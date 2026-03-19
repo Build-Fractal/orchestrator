@@ -1,0 +1,86 @@
+schema_version: "1.0"
+
+extension:
+  id: speckit-orchestrator
+  name: Speckit Orchestrator
+  version: 0.1.0
+  description: "Autonomous multi-phase orchestration for spec-kit's spec-driven development workflow. Adds milestone/phase/task hierarchy, state machine dispatch, crash recovery, and knowledge generation."
+  author: clariti-care
+  repository: https://github.com/clariti-care/spec-kit-orchestrator
+  license: MIT
+
+requires:
+  speckit_version: ">=0.1.0"
+
+provides:
+  commands:
+    - name: speckit.orchestrator.evaluate
+      file: commands/evaluate.md
+      description: "Scope triage — classify a project as Tier A, B, or C based on complexity."
+
+    - name: speckit.orchestrator.roadmap
+      file: commands/roadmap.md
+      description: "Break a spec into phases with dependency graph and boundary maps."
+
+    - name: speckit.orchestrator.plan-phase
+      file: commands/plan-phase.md
+      description: "Plan one phase — create task decomposition with must-haves."
+
+    - name: speckit.orchestrator.dispatch
+      file: commands/dispatch.md
+      description: "Execute one task in a fresh context with constructed payload."
+
+    - name: speckit.orchestrator.auto
+      file: commands/auto.md
+      description: "State machine loop — dispatch tasks until milestone completes or blocker."
+
+    - name: speckit.orchestrator.status
+      file: commands/status.md
+      description: "Progress dashboard — milestone/phase/task completion, blockers, next action."
+
+    - name: speckit.orchestrator.resume
+      file: commands/resume.md
+      description: "Resume from a crash or intentional pause using disk state."
+
+    - name: speckit.orchestrator.verify
+      file: commands/verify.md
+      description: "Run must-haves verification for a completed phase."
+
+    - name: speckit.orchestrator.consolidate
+      file: commands/consolidate.md
+      description: "Compress knowledge, archive verbose artifacts after milestone completion."
+
+    - name: speckit.orchestrator.discuss
+      file: commands/discuss.md
+      description: "Capture architectural decisions and constraints before roadmap generation."
+
+hooks:
+  before_tasks:
+    command: speckit.orchestrator.evaluate
+    optional: true
+    prompt: "Evaluate project scope and classify execution tier?"
+    description: "Injects phase-level context if orchestrator is active."
+
+  after_tasks:
+    command: speckit.orchestrator.roadmap
+    optional: true
+    prompt: "Generate orchestration roadmap from task phases?"
+    description: "Triggers roadmap generation from tasks.md phases."
+
+  before_implement:
+    command: speckit.orchestrator.dispatch
+    optional: true
+    prompt: "Dispatch this phase via orchestrator?"
+    description: "Injects phase scope enforcement for current phase."
+
+  after_implement:
+    command: speckit.orchestrator.verify
+    optional: true
+    prompt: "Run orchestrator verification on completed phase?"
+    description: "Triggers phase summary generation and state advancement."
+
+tags:
+  - orchestration
+  - automation
+  - multi-phase
+  - autonomous

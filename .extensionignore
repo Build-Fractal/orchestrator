@@ -1,0 +1,14 @@
+# Development and planning files — excluded from extension installation
+.planning/
+specs/
+.github/
+tests/
+
+# Spec-kit SDD state (used during development, not part of the extension)
+.specify/
+
+# Standard dev files
+.gitignore
+.extensionignore
+CONTRIBUTING.md
+LICENSE

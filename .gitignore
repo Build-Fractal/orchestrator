@@ -1,0 +1,19 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Orchestrator runtime state (derived, not source of truth for git)
+.specify/orchestrator/STATE.md
+.specify/orchestrator/orchestrator.lock
+.specify/orchestrator/execution-log.jsonl
+.specify/orchestrator/milestones/**/continue.md
+
+# Spec-kit extension install cache
+.specify/extensions/.cache/
+.specify/extensions/.backup/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo

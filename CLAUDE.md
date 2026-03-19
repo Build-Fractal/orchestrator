@@ -50,3 +50,10 @@ This project uses spec-kit's own slash commands for development:
 - `/speckit.tasks` — generate task breakdown
 - `/speckit.analyze` — consistency check
 - `/speckit.implement` — execute tasks
+
+## Active Technologies
+- Markdown (spec-kit command format) + Bash 4+ / POSIX sh (helper scripts) + spec-kit >=0.1.0 (extension host), git (version control, worktree isolation), jq (optional, JSON parsing in scripts) (001-speckit-orchestrator)
+- File-based state machine — YAML frontmatter + markdown body files, JSONL append-only logs, JSON lock files. All state at `.specify/orchestrator/` (001-speckit-orchestrator)
+
+## Recent Changes
+- 001-speckit-orchestrator: Added Markdown (spec-kit command format) + Bash 4+ / POSIX sh (helper scripts) + spec-kit >=0.1.0 (extension host), git (version control, worktree isolation), jq (optional, JSON parsing in scripts)

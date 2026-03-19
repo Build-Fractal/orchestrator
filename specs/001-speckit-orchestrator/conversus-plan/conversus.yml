@@ -1,0 +1,72 @@
+mode: cooperative
+output: spec-kit-orc/specs/001-speckit-orchestrator/conversus-plan/
+iterations: 1
+
+target:
+  - spec-kit-orc/specs/001-speckit-orchestrator/data-model.md
+  - spec-kit-orc/specs/001-speckit-orchestrator/plan.md
+  - spec-kit-orc/specs/001-speckit-orchestrator/quickstart.md
+  - spec-kit-orc/specs/001-speckit-orchestrator/research.md
+
+agents:
+  - name: apm
+    prompt: |
+      You are APM (Agent Package Manager). You represent packaging, distribution,
+      context compilation, and agent primitives. Evaluate these implementation
+      planning artifacts for how well they account for APM's role in the
+      orchestrator's architecture.
+    docs:
+      - apm/docs/src/content/docs/introduction/key-concepts.md
+      - apm/docs/src/content/docs/reference/manifest-schema.md
+      - apm/docs/src/content/docs/guides/skills.md
+      - apm/docs/src/content/docs/guides/compilation.md
+
+  - name: spec-kit
+    prompt: |
+      You are spec-kit (the SDD framework). You represent the extension system,
+      commands, hooks, templates, and configuration. Evaluate these implementation
+      planning artifacts for alignment with spec-kit's extension model and
+      development workflow.
+    docs:
+      - spec-kit/README.md
+      - spec-kit/templates/
+      - spec-kit/extensions/
+
+  - name: gh-aw
+    prompt: |
+      You are gh-aw (GitHub Agentic Workflows). You represent CI dispatch,
+      workflow automation, repo-memory, and concurrency. Evaluate these
+      implementation planning artifacts for CI compatibility and dispatch
+      architecture.
+    docs:
+      - gh-aw/docs/
+      - gh-aw/README.md
+
+# Post-conversus arbitration (Phase 6 — ad-hoc extension)
+#
+# After cooperative mode's 5-phase process (review → cross-review → revision →
+# disputes → synthesis), 5 disputes remained unresolved across the spec-level
+# and plan-level conversus processes.
+#
+# A 4th agent — the speckit-orchestrator itself — was introduced as a
+# post-conversus arbiter to issue binding decisions grounded in the project's
+# 7 constitution principles. This is not a native conversus feature; it is an
+# ad-hoc extension of the cooperative process.
+#
+# The conversus framework's Prisoner's Dilemma and Red-Blue modes include
+# built-in arbiter roles in Phase 5. Cooperative mode does not. This suggests
+# an enhancement: an optional `arbiter` field that triggers a binding
+# resolution phase when disputes remain after synthesis.
+#
+# Proposed schema extension:
+#   arbiter:
+#     name: speckit-orchestrator
+#     prompt: |
+#       You ARE the system being built. Evaluate disputes from the perspective
+#       of operational reliability, grounded in the constitution.
+#     trigger: disputes_remain
+#
+# Arbitration output: conversus-plan/arbitration/resolution.md
+# Decisions: PD1 (config placement), PD2 (deterministic annotation),
+#            SC1 (three-bucket separation), SC5 (manual SKILL.md),
+#            D3-EXT (5 ops, no negotiation)

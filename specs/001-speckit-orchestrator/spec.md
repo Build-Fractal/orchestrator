@@ -153,6 +153,8 @@ As a developer, I can install the orchestrator via APM (`apm install speckit-orc
 1. **Given** APM is available in the project, **When** the developer runs the install command, **Then** orchestrator skills are deployed to the IDE-native command directories for all detected agents.
 2. **Given** APM is not available, **When** the developer wants to use the orchestrator, **Then** they can install it manually as a spec-kit extension (`specify extension add`) with equivalent functionality.
 3. **Given** the orchestrator is installed via APM, **When** the developer invokes an orchestrator command, **Then** the command works identically to a manually installed extension command.
+4. **Given** the `apm.yml` manifest is defined, **When** `apm install` runs, **Then** the manifest specifies: `name: speckit-orchestrator`, `type: extension`, dependencies on spec-kit core, compilation scripts, and `target: detect` (compile for detected agent runtimes only, not all runtimes). In CI environments, only `.github/` targets are relevant.
+5. **Given** a team uses version pinning, **When** the `apm.yml` references the orchestrator, **Then** both `@main` (branch tracking for development) and `#v1.0.0` (tag pinning for stable releases) are supported version specifiers.
 
 ---
 
@@ -254,13 +256,19 @@ Verification operates at two tiers corresponding to the dispatch and review gran
 
 #### Skill Architecture
 
-- **FR-028**: Each orchestrator command MUST be packaged as a skill folder containing: a trigger-phrased skill description, helper scripts for state parsing and context assembly, output templates for summaries and dispatch prompts, reference documents for progressive disclosure, and a user preferences configuration file.
-- **FR-029**: Skill descriptions MUST use trigger phrasing ("Use when...") rather than feature summaries, to enable accurate skill discovery by agents.
+- **FR-028**: Each orchestrator command MUST have a spec-kit command markdown file (`.md`) as its authoritative definition, registered in `extension.yml` following the `speckit.orchestrator.*` naming convention. The command definition is the canonical source for the command's purpose, arguments, and behavior. Helper scripts (state parsing, context assembly), output templates (summaries, dispatch prompts), and reference documents (progressive disclosure) MUST be co-located with their command in the command's resource directory. APM skill metadata (trigger-phrased descriptions, `SKILL.md` files) is either derived from command frontmatter at install time or co-located within the command's resource directory — not in a parallel `skills/` tree. The spec-kit extension model is the canonical organizational structure; APM packaging wraps it.
+- **FR-029**: Skill descriptions MUST use trigger phrasing ("Use when...") rather than feature summaries, to enable accurate skill discovery by agents. This applies whether the description is in a `SKILL.md` file, command frontmatter, or APM-generated metadata.
 - **FR-030**: Each skill MUST document known failure modes, context pollution patterns, and anti-patterns in a dedicated gotchas section.
+
+#### Extension Templates
+
+- **FR-074**: Structural formatting templates (roadmap layout, phase summary format, task summary format) MUST be registered as extension templates in `.specify/extensions/orchestrator/templates/` and resolved through spec-kit's template resolution stack. Project-level overrides follow spec-kit's standard template override mechanism. Templates MUST NOT embed orchestrator-specific context (milestone references, phase scope, boundary maps). Orchestrator context is always injected explicitly into command inputs at runtime, keeping templates context-free and reusable.
 
 #### Extension Compliance
 
 - **FR-031**: The system MUST be a valid spec-kit extension with an `extension.yml` manifest, registered commands following the `speckit.orchestrator.*` naming pattern, and hook registrations at all 4 available hook points (`before_tasks`, `after_tasks`, `before_implement`, `after_implement`). For SDD steps without hook points (plan, specify, clarify), orchestrator commands MUST wrap the corresponding spec-kit commands via command composition, injecting orchestrator context before delegating.
+- **FR-071**: The `extension.yml` manifest MUST declare `requires.commands` listing the spec-kit commands the orchestrator depends on: `speckit.tasks`, `speckit.plan`, `speckit.specify`, `speckit.clarify`, `speckit.implement`, `speckit.analyze`. Spec-kit validates these prerequisites at extension load time. CI environments MUST perform their own prerequisite validation (e.g., a `check-prerequisites` workflow step). APM installations validate via `apm.yml` dependencies. These are complementary validations at different layers.
+- **FR-072**: The `extension.yml` manifest MUST include a `config_schema` section defining a JSON Schema for orchestrator configuration. The schema MUST validate the following properties: `default_tier` (enum: A, B, C, or null), `verification_commands` (array of strings), `context_verbosity` (enum: minimal, standard, full), `git_isolation` (boolean), `dispatch_budget` (integer or null), `duration_budget` (string or null). The schema validates persisted configuration files (`orchestrator-config.yml`, `orchestrator-config.local.yml`), not per-run environment variable overrides.
 - **FR-032**: The system MUST work with all spec-kit-supported agents without requiring agent-specific code paths in the core logic.
 - **FR-033**: The system MUST NOT require GSD-2 or APM as runtime dependencies. Principles and patterns are ported, not wrapped.
 
@@ -281,12 +289,18 @@ Verification operates at two tiers corresponding to the dispatch and review gran
 
 #### First-Run Configuration
 
-- **FR-040**: On first invocation in a project, the system MUST prompt the developer for configuration preferences: default tier override (if any), verification commands for the project, context verbosity level (minimal, standard, full), and whether to enable git isolation for phase execution. Subsequent invocations MUST read this configuration without re-prompting.
-- **FR-041**: All configuration preferences MUST be overridable per-invocation without modifying the stored configuration.
+- **FR-040**: Configuration MUST flow through spec-kit's multi-layer config system with the following precedence (highest to lowest):
+  1. **Environment variables** (`SPECKIT_ORCHESTRATOR_*`) — for CI and per-run overrides
+  2. **Local overrides** (`orchestrator-config.local.yml`, gitignored) — for developer preferences
+  3. **Project overrides** (`orchestrator-config.yml` at project root, outside APM deployment radius) — for team-shared settings
+  4. **Extension defaults** (`extension.yml` `defaults` section) — factory defaults shipped with the extension
+  On first invocation, if no project-level config exists, the system MUST prompt the developer for configuration preferences (default tier override, verification commands, context verbosity level, git isolation mode) and write them to `orchestrator-config.yml`. Subsequent invocations MUST read this configuration without re-prompting.
+- **FR-041**: All configuration preferences MUST be overridable per-invocation via environment variables or command options without modifying the stored configuration files.
+- **FR-070**: User-mutable configuration MUST NOT reside in APM-managed directories. The `orchestrator-config.yml` and `orchestrator-config.local.yml` files live at the project root, outside `.specify/extensions/orchestrator/`. APM deployment never overwrites user configuration.
 
 #### Scaffolding
 
-- **FR-042**: The system MUST provide a scaffolding command that creates the orchestrator directory structure under `.specify/orchestrator/milestones/{M###}/` for a milestone, including directories for phases, tasks, and the required state files (decisions register, knowledge file, execution log). The scaffolded structure MUST match the expected layout that the state machine reads. Global files (DECISIONS.md, KNOWLEDGE.md, config.json, execution-log.jsonl) live at `.specify/orchestrator/` root.
+- **FR-042**: The system MUST provide a scaffolding command that creates the orchestrator directory structure under `.specify/orchestrator/milestones/{M###}/` for a milestone, including directories for phases, tasks, and the required state files (decisions register, knowledge file, execution log). The scaffolded structure MUST match the expected layout that the state machine reads. Global state files (DECISIONS.md, KNOWLEDGE.md, execution-log.jsonl) live at `.specify/orchestrator/` root. Configuration lives outside this directory per the multi-layer config system (FR-040).
 
 #### Risk-Ordered Execution
 
@@ -300,6 +314,17 @@ Verification operates at two tiers corresponding to the dispatch and review gran
 #### Capability Detection
 
 - **FR-046**: At startup, the system MUST detect available runtime capabilities: subagent dispatch support, shell command execution, git availability, and GitHub Agentic Workflows environment. The detected capability set MUST determine the execution strategy (subagent dispatch vs sequential, local vs CI, isolated worktree vs shared branch).
+
+#### Runtime Adapter Interface
+
+- **FR-067**: The orchestrator's core logic MUST program against an abstract runtime adapter interface, never directly against platform-specific APIs. The interface MUST define five platform-neutral operations:
+  - `dispatch-task` — send a task payload to an agent context for execution
+  - `await-completion` — block or poll until a dispatched task signals done
+  - `collect-result` — retrieve the output artifacts and status from a completed task
+  - `signal-failure` — report a task failure with diagnostic context
+  - `inject-context` — provide additional context to a running or queued task
+- **FR-068**: Runtime adapters (local subprocess, gh-aw CI, future runtimes) MUST implement the five core operations using platform-native primitives. The orchestrator MUST NOT contain conditional branches based on runtime identity in its core dispatch, verification, or state management logic.
+- **FR-069**: The runtime adapter interface MUST include a capability-negotiation mechanism. Each adapter declares which optional enhanced operations it supports (e.g., batch dispatch, concurrency control, progress projection). The orchestrator queries adapter capabilities at startup and uses enhanced operations only when the active adapter declares support. Unsupported enhanced operations degrade gracefully to sequential core operations.
 
 #### Feature-Milestone Mapping
 
@@ -338,6 +363,10 @@ Verification operates at two tiers corresponding to the dispatch and review gran
 - **FR-059**: The spec compliance stage of the two-stage review (FR-015) MUST check phase-level concerns that per-task verification cannot catch: (a) the phase as a whole achieves its demo sentence, (b) all boundary map contracts declared in the roadmap are satisfied — not just per-artifact existence but the complete interface surface, (c) no scope creep occurred — features or files not in the phase plan were not introduced, and (d) the phase's output is consistent with its declared must-haves at the aggregate level (individual task must-haves may pass while the phase-level integration fails).
 - **FR-060**: The code quality stage of the two-stage review MUST check cross-task consistency: (a) naming conventions are consistent across all tasks in the phase, (b) error handling patterns are uniform, (c) test coverage meets the project's configured threshold (if verification commands include tests), and (d) no dead code, unused imports, or placeholder implementations ("TODO", "FIXME") were left by task-level execution.
 
+#### Specification Propagation
+
+- **FR-073**: When a phase's outputs change boundary maps, interfaces, or constraints that affect subsequent phases, the orchestrator MUST detect the invalidation and trigger re-planning for affected downstream phases. Detection MUST occur during roadmap reassessment (FR-009, FR-061) by comparing the completed phase's actual outputs against the boundary map contracts consumed by downstream phases. If a downstream phase's plan references an interface or artifact that has changed, the orchestrator MUST mark that phase's plan as stale, record the invalidation in the decisions register, and require re-planning before dispatch. The specific re-planning mechanism (automatic or developer-initiated) is a runtime adapter concern, but detection and flagging are core orchestrator responsibilities.
+
 #### Roadmap Reassessment Criteria
 
 - **FR-061**: Roadmap reassessment (FR-009) MUST consider: (a) deviations recorded in the just-completed phase's summary, (b) new interfaces discovered during execution that are not in the original boundary map, (c) decisions recorded in the decisions register that invalidate assumptions in downstream phase plans, and (d) risk reclassifications based on execution experience (e.g., a phase classified as low-risk that revealed unexpected complexity). Reassessment MUST NOT modify phases that are already complete. Reassessment MUST NOT modify the currently executing phase. Changes from reassessment MUST be recorded in the decisions register.
@@ -374,7 +403,7 @@ Verification operates at two tiers corresponding to the dispatch and review gran
 - **Execution Log**: Append-only record of every dispatch event with timestamps, unit IDs, and outcomes. Used for cost tracking, debugging, and retrospective analysis.
 - **Lock File**: Ephemeral file indicating an active or crashed session. Contains session metadata for crash recovery forensics.
 - **Continue File**: Ephemeral file written during a graceful pause, containing the exact resume point (milestone, phase, task, step), completed work, remaining work, session decisions, and the next action. Consumed and deleted on resume.
-- **Configuration**: Project-level preferences controlling orchestrator behavior: default tier, verification commands, context verbosity level, git isolation mode, optional dispatch/duration budgets. Set on first run, overridable per-invocation.
+- **Configuration**: Project-level preferences controlling orchestrator behavior: default tier, verification commands, context verbosity level, git isolation mode, optional dispatch/duration budgets. Delivered through spec-kit's multi-layer config system: extension defaults in `extension.yml`, project overrides in `orchestrator-config.yml` (project root), local overrides in `orchestrator-config.local.yml` (gitignored), and `SPECKIT_ORCHESTRATOR_*` environment variables for CI/per-run overrides. Set on first run, overridable per-invocation.
 - **Context Draft**: A pre-planning artifact created during the `discussing` state that captures the developer's architectural decisions, constraints, scope boundaries, and design preferences. Created via the `discuss` command, finalized explicitly by the developer. Required gate for Tier C roadmap generation; optional for Tier B. Captures human judgment that complements any technical research the agent performs.
 
 ### File Format Specifications
@@ -473,9 +502,34 @@ Body contains: one-liner summary (not "task complete" but what shipped), What Ha
 - Must be a valid spec-kit extension conforming to extension.yml schema version 1.0.
 - Must not import, invoke, or wrap GSD-2 or APM binaries at runtime.
 - Must use a hybrid integration strategy: leverage spec-kit's 4 available hook points (`before_tasks`, `after_tasks`, `before_implement`, `after_implement`) for lifecycle integration and context injection at task/implement boundaries; use command composition (orchestrator commands wrapping spec-kit commands internally) for steps without hooks (plan, specify, clarify). Hook commands check whether orchestration is active and no-op when it is not.
-- Skills must be structured as folders (not flat markdown files) containing scripts, templates, references, and configuration.
+- Command resources (scripts, templates, references) must be co-located with their command definitions in the extension's command resource directories, not in a separate parallel hierarchy.
 - State on disk is the sole source of truth. No in-memory state across sessions.
 - Every task must fit in one context window. No exceptions.
 - Plans must assume zero context. An agent dropped into the repo cold must be able to execute any plan without reading files not referenced in the plan itself.
 - All orchestrator commands must be idempotent. Running a command when its output already exists and is current must produce no change.
 - Knowledge and decision injection into dispatch payloads must be scope-filtered, not whole-file. Unbounded context injection violates Principle I.
+- The orchestrator MUST NOT override or replace core spec-kit commands via presets or any other mechanism. The command composition mechanism is exclusively new `speckit.orchestrator.*` commands that delegate to standard spec-kit workflows with injected context. Preset-based command replacement is prohibited.
+- All state management, dispatch, and verification abstractions MUST be implementable in both local and CI execution contexts without forking the core logic. CI-specific behavior is confined to runtime adapter implementations, never to conditional branches in the orchestrator's core state machine, dispatch loop, or verification pipeline.
+- **Deployment directory boundary**: `.specify/extensions/orchestrator/` is the APM/extension deployment target (overwritten on install). `.specify/orchestrator/` is the runtime state directory (never touched by APM or extension install). No APM primitive or extension install operation may target paths under `.specify/orchestrator/`. No runtime operation may modify files under `.specify/extensions/orchestrator/`. These two directory trees have strictly non-overlapping write ownership.
+
+## Architecture: Static Configuration vs. Dynamic Runtime State
+
+The orchestrator enforces an explicit boundary between static configuration and dynamic runtime state. No configuration setting changes during orchestration execution. No runtime state is stored in configuration files.
+
+| Item | Category | Location | Mutability During Execution |
+|---|---|---|---|
+| Default tier | Static config | spec-kit multi-layer config (see FR-040) | Immutable |
+| Verification commands | Static config | spec-kit multi-layer config | Immutable |
+| Context verbosity | Static config | spec-kit multi-layer config | Immutable |
+| Git isolation mode | Static config | spec-kit multi-layer config | Immutable |
+| Dispatch budget | Static config | spec-kit multi-layer config | Immutable |
+| Duration budget | Static config | spec-kit multi-layer config | Immutable |
+| Current phase / state | Dynamic state | `.specify/orchestrator/` | Updated by orchestrator |
+| Execution log | Dynamic state | `.specify/orchestrator/execution-log.jsonl` | Append-only |
+| Decisions register | Dynamic state | `.specify/orchestrator/DECISIONS.md` | Append-only |
+| Knowledge file | Dynamic state | `.specify/orchestrator/KNOWLEDGE.md` | Append-only |
+| Lock files | Dynamic state | `.specify/orchestrator/orchestrator.lock` | Created/deleted per session |
+| Phase summaries | Dynamic state | `.specify/orchestrator/milestones/{M###}/` | Written on phase completion |
+| Continue files | Dynamic state | `.specify/orchestrator/continue.md` | Written on pause, consumed on resume |
+
+**Rule**: Static configuration flows through spec-kit's multi-layer config system (extension defaults, project overrides, local overrides, environment variables). Dynamic state lives exclusively in `.specify/orchestrator/`. These two domains never overlap.

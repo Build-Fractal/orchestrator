@@ -155,6 +155,12 @@ If `<milestone-dir>/archive/` already exists from a prior consolidation or rollb
 
 If the milestone directory does not exist, the script exits non-zero: "Milestone directory not found." Resolution: verify the milestone ID and orchestrator root path.
 
+## Gotchas
+
+- **Consolidation moves files, it does not delete them**: Originals are always preserved in the `archive/` directory. To truly reclaim space, the archive must be removed manually.
+- **Incomplete phases block consolidation**: If any phase lacks a `P##-SUMMARY.md`, the script exits non-zero. Complete all phases before consolidating.
+- **Worktree merge conflicts require manual resolution**: If the orchestrator worktree branch conflicts with the feature branch, the `git merge` step will fail and the developer must resolve conflicts manually.
+
 ## Referenced Scripts
 
 - `scripts/knowledge/consolidate-artifacts.sh` — performs the archival and reports reduction metrics

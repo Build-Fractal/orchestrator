@@ -706,8 +706,7 @@ fi
 # Summary
 # ==========================================================================
 echo ""
-echo "--- Summary ---"
-echo "Total: $TOTAL  Passed: $PASS_COUNT  Failed: $FAIL_COUNT"
+echo "$PASS_COUNT/$TOTAL checks passed"
 
 if [ "$FAIL_COUNT" -gt 0 ]; then
   exit 1

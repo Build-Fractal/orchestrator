@@ -131,6 +131,31 @@ else
 fi
 
 # --------------------------------------------------------------------------
+# 1c. Tier A zero-artifacts tests (FR-001, FR-003)
+# --------------------------------------------------------------------------
+
+TIER_A_FIXTURE="$PROJECT_ROOT/tests/fixtures/state-tier-a"
+
+# Tier A: derive-phase.sh on empty dir → pre-planning
+if [ -f "$DERIVE_SCRIPT" ] && [ -d "$TIER_A_FIXTURE" ]; then
+  tier_a_state=$(bash "$DERIVE_SCRIPT" "$TIER_A_FIXTURE" 2>/dev/null) || true
+  if [ "$tier_a_state" = "pre-planning" ]; then
+    pass "derive-phase.sh tier A fixture → pre-planning"
+  else
+    fail "derive-phase.sh tier A fixture → pre-planning (got: '$tier_a_state')"
+  fi
+else
+  fail "derive-phase.sh tier A fixture → pre-planning (script or fixture missing)"
+fi
+
+# Tier A: no milestones/ directory exists in the fixture
+if [ ! -d "$TIER_A_FIXTURE/milestones" ]; then
+  pass "tier A fixture has no milestones/ directory"
+else
+  fail "tier A fixture has milestones/ directory (should have none)"
+fi
+
+# --------------------------------------------------------------------------
 # 2. State derivation error path tests
 # --------------------------------------------------------------------------
 

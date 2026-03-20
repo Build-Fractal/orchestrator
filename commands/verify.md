@@ -1,5 +1,5 @@
 ---
-description: "Run mechanical verification for a completed task or phase. Executes 4-tier verification: static checks (file existence, content patterns), command execution (configured tests/lint), behavioral review (spec compliance), and human review (UAT). Produces a structured verification report."
+description: "Use when running mechanical verification for a completed task or phase. Executes 4-tier verification: static checks (file existence, content patterns), command execution (configured tests/lint), behavioral review (spec compliance), and human review (UAT). Produces a structured verification report."
 ---
 
 # speckit.orchestrator.verify
@@ -140,3 +140,10 @@ Write the verification report using the template at `templates/verification-repo
 - If the phase plan is missing, exit with error: *"Phase plan not found for <phase-id>. Run plan-phase first."*
 - If the milestone directory doesn't exist, exit with error: *"Milestone directory not found. Run evaluate first."*
 - If state derivation shows `complete`, report: *"Phase already verified and complete. No action needed."*
+
+## Gotchas
+
+- **Tier 1 failures don't short-circuit other tiers**: The full verification report is always produced regardless of individual tier results. This ensures all issues are surfaced in a single run.
+- **Behavioral truths without `Check:` commands are Tier 3 (agent judgment)**: They cannot fail mechanically — the verifying agent must read source files and exercise judgment. Results may vary between agents.
+- **External modification detection is informational only**: `check-external-mods.sh` produces `WARN` lines that appear in the report but do not count as verification failures.
+- **Re-verify with --force rechecks everything**: Without `--force`, cached results are returned if no files changed since the last verification. Use `--force` after making fixes to get a fresh result.

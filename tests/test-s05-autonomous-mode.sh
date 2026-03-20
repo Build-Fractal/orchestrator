@@ -826,10 +826,90 @@ else
 fi
 
 # ==========================================================================
+# Section 5: Pause → Continue File → Resume Round-Trip (FR-047, FR-048, FR-049)
+# ==========================================================================
+echo ""
+echo "--- Section 5: Pause/Resume Round-Trip ---"
+
+PAUSE_FIXTURE="$PROJECT_ROOT/tests/fixtures/auto-pause"
+CONTINUE_FILE="$PAUSE_FIXTURE/continue.md"
+
+# --------------------------------------------------------------------------
+# 5.1 resume.md references templates/continue-file.md
+# --------------------------------------------------------------------------
+if grep -q 'templates/continue-file.md' "$RESUME_CMD"; then
+  pass "resume.md references templates/continue-file.md"
+else
+  fail "resume.md references templates/continue-file.md"
+fi
+
+# --------------------------------------------------------------------------
+# 5.2 Continue file fixture has required frontmatter fields
+# --------------------------------------------------------------------------
+missing_fm=""
+for field in "milestone:" "phase:" "task:" "step:" "saved_at:"; do
+  if ! head -12 "$CONTINUE_FILE" | grep -q "$field"; then
+    missing_fm="$missing_fm $field"
+  fi
+done
+if [ -z "$missing_fm" ]; then
+  pass "continue file fixture has required frontmatter (milestone, phase, task, step, saved_at)"
+else
+  fail "continue file fixture missing frontmatter:$missing_fm"
+fi
+
+# --------------------------------------------------------------------------
+# 5.3 Continue file fixture has required body sections
+# --------------------------------------------------------------------------
+missing_sections=""
+for section in "## Completed Work" "## Remaining Work" "## Next Action"; do
+  if ! grep -q "$section" "$CONTINUE_FILE"; then
+    missing_sections="$missing_sections '$section'"
+  fi
+done
+if [ -z "$missing_sections" ]; then
+  pass "continue file fixture has required body sections (Completed Work, Remaining Work, Next Action)"
+else
+  fail "continue file fixture missing sections:$missing_sections"
+fi
+
+# --------------------------------------------------------------------------
+# 5.4 resume.md documents that continue file is consumed (deleted) on resume
+# --------------------------------------------------------------------------
+if grep -q 'rm.*continue\.md\|consumed\|deleted\|Delete the Continue File' "$RESUME_CMD"; then
+  pass "resume.md documents continue file consumption (deletion) on resume"
+else
+  fail "resume.md documents continue file consumption (deletion) on resume"
+fi
+
+# --------------------------------------------------------------------------
+# 5.5 Continue file fixture matches template structure (has Decisions Made, Context)
+# --------------------------------------------------------------------------
+extra_sections_ok=true
+for section in "## Decisions Made" "## Context"; do
+  if ! grep -q "$section" "$CONTINUE_FILE"; then
+    extra_sections_ok=false
+  fi
+done
+if [ "$extra_sections_ok" = "true" ]; then
+  pass "continue file fixture has optional sections (Decisions Made, Context)"
+else
+  fail "continue file fixture missing optional sections (Decisions Made, Context)"
+fi
+
+# --------------------------------------------------------------------------
+# 5.6 resume.md documents crash vs pause detection logic
+# --------------------------------------------------------------------------
+if grep -q "Recovery Type Detection" "$RESUME_CMD" && grep -q "Path A" "$RESUME_CMD" && grep -q "Path B" "$RESUME_CMD"; then
+  pass "resume.md documents crash vs pause detection with separate paths"
+else
+  fail "resume.md documents crash vs pause detection with separate paths"
+fi
+
+# ==========================================================================
 # Summary
 # ==========================================================================
 echo ""
-echo "--- Overall Results ---"
 echo "$PASS_COUNT/$TOTAL checks passed"
 
 if [ "$FAIL_COUNT" -gt 0 ]; then

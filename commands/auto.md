@@ -175,6 +175,10 @@ Invoke `speckit.orchestrator.verify` on the completed task to confirm must-haves
 - The failure messages from check-must-haves.sh
 - The task summary (if produced) from the failed attempt
 
+**On verification pass with concerns (DONE_WITH_CONCERNS):** Per US3 AS6, evaluate each concern:
+- **Concerns affecting correctness or scope** (e.g., a must-have check passes but with unexpected side effects, or a boundary map produce exists but has wrong content) → block advancement and address the concern before proceeding.
+- **Observational concerns** (e.g., performance notes, style suggestions, minor warnings that don't affect correctness) → note the concern in the task summary and proceed to Step G. These concerns are recorded but do not block the dispatch loop.
+
 **On verification failure (second attempt):** Do NOT retry further. Instead:
 1. Record the double failure in the execution log
 2. Write a continue file with the failed verification details
@@ -262,7 +266,24 @@ When `derive-phase.sh` returns `summarizing` (all tasks in the active phase are 
    - Synthesize a phase-level summary capturing: what was built, key decisions, patterns established, and verification results
    - Write to `<milestone-dir>/phases/<P##>/<P##>-SUMMARY.md`
 
-3. **Advance**: After the phase summary is written, `derive-phase.sh` will return the next phase's state on the next loop iteration. If all phases are complete, it will return `validating`.
+3. **Roadmap Reassessment (FR-009 / FR-061)**: After the phase summary is written, perform mandatory roadmap reassessment before advancing. This is required for every phase transition in Tier C autonomous mode:
+
+   a. **Check for deviations**: Read the just-completed phase's summary for any deviations recorded from the original plan.
+
+   b. **Check for new interfaces**: Compare the phase's actual outputs against the boundary map. Identify any new interfaces discovered during execution that are not in the original boundary map.
+
+   c. **Check decisions register**: Scan decisions made during this phase for entries that invalidate assumptions in downstream phase plans (look for decisions scoped to this phase or `arch`-scoped decisions).
+
+   d. **Check risk reclassifications**: If the phase was classified as low-risk but revealed unexpected complexity, flag downstream phases with similar risk profiles for review.
+
+   e. **Apply reassessment results**:
+      - If no changes needed: Log "Roadmap reassessment: no changes required" and proceed.
+      - If downstream phases are affected: Mark affected phase plans as stale (triggers `replanning` state on next derivation), record the invalidation in the decisions register, and report which phases need replanning before their execution begins.
+      - Reassessment MUST NOT modify phases that are already complete.
+      - Reassessment MUST NOT modify the phase that just finished (it is already summarized).
+      - All changes from reassessment MUST be recorded in the decisions register.
+
+4. **Advance**: After reassessment, `derive-phase.sh` will return the next phase's state on the next loop iteration. If downstream phases were marked stale, it will return `replanning`. If all phases are complete, it will return `validating`.
 
 ### External Modification Check (FR-064)
 
@@ -359,6 +380,13 @@ If a required script is not found:
 - Report "Required script not found: {path}. Orchestrator installation may be incomplete."
 - Release the lock
 - Exit 1
+
+## Gotchas
+
+- **Only Tier C projects can use auto mode**: Tier B uses guided dispatch via `speckit.orchestrator.dispatch`. Tier A bypasses the orchestrator entirely.
+- **Stale lock requires `resume`, not re-invocation**: Auto mode refuses to start with a stale lock — it does not auto-break it. Run `speckit.orchestrator.resume` for crash recovery to ensure no work is lost.
+- **Pause detection is checked between tasks, not during**: A `pause-requested` file created while a task is executing will not take effect until that task completes and the loop returns to Step A.
+- **DONE_WITH_CONCERNS evaluation**: Concerns affecting correctness or scope block advancement; observational concerns are noted in the task summary and the loop proceeds (US3 AS6).
 
 ## Referenced Scripts
 

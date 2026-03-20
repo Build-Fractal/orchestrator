@@ -126,6 +126,12 @@ Status is inherently idempotent — it only reads from disk and computes derived
 - If `scripts/state/derive-phase.sh` is unavailable, report: "State derivation script not found. Orchestrator may not be properly installed."
 - If `execution-log.jsonl` is malformed, skip the execution history section and report: "⚠ Execution log is malformed. History unavailable."
 
+## Gotchas
+
+- **Status is strictly read-only**: It never acquires locks, writes files, or updates logs. Safe to run concurrently with auto mode or dispatched tasks in another terminal.
+- **Lock staleness uses PID checking (`kill -0`)**: False positives are possible if the OS has reused a PID. CI runtime liveness checks (GitHub API `run_id` lookup) are deferred to US7.
+- **Malformed execution log skips history section**: If `execution-log.jsonl` contains invalid JSON lines, the execution history and budget status sections are omitted rather than failing the command.
+
 ## Reference Files
 
 - `scripts/state/derive-phase.sh` — derives current orchestrator state from disk

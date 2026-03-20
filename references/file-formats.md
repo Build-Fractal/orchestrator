@@ -185,9 +185,9 @@ milestone: M001                   # Parent milestone
 **Format**: YAML frontmatter + markdown body
 **Mutability**: Written once at completion. Never edited after creation.
 
-### 14-Field Frontmatter Schema
+### 15-Field Frontmatter Schema
 
-All summary types (task, phase, milestone) share this base schema:
+All summary types (task, phase, milestone) share this 15-field base schema (phase and milestone summaries add `observability_surfaces` for 16 fields):
 
 ```yaml
 ---
@@ -371,7 +371,7 @@ For CI runtimes, add `"run_id": "12345678"` field.
 The `runtime` field determines the liveness check strategy:
 
 - `"local"` — read `pid`, attempt `kill -0 $pid`. Process gone → stale.
-- `"ci-github"` — read `run_id`, call GitHub Actions API. Status not `in_progress` → stale.
+- `"ci-github"` — read `run_id`, call GitHub Actions API. Status not `in_progress` → stale. **Note:** CI runtime liveness checks (GitHub API `run_id` lookup) are deferred to US7 (GitHub Agentic Workflows). In v0.1.0, only local PID checking via `kill -0` is implemented.
 - Unknown runtime → treat as stale (fail-open for crash recovery).
 
 ---

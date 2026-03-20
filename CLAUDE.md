@@ -6,24 +6,27 @@ A spec-kit extension that adds autonomous multi-phase orchestration to spec-kit'
 
 ## Project Status
 
-Specification phase complete. Next steps: `/speckit.plan` then `/speckit.tasks` then implementation.
+**v0.1.0 implemented** (M001 complete, 2026-03-20). 10 commands, 23 scripts, 13 templates, 4 reference docs. 307 test assertions, zero failures. User Stories 1-6 delivered. US7 (GitHub Agentic Workflows) and US8 (APM Packaging) deferred.
 
 ## Key Files
 
-- `extension.yml` — spec-kit extension manifest (the deliverable)
-- `commands/` — orchestrator command definitions (placeholders, pending implementation)
-- `skills/` — skill folders with scripts/templates/references (pending implementation)
+- `extension.yml` — spec-kit extension manifest (10 commands, 5 hooks, 23 scripts)
+- `commands/` — orchestrator command definitions (10 agent instruction documents)
+- `scripts/` — helper scripts organized by concern (state, dispatch, verify, knowledge, lifecycle)
+- `templates/` — 13 output templates + 1 config default
+- `references/` — 4 progressive disclosure docs (state machine, verification ladder, tier definitions, file formats)
+- `tests/` — 7 test suites (307 assertions)
 - `specs/001-speckit-orchestrator/spec.md` — full feature specification
 - `.specify/memory/constitution.md` — 7 governing principles
-- `.planning/research/` — deep research on 5 source systems (spec-kit, GSD-2, APM, superpowers, gh-aw)
-- `.planning/speckit-orchestrator-playbook.md` — execution playbook
+- `.specify/orchestrator/KNOWLEDGE.md` — consolidated patterns, decisions, lessons
+- `.specify/orchestrator/milestone-summary.md` — M001 build summary + extension guide
 
 ## Architecture
 
 This is a **spec-kit extension** (markdown commands + shell scripts), NOT a standalone CLI. It:
 
 - Registers commands via `extension.yml` following `speckit.orchestrator.*` naming
-- Uses hooks at 4 spec-kit lifecycle points (before/after tasks, before/after implement)
+- Uses hooks at 5 spec-kit lifecycle points (before/after tasks, before/after implement, before commit)
 - Uses command composition to wrap spec-kit commands for steps without hooks
 - Stores orchestrator state at `.specify/orchestrator/` (separate from `specs/`)
 - Must work with all spec-kit-supported agents (Claude Code, Copilot, Cursor, Gemini CLI)
@@ -50,3 +53,10 @@ This project uses spec-kit's own slash commands for development:
 - `/speckit.tasks` — generate task breakdown
 - `/speckit.analyze` — consistency check
 - `/speckit.implement` — execute tasks
+
+## Active Technologies
+- Markdown (spec-kit command format) + Bash 4+ / POSIX sh (helper scripts) + spec-kit >=0.1.0 (extension host), git (version control, worktree isolation), jq (optional, JSON parsing in scripts) (001-speckit-orchestrator)
+- File-based state machine — YAML frontmatter + markdown body files, JSONL append-only logs, JSON lock files. All state at `.specify/orchestrator/` (001-speckit-orchestrator)
+
+## Recent Changes
+- 001-speckit-orchestrator: M001 v0.1.0 implementation complete. All core orchestration delivered (scope triage, phase decomposition, state machine, autonomous dispatch, verification, crash recovery, knowledge generation, consolidation).

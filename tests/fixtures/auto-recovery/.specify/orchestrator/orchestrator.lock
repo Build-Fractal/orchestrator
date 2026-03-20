@@ -1,0 +1,9 @@
+{
+  "pid": 888888,
+  "startedAt": "2026-03-19T14:00:00Z",
+  "unitType": "task",
+  "unitId": "M001/P02/T02",
+  "unitStartedAt": "2026-03-19T14:30:00Z",
+  "completedUnits": ["M001/P02/T01"],
+  "featureBranch": "feat/widgets"
+}

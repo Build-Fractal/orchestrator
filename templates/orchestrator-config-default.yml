@@ -1,0 +1,11 @@
+# Speckit-Orchestrator Project Configuration
+# Copy to orchestrator-config.yml in your project root and customize.
+# See extension.yml config_schema for valid values.
+
+default_tier: null              # Auto-detect. Override: A, B, or C
+verification_commands: []       # Run after each task (e.g., ["npm test", "npm run lint"])
+context_verbosity: standard     # minimal | standard | full
+git_isolation: false            # Use git worktree per milestone
+dispatch_budget: null           # Max dispatches per milestone (null = unlimited)
+duration_budget: null           # Max cumulative duration (null = unlimited, e.g., "2h")
+budget_enforcement: advisory    # advisory (warn only) | enforced (hard stop)

@@ -1,0 +1,5 @@
+{"event":"dispatch","unitId":"M001/P01/T01","timestamp":"2026-03-19T08:00:00Z","duration_s":60}
+{"event":"dispatch","unitId":"M001/P01/T02","timestamp":"2026-03-19T09:00:00Z","duration_s":120}
+{"event":"dispatch","unitId":"M001/P02/T01","timestamp":"2026-03-19T10:00:00Z","duration_s":90}
+{"event":"dispatch","unitId":"M001/P02/T02","timestamp":"2026-03-19T11:00:00Z","duration_s":150}
+{"event":"dispatch","unitId":"M001/P02/T03","timestamp":"2026-03-19T12:00:00Z","duration_s":80}

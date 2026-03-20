@@ -1,0 +1,2 @@
+- **[project]** [2026-03-19] spec-kit hooks use `optional: true` — the LLM decides whether to execute.
+- **[milestone:M001]** [2026-03-19] All state scripts must handle the case where `.specify/orchestrator/` doesn't exist yet.

@@ -96,6 +96,12 @@ This satisfies R012 (idempotent commands) — running `roadmap` twice without co
 - If Tier C context draft is not finalized, block and report as described in Prerequisites.
 - If the feature spec is missing or unreadable, exit with error: "Feature spec not found at {path}."
 
+## Gotchas
+
+- **Generating a roadmap when one exists requires confirmation**: Silent overwrite is prevented by the idempotency check. Without `--force` or explicit confirmation, the command exits without changes.
+- **Tier C without finalized context draft is blocked at state check**: The block happens before roadmap generation starts, not during — the error message references `discuss`, not `roadmap`.
+- **Boundary map conflicts are agent-evaluated, not mechanically enforced**: Two phases producing the same artifact should be caught during validation, but the check relies on agent judgment. `check-boundary-map.sh` only verifies that declared produces exist on disk — it does not detect undeclared conflicts.
+
 ## Reference Files
 
 - `templates/roadmap.md` — output template for the roadmap file

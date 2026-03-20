@@ -95,6 +95,12 @@ After finalizing, suggest: "Context finalized. Run `speckit.orchestrator.roadmap
 - **Template file missing** (`templates/context-draft.md` not found): Report "Context draft template not found at `templates/context-draft.md`. Cannot create context draft." and exit 1.
 - **Developer provides empty content**: Warn "No content provided. The context draft sections are empty." Allow the draft to be created (it can be updated later), but warn that finalizing an empty draft provides no value for planning.
 
+## Gotchas
+
+- **Running discuss on a Tier B project is allowed but optional**: It will create a context draft that is not required for roadmap generation. Running it on Tier A is a no-op — Tier A bypasses the orchestrator entirely.
+- **Finalizing an empty context draft is allowed**: The command warns but does not block. The result is a vacuous planning gate that adds no value to roadmap generation.
+- **Context draft malformed frontmatter**: The command attempts repair (re-adding `---` delimiters), but if the `status` field is missing after repair, the state machine cannot transition — `derive-phase.sh` will not recognize the file as a valid context draft.
+
 ## Referenced Scripts
 
 - `scripts/state/derive-phase.sh` — derives current orchestrator state to validate that discussion is allowed

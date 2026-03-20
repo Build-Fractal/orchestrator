@@ -106,6 +106,12 @@ If the target task already has a `<T##>-SUMMARY.md` file, the dispatch is skippe
 - Context budget exceeded (payload > 20% of total artifacts) → warn to stderr but continue (unless budget_enforcement=strict)
 - Dispatch failure (subagent crashes, timeout) → record failure in execution log, do NOT retry automatically
 
+## Gotchas
+
+- **Context budget exceeded is a warning unless budget_enforcement is "strict"**: The dispatch continues with an oversized payload by default. Set `budget_enforcement: strict` in orchestrator config to block dispatch when the payload exceeds the configured threshold.
+- **Dispatch to a task with existing T##-SUMMARY.md is a no-op**: The task is skipped (idempotency), not treated as an error. No re-execution occurs and no new execution log entry is written.
+- **No subagent support falls back to sequential execution**: If `detect-capabilities.sh` reports `subagent_dispatch=false`, the task runs in the current session with explicit context separation instructions. The task still executes — just without process isolation.
+
 ## Referenced Scripts
 
 - `scripts/dispatch/build-context.sh` — assembles the context payload

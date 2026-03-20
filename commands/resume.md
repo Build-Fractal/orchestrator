@@ -171,6 +171,12 @@ Resume is designed to be safely re-callable:
 - **Lock file cannot be broken** (lock-manager.sh break returns non-zero): Report "Failed to break stale lock at .specify/orchestrator/orchestrator.lock. Manual removal may be required." and exit 1.
 - **Both recovery paths fail**: If neither the continue file nor the recovery briefing provides actionable information, report: "Unable to determine recovery path. Run `speckit.orchestrator.status` for current state." and exit 1.
 
+## Gotchas
+
+- **Continue file is consumed (deleted) on resume**: The same pause cannot be resumed twice. A second resume invocation finds no continue file and falls through to the "no recovery needed" case.
+- **Mixed state (continue file + stale lock) is treated as crash recovery**: The continue file is read for context, but Path B (crash recovery) takes precedence — the lock is broken and a recovery briefing is synthesized.
+- **Stuck tasks are not auto-retried**: If `stuck-detector.sh` reports `STUCK:YES`, the command exits and requires manual intervention. The developer must investigate, adjust the task plan, or unblock the task before resuming.
+
 ## Referenced Scripts
 
 - `scripts/lifecycle/lock-manager.sh` — lock status check and lock break operations

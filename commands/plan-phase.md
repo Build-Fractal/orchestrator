@@ -139,6 +139,12 @@ This satisfies R012 (idempotent commands) — running `plan-phase` twice without
 - If the specified phase doesn't exist in the roadmap, exit with error: "Phase {P##} not found in roadmap."
 - If upstream dependencies are not satisfied (missing summaries), report: "Phase {P##} depends on {P##} which is not yet complete."
 
+## Gotchas
+
+- **Truths without `Check:` sub-items are Tier 3 (behavioral)**: They require agent judgment and cannot fail mechanically. Use sparingly — prefer concrete `Check:` commands wherever possible.
+- **Task plans referencing files from upstream tasks**: If an upstream task has not yet run, the referenced files will not exist and verification will fail. Plan tasks in dependency order and verify upstream completion before dispatching downstream.
+- **Phase plan overwrite is all-or-nothing**: Requires confirmation; partial overwrite is not supported. All task plans are regenerated alongside the phase plan.
+
 ## Reference Files
 
 - `templates/phase-plan.md` — output template for the phase plan

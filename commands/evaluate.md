@@ -111,6 +111,12 @@ This satisfies R012 (idempotent commands) — running `evaluate` twice with no i
 - If `scripts/lifecycle/scaffold.sh` fails, report the error and do not write partial state.
 - If `scripts/state/read-config.sh` is unavailable, proceed with auto-classification (no config override).
 
+## Gotchas
+
+- **Tier A produces zero orchestrator state**: Promotion to Tier B/C requires a fresh evaluate with `--tier` override — there is no upgrade path from existing Tier A artifacts because none exist.
+- **Re-evaluation with --force overwrites tier metadata**: If a roadmap already exists, the tier classification changes but the roadmap becomes inconsistent with the new tier's expectations. Re-run `speckit.orchestrator.roadmap` after a tier change.
+- **read-config.sh failure is non-fatal**: Falls back to auto-classification silently. If the config file has a `default_tier` override, that override will be missed — the tier may differ from what the developer expected.
+
 ## Reference Files
 
 - `scripts/state/read-config.sh` — resolves configuration values including `default_tier`

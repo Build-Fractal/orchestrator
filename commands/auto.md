@@ -364,6 +364,13 @@ If a required script is not found:
 - Release the lock
 - Exit 1
 
+## Gotchas
+
+- **Only Tier C projects can use auto mode**: Tier B uses guided dispatch via `speckit.orchestrator.dispatch`. Tier A bypasses the orchestrator entirely.
+- **Stale lock requires `resume`, not re-invocation**: Auto mode refuses to start with a stale lock — it does not auto-break it. Run `speckit.orchestrator.resume` for crash recovery to ensure no work is lost.
+- **Pause detection is checked between tasks, not during**: A `pause-requested` file created while a task is executing will not take effect until that task completes and the loop returns to Step A.
+- **DONE_WITH_CONCERNS evaluation**: Concerns affecting correctness or scope block advancement; observational concerns are noted in the task summary and the loop proceeds (US3 AS6).
+
 ## Referenced Scripts
 
 - `scripts/lifecycle/lock-manager.sh` — lock file lifecycle (create, status, break, update)

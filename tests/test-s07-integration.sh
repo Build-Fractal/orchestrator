@@ -375,6 +375,74 @@ else
 fi
 
 # ==========================================================================
+# Section 5 — Idempotency Tests (FR-066)
+# ==========================================================================
+echo ""
+echo "--- Section 5: Idempotency Tests ---"
+
+# 5a. Roadmap idempotency: roadmap.md has overwrite protection language
+ROADMAP_CMD="$PROJECT_ROOT/commands/roadmap.md"
+if grep -qi "already exists\|existing roadmap\|Overwrite" "$ROADMAP_CMD" && grep -qi "confirmation\|confirmed" "$ROADMAP_CMD"; then
+  pass "roadmap.md contains overwrite protection with confirmation language (FR-066)"
+else
+  fail "roadmap.md missing overwrite protection language — commands/roadmap.md"
+fi
+
+# 5b. Verify idempotency: verify.md has cached result language
+VERIFY_CMD="$PROJECT_ROOT/commands/verify.md"
+if grep -qi "cached\|already verified\|Cached verification" "$VERIFY_CMD"; then
+  pass "verify.md contains cached result language (FR-066)"
+else
+  fail "verify.md missing cached result language — commands/verify.md"
+fi
+
+# 5c. Verify idempotency: verify.md documents --force for re-verification
+if grep -q "\-\-force" "$VERIFY_CMD"; then
+  pass "verify.md documents --force flag for re-verification"
+else
+  fail "verify.md missing --force documentation — commands/verify.md"
+fi
+
+# 5d. Dispatch idempotency: dispatch.md has T##-SUMMARY.md skip language
+DISPATCH_CMD="$PROJECT_ROOT/commands/dispatch.md"
+if grep -q "SUMMARY.md" "$DISPATCH_CMD" && grep -qi "skip\|no-op\|skipped" "$DISPATCH_CMD"; then
+  pass "dispatch.md contains SUMMARY.md skip/no-op language (FR-066)"
+else
+  fail "dispatch.md missing SUMMARY.md skip language — commands/dispatch.md"
+fi
+
+# 5e. Scaffold idempotency: run scaffold.sh twice, md5 identical
+SCAFFOLD_SCRIPT="$PROJECT_ROOT/scripts/lifecycle/scaffold.sh"
+if [ -f "$SCAFFOLD_SCRIPT" ]; then
+  TMPDIR_IDEM=$(mktemp -d)
+
+  # First run
+  bash "$SCAFFOLD_SCRIPT" "$TMPDIR_IDEM" M001 2>/dev/null
+  first_md5=$(find "$TMPDIR_IDEM" -type f -exec md5 {} \; 2>/dev/null | sort || find "$TMPDIR_IDEM" -type f -exec md5sum {} \; 2>/dev/null | sort) || true
+
+  # Second run
+  bash "$SCAFFOLD_SCRIPT" "$TMPDIR_IDEM" M001 2>/dev/null
+  second_md5=$(find "$TMPDIR_IDEM" -type f -exec md5 {} \; 2>/dev/null | sort || find "$TMPDIR_IDEM" -type f -exec md5sum {} \; 2>/dev/null | sort) || true
+
+  if [ "$first_md5" = "$second_md5" ]; then
+    pass "scaffold.sh idempotent re-run produces identical md5 sums (FR-066)"
+  else
+    fail "scaffold.sh idempotent re-run changed files — scripts/lifecycle/scaffold.sh"
+  fi
+  rm -rf "$TMPDIR_IDEM"
+else
+  fail "scaffold.sh idempotency test — scripts/lifecycle/scaffold.sh not found"
+fi
+
+# 5f. Resume idempotency: resume.md documents safe re-callable behavior
+RESUME_CMD="$PROJECT_ROOT/commands/resume.md"
+if grep -qi "idempotency\|re-callable\|Running resume twice" "$RESUME_CMD"; then
+  pass "resume.md documents idempotency/re-callable behavior (FR-066)"
+else
+  fail "resume.md missing idempotency documentation — commands/resume.md"
+fi
+
+# ==========================================================================
 # Summary
 # ==========================================================================
 echo ""

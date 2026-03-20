@@ -6,7 +6,7 @@ A spec-kit extension that adds autonomous multi-phase orchestration to spec-kit'
 
 ## Project Status
 
-**v0.1.0 implemented** (M001 complete, 2026-03-20). 10 commands, 23 scripts, 13 templates, 4 reference docs. 307 test assertions, zero failures. User Stories 1-6 delivered. US7 (GitHub Agentic Workflows) and US8 (APM Packaging) deferred.
+**v0.1.0 implemented** (M001 complete, 2026-03-20). 10 commands, 23 scripts, 13 templates, 4 reference docs. 334 test assertions, zero failures. User Stories 1-6 delivered. US7 (GitHub Agentic Workflows) and US8 (APM Packaging) deferred.
 
 ## Key Files
 

@@ -768,6 +768,76 @@ else
 fi
 
 # ==========================================================================
+# Section 3b: Scope Filtering with Multiple Milestones (FR-062)
+# ==========================================================================
+echo ""
+echo "--- Scope Filtering Multi-Milestone ---"
+
+MULTI_SCOPE_FIXTURE="$PROJECT_ROOT/tests/fixtures/dispatch-multi-scope"
+
+if [ -f "$SCOPE_FILTER" ]; then
+  # Run scope-filter.sh with --milestone M001 scope (M001/P01 context)
+  multi_output=$(bash "$SCOPE_FILTER" "$MULTI_SCOPE_FIXTURE/KNOWLEDGE.md" M001/P01 --type knowledge 2>/dev/null) || true
+
+  # Assert: output includes all [project] entries (K001, K002, K003)
+  project_hits=0
+  for kid in K001 K002 K003; do
+    if echo "$multi_output" | grep -q "$kid"; then
+      project_hits=$((project_hits + 1))
+    fi
+  done
+  if [ "$project_hits" -eq 3 ]; then
+    pass "scope-filter.sh multi-milestone → includes all 3 [project] entries"
+  else
+    fail "scope-filter.sh multi-milestone → includes all 3 [project] entries (got $project_hits)"
+  fi
+
+  # Assert: output includes [milestone:M001] entries (K004, K005, K006)
+  m001_hits=0
+  for kid in K004 K005 K006; do
+    if echo "$multi_output" | grep -q "$kid"; then
+      m001_hits=$((m001_hits + 1))
+    fi
+  done
+  if [ "$m001_hits" -eq 3 ]; then
+    pass "scope-filter.sh multi-milestone → includes all 3 [milestone:M001] entries"
+  else
+    fail "scope-filter.sh multi-milestone → includes all 3 [milestone:M001] entries (got $m001_hits)"
+  fi
+
+  # Assert: output excludes [milestone:M002] entries (K007, K008, K009)
+  m002_hits=0
+  for kid in K007 K008 K009; do
+    if echo "$multi_output" | grep -q "$kid"; then
+      m002_hits=$((m002_hits + 1))
+    fi
+  done
+  if [ "$m002_hits" -eq 0 ]; then
+    pass "scope-filter.sh multi-milestone → excludes all 3 [milestone:M002] entries"
+  else
+    fail "scope-filter.sh multi-milestone → excludes [milestone:M002] entries (found $m002_hits)"
+  fi
+
+  # Assert: output excludes [phase:M001/P03] entries (K010, K011, K012) — P03 not current
+  p03_hits=0
+  for kid in K010 K011 K012; do
+    if echo "$multi_output" | grep -q "$kid"; then
+      p03_hits=$((p03_hits + 1))
+    fi
+  done
+  if [ "$p03_hits" -eq 0 ]; then
+    pass "scope-filter.sh multi-milestone → excludes all 3 [phase:M001/P03] entries (not current phase)"
+  else
+    fail "scope-filter.sh multi-milestone → excludes [phase:M001/P03] entries (found $p03_hits)"
+  fi
+else
+  fail "scope-filter.sh multi-milestone tests — script not found"
+  fail "scope-filter.sh multi-milestone tests — script not found"
+  fail "scope-filter.sh multi-milestone tests — script not found"
+  fail "scope-filter.sh multi-milestone tests — script not found"
+fi
+
+# ==========================================================================
 # Summary
 # ==========================================================================
 echo ""

@@ -1,0 +1,4 @@
+# Local config (orchestrator-config.local.yml)
+# Overrides project config. Gitignored, developer-specific.
+
+context_verbosity: minimal

@@ -1,0 +1,9 @@
+{
+  "pid": 999999,
+  "startedAt": "2026-03-19T10:00:00Z",
+  "unitType": "task",
+  "unitId": "M001/P01/T01",
+  "unitStartedAt": "2026-03-19T10:15:00Z",
+  "completedUnits": [],
+  "featureBranch": "feat/orchestrator"
+}

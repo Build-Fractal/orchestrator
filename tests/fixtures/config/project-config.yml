@@ -1,0 +1,5 @@
+# Project-level config (orchestrator-config.yml)
+# Overrides extension defaults. Shared via version control.
+
+context_verbosity: full
+git_isolation: true

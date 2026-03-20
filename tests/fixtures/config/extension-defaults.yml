@@ -1,0 +1,10 @@
+# Extension defaults — factory values from extension.yml defaults section
+# These are the lowest-precedence layer in config resolution.
+
+default_tier: null
+verification_commands: []
+context_verbosity: standard
+git_isolation: false
+dispatch_budget: null
+duration_budget: null
+budget_enforcement: advisory

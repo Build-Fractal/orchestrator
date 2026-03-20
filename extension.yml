@@ -4,10 +4,7 @@ extension:
   id: speckit-orchestrator
   name: Speckit Orchestrator
   version: 0.1.0
-  description: >-
-    Autonomous multi-phase orchestration for spec-kit's spec-driven development
-    workflow. Adds milestone/phase/task hierarchy, state machine dispatch, crash
-    recovery, and knowledge generation.
+  description: "Autonomous multi-phase orchestration for spec-kit's spec-driven development workflow. Adds milestone/phase/task hierarchy, state machine dispatch, crash recovery, and knowledge generation."
   author: clariti-care
   repository: https://github.com/clariti-care/spec-kit-orchestrator
   license: MIT
@@ -30,7 +27,7 @@ provides:
 
     - name: speckit.orchestrator.discuss
       file: commands/discuss.md
-      description: "Use when capturing architectural context before planning, or injecting decisions during autonomous execution."
+      description: "Use when capturing architectural decisions and constraints before roadmap generation."
 
     - name: speckit.orchestrator.roadmap
       file: commands/roadmap.md
@@ -50,7 +47,7 @@ provides:
 
     - name: speckit.orchestrator.verify
       file: commands/verify.md
-      description: "Use when running mechanical verification — per-task must-haves, per-phase two-stage review, or pre-commit static checks."
+      description: "Use when checking must-haves verification for a completed phase."
 
     - name: speckit.orchestrator.status
       file: commands/status.md
@@ -76,8 +73,6 @@ provides:
       executable: true
     - file: scripts/state/read-config.sh
       executable: true
-    - file: scripts/state/check-lock.sh
-      executable: true
     - file: scripts/dispatch/build-context.sh
       executable: true
     - file: scripts/dispatch/scope-filter.sh
@@ -92,8 +87,6 @@ provides:
       executable: true
     - file: scripts/verify/check-scope.sh
       executable: true
-    - file: scripts/verify/check-external-mods.sh
-      executable: true
     - file: scripts/knowledge/write-summary.sh
       executable: true
     - file: scripts/knowledge/append-decision.sh
@@ -104,13 +97,17 @@ provides:
       executable: true
     - file: scripts/lifecycle/scaffold.sh
       executable: true
+    - file: scripts/lifecycle/rollback-phase.sh
+      executable: true
     - file: scripts/lifecycle/mark-complete.sh
       executable: true
-    - file: scripts/lifecycle/write-lock.sh
+    - file: scripts/lifecycle/lock-manager.sh
       executable: true
-    - file: scripts/lifecycle/write-continue.sh
+    - file: scripts/lifecycle/stuck-detector.sh
       executable: true
-    - file: scripts/lifecycle/rollback-phase.sh
+    - file: scripts/lifecycle/recovery-briefing.sh
+      executable: true
+    - file: scripts/lifecycle/budget-checker.sh
       executable: true
 
 defaults:
@@ -145,13 +142,12 @@ config_schema:
     budget_enforcement:
       type: string
       enum: [advisory, enforced]
-      default: advisory
 
 hooks:
   before_tasks:
     command: speckit.orchestrator.evaluate
     optional: true
-    prompt: "Orchestration active — evaluate project scope and classify execution tier?"
+    prompt: "Evaluate project scope and classify execution tier?"
     description: "Injects phase-level context if orchestrator is active."
 
   after_tasks:
@@ -163,7 +159,7 @@ hooks:
   before_implement:
     command: speckit.orchestrator.dispatch
     optional: true
-    prompt: "Dispatch this implementation phase via orchestrator?"
+    prompt: "Dispatch this phase via orchestrator?"
     description: "Injects phase scope enforcement for current phase."
 
   after_implement:

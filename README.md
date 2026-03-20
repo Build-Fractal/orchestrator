@@ -24,13 +24,21 @@ Spec-kit excels at single-context-window development: constitution, specify, cla
 
 ## Status
 
-**Specification phase.** The spec is complete and under review. Implementation has not begun.
+**v0.1.0 — Implementation complete.** The extension is fully implemented and tested:
+
+- **10 commands** — `speckit.orchestrator.evaluate` through `speckit.orchestrator.consolidate`
+- **21 helper scripts** — state management, dispatch, verification, knowledge, lifecycle
+- **13 templates** — roadmaps, phase plans, task plans, summaries, dispatch prompts, config defaults
+- **4 reference docs** — state machine, verification ladder, tier definitions, file formats
+- **7 test suites** — structural validation (S01), state machine (S02), design artifacts (S03), core commands (S04), autonomous mode (S05), knowledge lifecycle (S06), cross-slice integration (S07)
+
+### Key references
 
 - `specs/001-speckit-orchestrator/spec.md` — full feature specification (67 FRs, 20 SCs)
 - `.specify/memory/constitution.md` — 7 governing principles
 - `.planning/research/` — deep research reports on 5 source systems
 
-## Installation (future)
+## Installation
 
 ```bash
 specify extension add speckit-orchestrator
@@ -42,20 +50,20 @@ Or via APM:
 apm install speckit-orchestrator
 ```
 
-## Commands (planned)
+## Commands
 
 | Command | Purpose |
 |---------|---------|
-| `speckit.orchestrator.evaluate` | Scope triage (Tier A/B/C) |
-| `speckit.orchestrator.discuss` | Pre-planning architectural decisions |
-| `speckit.orchestrator.roadmap` | Decompose spec into phases |
-| `speckit.orchestrator.plan-phase` | Plan one phase with must-haves |
-| `speckit.orchestrator.dispatch` | Execute one task in fresh context |
-| `speckit.orchestrator.auto` | Autonomous dispatch loop |
-| `speckit.orchestrator.verify` | Must-haves verification |
-| `speckit.orchestrator.status` | Progress dashboard |
-| `speckit.orchestrator.resume` | Crash/pause recovery |
-| `speckit.orchestrator.consolidate` | Knowledge compression and archival |
+| `speckit.orchestrator.evaluate` | Classify scope as Tier A, B, or C |
+| `speckit.orchestrator.discuss` | Capture architectural decisions before roadmap generation |
+| `speckit.orchestrator.roadmap` | Decompose spec into phases with dependency graph and boundary maps |
+| `speckit.orchestrator.plan-phase` | Plan one phase — task decomposition with must-haves |
+| `speckit.orchestrator.dispatch` | Execute one task in a fresh context with constructed payload |
+| `speckit.orchestrator.auto` | Autonomous dispatch loop until milestone completes |
+| `speckit.orchestrator.verify` | Must-haves verification for a completed phase |
+| `speckit.orchestrator.status` | Progress dashboard — completion, blockers, next action |
+| `speckit.orchestrator.resume` | Crash/pause recovery using disk state |
+| `speckit.orchestrator.consolidate` | Knowledge compression and artifact archival |
 
 ## License
 

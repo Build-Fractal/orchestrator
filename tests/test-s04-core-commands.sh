@@ -1,0 +1,562 @@
+#!/usr/bin/env bash
+# tests/test-s04-core-commands.sh — Validates all S04 core command contracts
+# Tests: verification scripts (check-must-haves, check-boundary-map, check-scope,
+#        run-commands), dispatch scripts, command markdown files, and integration.
+# Outputs structured PASS/FAIL lines per check. Exits 0 if all pass, 1 if any fail.
+# Dependencies: bash only (no declare -A, bash 3.2 compatible per K001)
+
+set -euo pipefail
+
+PASS_COUNT=0
+FAIL_COUNT=0
+TOTAL=0
+
+# Resolve project root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+pass() {
+  TOTAL=$((TOTAL + 1))
+  PASS_COUNT=$((PASS_COUNT + 1))
+  echo "PASS: $1"
+}
+
+fail() {
+  TOTAL=$((TOTAL + 1))
+  FAIL_COUNT=$((FAIL_COUNT + 1))
+  echo "FAIL: $1"
+}
+
+# ==========================================================================
+# Section 1: Verification Script Tests
+# ==========================================================================
+echo ""
+echo "--- Verification Scripts ---"
+
+CHECK_MH="$PROJECT_ROOT/scripts/verify/check-must-haves.sh"
+CHECK_BM="$PROJECT_ROOT/scripts/verify/check-boundary-map.sh"
+CHECK_SC="$PROJECT_ROOT/scripts/verify/check-scope.sh"
+RUN_CMD="$PROJECT_ROOT/scripts/verify/run-commands.sh"
+
+PASS_FIXTURE="$PROJECT_ROOT/tests/fixtures/verify-pass"
+FAIL_FIXTURE="$PROJECT_ROOT/tests/fixtures/verify-fail"
+SCOPE_FIXTURE="$PROJECT_ROOT/tests/fixtures/verify-scope"
+
+# --------------------------------------------------------------------------
+# 1.1 check-must-haves.sh — passing fixture
+# --------------------------------------------------------------------------
+
+if [ ! -f "$CHECK_MH" ]; then
+  fail "check-must-haves.sh exists (script not found)"
+else
+  output=$(bash "$CHECK_MH" "$PASS_FIXTURE/phases/P01" 2>/dev/null) && exit_code=0 || exit_code=$?
+  if [ "$exit_code" -eq 0 ]; then
+    pass "check-must-haves.sh verify-pass fixture → all PASS (exit 0)"
+  else
+    fail "check-must-haves.sh verify-pass fixture → all PASS (exit $exit_code, output: $output)"
+  fi
+
+  # Verify no FAIL lines in output
+  fail_lines=$(echo "$output" | grep -c "^FAIL:" || true)
+  if [ "$fail_lines" -eq 0 ]; then
+    pass "check-must-haves.sh verify-pass fixture → zero FAIL lines"
+  else
+    fail "check-must-haves.sh verify-pass fixture → zero FAIL lines (got $fail_lines)"
+  fi
+fi
+
+# --------------------------------------------------------------------------
+# 1.2 check-must-haves.sh — failing fixture
+# --------------------------------------------------------------------------
+
+if [ ! -f "$CHECK_MH" ]; then
+  fail "check-must-haves.sh verify-fail fixture (script not found)"
+else
+  output=$(bash "$CHECK_MH" "$FAIL_FIXTURE/phases/P01" 2>/dev/null) && exit_code=0 || exit_code=$?
+  if [ "$exit_code" -ne 0 ]; then
+    pass "check-must-haves.sh verify-fail fixture → non-zero exit ($exit_code)"
+  else
+    fail "check-must-haves.sh verify-fail fixture → non-zero exit (got exit 0)"
+  fi
+
+  # Must have at least one FAIL line
+  fail_lines=$(echo "$output" | grep -c "^FAIL:" || true)
+  if [ "$fail_lines" -gt 0 ]; then
+    pass "check-must-haves.sh verify-fail fixture → at least one FAIL line ($fail_lines found)"
+  else
+    fail "check-must-haves.sh verify-fail fixture → at least one FAIL line (none found)"
+  fi
+fi
+
+# --------------------------------------------------------------------------
+# 1.3 check-must-haves.sh — failure diagnostics (specific artifact name in output)
+# --------------------------------------------------------------------------
+
+if [ ! -f "$CHECK_MH" ]; then
+  fail "check-must-haves.sh failure diagnostics (script not found)"
+else
+  output=$(bash "$CHECK_MH" "$FAIL_FIXTURE/phases/P01" 2>/dev/null) || true
+  # The failing fixture has a missing "scripts/missing-script.sh" — check it's named in output
+  if echo "$output" | grep "FAIL" | grep -q "missing-script.sh"; then
+    pass "check-must-haves.sh failure output names specific missing artifact (missing-script.sh)"
+  else
+    fail "check-must-haves.sh failure output names specific missing artifact (missing-script.sh not found in FAIL lines)"
+  fi
+fi
+
+# --------------------------------------------------------------------------
+# 1.4 check-must-haves.sh — missing arguments error path
+# --------------------------------------------------------------------------
+
+if [ ! -f "$CHECK_MH" ]; then
+  fail "check-must-haves.sh missing args → non-zero exit + stderr (script not found)"
+else
+  stderr_output=$(bash "$CHECK_MH" 2>&1 1>/dev/null) && exit_code=$? || exit_code=$?
+  if [ "$exit_code" -ne 0 ] && [ -n "$stderr_output" ]; then
+    pass "check-must-haves.sh missing args → non-zero exit + stderr"
+  else
+    fail "check-must-haves.sh missing args → non-zero exit + stderr (exit=$exit_code, stderr='$stderr_output')"
+  fi
+fi
+
+# --------------------------------------------------------------------------
+# 1.5 check-boundary-map.sh — passing fixture
+# --------------------------------------------------------------------------
+
+if [ ! -f "$CHECK_BM" ]; then
+  fail "check-boundary-map.sh verify-pass fixture (script not found)"
+else
+  output=$(bash "$CHECK_BM" "$PASS_FIXTURE/M001-ROADMAP.md" P01 2>/dev/null) && exit_code=0 || exit_code=$?
+  if [ "$exit_code" -eq 0 ]; then
+    pass "check-boundary-map.sh verify-pass fixture → all PASS (exit 0)"
+  else
+    fail "check-boundary-map.sh verify-pass fixture → all PASS (exit $exit_code, output: $output)"
+  fi
+fi
+
+# --------------------------------------------------------------------------
+# 1.6 check-boundary-map.sh — failing fixture
+# --------------------------------------------------------------------------
+
+if [ ! -f "$CHECK_BM" ]; then
+  fail "check-boundary-map.sh verify-fail fixture (script not found)"
+else
+  output=$(bash "$CHECK_BM" "$FAIL_FIXTURE/M001-ROADMAP.md" P01 2>/dev/null) && exit_code=0 || exit_code=$?
+  if [ "$exit_code" -ne 0 ]; then
+    pass "check-boundary-map.sh verify-fail fixture → non-zero exit (missing produce item)"
+  else
+    fail "check-boundary-map.sh verify-fail fixture → non-zero exit (got exit 0)"
+  fi
+
+  fail_lines=$(echo "$output" | grep -c "^FAIL:" || true)
+  if [ "$fail_lines" -gt 0 ]; then
+    pass "check-boundary-map.sh verify-fail fixture → at least one FAIL line"
+  else
+    fail "check-boundary-map.sh verify-fail fixture → at least one FAIL line (none found)"
+  fi
+fi
+
+# --------------------------------------------------------------------------
+# 1.7 check-boundary-map.sh — missing arguments error path
+# --------------------------------------------------------------------------
+
+if [ ! -f "$CHECK_BM" ]; then
+  fail "check-boundary-map.sh missing args → non-zero exit + stderr (script not found)"
+else
+  stderr_output=$(bash "$CHECK_BM" 2>&1 1>/dev/null) && exit_code=$? || exit_code=$?
+  if [ "$exit_code" -ne 0 ] && [ -n "$stderr_output" ]; then
+    pass "check-boundary-map.sh missing args → non-zero exit + stderr"
+  else
+    fail "check-boundary-map.sh missing args → non-zero exit + stderr (exit=$exit_code)"
+  fi
+fi
+
+# --------------------------------------------------------------------------
+# 1.8 check-scope.sh — in-scope files → no warnings
+# --------------------------------------------------------------------------
+
+if [ ! -f "$CHECK_SC" ]; then
+  fail "check-scope.sh in-scope files (script not found)"
+else
+  output=$(bash "$CHECK_SC" "$SCOPE_FIXTURE/phases/P01/P01-PLAN.md" --files "scripts/in-scope.sh,docs/in-scope.md" 2>/dev/null)
+  warn_lines=$(echo "$output" | grep -c "^WARN:" || true)
+  if [ "$warn_lines" -eq 0 ]; then
+    pass "check-scope.sh in-scope files → no warnings"
+  else
+    fail "check-scope.sh in-scope files → no warnings (got $warn_lines warnings)"
+  fi
+fi
+
+# --------------------------------------------------------------------------
+# 1.9 check-scope.sh — out-of-scope files → warnings reported
+# --------------------------------------------------------------------------
+
+if [ ! -f "$CHECK_SC" ]; then
+  fail "check-scope.sh out-of-scope files (script not found)"
+else
+  output=$(bash "$CHECK_SC" "$SCOPE_FIXTURE/phases/P01/P01-PLAN.md" --files "scripts/in-scope.sh,unauthorized.txt" 2>/dev/null)
+  warn_lines=$(echo "$output" | grep -c "^WARN:" || true)
+  if [ "$warn_lines" -gt 0 ]; then
+    pass "check-scope.sh out-of-scope files → warnings reported ($warn_lines)"
+  else
+    fail "check-scope.sh out-of-scope files → warnings reported (no WARN lines)"
+  fi
+
+  # Verify the specific out-of-scope file is named
+  if echo "$output" | grep "WARN" | grep -q "unauthorized.txt"; then
+    pass "check-scope.sh out-of-scope output names specific file (unauthorized.txt)"
+  else
+    fail "check-scope.sh out-of-scope output names specific file (unauthorized.txt not in WARN)"
+  fi
+fi
+
+# --------------------------------------------------------------------------
+# 1.10 check-scope.sh — missing arguments error path
+# --------------------------------------------------------------------------
+
+if [ ! -f "$CHECK_SC" ]; then
+  fail "check-scope.sh missing args → non-zero exit + stderr (script not found)"
+else
+  stderr_output=$(bash "$CHECK_SC" 2>&1 1>/dev/null) && exit_code=$? || exit_code=$?
+  if [ "$exit_code" -ne 0 ] && [ -n "$stderr_output" ]; then
+    pass "check-scope.sh missing args → non-zero exit + stderr"
+  else
+    fail "check-scope.sh missing args → non-zero exit + stderr (exit=$exit_code)"
+  fi
+fi
+
+# --------------------------------------------------------------------------
+# 1.11 run-commands.sh — passing commands
+# --------------------------------------------------------------------------
+
+if [ ! -f "$RUN_CMD" ]; then
+  fail "run-commands.sh passing command (script not found)"
+else
+  output=$(bash "$RUN_CMD" "echo hello" 2>/dev/null) && exit_code=0 || exit_code=$?
+  if [ "$exit_code" -eq 0 ] && echo "$output" | grep -q "^PASS:"; then
+    pass "run-commands.sh passing command → PASS (exit 0)"
+  else
+    fail "run-commands.sh passing command → PASS (exit=$exit_code, output: $output)"
+  fi
+fi
+
+# --------------------------------------------------------------------------
+# 1.12 run-commands.sh — failing command
+# --------------------------------------------------------------------------
+
+if [ ! -f "$RUN_CMD" ]; then
+  fail "run-commands.sh failing command (script not found)"
+else
+  output=$(bash "$RUN_CMD" "false" 2>/dev/null) && exit_code=0 || exit_code=$?
+  if [ "$exit_code" -ne 0 ] && echo "$output" | grep -q "^FAIL:"; then
+    pass "run-commands.sh failing command → FAIL (exit $exit_code)"
+  else
+    fail "run-commands.sh failing command → FAIL (exit=$exit_code, output: $output)"
+  fi
+fi
+
+# --------------------------------------------------------------------------
+# 1.13 run-commands.sh — no commands → SKIP
+# --------------------------------------------------------------------------
+
+if [ ! -f "$RUN_CMD" ]; then
+  fail "run-commands.sh no commands → SKIP (script not found)"
+else
+  output=$(bash "$RUN_CMD" 2>/dev/null) && exit_code=0 || exit_code=$?
+  if [ "$exit_code" -eq 0 ] && echo "$output" | grep -q "^SKIP:"; then
+    pass "run-commands.sh no commands → SKIP (exit 0)"
+  else
+    fail "run-commands.sh no commands → SKIP (exit=$exit_code, output: $output)"
+  fi
+fi
+
+# ==========================================================================
+# Section 2: Dispatch Script Tests
+# ==========================================================================
+echo ""
+echo "--- Dispatch Scripts ---"
+
+SCOPE_FILTER="$PROJECT_ROOT/scripts/dispatch/scope-filter.sh"
+DETECT_CAP="$PROJECT_ROOT/scripts/dispatch/detect-capabilities.sh"
+BUILD_CTX="$PROJECT_ROOT/scripts/dispatch/build-context.sh"
+
+DISPATCH_FIXTURE="$PROJECT_ROOT/tests/fixtures/dispatch-state"
+
+# --------------------------------------------------------------------------
+# 2.1 scope-filter.sh — knowledge filter includes [project] and [milestone:M001]
+# --------------------------------------------------------------------------
+
+if [ ! -f "$SCOPE_FILTER" ]; then
+  fail "scope-filter.sh knowledge filter (script not found)"
+else
+  output=$(bash "$SCOPE_FILTER" "$DISPATCH_FIXTURE/KNOWLEDGE.md" M001/P02 --type knowledge 2>/dev/null)
+  # Should include K001 ([project]) and K002 ([milestone:M001])
+  has_project=$(echo "$output" | grep -c "K001" || true)
+  has_milestone=$(echo "$output" | grep -c "K002" || true)
+  has_p03=$(echo "$output" | grep -c "K003" || true)
+  if [ "$has_project" -gt 0 ] && [ "$has_milestone" -gt 0 ] && [ "$has_p03" -eq 0 ]; then
+    pass "scope-filter.sh knowledge → includes [project]+[milestone:M001], excludes [phase:M001/P03]"
+  else
+    fail "scope-filter.sh knowledge → includes [project]+[milestone:M001], excludes [phase:M001/P03] (project=$has_project, milestone=$has_milestone, p03=$has_p03)"
+  fi
+fi
+
+# --------------------------------------------------------------------------
+# 2.2 scope-filter.sh — decisions filter includes P01+P02+arch, excludes P03 non-arch
+# --------------------------------------------------------------------------
+
+if [ ! -f "$SCOPE_FILTER" ]; then
+  fail "scope-filter.sh decisions filter (script not found)"
+else
+  output=$(bash "$SCOPE_FILTER" "$DISPATCH_FIXTURE/DECISIONS.md" M001/P02 --type decisions --depends P01 2>/dev/null)
+  has_d001=$(echo "$output" | grep -c "D001" || true)
+  has_d002=$(echo "$output" | grep -c "D002" || true)
+  has_d003=$(echo "$output" | grep -c "D003" || true)
+  has_d004=$(echo "$output" | grep -c "D004" || true)
+  if [ "$has_d001" -gt 0 ] && [ "$has_d002" -gt 0 ] && [ "$has_d003" -gt 0 ] && [ "$has_d004" -eq 0 ]; then
+    pass "scope-filter.sh decisions → includes P01+P02+arch, excludes P03 convention"
+  else
+    fail "scope-filter.sh decisions → includes P01+P02+arch, excludes P03 convention (d1=$has_d001, d2=$has_d002, d3=$has_d003, d4=$has_d004)"
+  fi
+fi
+
+# --------------------------------------------------------------------------
+# 2.3 scope-filter.sh — nonexistent file → exit 0, empty output
+# --------------------------------------------------------------------------
+
+if [ ! -f "$SCOPE_FILTER" ]; then
+  fail "scope-filter.sh nonexistent file (script not found)"
+else
+  output=$(bash "$SCOPE_FILTER" "/tmp/nonexistent-file-$$.md" M001/P02 --type knowledge 2>/dev/null) && exit_code=0 || exit_code=$?
+  if [ "$exit_code" -eq 0 ] && [ -z "$output" ]; then
+    pass "scope-filter.sh nonexistent file → exit 0, empty output"
+  else
+    fail "scope-filter.sh nonexistent file → exit 0, empty output (exit=$exit_code, output='$output')"
+  fi
+fi
+
+# --------------------------------------------------------------------------
+# 2.4 scope-filter.sh — missing arguments → exit 1 + stderr
+# --------------------------------------------------------------------------
+
+if [ ! -f "$SCOPE_FILTER" ]; then
+  fail "scope-filter.sh missing args (script not found)"
+else
+  stderr_output=$(bash "$SCOPE_FILTER" 2>&1 1>/dev/null) && exit_code=$? || exit_code=$?
+  if [ "$exit_code" -ne 0 ] && [ -n "$stderr_output" ]; then
+    pass "scope-filter.sh missing args → non-zero exit + stderr"
+  else
+    fail "scope-filter.sh missing args → non-zero exit + stderr (exit=$exit_code)"
+  fi
+fi
+
+# --------------------------------------------------------------------------
+# 2.5 detect-capabilities.sh — outputs key=value including shell_execution=true
+# --------------------------------------------------------------------------
+
+if [ ! -f "$DETECT_CAP" ]; then
+  fail "detect-capabilities.sh key=value output (script not found)"
+else
+  output=$(bash "$DETECT_CAP" 2>/dev/null) && exit_code=0 || exit_code=$?
+  has_shell=$(echo "$output" | grep -c "shell_execution=true" || true)
+  has_runtime=$(echo "$output" | grep -c "runtime=" || true)
+  if [ "$exit_code" -eq 0 ] && [ "$has_shell" -gt 0 ] && [ "$has_runtime" -gt 0 ]; then
+    pass "detect-capabilities.sh → key=value output with shell_execution=true and runtime="
+  else
+    fail "detect-capabilities.sh → key=value output (exit=$exit_code, shell=$has_shell, runtime=$has_runtime)"
+  fi
+fi
+
+# --------------------------------------------------------------------------
+# 2.6 build-context.sh — assembles payload from fixture state
+# --------------------------------------------------------------------------
+
+if [ ! -f "$BUILD_CTX" ]; then
+  fail "build-context.sh payload assembly (script not found)"
+else
+  output=$(bash "$BUILD_CTX" "$DISPATCH_FIXTURE" M001 P02 T01 2>/dev/null) && exit_code=0 || exit_code=$?
+  # Check payload is non-empty and contains task plan content
+  has_task=$(echo "$output" | grep -c "Implement dispatch scripts" || true)
+  has_state=$(echo "$output" | grep -c "Current State" || true)
+  has_tier=$(echo "$output" | grep -c "Tier" || true)
+  if [ "$exit_code" -eq 0 ] && [ -n "$output" ] && [ "$has_task" -gt 0 ] && [ "$has_state" -gt 0 ]; then
+    pass "build-context.sh fixture → non-empty payload with task plan content"
+  else
+    fail "build-context.sh fixture → non-empty payload (exit=$exit_code, task=$has_task, state=$has_state)"
+  fi
+fi
+
+# --------------------------------------------------------------------------
+# 2.7 build-context.sh — missing task plan → exit 1 + stderr
+# --------------------------------------------------------------------------
+
+if [ ! -f "$BUILD_CTX" ]; then
+  fail "build-context.sh missing task plan (script not found)"
+else
+  stderr_output=$(bash "$BUILD_CTX" "$DISPATCH_FIXTURE" M001 P02 T99 2>&1 1>/dev/null) && exit_code=$? || exit_code=$?
+  if [ "$exit_code" -ne 0 ] && echo "$stderr_output" | grep -q "task plan not found"; then
+    pass "build-context.sh missing task plan → exit 1 + descriptive stderr"
+  else
+    fail "build-context.sh missing task plan → exit 1 + stderr (exit=$exit_code, stderr='$stderr_output')"
+  fi
+fi
+
+# --------------------------------------------------------------------------
+# 2.8 build-context.sh — reports context budget to stderr
+# --------------------------------------------------------------------------
+
+if [ ! -f "$BUILD_CTX" ]; then
+  fail "build-context.sh context budget reporting (script not found)"
+else
+  stderr_output=$(bash "$BUILD_CTX" "$DISPATCH_FIXTURE" M001 P02 T01 2>&1 1>/dev/null) && exit_code=$? || exit_code=$?
+  if echo "$stderr_output" | grep -q "Context payload:.*bytes"; then
+    pass "build-context.sh → reports context budget to stderr"
+  else
+    fail "build-context.sh → reports context budget to stderr (stderr='$stderr_output')"
+  fi
+fi
+
+# --------------------------------------------------------------------------
+# 2.9 build-context.sh — missing arguments → exit 1 + stderr
+# --------------------------------------------------------------------------
+
+if [ ! -f "$BUILD_CTX" ]; then
+  fail "build-context.sh missing args (script not found)"
+else
+  stderr_output=$(bash "$BUILD_CTX" 2>&1 1>/dev/null) && exit_code=$? || exit_code=$?
+  if [ "$exit_code" -ne 0 ] && [ -n "$stderr_output" ]; then
+    pass "build-context.sh missing args → non-zero exit + stderr"
+  else
+    fail "build-context.sh missing args → non-zero exit + stderr (exit=$exit_code)"
+  fi
+fi
+
+# ==========================================================================
+# Section 3: Integration Tests — Command Files + Cross-References
+# ==========================================================================
+echo ""
+echo "--- Integration Tests ---"
+
+# The 6 core S04 commands
+COMMANDS="evaluate roadmap plan-phase dispatch verify status"
+
+# --------------------------------------------------------------------------
+# 3.1 All 6 command files exist and are not placeholder
+# --------------------------------------------------------------------------
+
+for cmd in $COMMANDS; do
+  cmd_file="$PROJECT_ROOT/commands/${cmd}.md"
+  if [ ! -f "$cmd_file" ]; then
+    fail "commands/${cmd}.md exists"
+  elif grep -q "Placeholder" "$cmd_file"; then
+    fail "commands/${cmd}.md has no Placeholder text"
+  else
+    pass "commands/${cmd}.md exists and has no Placeholder text"
+  fi
+done
+
+# --------------------------------------------------------------------------
+# 3.2 All 6 command files have YAML frontmatter
+# --------------------------------------------------------------------------
+
+for cmd in $COMMANDS; do
+  cmd_file="$PROJECT_ROOT/commands/${cmd}.md"
+  if [ ! -f "$cmd_file" ]; then
+    fail "commands/${cmd}.md has YAML frontmatter (file not found)"
+  else
+    first_line=$(head -1 "$cmd_file")
+    if [ "$first_line" = "---" ]; then
+      pass "commands/${cmd}.md has YAML frontmatter"
+    else
+      fail "commands/${cmd}.md has YAML frontmatter (first line: '$first_line')"
+    fi
+  fi
+done
+
+# --------------------------------------------------------------------------
+# 3.3 All 7 helper scripts exist and are executable
+# --------------------------------------------------------------------------
+
+VERIFY_SCRIPTS="check-must-haves.sh check-boundary-map.sh check-scope.sh run-commands.sh"
+DISPATCH_SCRIPTS="scope-filter.sh detect-capabilities.sh build-context.sh"
+
+for script in $VERIFY_SCRIPTS; do
+  script_path="$PROJECT_ROOT/scripts/verify/$script"
+  if [ -f "$script_path" ] && [ -x "$script_path" ]; then
+    pass "scripts/verify/$script exists and is executable"
+  elif [ -f "$script_path" ]; then
+    fail "scripts/verify/$script is executable (file exists but not executable)"
+  else
+    fail "scripts/verify/$script exists (not found)"
+  fi
+done
+
+for script in $DISPATCH_SCRIPTS; do
+  script_path="$PROJECT_ROOT/scripts/dispatch/$script"
+  if [ -f "$script_path" ] && [ -x "$script_path" ]; then
+    pass "scripts/dispatch/$script exists and is executable"
+  elif [ -f "$script_path" ]; then
+    fail "scripts/dispatch/$script is executable (file exists but not executable)"
+  else
+    fail "scripts/dispatch/$script exists (not found)"
+  fi
+done
+
+# --------------------------------------------------------------------------
+# 3.4 Cross-reference validation — commands reference their helper scripts/templates
+# --------------------------------------------------------------------------
+
+# verify.md references check-must-haves
+if grep -q "check-must-haves" "$PROJECT_ROOT/commands/verify.md"; then
+  pass "verify.md references check-must-haves"
+else
+  fail "verify.md references check-must-haves"
+fi
+
+# dispatch.md references build-context
+if grep -q "build-context" "$PROJECT_ROOT/commands/dispatch.md"; then
+  pass "dispatch.md references build-context"
+else
+  fail "dispatch.md references build-context"
+fi
+
+# evaluate.md references scaffold.sh
+if grep -q "scaffold" "$PROJECT_ROOT/commands/evaluate.md"; then
+  pass "evaluate.md references scaffold"
+else
+  fail "evaluate.md references scaffold"
+fi
+
+# roadmap.md references roadmap template
+if grep -q "templates/roadmap" "$PROJECT_ROOT/commands/roadmap.md"; then
+  pass "roadmap.md references templates/roadmap"
+else
+  fail "roadmap.md references templates/roadmap"
+fi
+
+# plan-phase.md references phase-plan template
+if grep -q "templates/phase-plan" "$PROJECT_ROOT/commands/plan-phase.md"; then
+  pass "plan-phase.md references templates/phase-plan"
+else
+  fail "plan-phase.md references templates/phase-plan"
+fi
+
+# status.md references derive-phase
+if grep -q "derive-phase" "$PROJECT_ROOT/commands/status.md"; then
+  pass "status.md references derive-phase"
+else
+  fail "status.md references derive-phase"
+fi
+
+# ==========================================================================
+# Summary
+# ==========================================================================
+echo ""
+echo "$PASS_COUNT/$TOTAL checks passed"
+
+if [ "$FAIL_COUNT" -gt 0 ]; then
+  echo "$FAIL_COUNT checks FAILED"
+  exit 1
+fi
+
+exit 0

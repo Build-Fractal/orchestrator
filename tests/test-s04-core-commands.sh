@@ -511,6 +511,146 @@ else
 fi
 
 # ==========================================================================
+# Section 2b: Tier A Evaluate Command Content Tests (FR-001, FR-003)
+# ==========================================================================
+echo ""
+echo "--- Tier A Evaluate Content ---"
+
+EVALUATE_CMD="$PROJECT_ROOT/commands/evaluate.md"
+
+# Assert: evaluate.md contains "Tier A" routing to standard spec-kit
+if grep -q "Tier A" "$EVALUATE_CMD" && grep -q "standard spec-kit" "$EVALUATE_CMD"; then
+  pass "evaluate.md contains Tier A routing to standard spec-kit"
+else
+  fail "evaluate.md contains Tier A routing to standard spec-kit"
+fi
+
+# Assert: evaluate.md contains "no orchestrator" or "zero additional" or "Do NOT create" language
+if grep -qi "no orchestrator\|Do NOT create\|no additional files" "$EVALUATE_CMD"; then
+  pass "evaluate.md contains no-orchestrator language for Tier A"
+else
+  fail "evaluate.md contains no-orchestrator language for Tier A"
+fi
+
+# ==========================================================================
+# Section 2c: Boundary Map Contract Violation Tests (FR-008)
+# ==========================================================================
+echo ""
+echo "--- Boundary Map Contract Violation ---"
+
+BOUNDARY_FAIL_FIXTURE="$PROJECT_ROOT/tests/fixtures/verify-boundary-fail"
+
+# Assert: check-boundary-map.sh on verify-boundary-fail fixture → FAIL for missing src/api.ts
+if [ -f "$CHECK_BM" ]; then
+  output=$(bash "$CHECK_BM" "$BOUNDARY_FAIL_FIXTURE/M001-ROADMAP.md" P01 --root "$BOUNDARY_FAIL_FIXTURE" 2>/dev/null) && exit_code=0 || exit_code=$?
+  if [ "$exit_code" -eq 1 ]; then
+    pass "check-boundary-map.sh verify-boundary-fail → exit 1 (missing produce item)"
+  else
+    fail "check-boundary-map.sh verify-boundary-fail → exit 1 (got exit $exit_code)"
+  fi
+
+  fail_lines=$(echo "$output" | grep -c "^FAIL:" || true)
+  if [ "$fail_lines" -gt 0 ]; then
+    pass "check-boundary-map.sh verify-boundary-fail → FAIL line for missing contract"
+  else
+    fail "check-boundary-map.sh verify-boundary-fail → FAIL line (none found)"
+  fi
+
+  # Verify the specific missing item is named
+  if echo "$output" | grep "FAIL" | grep -q "src/api.ts"; then
+    pass "check-boundary-map.sh verify-boundary-fail → names missing src/api.ts"
+  else
+    fail "check-boundary-map.sh verify-boundary-fail → names missing src/api.ts"
+  fi
+else
+  fail "check-boundary-map.sh verify-boundary-fail tests (script not found)"
+  fail "check-boundary-map.sh verify-boundary-fail tests (script not found)"
+  fail "check-boundary-map.sh verify-boundary-fail tests (script not found)"
+fi
+
+# ==========================================================================
+# Section 2d: External Modification Detection Test (FR-064)
+# ==========================================================================
+echo ""
+echo "--- External Modification Detection ---"
+
+if [ -f "$CHECK_EM" ]; then
+  # Create a temporary git repo for this test
+  TMPDIR_EXTMOD=$(mktemp -d)
+  extmod_ok=true
+
+  # Initialize repo with an initial commit
+  (cd "$TMPDIR_EXTMOD" && git init -q && echo "initial" > file.txt && git add file.txt && git commit -q -m "init") 2>/dev/null
+
+  # Record the initial tree hash (commit hash)
+  INITIAL_HASH=$(cd "$TMPDIR_EXTMOD" && git rev-parse HEAD)
+
+  # Modify a file and commit
+  (cd "$TMPDIR_EXTMOD" && echo "modified" > file.txt && git add file.txt && git commit -q -m "external change") 2>/dev/null
+
+  # Create lock file with phase_start_tree pointing to initial commit
+  # Multi-line JSON format required for json_field parser
+  TMPLOCK_EXTMOD="$TMPDIR_EXTMOD/test.lock"
+  cat > "$TMPLOCK_EXTMOD" <<LOCKEOF
+{
+  "pid": 1,
+  "phase_start_tree": "$INITIAL_HASH"
+}
+LOCKEOF
+
+  # Run check-external-mods.sh from within the temp git repo
+  output=$(cd "$TMPDIR_EXTMOD" && bash "$CHECK_EM" "$TMPLOCK_EXTMOD" 2>/dev/null) && exit_code=0 || exit_code=$?
+
+  # Assert: output contains WARN
+  if echo "$output" | grep -q "^WARN:"; then
+    pass "check-external-mods.sh detects modification (WARN output)"
+  else
+    fail "check-external-mods.sh detects modification (output: $output)"
+  fi
+
+  # Assert: exit code is 2
+  if [ "$exit_code" -eq 2 ]; then
+    pass "check-external-mods.sh external mods → exit 2"
+  else
+    fail "check-external-mods.sh external mods → exit 2 (got exit $exit_code)"
+  fi
+
+  # Clean up
+  rm -rf "$TMPDIR_EXTMOD"
+else
+  fail "check-external-mods.sh external mod detection (script not found)"
+  fail "check-external-mods.sh external mod detection (script not found)"
+fi
+
+# ==========================================================================
+# Section 2e: Build Context Payload Ratio Test (SC-002)
+# ==========================================================================
+echo ""
+echo "--- Build Context Payload Ratio ---"
+
+if [ -f "$BUILD_CTX" ]; then
+  stderr_output=$(bash "$BUILD_CTX" "$DISPATCH_FIXTURE" M001 P02 T01 2>&1 1>/dev/null) && exit_code=$? || exit_code=$?
+
+  # Assert: stderr contains a percentage
+  if echo "$stderr_output" | grep -qE '[0-9]+%'; then
+    pass "build-context.sh stderr reports percentage"
+  else
+    fail "build-context.sh stderr reports percentage (stderr: '$stderr_output')"
+  fi
+
+  # Assert: percentage is less than 100% (payload is subset of total)
+  pct=$(echo "$stderr_output" | grep -oE '[0-9]+%' | head -1 | tr -d '%')
+  if [ -n "$pct" ] && [ "$pct" -lt 100 ]; then
+    pass "build-context.sh payload ratio < 100% (${pct}%)"
+  else
+    fail "build-context.sh payload ratio < 100% (got: ${pct:-empty}%)"
+  fi
+else
+  fail "build-context.sh payload ratio tests (script not found)"
+  fail "build-context.sh payload ratio tests (script not found)"
+fi
+
+# ==========================================================================
 # Section 3: Integration Tests — Command Files + Cross-References
 # ==========================================================================
 echo ""

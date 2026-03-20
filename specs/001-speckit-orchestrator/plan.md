@@ -153,6 +153,30 @@ tests/                                 # Integration tests
 
 **Source vs Installed Layout**: The `templates/` and `references/` directories at the repo root are the source layout. After `specify extension add` or `apm install`, these are deployed to `.specify/extensions/orchestrator/templates/` and `.specify/extensions/orchestrator/references/`. FR-074's template resolution stack applies to the installed location. The source layout mirrors the installed layout — no path transformation occurs during deployment.
 
+### M001 Implementation Drift (post-implementation annotation)
+
+**Scripts renamed/consolidated** (plan → actual):
+- `scripts/state/check-lock.sh` → `scripts/lifecycle/lock-manager.sh` (broader scope: create/status/break/update with PID liveness)
+- `scripts/lifecycle/write-lock.sh` → absorbed into `lock-manager.sh`
+- `scripts/lifecycle/write-continue.sh` → handled by command-level instructions (no separate script)
+
+**Scripts added** (not in plan tree, required by spec):
+- `scripts/lifecycle/stuck-detector.sh` — dispatch-twice-without-completion detection (FR-021)
+- `scripts/lifecycle/recovery-briefing.sh` — crash recovery context synthesis (FR-022)
+- `scripts/lifecycle/budget-checker.sh` — dispatch count and duration budget enforcement (FR-044)
+
+**Scripts deferred**:
+- `scripts/verify/check-external-mods.sh` — planned but not built in M001; implement when external modification detection becomes needed
+
+**Test organization**: Plan listed per-feature test files (test-scaffold.sh, test-state-derivation.sh, etc.) → actual uses per-slice organization (test-s01 through test-s07) with section-based grouping within each suite. 294 total assertions across 7 suites.
+
+**Files deferred to future milestones** (P7/P8 scope):
+- `apm.yml`, `SKILL.md`, `.extensionignore` — APM packaging
+- `orchestrator-config.yml`, `orchestrator-config.local.yml` — created by users, not shipped
+- `docs/getting-started.md`, `docs/configuration.md` — documentation
+
+**Final script count**: 21 (plan estimated ~20).
+
 ## Architecture Decisions (from Conversus Process)
 
 These 8 decisions represent unanimous convergence across all 3 tool perspectives (APM, spec-kit, gh-aw) after 15 review artifacts and 3 iterations:

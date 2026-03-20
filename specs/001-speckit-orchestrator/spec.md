@@ -2,7 +2,7 @@
 
 **Feature Branch**: `001-speckit-orchestrator`
 **Created**: 2026-03-18
-**Status**: Draft
+**Status**: Implemented (M001 — v0.1.0, 2026-03-20). US1-US6 delivered. US7 (GitHub Agentic Workflows) and US8 (APM Packaging) deferred to future milestones.
 **Input**: Build a spec-kit extension that adds autonomous multi-phase orchestration to spec-kit's spec-driven development workflow.
 
 ## User Scenarios & Testing *(mandatory)*

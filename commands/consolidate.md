@@ -105,6 +105,22 @@ Report the following to the developer:
    - KNOWLEDGE.md
 4. **Archive location**: e.g., "Archived originals available at `<milestone-dir>/archive/`"
 
+### Step 6 — Merge Worktree (if applicable)
+
+If git worktree isolation was used during execution (FR-075), merge the worktree branch back:
+
+1. Detect worktree: check if `.worktrees/<M###>` exists
+2. If present:
+   ```bash
+   git checkout <feature-branch>
+   git merge orchestrator/<M###> --no-ff -m "Merge orchestrator/<M###> into <feature-branch>"
+   git worktree remove .worktrees/<M###>
+   git branch -d orchestrator/<M###>
+   ```
+3. If not present, skip this step silently (worktree isolation was not used)
+
+This step is idempotent — if the worktree was already removed, the commands gracefully skip.
+
 ## Idempotency
 
 Running consolidate twice is safe:

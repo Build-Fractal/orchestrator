@@ -87,6 +87,8 @@ provides:
       executable: true
     - file: scripts/verify/check-scope.sh
       executable: true
+    - file: scripts/verify/check-external-mods.sh
+      executable: true
     - file: scripts/knowledge/write-summary.sh
       executable: true
     - file: scripts/knowledge/append-decision.sh
@@ -108,6 +110,8 @@ provides:
     - file: scripts/lifecycle/recovery-briefing.sh
       executable: true
     - file: scripts/lifecycle/budget-checker.sh
+      executable: true
+    - file: scripts/util/json-field.sh
       executable: true
 
 defaults:

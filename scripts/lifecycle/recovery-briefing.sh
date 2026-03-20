@@ -36,18 +36,8 @@ iso_timestamp() {
   date -u '+%Y-%m-%dT%H:%M:%SZ'
 }
 
-# --- Helper: Read a JSON field value (simple grep-based, no jq required) ---
-json_field() {
-  local file="$1"
-  local key="$2"
-  grep "\"${key}\"" "$file" 2>/dev/null \
-    | head -1 \
-    | sed 's/.*"'"$key"'"[[:space:]]*:[[:space:]]*//' \
-    | sed 's/^"//' \
-    | sed 's/"[[:space:]]*,*[[:space:]]*$//' \
-    | sed 's/,*[[:space:]]*$//' \
-    | sed 's/[[:space:]]*$//'
-}
+# --- Helper: Read a JSON field value (shared utility, no jq required) ---
+source "$SCRIPT_DIR/../util/json-field.sh"
 
 # --- Detect milestone ID ---
 MILESTONE_ID="$(basename "$MILESTONE_DIR")"
@@ -91,6 +81,16 @@ if [[ -f "$LOCK_FILE" ]]; then
     else
       lock_pid_status="dead"
     fi
+  fi
+fi
+
+# --- Detect git worktrees (FR-075) ---
+worktree_info=""
+if command -v git >/dev/null 2>&1; then
+  worktree_list=$(git worktree list --porcelain 2>/dev/null | grep "^worktree " | grep -v "$(git rev-parse --show-toplevel 2>/dev/null)" || true)
+  if [[ -n "$worktree_list" ]]; then
+    worktree_info="Active worktrees detected:
+$(echo "$worktree_list" | sed 's/^worktree /- /')"
   fi
 fi
 
@@ -201,4 +201,10 @@ $(if [[ -n "$recent_dispatches" ]]; then echo "$recent_dispatches"; else echo "(
 ## Recovery Plan
 
 $recovery_plan
+
+$(if [[ -n "$worktree_info" ]]; then
+echo "## Worktree Isolation"
+echo ""
+echo "$worktree_info"
+fi)
 EOF

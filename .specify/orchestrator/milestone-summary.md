@@ -1,10 +1,10 @@
 # M001: spec-kit-orchestrator v0.1.0
 
-Completed: 2026-03-20 | 7 slices, 294 test assertions, zero failures
+Completed: 2026-03-20 | 7 slices, 307 test assertions, zero failures
 
 ## What Was Built
 
-A spec-kit extension providing autonomous multi-phase orchestration via 10 commands, 21 helper scripts, 13 templates, and 4 reference documents. All state is file-based under `.specify/orchestrator/`. The extension works with any spec-kit-supported agent (Claude Code, Copilot, Cursor, Gemini CLI).
+A spec-kit extension providing autonomous multi-phase orchestration via 10 commands, 23 helper scripts, 13 templates, and 4 reference documents. All state is file-based under `.specify/orchestrator/`. The extension works with any spec-kit-supported agent (Claude Code, Copilot, Cursor, Gemini CLI).
 
 ### Capabilities Delivered
 - **Scope triage**: Classify projects as Tier A/B/C based on complexity
@@ -25,7 +25,7 @@ A spec-kit extension providing autonomous multi-phase orchestration via 10 comma
 ## Architecture Overview
 
 ```
-extension.yml          ← manifest: 10 commands, 5 hooks, 21 scripts, 7 config properties
+extension.yml          ← manifest: 10 commands, 5 hooks, 23 scripts, 7 config properties
 │
 ├── commands/*.md      ← agent instruction documents (what to do)
 │   └── references scripts/ and templates/ by path
@@ -43,12 +43,12 @@ extension.yml          ← manifest: 10 commands, 5 hooks, 21 scripts, 7 config 
 ├── references/*.md    ← 4 progressive disclosure docs (state-machine, verification-ladder,
 │                        tier-definitions, file-formats)
 │
-└── tests/             ← 7 test suites, 294 assertions
+└── tests/             ← 7 test suites, 307 assertions
     ├── test-s01-structure.sh       (20 assertions)
-    ├── test-s02-state-machine.sh   (23 assertions)
+    ├── test-s02-state-machine.sh   (26 assertions)
     ├── test-s03-design-artifacts.sh (60 assertions)
-    ├── test-s04-core-commands.sh   (51 assertions)
-    ├── test-s05-autonomous-mode.sh (61 assertions)
+    ├── test-s04-core-commands.sh   (57 assertions)
+    ├── test-s05-autonomous-mode.sh (65 assertions)
     ├── test-s06-knowledge-lifecycle.sh (57 assertions)
     ├── test-s07-integration.sh     (22 assertions)
     └── fixtures/                   (~20 fixture directories)
@@ -95,6 +95,8 @@ Environment vars > .local config > project config > extension defaults
 | verify/ | check-boundary-map.sh | Cross-phase interface checks |
 | verify/ | check-scope.sh | Scope violation warnings |
 | verify/ | run-commands.sh | Execute verification commands |
+| verify/ | check-external-mods.sh | External modification detection (FR-064) |
+| util/ | json-field.sh | Shared JSON field extraction utility |
 | knowledge/ | write-summary.sh | Generate structured summaries |
 | knowledge/ | append-decision.sh | Append to DECISIONS.md |
 | knowledge/ | append-knowledge.sh | Append to KNOWLEDGE.md |
@@ -146,5 +148,5 @@ state-machine.md, verification-ladder.md, tier-definitions.md, file-formats.md
 
 ### Future milestones
 - M002 candidates: GitHub Agentic Workflows (US7), APM packaging (US8), docs
-- The `check-external-mods.sh` script was planned but deferred — implement if external modification detection becomes needed
+- `check-external-mods.sh` (FR-064) and git worktree isolation (FR-075) implemented in v0.1.0 audit remediation
 - `write-lock.sh` and `write-continue.sh` were planned as separate scripts but their functionality was absorbed into `lock-manager.sh` and command-level logic

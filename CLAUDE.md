@@ -6,16 +6,16 @@ A spec-kit extension that adds autonomous multi-phase orchestration to spec-kit'
 
 ## Project Status
 
-**v0.1.0 implemented** (M001 complete, 2026-03-20). 10 commands, 21 scripts, 13 templates, 4 reference docs. 294 test assertions, zero failures. User Stories 1-6 delivered. US7 (GitHub Agentic Workflows) and US8 (APM Packaging) deferred.
+**v0.1.0 implemented** (M001 complete, 2026-03-20). 10 commands, 23 scripts, 13 templates, 4 reference docs. 307 test assertions, zero failures. User Stories 1-6 delivered. US7 (GitHub Agentic Workflows) and US8 (APM Packaging) deferred.
 
 ## Key Files
 
-- `extension.yml` — spec-kit extension manifest (10 commands, 5 hooks, 21 scripts)
+- `extension.yml` — spec-kit extension manifest (10 commands, 5 hooks, 23 scripts)
 - `commands/` — orchestrator command definitions (10 agent instruction documents)
 - `scripts/` — helper scripts organized by concern (state, dispatch, verify, knowledge, lifecycle)
 - `templates/` — 13 output templates + 1 config default
 - `references/` — 4 progressive disclosure docs (state machine, verification ladder, tier definitions, file formats)
-- `tests/` — 7 test suites (294 assertions)
+- `tests/` — 7 test suites (307 assertions)
 - `specs/001-speckit-orchestrator/spec.md` — full feature specification
 - `.specify/memory/constitution.md` — 7 governing principles
 - `.specify/orchestrator/KNOWLEDGE.md` — consolidated patterns, decisions, lessons

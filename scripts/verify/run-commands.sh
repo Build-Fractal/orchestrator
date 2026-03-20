@@ -14,11 +14,14 @@ set -euo pipefail
 # --- Argument parsing ---
 COMMANDS=()
 CONFIG_FILE=""
+TIMEOUT=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --config)
       CONFIG_FILE="$2"; shift 2 ;;
+    --timeout)
+      TIMEOUT="$2"; shift 2 ;;
     -*)
       echo "run-commands.sh: unknown option '$1'" >&2; exit 1 ;;
     *)
@@ -70,11 +73,25 @@ fi
 # --- Execute commands ---
 FAILURES=0
 
+# Detect timeout command availability
+TIMEOUT_CMD=""
+if [[ -n "${TIMEOUT:-}" ]]; then
+  if command -v timeout >/dev/null 2>&1; then
+    TIMEOUT_CMD="timeout"
+  elif command -v gtimeout >/dev/null 2>&1; then
+    TIMEOUT_CMD="gtimeout"
+  fi
+fi
+
 for cmd in "${COMMANDS[@]}"; do
   # Capture output and exit code
   cmd_output=""
   cmd_exit=0
-  cmd_output=$(eval "$cmd" 2>&1) || cmd_exit=$?
+  if [[ -n "$TIMEOUT_CMD" && -n "${TIMEOUT:-}" ]]; then
+    cmd_output=$($TIMEOUT_CMD "$TIMEOUT" bash -c "$cmd" 2>&1) || cmd_exit=$?
+  else
+    cmd_output=$(eval "$cmd" 2>&1) || cmd_exit=$?
+  fi
 
   if [[ "$cmd_exit" -eq 0 ]]; then
     echo "PASS: $cmd (exit 0)"

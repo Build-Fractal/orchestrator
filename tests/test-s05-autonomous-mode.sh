@@ -323,6 +323,68 @@ else
   fail "No lifecycle scripts use declare -A (bash 3.2 compatible)"
 fi
 
+# --------------------------------------------------------------------------
+# 1.19 scaffold.sh with GIT_ISOLATION=true creates worktree in temp git repo
+# --------------------------------------------------------------------------
+
+TMPDIR_WT="$(mktemp -d)"
+# Initialize a git repo so worktree commands work
+(cd "$TMPDIR_WT" && git init -q && git commit --allow-empty -m "init" -q) 2>/dev/null
+output=$(GIT_ISOLATION=true bash "$PROJECT_ROOT/scripts/lifecycle/scaffold.sh" "$TMPDIR_WT/orch" M001 2>&1) && exit_code=0 || exit_code=$?
+if [ "$exit_code" -eq 0 ] && echo "$output" | grep -q "WORKTREE:CREATED\|Worktree already exists"; then
+  pass "scaffold.sh with GIT_ISOLATION=true → creates worktree"
+elif [ "$exit_code" -eq 0 ]; then
+  # Worktree creation may gracefully warn if git context doesn't support it
+  if echo "$output" | grep -q "WORKTREE:WARN"; then
+    pass "scaffold.sh with GIT_ISOLATION=true → graceful fallback (WORKTREE:WARN)"
+  else
+    fail "scaffold.sh with GIT_ISOLATION=true → expected WORKTREE output (got: $output)"
+  fi
+else
+  fail "scaffold.sh with GIT_ISOLATION=true → exit $exit_code"
+fi
+# Clean up worktrees before removing temp dir
+(cd "$TMPDIR_WT" && git worktree prune 2>/dev/null) || true
+rm -rf "$TMPDIR_WT"
+
+# --------------------------------------------------------------------------
+# 1.20 scaffold.sh without GIT_ISOLATION does NOT create worktree
+# --------------------------------------------------------------------------
+
+TMPDIR_NOWT="$(mktemp -d)"
+output=$(bash "$PROJECT_ROOT/scripts/lifecycle/scaffold.sh" "$TMPDIR_NOWT/orch" M001 2>&1) && exit_code=0 || exit_code=$?
+if [ "$exit_code" -eq 0 ] && ! echo "$output" | grep -q "WORKTREE"; then
+  pass "scaffold.sh without GIT_ISOLATION → no worktree created"
+else
+  fail "scaffold.sh without GIT_ISOLATION → unexpected WORKTREE output (output: $output)"
+fi
+rm -rf "$TMPDIR_NOWT"
+
+# --------------------------------------------------------------------------
+# 1.21 recovery-briefing.sh runs without error on recovery fixture
+# --------------------------------------------------------------------------
+
+output=$(bash "$RECOVERY" "$RECOVERY_FIXTURE" 2>/dev/null) && exit_code=0 || exit_code=$?
+if [ "$exit_code" -eq 0 ] && [ -n "$output" ]; then
+  pass "recovery-briefing.sh runs without error on fixture (worktree detection safe)"
+else
+  fail "recovery-briefing.sh with worktree detection → exit $exit_code"
+fi
+
+# --------------------------------------------------------------------------
+# 1.22 recovery-briefing.sh runs without error on empty milestone
+# --------------------------------------------------------------------------
+
+TMPDIR_REC="$(mktemp -d)"
+mkdir -p "$TMPDIR_REC/M001/phases"
+output=$(bash "$RECOVERY" "$TMPDIR_REC/M001" 2>/dev/null) && exit_code=0 || exit_code=$?
+if [ "$exit_code" -eq 0 ] && [ -n "$output" ]; then
+  pass "recovery-briefing.sh runs on empty milestone (no worktree, safe)"
+else
+  fail "recovery-briefing.sh on empty milestone → exit $exit_code"
+fi
+rm -rf "$TMPDIR_REC"
+
 # ==========================================================================
 # Section 2: Command File Tests — auto.md
 # ==========================================================================

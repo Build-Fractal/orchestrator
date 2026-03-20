@@ -96,3 +96,22 @@ Verification scripts output `PASS:`/`FAIL:` lines. `auto.md` consumes these: all
 
 ### Templates → Output
 Commands use `templates/*.md` as starting points. Agent fills `{{placeholder}}` values. Template `schema_version` field enables future format migration.
+
+## Audit Remediation Patterns (v0.1.0)
+
+### Shared JSON Utility
+- `scripts/util/json-field.sh` extracts `json_field()` into a sourceable utility. Lock-manager and recovery-briefing `source` it instead of duplicating the function. Pattern: extract shared functions into `scripts/util/` and `source` them.
+
+### ISO 8601 Standardization
+- All timestamps use `date -u +%Y-%m-%dT%H:%M:%SZ` (UTC, ISO 8601). Rollback-phase.sh was using `date +%Y%m%dT%H%M%S` — fixed for consistency with lock-manager and recovery-briefing.
+
+### AGENTS.md → README.md Convention
+- Documentation files in `commands/`, `references/`, and `templates/` directories renamed from `AGENTS.md` to `README.md`. Integration tests exclude `README.md` from command file checks (frontmatter, count).
+
+### FR-064 / FR-075 Implementation
+- **External modification detection** (FR-064): `check-external-mods.sh` reads `phase_start_tree` (git commit hash) from the lock file and diffs against HEAD. Scope filtering excludes authorized files. Graceful skip when no git/lock/tree.
+- **Git worktree isolation** (FR-075): `scaffold.sh` creates worktrees when `GIT_ISOLATION=true`. `recovery-briefing.sh` detects active worktrees. `consolidate.md` documents merge-back workflow. All graceful-degrade when git unavailable.
+
+### IFS Safety in Bash
+- `IFS=',' read -ra` is local to the `read` built-in — safe, does not leak. Documented in scope-filter.sh and read-roadmap.sh.
+- For `IFS=','` in `for` loops (rollback-phase.sh), wrap in subshell `(IFS=','; ...)` to prevent leaking into parent scope.

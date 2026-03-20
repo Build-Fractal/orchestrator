@@ -103,6 +103,18 @@ Where `<modified-files>` is a comma-separated list from `git diff --name-only HE
 
 Report any `WARN` lines in the verification report's scope section, but do not count them as failures.
 
+## External Modification Check (FR-064)
+
+As a pre-check before Tier 1 verification, detect files modified outside the orchestrator's scope:
+
+```bash
+bash scripts/verify/check-external-mods.sh .specify/orchestrator/orchestrator.lock --scope "<milestone-dir>/phases/<phase-id>"
+```
+
+If modifications are detected (exit code 2), include `WARN` lines in the verification report's scope section alongside check-scope.sh output. External modifications are informational warnings — they do not fail verification.
+
+If the lock file is missing or has no `phase_start_tree`, the check is gracefully skipped.
+
 ## Output
 
 Write the verification report using the template at `templates/verification-report.md`:

@@ -47,6 +47,18 @@ Auto mode is only available for **Tier C** projects (FR-054). If the tier is B, 
 
 If the tier is A, report "Tier A projects do not use orchestrator dispatch. Use spec-kit commands directly." and exit.
 
+### 4. Worktree Isolation (FR-075)
+
+If `git_isolation` is configured to `true`:
+
+```bash
+git_isolation=$(bash scripts/state/read-config.sh <root> git_isolation)
+```
+
+When `git_isolation=true`, dispatched tasks execute within a git worktree created by `scaffold.sh` at `.worktrees/<M###>`. This isolates orchestrator work from the main branch. The worktree is merged back during `speckit.orchestrator.consolidate`.
+
+If `git_isolation=false` (default), tasks execute in the current working tree.
+
 ## Lock Acquisition
 
 Acquire the execution lock before entering the loop:
@@ -251,6 +263,16 @@ When `derive-phase.sh` returns `summarizing` (all tasks in the active phase are 
    - Write to `<milestone-dir>/phases/<P##>/<P##>-SUMMARY.md`
 
 3. **Advance**: After the phase summary is written, `derive-phase.sh` will return the next phase's state on the next loop iteration. If all phases are complete, it will return `validating`.
+
+### External Modification Check (FR-064)
+
+Before the two-stage review, check for external modifications:
+
+```bash
+bash scripts/verify/check-external-mods.sh .specify/orchestrator/orchestrator.lock --scope "<phase-scope-pattern>"
+```
+
+If `WARN` lines are returned, include them in the phase transition report. External modifications are informational — they do not block phase transition, but the developer should review them to ensure no conflicts with phase outputs.
 
 ### Phase Verification Failure
 

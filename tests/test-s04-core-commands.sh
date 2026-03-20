@@ -270,6 +270,85 @@ else
   fi
 fi
 
+# --------------------------------------------------------------------------
+# 1.14 check-external-mods.sh — script exists and is executable
+# --------------------------------------------------------------------------
+
+CHECK_EM="$PROJECT_ROOT/scripts/verify/check-external-mods.sh"
+
+if [ -f "$CHECK_EM" ] && [ -x "$CHECK_EM" ]; then
+  pass "scripts/verify/check-external-mods.sh exists and is executable"
+else
+  fail "scripts/verify/check-external-mods.sh exists and is executable"
+fi
+
+# --------------------------------------------------------------------------
+# 1.15 check-external-mods.sh — missing lock file → SKIP
+# --------------------------------------------------------------------------
+
+if [ -f "$CHECK_EM" ]; then
+  output=$(bash "$CHECK_EM" "/tmp/nonexistent-lock-$$" 2>/dev/null) && exit_code=0 || exit_code=$?
+  if [ "$exit_code" -eq 0 ] && echo "$output" | grep -q "^SKIP:"; then
+    pass "check-external-mods.sh missing lock → SKIP (exit 0)"
+  else
+    fail "check-external-mods.sh missing lock → SKIP (exit=$exit_code, output: $output)"
+  fi
+else
+  fail "check-external-mods.sh missing lock test (script not found)"
+fi
+
+# --------------------------------------------------------------------------
+# 1.16 check-external-mods.sh — lock without phase_start_tree → SKIP
+# --------------------------------------------------------------------------
+
+if [ -f "$CHECK_EM" ]; then
+  TMPLOCK_EM=$(mktemp)
+  echo '{"pid": 1, "startedAt": "2026-01-01T00:00:00Z"}' > "$TMPLOCK_EM"
+  output=$(bash "$CHECK_EM" "$TMPLOCK_EM" 2>/dev/null) && exit_code=0 || exit_code=$?
+  rm -f "$TMPLOCK_EM"
+  if [ "$exit_code" -eq 0 ] && echo "$output" | grep -q "^SKIP:"; then
+    pass "check-external-mods.sh lock without tree → SKIP (exit 0)"
+  else
+    fail "check-external-mods.sh lock without tree → SKIP (exit=$exit_code, output: $output)"
+  fi
+else
+  fail "check-external-mods.sh lock without tree test (script not found)"
+fi
+
+# --------------------------------------------------------------------------
+# 1.17 check-external-mods.sh — no args → exit 1
+# --------------------------------------------------------------------------
+
+if [ -f "$CHECK_EM" ]; then
+  stderr_output=$(bash "$CHECK_EM" 2>&1 1>/dev/null) && exit_code=$? || exit_code=$?
+  if [ "$exit_code" -ne 0 ] && [ -n "$stderr_output" ]; then
+    pass "check-external-mods.sh no args → exit 1 + stderr"
+  else
+    fail "check-external-mods.sh no args → exit 1 + stderr (exit=$exit_code)"
+  fi
+else
+  fail "check-external-mods.sh no args test (script not found)"
+fi
+
+# --------------------------------------------------------------------------
+# 1.18 check-external-mods.sh — structured output format (PASS/WARN/SKIP prefix)
+# --------------------------------------------------------------------------
+
+if [ -f "$CHECK_EM" ]; then
+  # Use a lock file with an empty tree hash to trigger SKIP
+  TMPLOCK_FMT=$(mktemp)
+  echo '{"pid": 1, "phase_start_tree": ""}' > "$TMPLOCK_FMT"
+  output=$(bash "$CHECK_EM" "$TMPLOCK_FMT" 2>/dev/null) && exit_code=0 || exit_code=$?
+  rm -f "$TMPLOCK_FMT"
+  if echo "$output" | grep -qE "^(PASS:|WARN:|SKIP:)"; then
+    pass "check-external-mods.sh output uses structured prefix (PASS/WARN/SKIP)"
+  else
+    fail "check-external-mods.sh output uses structured prefix (output: $output)"
+  fi
+else
+  fail "check-external-mods.sh structured output test (script not found)"
+fi
+
 # ==========================================================================
 # Section 2: Dispatch Script Tests
 # ==========================================================================
@@ -477,7 +556,7 @@ done
 # 3.3 All 7 helper scripts exist and are executable
 # --------------------------------------------------------------------------
 
-VERIFY_SCRIPTS="check-must-haves.sh check-boundary-map.sh check-scope.sh run-commands.sh"
+VERIFY_SCRIPTS="check-must-haves.sh check-boundary-map.sh check-scope.sh run-commands.sh check-external-mods.sh"
 DISPATCH_SCRIPTS="scope-filter.sh detect-capabilities.sh build-context.sh"
 
 for script in $VERIFY_SCRIPTS; do

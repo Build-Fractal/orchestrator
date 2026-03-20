@@ -38,19 +38,9 @@ iso_timestamp() {
   date -u '+%Y-%m-%dT%H:%M:%SZ'
 }
 
-# --- Helper: Read a JSON field value (simple grep-based, no jq required) ---
-# Usage: json_field <file> <key>
-json_field() {
-  local file="$1"
-  local key="$2"
-  grep "\"${key}\"" "$file" 2>/dev/null \
-    | head -1 \
-    | sed 's/.*"'"$key"'"[[:space:]]*:[[:space:]]*//' \
-    | sed 's/^"//' \
-    | sed 's/"[[:space:]]*,*[[:space:]]*$//' \
-    | sed 's/,*[[:space:]]*$//' \
-    | sed 's/[[:space:]]*$//'
-}
+# --- Helper: Read a JSON field value (shared utility, no jq required) ---
+SCRIPT_DIR_LM="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR_LM/../util/json-field.sh"
 
 # --- Helper: Check if a PID is running ---
 # kill -0 returns 0 if we can signal, or non-zero if:
@@ -100,6 +90,10 @@ op_create() {
   local feature_branch=""
   feature_branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")"
 
+  # Capture git tree hash for external modification detection (FR-064)
+  local phase_start_tree=""
+  phase_start_tree="$(git rev-parse HEAD 2>/dev/null || echo "")"
+
   # Create lock directory if needed
   mkdir -p "$(dirname "$lock_file")"
 
@@ -112,7 +106,8 @@ op_create() {
   "unitId": "$unit_id",
   "unitStartedAt": "$now",
   "completedUnits": [],
-  "featureBranch": "$feature_branch"
+  "featureBranch": "$feature_branch",
+  "phase_start_tree": "$phase_start_tree"
 }
 EOF
 

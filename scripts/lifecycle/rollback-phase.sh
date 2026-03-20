@@ -71,7 +71,7 @@ ARCHIVE_DIR="$PHASE_DIR/archive"
 mkdir -p "$ARCHIVE_DIR"
 
 # Generate timestamp for archive prefix
-TIMESTAMP=$(date +%Y%m%dT%H%M%S)
+TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
 # Move phase summary to archive
 mv "$SUMMARY_FILE" "$ARCHIVE_DIR/${TIMESTAMP}-${PHASE_ID}-SUMMARY.md"
@@ -93,6 +93,7 @@ if [ -f "$ROADMAP_FILE" ] && [ -x "$READ_ROADMAP" ]; then
   phases_output=$(bash "$READ_ROADMAP" "$ROADMAP_FILE" phases 2>/dev/null) || true
 
   # Find phases that depend on the rolled-back phase
+  # IFS modification wrapped to avoid leaking into parent scope
   while IFS=' ' read -r pid pstatus prisk pdepends; do
     if [ -z "$pid" ]; then
       continue
@@ -100,18 +101,14 @@ if [ -f "$ROADMAP_FILE" ] && [ -x "$READ_ROADMAP" ]; then
     # Check if this phase depends on the rolled-back phase
     # pdepends is comma-separated list like "P01" or "P01,P02" or "none"
     if [ "$pdepends" != "none" ]; then
-      # Check each dependency
-      old_ifs="$IFS"
-      IFS=','
-      for dep in $pdepends; do
-        dep=$(echo "$dep" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
-        if [ "$dep" = "$PHASE_ID" ]; then
-          echo "ROLLBACK: downstream $pid flagged for review"
-          downstream_count=$((downstream_count + 1))
-          break
-        fi
-      done
-      IFS="$old_ifs"
+      # Check each dependency (subshell isolates IFS change)
+      if (IFS=','; for dep in $pdepends; do
+            dep=$(echo "$dep" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+            if [ "$dep" = "$PHASE_ID" ]; then exit 0; fi
+          done; exit 1); then
+        echo "ROLLBACK: downstream $pid flagged for review"
+        downstream_count=$((downstream_count + 1))
+      fi
     fi
   done <<< "$phases_output"
 fi

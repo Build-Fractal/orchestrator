@@ -109,6 +109,8 @@ while IFS= read -r line; do
         check_cmd=$(echo "$line" | sed 's/.*`\(.*\)`.*/\1/')
         if [[ -n "$check_cmd" ]]; then
           # Run the check command relative to project root
+          # TRUST BOUNDARY: eval runs commands authored by the orchestrator in phase plans.
+          # These are trusted check commands (e.g., grep patterns) — not user input.
           if (cd "$PROJECT_ROOT" && eval "$check_cmd") >/dev/null 2>&1; then
             echo "PASS: truth '$PENDING_TRUTH'"
           else

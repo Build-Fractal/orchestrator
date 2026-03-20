@@ -105,4 +105,23 @@ fi
 # Create milestone directory structure
 mkdir -p "$MILESTONE_DIR/phases"
 
+# --- Git worktree isolation (FR-075) ---
+# If GIT_ISOLATION is set to true (e.g., via read-config.sh), create an isolated worktree
+if [[ "${GIT_ISOLATION:-false}" = "true" ]]; then
+  WORKTREE_DIR="$(cd "$ROOT_DIR/../.." 2>/dev/null && pwd)/.worktrees/$MILESTONE"
+  WORKTREE_BRANCH="orchestrator/$MILESTONE"
+
+  if [[ -d "$WORKTREE_DIR" ]]; then
+    echo "Worktree already exists at $WORKTREE_DIR"
+  elif command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    if git worktree add "$WORKTREE_DIR" -b "$WORKTREE_BRANCH" 2>/dev/null; then
+      echo "WORKTREE:CREATED $WORKTREE_DIR (branch: $WORKTREE_BRANCH)"
+    else
+      echo "WORKTREE:WARN could not create worktree, continuing without isolation" >&2
+    fi
+  else
+    echo "WORKTREE:WARN git not available, continuing without isolation" >&2
+  fi
+fi
+
 echo "Scaffolded $MILESTONE at $MILESTONE_DIR"

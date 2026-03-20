@@ -34,6 +34,7 @@ fail() {
 # derive-phase.sh reads the directory and outputs the current state.
 
 DERIVE_SCRIPT="$PROJECT_ROOT/scripts/state/derive-phase.sh"
+ROADMAP_SCRIPT="$PROJECT_ROOT/scripts/state/read-roadmap.sh"
 
 # State names and their fixture directories (parallel arrays for bash 3 compat)
 STATE_NAMES=(
@@ -83,6 +84,50 @@ else
       fail "derive-phase.sh → $state (got: '$actual')"
     fi
   done
+fi
+
+# --------------------------------------------------------------------------
+# 1b. Tier B state machine tests
+# --------------------------------------------------------------------------
+
+TIER_B_FIXTURE="$PROJECT_ROOT/tests/fixtures/state-tier-b"
+TIER_B_ROADMAP="$TIER_B_FIXTURE/M001-ROADMAP.md"
+
+# Tier B: read-roadmap.sh returns tier B
+if [ -f "$ROADMAP_SCRIPT" ] && [ -f "$TIER_B_ROADMAP" ]; then
+  tier_b_result=$(bash "$ROADMAP_SCRIPT" "$TIER_B_ROADMAP" tier 2>/dev/null) || true
+  if [ "$tier_b_result" = "B" ]; then
+    pass "read-roadmap.sh tier B fixture → B"
+  else
+    fail "read-roadmap.sh tier B fixture → B (got: '$tier_b_result')"
+  fi
+else
+  fail "read-roadmap.sh tier B fixture → B (script or fixture missing)"
+fi
+
+# Tier B: derive-phase.sh returns executing (P02 has plan + incomplete task)
+if [ -f "$DERIVE_SCRIPT" ] && [ -d "$TIER_B_FIXTURE" ]; then
+  tier_b_state=$(bash "$DERIVE_SCRIPT" "$TIER_B_FIXTURE" 2>/dev/null) || true
+  if [ "$tier_b_state" = "executing" ]; then
+    pass "derive-phase.sh tier B fixture → executing"
+  else
+    fail "derive-phase.sh tier B fixture → executing (got: '$tier_b_state')"
+  fi
+else
+  fail "derive-phase.sh tier B fixture → executing (script or fixture missing)"
+fi
+
+# Tier B: fixture has no discussing/validating/completing state files
+tier_b_has_forbidden=false
+for pattern in "M001-CONTEXT.md" "M001-VALIDATION.md" "M001-SUMMARY.md"; do
+  if [ -f "$TIER_B_FIXTURE/$pattern" ]; then
+    tier_b_has_forbidden=true
+  fi
+done
+if [ "$tier_b_has_forbidden" = "false" ]; then
+  pass "tier B fixture has no discussing/validating/completing state files"
+else
+  fail "tier B fixture has forbidden state files (discussing/validating/completing)"
 fi
 
 # --------------------------------------------------------------------------

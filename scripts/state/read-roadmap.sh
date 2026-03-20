@@ -229,6 +229,7 @@ case "$QUERY" in
       deps_satisfied=true
       if [[ "$pdepends" != "none" ]]; then
         # Split comma-separated deps
+        # IFS=',' is local to read -ra (bash built-in) — safe, does not leak
         IFS=',' read -ra dep_list <<< "$pdepends"
         for dep in "${dep_list[@]}"; do
           dep=$(echo "$dep" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')

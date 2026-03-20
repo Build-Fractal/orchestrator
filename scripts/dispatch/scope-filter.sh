@@ -76,6 +76,7 @@ deps_match() {
   fi
   # Check explicit depends
   if [[ -n "$DEPENDS" ]]; then
+    # IFS=',' is local to read -ra (bash built-in) — safe, does not leak
     IFS=',' read -ra dep_list <<< "$DEPENDS"
     for dep in "${dep_list[@]}"; do
       dep=$(echo "$dep" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')

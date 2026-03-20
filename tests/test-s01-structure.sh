@@ -131,13 +131,13 @@ else
 fi
 
 # --------------------------------------------------------------------------
-# 7. provides.scripts count = 21
+# 7. provides.scripts count = 23
 # --------------------------------------------------------------------------
 SCRIPT_COUNT=$(grep -c '^\s*- file: scripts/' extension.yml 2>/dev/null || echo 0)
-if [ "$SCRIPT_COUNT" -eq 21 ]; then
-  pass "provides.scripts has 21 entries"
+if [ "$SCRIPT_COUNT" -eq 23 ]; then
+  pass "provides.scripts has 23 entries"
 else
-  fail "provides.scripts has $SCRIPT_COUNT entries, expected 21"
+  fail "provides.scripts has $SCRIPT_COUNT entries, expected 23"
 fi
 
 # --------------------------------------------------------------------------

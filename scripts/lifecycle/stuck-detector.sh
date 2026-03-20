@@ -42,7 +42,7 @@ while IFS= read -r line; do
   [[ -z "$line" ]] && continue
 
   # Check if this line references our unit ID
-  if echo "$line" | grep -q "\"$UNIT_ID\""; then
+  if echo "$line" | grep -qE '"unitId"[[:space:]]*:[[:space:]]*"'"$UNIT_ID"'"'; then
     # Check if this is a dispatch event
     if echo "$line" | grep -q '"dispatch"'; then
       dispatch_count=$((dispatch_count + 1))

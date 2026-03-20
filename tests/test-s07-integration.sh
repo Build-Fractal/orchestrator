@@ -216,6 +216,8 @@ fi
 FRONTMATTER_BAD=0
 FRONTMATTER_BAD_LIST=""
 for cmd_file in commands/*.md; do
+  # Skip README.md — it's documentation, not a command file
+  [ "$(basename "$cmd_file")" = "README.md" ] && continue
   first_line=$(head -1 "$cmd_file" 2>/dev/null)
   if [ "$first_line" != "---" ]; then
     FRONTMATTER_BAD=$((FRONTMATTER_BAD + 1))
@@ -364,7 +366,7 @@ else
 fi
 
 # 4c. Count total commands on disk vs total in manifest — equal
-DISK_CMD_COUNT=$(find commands/ -name '*.md' -type f | wc -l | tr -d ' ')
+DISK_CMD_COUNT=$(find commands/ -name '*.md' -type f ! -name 'README.md' | wc -l | tr -d ' ')
 MANIFEST_CMD_COUNT=$(grep -c '^\s*- name: speckit\.orchestrator\.' extension.yml 2>/dev/null || echo 0)
 if [ "$DISK_CMD_COUNT" -eq "$MANIFEST_CMD_COUNT" ]; then
   pass "command count matches: disk=$DISK_CMD_COUNT manifest=$MANIFEST_CMD_COUNT"

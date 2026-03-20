@@ -15,11 +15,12 @@ A spec-kit extension that adds autonomous multi-phase orchestration to spec-kit'
 - `scripts/` — helper scripts organized by concern (state, dispatch, verify, knowledge, lifecycle)
 - `templates/` — 13 output templates + 1 config default
 - `references/` — 4 progressive disclosure docs (state machine, verification ladder, tier definitions, file formats)
-- `tests/` — 7 test suites (307 assertions)
+- `tests/` — 7 test suites (334 assertions)
 - `specs/001-speckit-orchestrator/spec.md` — full feature specification
 - `.specify/memory/constitution.md` — 7 governing principles
 - `.specify/orchestrator/KNOWLEDGE.md` — consolidated patterns, decisions, lessons
 - `.specify/orchestrator/milestone-summary.md` — M001 build summary + extension guide
+- `CHANGELOG.md` — version history and audit remediation tracking
 
 ## Architecture
 
@@ -29,7 +30,7 @@ This is a **spec-kit extension** (markdown commands + shell scripts), NOT a stan
 - Uses hooks at 5 spec-kit lifecycle points (before/after tasks, before/after implement, before commit)
 - Uses command composition to wrap spec-kit commands for steps without hooks
 - Stores orchestrator state at `.specify/orchestrator/` (separate from `specs/`)
-- Must work with all spec-kit-supported agents (Claude Code, Copilot, Cursor, Gemini CLI)
+- v0.1.0 designed and validated with Claude Code only (agent-neutral architecture, multi-agent validation deferred to M002)
 - Must NOT require GSD-2 or APM as runtime dependencies (principles ported, not wrapped)
 
 ## Constitution Principles (governs all decisions)
@@ -55,7 +56,7 @@ This project uses spec-kit's own slash commands for development:
 - `/speckit.implement` — execute tasks
 
 ## Active Technologies
-- Markdown (spec-kit command format) + Bash 4+ / POSIX sh (helper scripts) + spec-kit >=0.1.0 (extension host), git (version control, worktree isolation), jq (optional, JSON parsing in scripts) (001-speckit-orchestrator)
+- Markdown (spec-kit command format) + Bash 3.2+ / POSIX sh (helper scripts) + spec-kit >=0.1.0 (extension host), git (version control, worktree isolation), jq (optional, JSON parsing in scripts) (001-speckit-orchestrator)
 - File-based state machine — YAML frontmatter + markdown body files, JSONL append-only logs, JSON lock files. All state at `.specify/orchestrator/` (001-speckit-orchestrator)
 
 ## Recent Changes

@@ -115,3 +115,14 @@ Commands use `templates/*.md` as starting points. Agent fills `{{placeholder}}` 
 ### IFS Safety in Bash
 - `IFS=',' read -ra` is local to the `read` built-in — safe, does not leak. Documented in scope-filter.sh and read-roadmap.sh.
 - For `IFS=','` in `for` loops (rollback-phase.sh), wrap in subshell `(IFS=','; ...)` to prevent leaking into parent scope.
+
+### Runtime Adapter Interface (FR-067/FR-068/FR-069)
+- The spec defines 5 abstract adapter operations (`dispatch-task`, `await-completion`, `collect-result`, `signal-failure`, `inject-context`). In the v0.1.0 extension architecture (markdown commands + shell scripts), these are realized as:
+  - **dispatch-task / inject-context**: `build-context.sh` assembles the payload; command documents instruct the agent to dispatch (subagent or sequential) based on `detect-capabilities.sh` output.
+  - **await-completion / collect-result**: The agent runtime handles task execution and writes artifacts to disk. The orchestrator detects completion via file presence (task summary exists = done).
+  - **signal-failure**: Verification scripts (`check-must-haves.sh`, `run-commands.sh`) detect failure by checking artifacts against must-haves. Failures are recorded in `execution-log.jsonl`.
+- No formal `adapter-*.sh` scripts exist. The agent interpreting the markdown command IS the adapter. This satisfies FR-067-069's intent (no platform-specific branching in core logic) while being idiomatic for the extension architecture.
+
+### Claude Code-Only Validation (v0.1.0)
+- v0.1.0 is designed and validated exclusively with Claude Code. All instructions are agent-neutral markdown, all scripts are POSIX-compatible — no Claude Code-specific APIs or behaviors are assumed. Multi-agent validation deferred to M002 when spec-kit's agent ecosystem matures.
+- FR-045 (destructive operation warnings) is delegated to Claude Code's built-in safety checks for v0.1.0. Orchestrator-level detection deferred to future milestone.

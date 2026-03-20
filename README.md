@@ -43,16 +43,15 @@ extension.yml              ← manifest: 10 commands, 5 hooks, 23 scripts
 │   ├── dispatch/          ← build-context, scope-filter, detect-capabilities
 │   ├── verify/            ← check-must-haves, check-boundary-map, check-scope, run-commands
 │   ├── knowledge/         ← write-summary, append-decision, append-knowledge, consolidate-artifacts
-│   └── lifecycle/         ← scaffold, lock-manager, stuck-detector, recovery-briefing,
-│                            budget-checker, rollback-phase, mark-complete
+│   ├── lifecycle/         ← scaffold, lock-manager, stuck-detector, recovery-briefing,
+│   │                        budget-checker, rollback-phase, mark-complete
+│   └── util/              ← json-field (shared JSON parsing utility)
 │
 ├── templates/*.md         ← 13 output templates with {{placeholder}} syntax
 │
 ├── references/*.md        ← 4 progressive disclosure docs
 │
-│   ├── util/              ← json-field (shared JSON parsing utility)
-│
-└── tests/                 ← 7 test suites, 307 assertions
+└── tests/                 ← 7 test suites, 334 assertions
 ```
 
 All orchestrator state lives at `.specify/orchestrator/` — separate from spec-kit's own state. State is derived from file presence on disk (never in-memory), making every session crash-recoverable.
@@ -76,17 +75,25 @@ Environment vars > .local config > project config > extension defaults
 ## Quickstart
 
 ```
-evaluate → discuss (Tier C) → roadmap → plan-phase → auto/dispatch → verify → status → consolidate
+┌──────────┐    ┌─────────┐    ┌─────────┐    ┌────────────┐
+│ evaluate │───▶│ discuss │───▶│ roadmap │───▶│ plan-phase │
+└──────────┘    └─────────┘    └─────────┘    └─────┬──────┘
+                 (Tier C)                            │
+                                                     ▼
+┌─────────────┐    ┌────────┐    ┌────────┐    ┌──────────┐
+│ consolidate │◀───│ status │◀───│ verify │◀───│ auto /   │
+└─────────────┘    └────────┘    └────────┘    │ dispatch │
+                                               └──────────┘
 ```
 
 1. **Evaluate** — `speckit.orchestrator.evaluate` classifies your project as Tier A/B/C
-2. **Discuss** (Tier C) — `speckit.orchestrator.discuss` captures architectural decisions
-3. **Roadmap** — `speckit.orchestrator.roadmap` decomposes spec into phases
-4. **Plan** — `speckit.orchestrator.plan-phase` plans one phase with must-haves
-5. **Execute** — `speckit.orchestrator.auto` runs autonomous dispatch (or use `dispatch` for manual)
-6. **Verify** — `speckit.orchestrator.verify` checks must-haves after each phase
-7. **Status** — `speckit.orchestrator.status` shows progress at any point
-8. **Consolidate** — `speckit.orchestrator.consolidate` compresses knowledge at milestone end
+2. **Discuss** (Tier C) — `speckit.orchestrator.discuss` captures architectural decisions before planning
+3. **Roadmap** — `speckit.orchestrator.roadmap` decomposes spec into phases with dependency graph
+4. **Plan** — `speckit.orchestrator.plan-phase` plans one phase with must-haves and task decomposition
+5. **Execute** — `speckit.orchestrator.auto` runs autonomous dispatch (or `dispatch` for manual, one task at a time)
+6. **Verify** — `speckit.orchestrator.verify` checks must-haves after each phase (automatic in auto mode)
+7. **Status** — `speckit.orchestrator.status` shows progress, blockers, and next action (safe to run anytime)
+8. **Consolidate** — `speckit.orchestrator.consolidate` compresses knowledge and archives artifacts at milestone end
 
 ## Commands
 
@@ -118,14 +125,15 @@ apm install speckit-orchestrator
 ## Requirements
 
 - spec-kit >= 0.1.0
-- Bash 4+ (scripts use associative-array-free patterns for bash 3.2 compatibility)
+- Bash 3.2+ (scripts use associative-array-free patterns for macOS default bash compatibility)
 - git (version control, worktree isolation)
 - jq (optional, for JSON parsing in scripts)
 
 ## Agent Compatibility
 
-Works with all spec-kit-supported agents:
-- Claude Code
+**v0.1.0**: Designed and validated exclusively with **Claude Code**. The architecture avoids agent-specific code paths (all instructions are agent-neutral markdown, all scripts are POSIX-compatible), so compatibility with other spec-kit-supported agents is expected but not yet validated.
+
+Future validation targets:
 - GitHub Copilot
 - Cursor
 - Gemini CLI
@@ -160,17 +168,17 @@ See [`.specify/memory/constitution.md`](.specify/memory/constitution.md) for ful
 
 ## Testing
 
-7 test suites with 307 assertions:
+7 test suites with 334 assertions:
 
 ```bash
 # Run all tests
 bash tests/test-s01-structure.sh      # Structural validation (20 assertions)
-bash tests/test-s02-state-machine.sh  # State machine derivation (26 assertions)
+bash tests/test-s02-state-machine.sh  # State machine derivation (28 assertions)
 bash tests/test-s03-design-artifacts.sh  # Design artifacts (60 assertions)
-bash tests/test-s04-core-commands.sh  # Core commands (57 assertions)
-bash tests/test-s05-autonomous-mode.sh   # Autonomous mode (65 assertions)
+bash tests/test-s04-core-commands.sh  # Core commands (70 assertions)
+bash tests/test-s05-autonomous-mode.sh   # Autonomous mode (71 assertions)
 bash tests/test-s06-knowledge-lifecycle.sh  # Knowledge lifecycle (57 assertions)
-bash tests/test-s07-integration.sh    # Cross-slice integration (22 assertions)
+bash tests/test-s07-integration.sh    # Cross-slice integration (28 assertions)
 ```
 
 ## Extending

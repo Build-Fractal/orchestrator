@@ -311,7 +311,7 @@ Verification operates at two tiers corresponding to the dispatch and review gran
 #### Phase Scope Enforcement
 
 - **FR-044**: During phase execution, the system MUST enforce that the executing agent only modifies files declared in the phase plan's "files likely touched" section. Modifications to files outside the declared scope MUST be flagged as a verification warning.
-- **FR-045**: During autonomous mode, the system MUST warn before any destructive operations (file deletion, branch force-push, database changes) and require explicit confirmation unless the phase plan specifically authorizes them.
+- **FR-045**: During autonomous mode, the system MUST warn before any destructive operations (file deletion, branch force-push, database changes) and require explicit confirmation unless the phase plan specifically authorizes them. **v0.1.0 Implementation Note**: For v0.1.0 (Claude Code-only), destructive operation detection is delegated to Claude Code's built-in safety checks, which already prompt for confirmation before destructive file operations and git commands. The orchestrator's scope enforcement (`check-scope.sh`) provides a complementary layer by flagging modifications to files outside the declared scope. Orchestrator-level destructive operation detection (independent of the agent runtime) is deferred to a future milestone when multi-agent support broadens the runtime surface.
 
 #### Capability Detection
 
@@ -327,6 +327,8 @@ Verification operates at two tiers corresponding to the dispatch and review gran
   - `inject-context` — provide additional context to a running or queued task
 - **FR-068**: Runtime adapters (local subprocess, gh-aw CI, future runtimes) MUST implement the five core operations using platform-native primitives. The orchestrator MUST NOT contain conditional branches based on runtime identity in its core dispatch, verification, or state management logic.
 - **FR-069**: Adapters MAY implement internal optimizations (e.g., batch dispatch, parallel fan-out) that are invisible to the orchestrator's core dispatch loop. The five core operations defined in FR-067 are the complete interface contract; there is no capability-negotiation protocol, no `AdapterCapabilities` type, and no conditional branches in core logic based on adapter identity. Unsupported scenarios degrade gracefully through the sequential core operations.
+
+> **v0.1.0 Implementation Note (FR-067/FR-068/FR-069)**: The orchestrator is implemented as a spec-kit extension (markdown command documents + shell scripts), not a programmatic API. The five adapter operations are realized through the extension's architecture rather than as a formal script-level abstraction: `dispatch-task` and `inject-context` are implemented by `build-context.sh` assembling a payload and the command document instructing the agent on dispatch strategy; `await-completion` and `collect-result` are handled by the agent runtime's task execution model (the agent executes the payload and writes artifacts to disk); `signal-failure` is captured by verification scripts (`check-must-haves.sh`, `run-commands.sh`) detecting missing/incorrect artifacts. Capability detection (`detect-capabilities.sh`) selects the dispatch strategy (subagent vs sequential) without conditional branches in the core command logic — the command documents describe both paths and the agent follows the applicable one. This design satisfies the intent of FR-067-069 (no platform-specific branching in core logic, graceful degradation) while being idiomatic for the markdown-command extension architecture. Formal adapter scripts may be introduced in a future milestone if additional runtimes (e.g., GitHub Agentic Workflows) require platform-native primitives.
 
 #### Feature-Milestone Mapping
 
@@ -411,8 +413,9 @@ Verification operates at two tiers corresponding to the dispatch and review gran
 
 ### File Format Specifications
 
-**Task Summary** (`T##-SUMMARY.md`): YAML frontmatter with markdown body. Frontmatter fields:
+**Task Summary** (`T##-SUMMARY.md`): YAML frontmatter with markdown body. Frontmatter fields (15 fields):
 - `schema_version`: Schema format version (always `1` for v0.1.0)
+- `type`: Summary type identifier (always `task` for task summaries)
 - `id`: Task ID (T01, T02...)
 - `parent`: Phase ID (P01, P02...)
 - `milestone`: Milestone ID (M001, M002...)
@@ -429,9 +432,9 @@ Verification operates at two tiers corresponding to the dispatch and review gran
 
 Body contains: one-liner summary (not "task complete" but what shipped), What Happened (prose narrative), Deviations (what differed from plan), Files Created/Modified (path + description).
 
-**Phase Summary** (`P##-SUMMARY.md`): Same frontmatter schema as task summary, but `id` is a phase ID, `parent` is a milestone ID, and content is a compressed rollup of all task summaries in the phase. Includes `drill_down_paths` to each task summary. Phase and milestone summaries include an optional `observability_surfaces` frontmatter field listing verification endpoints, health checks, or monitoring hooks relevant to the completed work.
+**Phase Summary** (`P##-SUMMARY.md`): Same frontmatter schema as task summary (16 fields — the 15 task fields plus `observability_surfaces`), but `type` is `phase`, `id` is a phase ID, `parent` is a milestone ID, and content is a compressed rollup of all task summaries in the phase. Includes `drill_down_paths` to each task summary. Phase and milestone summaries include an optional `observability_surfaces` frontmatter field listing verification endpoints, health checks, or monitoring hooks relevant to the completed work.
 
-**Milestone Summary** (`M###-SUMMARY.md`): Same frontmatter schema, compressed rollup of all phase summaries. Updated incrementally as each phase completes. Includes `observability_surfaces` field (same as phase summary).
+**Milestone Summary** (`M###-SUMMARY.md`): Same frontmatter schema (16 fields), `type` is `milestone`, compressed rollup of all phase summaries. Updated incrementally as each phase completes. Includes `observability_surfaces` field (same as phase summary).
 
 **Lock File** (`.specify/orchestrator/orchestrator.lock`): JSON file containing:
 - `schema_version`: Schema format version (always `1` for v0.1.0)
@@ -475,7 +478,7 @@ The `runtime` field determines the liveness check strategy: `"local"` checks PID
 - **SC-004**: After a simulated crash mid-phase, the orchestrator resumes execution within 2 minutes of restart, with no loss of completed work and no re-execution of already-completed phases.
 - **SC-005**: Stuck detection triggers within 2 dispatch cycles of a task failing to produce expected artifacts, preventing unbounded retries.
 - **SC-006**: Knowledge artifacts produced by the orchestrator reduce the context payload for subsequent phases by at least 50% compared to loading raw code and transcripts.
-- **SC-007**: The orchestrator works correctly on at least two different agent runtimes (e.g., Claude Code and one other spec-kit-supported agent) without agent-specific configuration.
+- **SC-007**: The orchestrator works correctly on at least two different agent runtimes (e.g., Claude Code and one other spec-kit-supported agent) without agent-specific configuration. **v0.1.0 Note**: For v0.1.0, the orchestrator is designed and validated exclusively with Claude Code. The architecture avoids agent-specific code paths (no Claude Code APIs in scripts, all instructions are agent-neutral markdown), but multi-agent validation is deferred until spec-kit's agent ecosystem matures. Multi-runtime testing is a candidate for M002.
 - **SC-008**: Tier A projects (single context window) experience zero additional overhead — no extra files, directories, or prompts beyond standard spec-kit.
 - **SC-009**: 100% of phase transitions include mechanical verification of must-haves (truths, artifacts, connections) before advancing.
 - **SC-010**: The orchestrator's extension manifest passes spec-kit's validation without errors, and all commands are discoverable via the agent's slash command system.

@@ -266,7 +266,24 @@ When `derive-phase.sh` returns `summarizing` (all tasks in the active phase are 
    - Synthesize a phase-level summary capturing: what was built, key decisions, patterns established, and verification results
    - Write to `<milestone-dir>/phases/<P##>/<P##>-SUMMARY.md`
 
-3. **Advance**: After the phase summary is written, `derive-phase.sh` will return the next phase's state on the next loop iteration. If all phases are complete, it will return `validating`.
+3. **Roadmap Reassessment (FR-009 / FR-061)**: After the phase summary is written, perform mandatory roadmap reassessment before advancing. This is required for every phase transition in Tier C autonomous mode:
+
+   a. **Check for deviations**: Read the just-completed phase's summary for any deviations recorded from the original plan.
+
+   b. **Check for new interfaces**: Compare the phase's actual outputs against the boundary map. Identify any new interfaces discovered during execution that are not in the original boundary map.
+
+   c. **Check decisions register**: Scan decisions made during this phase for entries that invalidate assumptions in downstream phase plans (look for decisions scoped to this phase or `arch`-scoped decisions).
+
+   d. **Check risk reclassifications**: If the phase was classified as low-risk but revealed unexpected complexity, flag downstream phases with similar risk profiles for review.
+
+   e. **Apply reassessment results**:
+      - If no changes needed: Log "Roadmap reassessment: no changes required" and proceed.
+      - If downstream phases are affected: Mark affected phase plans as stale (triggers `replanning` state on next derivation), record the invalidation in the decisions register, and report which phases need replanning before their execution begins.
+      - Reassessment MUST NOT modify phases that are already complete.
+      - Reassessment MUST NOT modify the phase that just finished (it is already summarized).
+      - All changes from reassessment MUST be recorded in the decisions register.
+
+4. **Advance**: After reassessment, `derive-phase.sh` will return the next phase's state on the next loop iteration. If downstream phases were marked stale, it will return `replanning`. If all phases are complete, it will return `validating`.
 
 ### External Modification Check (FR-064)
 

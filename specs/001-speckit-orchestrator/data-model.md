@@ -13,7 +13,9 @@ Milestone (M001, M002...)
  │    ├── produces → Phase Summary (P##-SUMMARY.md)
  │    └── declares → Boundary Map (produces/consumes interfaces)
  ├── produces → Milestone Summary (M###-SUMMARY.md)
+ ├── produces → Milestone Validation (M###-VALIDATION.md) [Tier C only]
  ├── owns → Context Draft (M###-CONTEXT.md) [Tier C required, Tier B optional]
+ ├── owns → Tier Metadata (M###-TIER.md) [Tier B/C only, created at evaluation]
  └── references → Feature Spec (specs/{NNN}/spec.md)
 
 Global State (project-wide, not per-milestone)
@@ -41,13 +43,16 @@ Configuration (outside .specify/orchestrator/, outside APM radius)
 ├── continue.md                     # Pause resume point (ephemeral)
 └── milestones/
     └── M001/
+        ├── M001-TIER.md            # Tier classification (B or C)
         ├── M001-ROADMAP.md         # Phase definitions + boundary maps + dependencies
         ├── M001-CONTEXT.md         # Discussion context draft (Tier C)
         ├── M001-SUMMARY.md         # Milestone rollup (updated per phase completion)
+        ├── M001-VALIDATION.md      # Milestone validation gate (Tier C only)
         └── phases/
             └── P01/
                 ├── P01-PLAN.md     # Task decomposition + must-haves
                 ├── P01-SUMMARY.md  # Phase summary (14-field frontmatter)
+                ├── archive/        # Prior summaries preserved on rollback (FR-058)
                 └── tasks/
                     ├── T01-PLAN.md
                     ├── T01-SUMMARY.md
@@ -73,6 +78,7 @@ Configuration (outside .specify/orchestrator/, outside APM radius)
 - One spec-kit feature maps to one milestone by default (FR-055)
 - Tier C may map one feature to multiple milestones
 - `feature_ref` in roadmap frontmatter links back to originating feature
+- `success_criteria` in roadmap frontmatter lists measurable outcomes; consumed by `mark-complete.sh` to generate M###-VALIDATION.md (Tier C validating gate)
 
 ### Phase
 
@@ -161,6 +167,7 @@ boundary_map:
 **Frontmatter** (YAML):
 ```yaml
 ---
+schema_version: 1
 id: T01
 parent: P01
 milestone: M001
@@ -203,11 +210,11 @@ None — implemented per plan.
 
 ### Phase Summary (`P##-SUMMARY.md`)
 
-Same frontmatter schema as task summary, but `id` is a phase ID, `parent` is a milestone ID. Body is a compressed rollup of all task summaries. Includes `drill_down_paths` to each task summary.
+Same frontmatter schema as task summary (including `schema_version: 1`), but `id` is a phase ID, `parent` is a milestone ID. Body is a compressed rollup of all task summaries. Includes `drill_down_paths` to each task summary.
 
 ### Milestone Summary (`M###-SUMMARY.md`)
 
-Same frontmatter schema. Compressed rollup of all phase summaries. Updated incrementally as each phase completes.
+Same frontmatter schema (including `schema_version: 1`). Compressed rollup of all phase summaries. Updated incrementally as each phase completes.
 
 ### Decisions Register (`DECISIONS.md`)
 
@@ -238,6 +245,7 @@ Reversals are new rows referencing the original: `D005 | ... | Reverses D002: no
 
 ```json
 {
+  "schema_version": 1,
   "pid": 12345,
   "runtime": "local",
   "startedAt": "2026-03-19T10:00:00Z",
@@ -245,9 +253,12 @@ Reversals are new rows referencing the original: `D005 | ... | Reverses D002: no
   "unitId": "M001/P01/T02",
   "unitStartedAt": "2026-03-19T10:15:00Z",
   "completedUnits": ["M001/P01/T01"],
-  "featureBranch": "001-speckit-orchestrator"
+  "featureBranch": "001-speckit-orchestrator",
+  "phase_start_tree": "abc123def456"
 }
 ```
+
+The `phase_start_tree` field stores the git tree hash at phase start (via `git write-tree`). Used by `check-external-mods.sh` (FR-064) to detect files changed outside the orchestrator at phase boundaries.
 
 **Runtime discriminator**: The `runtime` field determines the liveness check strategy:
 - `"local"` — check PID existence via `kill -0 $pid`
@@ -261,6 +272,7 @@ For CI runtimes, add `"run_id": "12345678"` field. `derive-phase.sh` reads `runt
 **Frontmatter**:
 ```yaml
 ---
+schema_version: 1
 milestone: M001
 phase: P01
 task: T03
@@ -277,6 +289,7 @@ saved_at: "2026-03-19T14:00:00Z"
 **Frontmatter**:
 ```yaml
 ---
+schema_version: 1
 milestone: M001
 status: draft  # or: finalized
 created_at: "2026-03-19T09:00:00Z"
@@ -286,16 +299,70 @@ finalized_at: null  # set when finalized
 
 **Body sections**: Architectural Decisions, Scope Boundaries, Design Constraints, Open Questions. Finalization sets `status: finalized` and triggers `discussing` → `planning` transition.
 
+### Tier Metadata (`{M###}-TIER.md`)
+
+**Frontmatter**:
+```yaml
+---
+schema_version: 1
+tier: C
+feature_ref: "001-speckit-orchestrator"
+feature_spec: "specs/001-speckit-orchestrator/spec.md"
+classified_at: "2026-03-19T10:00:00Z"
+override: false
+---
+```
+
+Created by the `evaluate` command during scaffolding. Persists the tier classification to disk before the roadmap is generated — resolving the gap where `derive-phase.sh` needs to know the tier but the roadmap doesn't exist yet.
+
+**Consumed by**:
+- `derive-phase.sh` — to determine valid state machine transitions (Tier B skips `discussing`, `replanning`, `validating`, `completing`)
+- `roadmap` command — copies tier into roadmap frontmatter
+- `status` command — displays current tier
+
+**Lifecycle**: Written once by `evaluate`, updated only if tier is overridden (FR-002). Never deleted.
+
+### Milestone Validation (`M###-VALIDATION.md`)
+
+**Frontmatter** (YAML):
+```yaml
+---
+schema_version: 1
+milestone: M001
+status: pass  # pass | fail
+validated_at: "2026-03-19T16:00:00Z"
+validator: auto  # auto | human
+---
+```
+
+**Body**:
+```markdown
+## Success Criteria Checklist
+
+- [x] SC-001: Tier classification completes in <5 minutes — **Evidence**: test-scaffold.sh timing output
+- [x] SC-002: Context payload <20% of total artifacts — **Evidence**: scope-filter.sh output log
+- [ ] SC-003: 5-phase milestone completes autonomously — **Evidence**: (pending validation)
+```
+
+Each success criterion from the milestone's roadmap is listed with a checkbox and evidence reference. The `status` field is derived from the checklist: `pass` when all criteria are checked, `fail` otherwise.
+
+**Lifecycle**: Created by `mark-complete.sh` when all phases in a Tier C milestone are done (triggers the `validating` state). Written once; immutable after validation passes. For Tier B, this file is not created — the state machine transitions directly from `summarizing` to `complete`.
+
+**Consumed by**:
+- `derive-phase.sh` — absence triggers `validating` state (rule #7); presence enables `completing` transition
+- `consolidate-artifacts.sh` — includes validation results in compressed milestone summary
+
 ### Execution Log (`execution-log.jsonl`)
 
 One JSON object per line:
 ```json
-{"timestamp":"2026-03-19T10:15:00Z","unitId":"M001/P01/T01","unitType":"execute-task","tier":"C","duration":"5m","outcome":"success","model":"claude-opus-4-6","featureBranch":"001-speckit-orchestrator"}
+{"schema_version":1,"timestamp":"2026-03-19T10:15:00Z","unitId":"M001/P01/T01","unitType":"execute-task","tier":"C","duration":"5m","outcome":"success","model":"claude-opus-4-6","featureBranch":"001-speckit-orchestrator"}
 ```
 
 **Verification Entry** (appended after phase verification):
 ```json
 {
+  "schema_version": 1,
   "timestamp": "2026-03-19T15:00:00Z",
   "unitId": "M001/P01",
   "unitType": "verify-phase",
@@ -388,3 +455,5 @@ budget_enforcement: advisory    # advisory (warn only) | enforced (CI: maps to s
 | 9 | M###-SUMMARY.md exists | `complete` |
 
 "Active phase" = first incomplete phase in dependency order (high-risk first among satisfied deps).
+
+**Tier-conditional derivation**: When `{M###}-TIER.md` indicates Tier B, `derive-phase.sh` skips states not in Tier B's subset. Specifically: if tier is B and a context draft exists with `status: draft`, the script treats it as if the draft doesn't exist (Tier B discussion is optional and doesn't gate planning). Similarly, the `replanning`, `validating`, and `completing` states are skipped for Tier B — after all phases are summarized, the state transitions directly to `complete`.

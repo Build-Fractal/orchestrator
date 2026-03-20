@@ -39,7 +39,7 @@ provides:
 
     - name: speckit.orchestrator.discuss
       file: commands/discuss.md
-      description: "Use when capturing architectural decisions and constraints before roadmap generation."
+      description: "Use when capturing architectural context before planning, or injecting decisions during autonomous execution."
 
     - name: speckit.orchestrator.roadmap
       file: commands/roadmap.md
@@ -59,7 +59,7 @@ provides:
 
     - name: speckit.orchestrator.verify
       file: commands/verify.md
-      description: "Use when checking must-haves verification for a completed phase."
+      description: "Use when running mechanical verification — per-task must-haves, per-phase two-stage review, or pre-commit static checks."
 
     - name: speckit.orchestrator.status
       file: commands/status.md
@@ -99,6 +99,10 @@ provides:
       executable: true
     - file: scripts/verify/run-commands.sh
       executable: true
+    - file: scripts/verify/check-scope.sh
+      executable: true
+    - file: scripts/verify/check-external-mods.sh
+      executable: true
     - file: scripts/knowledge/write-summary.sh
       executable: true
     - file: scripts/knowledge/append-decision.sh
@@ -109,11 +113,13 @@ provides:
       executable: true
     - file: scripts/lifecycle/scaffold.sh
       executable: true
-    - file: scripts/lifecycle/advance-state.sh
+    - file: scripts/lifecycle/mark-complete.sh
       executable: true
     - file: scripts/lifecycle/write-lock.sh
       executable: true
     - file: scripts/lifecycle/write-continue.sh
+      executable: true
+    - file: scripts/lifecycle/rollback-phase.sh
       executable: true
 
 defaults:
@@ -123,6 +129,7 @@ defaults:
   git_isolation: false
   dispatch_budget: null
   duration_budget: null
+  budget_enforcement: advisory
 
 config_schema:
   type: object
@@ -144,6 +151,10 @@ config_schema:
       minimum: 1
     duration_budget:
       type: [string, "null"]
+    budget_enforcement:
+      type: string
+      enum: [advisory, enforced]
+      default: advisory
 
 hooks:
   before_tasks:

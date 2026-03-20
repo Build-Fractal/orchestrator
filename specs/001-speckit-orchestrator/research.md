@@ -59,6 +59,8 @@ echo "complete"
 | completing | Validated, no summary | Dispatch: milestone summary generation |
 | complete | Summary exists | Stop: milestone complete |
 
+**Tier Persistence**: The tier classification is persisted in `{M###}-TIER.md` (written by `evaluate` during scaffolding). This resolves the gap where `derive-phase.sh` needs to know the tier to determine valid states (e.g., Tier B skips `discussing`) but the roadmap — which stores tier in frontmatter — doesn't exist yet in early states.
+
 ---
 
 ### R-003: Runtime Adapter Interface Design
@@ -110,6 +112,7 @@ context_verbosity: standard # enum: minimal, standard, full
 git_isolation: false        # Use git worktree per milestone
 dispatch_budget: null       # Max dispatches per milestone (advisory)
 duration_budget: null       # Max cumulative duration (advisory, e.g., "2h")
+budget_enforcement: advisory  # advisory | enforced
 ```
 
 **Key Constraint**: User-mutable config MUST NOT reside in APM-managed directories (FR-070).
@@ -196,13 +199,16 @@ key_links:    # Wiring between artifacts
 **Lock File** (`orchestrator.lock`):
 ```json
 {
+  "schema_version": 1,
   "pid": 12345,
+  "runtime": "local",
   "startedAt": "2026-03-19T10:00:00Z",
   "unitType": "execute-task",
   "unitId": "M001/P01/T02",
   "unitStartedAt": "2026-03-19T10:15:00Z",
   "completedUnits": ["M001/P01/T01"],
-  "featureBranch": "001-speckit-orchestrator"
+  "featureBranch": "001-speckit-orchestrator",
+  "phase_start_tree": "abc123def456"
 }
 ```
 
@@ -268,9 +274,9 @@ key_links:    # Wiring between artifacts
 
 ### R-010: Hook Integration Strategy
 
-**Decision**: Hybrid — hooks at 4 available points + command composition for hookless steps.
+**Decision**: Hybrid — hooks at 5 available points + command composition for hookless steps.
 
-**Rationale**: spec-kit provides 4 hook points (`before_tasks`, `after_tasks`, `before_implement`, `after_implement`). The orchestrator needs to inject context at plan/specify/clarify steps too. Command composition (orchestrator commands wrapping spec-kit commands) fills the gap.
+**Rationale**: spec-kit provides 5 hook points (`before_tasks`, `after_tasks`, `before_implement`, `after_implement`, `before_commit`). The orchestrator needs to inject context at plan/specify/clarify steps too. Command composition (orchestrator commands wrapping spec-kit commands) fills the gap.
 
 **Hook Usage**:
 | Hook | Orchestrator Behavior |
@@ -279,6 +285,7 @@ key_links:    # Wiring between artifacts
 | `after_tasks` | Offer to generate roadmap from tasks.md phases |
 | `before_implement` | Inject phase scope enforcement; offer dispatch via orchestrator |
 | `after_implement` | Trigger phase verification and summary generation |
+| `before_commit` | Run tier-1 static verification before commits when orchestration is active |
 
 **Command Composition** (for hookless steps):
 - `speckit.orchestrator.plan-phase` wraps `/speckit.plan` with phase-scoped context injection
@@ -386,3 +393,54 @@ For CI: `"runtime": "ci-github"`, add `"run_id": "12345678"` field. `derive-phas
 **Rationale**: CI runners have timeout caps (GitHub Actions: 6h default). A full milestone cannot complete in one run. The `step` mode advances one unit, persists state, and re-enters via `schedule` or `repository_dispatch`.
 
 **Concurrency Requirement**: All gh-aw task dispatch workflows MUST include `concurrency: { job-discriminator: ${{ inputs.task_id }} }` to prevent fan-out cancellations (dispatching T02 would otherwise cancel T01).
+
+---
+
+### R-016: Concurrent Access Model (FR-053)
+
+**Decision**: Read-safe by design. No file locking for reads.
+
+**Rationale**: All dynamic state files use one of two patterns:
+- **Append-only** (DECISIONS.md, KNOWLEDGE.md, execution-log.jsonl): A second terminal reading these while autonomous mode appends is safe — partial line reads are possible but harmless (the reader gets a complete-or-nothing view of each entry).
+- **Write-once** (summaries, lock file, continue file): Written atomically (write to temp file, then `mv`). A reader either sees the old state or the new state, never a partial write.
+
+The `status` command reads all files without acquiring any lock. The `discuss` command (in decision injection mode) appends to DECISIONS.md — append is atomic on POSIX for writes ≤ PIPE_BUF (4096 bytes). Decision entries are well under this limit.
+
+**Implementation**: All write operations in helper scripts MUST use the temp-file-then-mv pattern for non-append writes. Append writes use `>>` redirection. No advisory locks.
+
+---
+
+### R-017: Budget Enforcement in Dispatch Loop (FR-065)
+
+**Decision**: Budget check as a pre-dispatch gate in the `auto` command's state machine loop.
+
+**Implementation**: Before each dispatch, `auto.md` instructs the agent to:
+1. Read `execution-log.jsonl` and count dispatches for current milestone
+2. Sum durations for current milestone
+3. Compare against `dispatch_budget` and `duration_budget` from config
+4. If either threshold reached: pause autonomous mode, write continue file, surface budget status ("Dispatch budget: 47/50 used. Duration: 1h45m/2h. Pausing.")
+
+This is a soft gate — the developer resumes with `/speckit.orchestrator.resume` after reviewing. No dispatches are wasted (the check happens before dispatch, not after).
+
+---
+
+### R-018: Script Error Handling
+
+**Decision**: Fail-fast with descriptive errors. No silent fallbacks.
+
+**Rules**:
+- All scripts start with `set -euo pipefail`
+- YAML frontmatter parsing failures output the file path, expected format, and actual content of the malformed line, then exit 1
+- Missing directories/files that should exist produce a message suggesting the appropriate command to run (e.g., "M001 directory not found. Run /speckit.orchestrator.evaluate first.")
+- Lock file corruption (invalid JSON) is treated as stale — log a warning, delete the lock, proceed with recovery
+- `jq` absence triggers fallback to grep/sed for JSON parsing (KNOWLEDGE.md entry from data-model already notes this)
+
+---
+
+### R-019: State File Versioning
+
+**Decision**: Frontmatter `schema_version` field in all state files. No automated migration in v0.1.0.
+
+**Implementation**: All state file templates include `schema_version: 1` in frontmatter. Scripts check this field and error with a descriptive message if the version is unrecognized. Migration tooling is deferred to v0.2.0 — the first version has no legacy state to migrate. The `consolidate` command archives raw artifacts, providing a natural migration boundary.
+
+**Propagation**: This decision has been propagated to the data model (all file format examples include `schema_version: 1`) and the state-files contract.

@@ -6,13 +6,15 @@ A spec-kit extension that adds autonomous multi-phase orchestration to spec-kit'
 
 ## Project Status
 
-Specification phase complete. Next steps: `/speckit.plan` then `/speckit.tasks` then implementation.
+Specification and planning phases complete. Plan refined through post-analysis gap closure (15 issues resolved), then a 16-point cross-artifact consistency review addressing spec/plan/data-model/contract alignment gaps. Next step: `/speckit.tasks` then implementation.
 
 ## Key Files
 
 - `extension.yml` — spec-kit extension manifest (the deliverable)
 - `commands/` — orchestrator command definitions (placeholders, pending implementation)
-- `skills/` — skill folders with scripts/templates/references (pending implementation)
+- `scripts/` — helper scripts organized by concern (state, dispatch, verify, knowledge, lifecycle)
+- `templates/` — output templates (roadmap, summaries, dispatch prompt, etc.)
+- `references/` — progressive disclosure docs (state machine, verification ladder, tier definitions)
 - `specs/001-speckit-orchestrator/spec.md` — full feature specification
 - `.specify/memory/constitution.md` — 7 governing principles
 - `.planning/research/` — deep research on 5 source systems (spec-kit, GSD-2, APM, superpowers, gh-aw)
@@ -23,7 +25,7 @@ Specification phase complete. Next steps: `/speckit.plan` then `/speckit.tasks` 
 This is a **spec-kit extension** (markdown commands + shell scripts), NOT a standalone CLI. It:
 
 - Registers commands via `extension.yml` following `speckit.orchestrator.*` naming
-- Uses hooks at 4 spec-kit lifecycle points (before/after tasks, before/after implement)
+- Uses hooks at 5 spec-kit lifecycle points (before/after tasks, before/after implement, before commit)
 - Uses command composition to wrap spec-kit commands for steps without hooks
 - Stores orchestrator state at `.specify/orchestrator/` (separate from `specs/`)
 - Must work with all spec-kit-supported agents (Claude Code, Copilot, Cursor, Gemini CLI)

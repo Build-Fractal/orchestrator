@@ -27,11 +27,11 @@ Build a spec-kit extension that adds autonomous multi-phase orchestration to spe
 | **gh-aw** | Workflow compile only | `gh aw compile` converts workflow markdown to Actions YAML. Never invoked during task dispatch. |
 | **CI runner deps** | Runtime (CI only) | git, bash, jq — no APM CLI, no gh-aw CLI required on runners |
 
-**Scale/Scope**: 10 commands, ~20 helper scripts, ~15 templates, 1 extension manifest, 1 APM manifest, ~5 reference documents. Target: orchestrate projects with up to 5 milestones × 10 phases × 7 tasks each
+**Scale/Scope**: 10 commands, ~20 helper scripts, 12 templates, 1 extension manifest, 1 APM manifest, ~5 reference documents. Target: orchestrate projects with up to 5 milestones × 10 phases × 7 tasks each
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+*GATE: Must pass before Phase 2 foundation. Re-check after Phase 3 design.*
 
 | # | Principle | Status | Evidence |
 |---|-----------|--------|----------|
@@ -52,14 +52,14 @@ Build a spec-kit extension that adds autonomous multi-phase orchestration to spe
 ```text
 specs/001-speckit-orchestrator/
 ├── plan.md              # This file
-├── research.md          # Phase 0: resolved technical decisions
-├── data-model.md        # Phase 1: entity model and state file schemas
-├── quickstart.md        # Phase 1: developer getting-started guide
-├── contracts/           # Phase 1: command interface contracts
+├── research.md          # Pre-implementation: resolved technical decisions
+├── data-model.md        # Phase 3: entity model and state file schemas
+├── quickstart.md        # Phase 3: developer getting-started guide
+├── contracts/           # Phase 3: command interface contracts
 │   ├── extension-manifest.md
 │   ├── runtime-adapter.md
 │   └── state-files.md
-└── tasks.md             # Phase 2 output (/speckit.tasks — NOT created by /speckit.plan)
+└── tasks.md             # Phase 4+ output (/speckit.tasks — NOT created by /speckit.plan)
 ```
 
 ### Source Code (repository root)
@@ -95,6 +95,8 @@ scripts/                               # Helper scripts (composed by commands)
 │   ├── verify/
 │   │   ├── check-must-haves.sh        # Mechanical artifact/truth/link checks
 │   │   ├── check-boundary-map.sh      # Cross-phase interface verification
+│   │   ├── check-scope.sh             # Scope enforcement: flag files outside declared scope
+│   │   ├── check-external-mods.sh     # Detect changes not made by the orchestrator
 │   │   └── run-commands.sh            # Execute configured verification commands
 │   ├── knowledge/
 │   │   ├── write-summary.sh           # Generate task/phase/milestone summary
@@ -103,9 +105,10 @@ scripts/                               # Helper scripts (composed by commands)
 │   │   └── consolidate-artifacts.sh   # Compress + archive
 │   └── lifecycle/
 │       ├── scaffold.sh                # Create milestone directory structure
-│       ├── advance-state.sh           # Persist state transition to disk
+│       ├── mark-complete.sh            # Create/update files that trigger state transitions (e.g., toggle roadmap checkboxes, create gate files)
 │       ├── write-lock.sh              # Create/update lock file
-│       └── write-continue.sh          # Create continue file for graceful pause
+│       ├── write-continue.sh          # Create continue file for graceful pause
+│       └── rollback-phase.sh          # Phase rollback: archive summary, flag deps, record reversal
 templates/                             # Output templates (copied + filled by agent)
 │   ├── roadmap.md                     # Milestone roadmap layout
 │   ├── phase-plan.md                  # Phase plan with must-haves
@@ -132,10 +135,23 @@ tests/                                 # Integration tests
 │   ├── test-state-derivation.sh
 │   ├── test-config-resolution.sh
 │   ├── test-scope-filter.sh
+│   ├── test-tier-surface.sh
+│   ├── test-budget-enforcement.sh
+│   ├── test-rollback.sh
+│   ├── test-external-mods.sh
+│   ├── test-two-stage-review.sh
+│   ├── test-capability-detection.sh
+│   ├── test-concurrent-access.sh
+│   ├── test-dispatch-adapter.sh
+│   ├── test-spec-propagation.sh
 │   └── fixtures/                      # Test fixtures (sample state trees)
 ```
 
 **Structure Decision**: Flat extension layout following spec-kit conventions. Commands at `commands/`, helper scripts at `scripts/` (organized by concern), templates at `templates/`, references at `references/`. No parallel `skills/` tree — command markdown is the authoritative definition; one manually-maintained root `SKILL.md` provides package-level discoverability (per conversus convergence and arbitration revision of AD-6).
+
+**Scaffolding (FR-042)**: The spec's "scaffolding command" is fulfilled by `evaluate.md`. When `evaluate` classifies a project as Tier B or C, it invokes `scripts/lifecycle/scaffold.sh` to create the `.specify/orchestrator/milestones/{M###}/` directory tree and writes `{M###}-TIER.md` with the classified tier, feature reference, and timestamp. Scaffolding is not a standalone user-facing command — it is an internal step of scope triage. Running `evaluate` on an already-scaffolded milestone is idempotent (FR-066).
+
+**Source vs Installed Layout**: The `templates/` and `references/` directories at the repo root are the source layout. After `specify extension add` or `apm install`, these are deployed to `.specify/extensions/orchestrator/templates/` and `.specify/extensions/orchestrator/references/`. FR-074's template resolution stack applies to the installed location. The source layout mirrors the installed layout — no path transformation occurs during deployment.
 
 ## Architecture Decisions (from Conversus Process)
 
@@ -154,7 +170,7 @@ A pluggable adapter layer with 5 core operations: `dispatch-task`, `await-comple
 Static config flows through spec-kit's multi-layer config system (extension defaults → project overrides → local overrides → env vars). Dynamic state lives exclusively in `.specify/orchestrator/`. The two domains never overlap. No config changes during orchestration execution.
 
 ### AD-5: No Core Command Overrides
-New `speckit.orchestrator.*` commands delegate to standard spec-kit workflows with injected context. Preset-based command replacement is prohibited. Command composition for steps without hooks (plan, specify, clarify).
+New `speckit.orchestrator.*` commands delegate to standard spec-kit workflows with injected context. Preset-based command replacement is prohibited. Command composition for the planning step (via `plan-phase.md`); specify and clarify run pre-orchestration and are consumed as inputs.
 
 ### AD-6: Manual SKILL.md, No Derivation (Revised by Arbitration)
 One manually-maintained root-level `SKILL.md` as the package-level discoverability surface. Command frontmatter remains authoritative for per-command behavior. APM derivation from frontmatter does not exist today — building it violates Principle 3 (Design Before Code). When APM ships derivation, adopt it then. `SKILL.md` is updated at milestone boundaries as part of the release checklist.
@@ -250,6 +266,42 @@ All orchestrator commands MUST include:
 - **`$ARGUMENTS` handling**: A `## User Input` section processing `$ARGUMENTS` per spec-kit convention
 - **`scripts` frontmatter**: Commands invoking helper scripts declare them (`scripts: { sh: ../../scripts/state/derive-phase.sh }`) for spec-kit's path rewriting and `{SCRIPT}` placeholder substitution
 - **`handoffs` frontmatter**: Declare command transitions (e.g., `auto` → `plan-phase` → `dispatch` → `verify`). Handoffs are presentation-layer for local execution; the CI adapter extracts target command names and ignores prompt/send context. Receiving commands are self-sufficient via disk state (AD-2).
+- **Gotchas section (FR-030)**: Each command's `.md` file MUST include a `## Gotchas` section documenting: (a) known failure modes and their symptoms, (b) context pollution patterns (what happens if the agent injects too much/wrong context), and (c) anti-patterns (common misuses). This section is part of the command definition, not a separate file. It serves as progressive disclosure — agents read it when they encounter unexpected behavior, not on every invocation.
+
+### discuss Command: Two Modes
+
+The `discuss` command serves two distinct use cases via the same entry point:
+
+1. **Pre-planning mode** (when state is `pre-planning` or `discussing`): Creates or updates `{M###}-CONTEXT.md`. This is the Tier C gate — the context draft must be finalized before roadmap generation. The command presents targeted questions about architectural preferences, scope boundaries, and design constraints.
+
+2. **Decision injection mode** (when state is `executing` or later): Appends an entry to DECISIONS.md with the developer's input. Does NOT modify the context draft. The injected decision is picked up at the next phase boundary.
+
+Mode selection is automatic based on the current state machine phase (derived from disk). The command's `## User Input` section routes: if state ∈ {pre-planning, discussing} → pre-planning mode; otherwise → decision injection mode. This is a single `if/else` in the command template, not a capability flag or argument. **FR traceability**: Decision injection mode fulfills FR-052 (command for injecting architectural decisions during autonomous execution). Pre-planning mode fulfills FR-056.
+
+### plan-phase Command: Zero-Context Enforcement
+
+The `plan-phase.md` command template MUST include explicit instructions to the planning agent:
+- Every file reference MUST be an absolute path from repo root
+- Every code reference MUST include the file path and line range, not "the function we created earlier"
+- Phrases like "follow the established pattern", "as before", "same approach as P01" are PROHIBITED unless accompanied by the specific file path and code excerpt
+- The verification criteria section MUST be copy-pasteable into a fresh terminal with no additional context
+
+### Phase Rollback (FR-057/FR-058)
+
+The developer invokes rollback via `speckit.orchestrator.status` (which surfaces the option for completed phases) or a direct argument to `auto`: `/speckit.orchestrator.auto rollback P03`. The `rollback-phase.sh` script:
+1. Moves `P##-SUMMARY.md` to `archive/P##-SUMMARY-{timestamp}.md` (prior summaries preserved, not deleted)
+2. Appends a reversal decision to DECISIONS.md referencing the original completion decision
+3. Scans the roadmap's dependency graph for downstream phases that consumed this phase's boundary map outputs; marks them `stale` in the roadmap frontmatter
+4. Logs the rollback event in execution-log.jsonl
+5. Requires developer confirmation before any flagged downstream phase re-executes
+
+### Scope Enforcement (FR-044/FR-045)
+
+`check-scope.sh` runs at the per-task verification boundary. It compares `git diff --name-only` against the phase plan's "files likely touched" list. Files outside the declared scope produce a WARNING in the verification report. Destructive operations (file deletions, force-pushes) produce a BLOCK unless the phase plan's must-haves explicitly authorize them via a `destructive_ops_authorized` field.
+
+### External Modification Detection (FR-064)
+
+`check-external-mods.sh` runs at the phase boundary, before the two-stage review. It captures a git snapshot hash at phase start (stored in the lock file as `phase_start_tree`). At phase boundary, it compares the current tree to the snapshot, filtering out files in the phase's declared scope. Any remaining changes are external modifications. If detected, the script outputs the changed file list and pauses for developer confirmation before proceeding with the phase review.
 
 ## Context Injection Priority Rules
 
@@ -261,6 +313,31 @@ Two channels exist for injecting context into agent sessions:
 **Priority rule**: Command-time context overrides ambient context on conflict.
 
 **CI merge semantics**: The adapter's `build-context.sh` merges both channels into a single dispatch payload. Command context takes precedence. Instructions MUST be committed to the repo for CI runners (not dynamically generated).
+
+**Payload Size Guard**: Before dispatch, `build-context.sh` MUST measure the total payload size (line count or token estimate). If the payload exceeds a configurable threshold (default: 40% of estimated context window — conservative to leave room for agent reasoning and code generation; the context window estimate defaults to 100,000 tokens and is overridable via `SPECKIT_ORCHESTRATOR_CONTEXT_WINDOW` environment variable; for adapters that can detect the active model's context window programmatically, the detected value takes precedence), the script MUST: (1) drop `full` verbosity to `standard`, (2) if still over threshold, truncate upstream summaries to frontmatter-only (no body prose), (3) if still over threshold, warn the developer and proceed with `minimal` verbosity, (4) log the verbosity downgrade in execution-log.jsonl. This prevents silent context overflow that degrades agent performance without visible error.
+
+## Template Resolution
+
+Commands reference output templates via spec-kit's `{TEMPLATE:name}` placeholder. Resolution follows spec-kit's standard stack:
+
+1. **Project override**: `.specify/templates/orchestrator/{name}.md` (developer customization)
+2. **Extension installed**: `.specify/extensions/orchestrator/templates/{name}.md` (deployed by `specify extension add` or APM)
+3. **Extension source**: `templates/{name}.md` (development mode, `--dev` installs)
+
+Templates are structural formatting shells — they define layout (section headings, frontmatter fields, placeholder markers) but MUST NOT embed orchestrator-specific context (milestone references, phase scope, boundary maps). All runtime context is injected by the command at dispatch time, keeping templates reusable across milestones and phases.
+
+Available templates: `roadmap`, `phase-plan`, `task-plan`, `task-summary`, `phase-summary`, `milestone-summary`, `dispatch-prompt`, `recovery-briefing`, `continue-file`, `context-draft`, `verification-report`, `spec-compliance-review`.
+
+## Git Isolation Mode
+
+When `git_isolation: true` is configured (FR-075):
+
+1. **Scaffold**: `scaffold.sh` creates a git worktree per milestone: `git worktree add .worktrees/M001 -b orchestrator/M001`
+2. **Execute**: All task dispatches operate within the worktree. `build-context.sh` sets the working directory to the worktree path.
+3. **Complete**: On milestone completion, `consolidate` merges the worktree branch back to the feature branch and runs `git worktree remove`.
+4. **Crash**: Recovery detects active worktrees via `git worktree list`. The lock file includes a `worktree_path` field when git isolation is active.
+
+Default is `false` — all work occurs on the current branch. Git isolation is primarily useful for Tier C projects where multiple milestones might execute concurrently or where isolation from in-progress manual work is desired.
 
 ## Remaining Disputes (from Conversus)
 
@@ -293,6 +370,77 @@ Key rulings:
 - **SC1**: Resolved by three-bucket separation — tension structurally eliminated.
 - **SC5**: Manual root `SKILL.md`, no derivation system. YAGNI until APM ships the capability.
 - **D3-EXT**: 5 core adapter operations. NO capability negotiation. Parallel fan-out is adapter-internal, invisible to core. FR-069 rewritten.
+
+## Implementation Phases
+
+### Phase 1: Setup
+- Full directory structure (scripts/, templates/, references/, docs/, tests/)
+- extension.yml manifest validation (command registration, hooks, config schema)
+- orchestrator-config-default.yml template
+
+### Phase 2: Foundation (prerequisite for all command phases)
+- scripts/state/read-config.sh (4-layer config resolution)
+- scripts/state/derive-phase.sh (state machine core)
+- scripts/state/read-roadmap.sh (roadmap parsing)
+- scripts/lifecycle/scaffold.sh (directory scaffolding)
+
+### Phase 3: Design Artifacts
+- data-model.md (entity schemas, file format specs)
+- contracts/ directory (extension manifest, runtime adapter, state file contracts)
+- quickstart.md
+- All output templates (templates/*.md)
+- All reference documents (references/*.md)
+
+> **Note**: data-model.md, contracts/, and quickstart.md already exist from the planning phase. Phase 3 creates the 12 templates (`templates/*.md`) and 4 reference documents (`references/*.md`).
+
+### Phase 4: Core Commands (Tier B surface)
+- commands/evaluate.md (scope triage)
+- commands/roadmap.md (spec → phases)
+- commands/plan-phase.md (phase → tasks)
+- commands/dispatch.md (task execution)
+- commands/verify.md (must-haves check)
+- commands/status.md (progress dashboard)
+- Helper scripts: build-context.sh, scope-filter.sh, check-must-haves.sh, check-boundary-map.sh, check-scope.sh
+
+### Phase 5: Autonomous Mode (Tier C surface)
+- commands/auto.md (state machine loop)
+- commands/discuss.md (context capture + decision injection)
+- commands/resume.md (crash/pause recovery)
+- Helper scripts: check-lock.sh, write-lock.sh, write-continue.sh, detect-capabilities.sh, check-external-mods.sh
+- Crash recovery flow, stuck detection, budget enforcement
+
+### Phase 6: Knowledge & Lifecycle
+- commands/consolidate.md (compression + archival)
+- Helper scripts: write-summary.sh, append-decision.sh, append-knowledge.sh, consolidate-artifacts.sh
+- rollback-phase.sh, mark-complete.sh
+- Phase rollback mechanism
+
+### Phase 7: Distribution & Testing
+- apm.yml manifest
+- SKILL.md
+- .extensionignore
+- Integration tests (BATS or bash assert)
+- docs/getting-started.md, docs/configuration.md
+
+**Dependencies**: Phase 1 → Phase 2 → Phase 3 → Phase 4 → (Phase 5 ∥ Phase 6) → Phase 7
+
+## Test-to-Requirement Mapping
+
+| Test File | Validates | Success Criteria |
+|-----------|-----------|-----------------|
+| test-scaffold.sh | FR-042, FR-066 | SC-018 (idempotency) |
+| test-state-derivation.sh | FR-020, FR-021 | SC-004 (crash resume <2min), SC-005 (stuck detection) |
+| test-config-resolution.sh | FR-040, FR-041 | — |
+| test-scope-filter.sh | FR-062, FR-063 | SC-019 (scope-filtered payloads) |
+| test-tier-surface.sh | FR-003, FR-054 | SC-008 (Tier A zero overhead), SC-017 (Tier B < half state files) |
+| test-budget-enforcement.sh | FR-065 | SC-020 (pause within 1 dispatch cycle) |
+| test-rollback.sh | FR-057, FR-058 | SC-016 (rollback preserves archive + flags deps) |
+| test-external-mods.sh | FR-064 | — |
+| test-two-stage-review.sh | FR-059, FR-060 | SC-009 (mechanical verification) |
+| test-capability-detection.sh | FR-046 | SC-007 (two runtimes) |
+| test-concurrent-access.sh | FR-053 | SC-013 (status from second terminal) |
+| test-dispatch-adapter.sh | FR-067, FR-068 | — |
+| test-spec-propagation.sh | FR-073 | — |
 
 ## Complexity Tracking
 

@@ -175,6 +175,10 @@ Invoke `speckit.orchestrator.verify` on the completed task to confirm must-haves
 - The failure messages from check-must-haves.sh
 - The task summary (if produced) from the failed attempt
 
+**On verification pass with concerns (DONE_WITH_CONCERNS):** Per US3 AS6, evaluate each concern:
+- **Concerns affecting correctness or scope** (e.g., a must-have check passes but with unexpected side effects, or a boundary map produce exists but has wrong content) → block advancement and address the concern before proceeding.
+- **Observational concerns** (e.g., performance notes, style suggestions, minor warnings that don't affect correctness) → note the concern in the task summary and proceed to Step G. These concerns are recorded but do not block the dispatch loop.
+
 **On verification failure (second attempt):** Do NOT retry further. Instead:
 1. Record the double failure in the execution log
 2. Write a continue file with the failed verification details

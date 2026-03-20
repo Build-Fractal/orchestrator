@@ -1,5 +1,5 @@
 ---
-description: "Run mechanical verification for a completed task or phase. Executes 4-tier verification: static checks (file existence, content patterns), command execution (configured tests/lint), behavioral review (spec compliance), and human review (UAT). Produces a structured verification report."
+description: "Use when running mechanical verification for a completed task or phase. Executes 4-tier verification: static checks (file existence, content patterns), command execution (configured tests/lint), behavioral review (spec compliance), and human review (UAT). Produces a structured verification report."
 ---
 
 # speckit.orchestrator.verify

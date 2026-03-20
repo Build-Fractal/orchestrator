@@ -189,7 +189,7 @@ done
 # Summary
 # --------------------------------------------------------------------------
 echo ""
-echo "$PASS_COUNT of $TOTAL assertions passed"
+echo "$PASS_COUNT/$TOTAL checks passed"
 
 if [ "$FAIL_COUNT" -gt 0 ]; then
   exit 1

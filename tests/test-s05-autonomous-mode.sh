@@ -829,7 +829,6 @@ fi
 # Summary
 # ==========================================================================
 echo ""
-echo "--- Overall Results ---"
 echo "$PASS_COUNT/$TOTAL checks passed"
 
 if [ "$FAIL_COUNT" -gt 0 ]; then

@@ -35,7 +35,7 @@ YAML frontmatter (description field)
 - YAML frontmatter with `schema_version` + `type` fields
 - Body uses `{{placeholder}}` syntax for dynamic values
 - No hardcoded milestone/phase/task IDs (context-free per FR-074)
-- Summary frontmatter: 14-field schema (`id`, `parent`, `milestone`, `provides`, `requires`, `affects`, `key_files`, `key_decisions`, `patterns_established`, `drill_down_paths`, `duration`, `verification_result`, `completed_at`)
+- Summary frontmatter: 15-field base schema for tasks (`schema_version`, `type`, `id`, `parent`, `milestone`, `provides`, `requires`, `affects`, `key_files`, `key_decisions`, `patterns_established`, `drill_down_paths`, `duration`, `verification_result`, `completed_at`); phase/milestone summaries add `observability_surfaces` for 16 fields
 
 ### State Machine
 - 9 states derived from file presence on disk (priority-ordered rules in `derive-phase.sh`)

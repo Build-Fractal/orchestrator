@@ -1150,12 +1150,12 @@ else
 fi
 
 # --------------------------------------------------------------------------
-# 8.5 --step=G also outputs AUTO:ADVANCE with next task
+# 8.5 --step=G does NOT output AUTO:ADVANCE (deferred to pre-dispatch)
 # --------------------------------------------------------------------------
 if echo "$output" | grep -q "AUTO:ADVANCE"; then
-  pass "auto-loop.sh --step=G → AUTO:ADVANCE"
+  fail "auto-loop.sh --step=G should not emit AUTO:ADVANCE (output='$output')"
 else
-  fail "auto-loop.sh --step=G → AUTO:ADVANCE (output='$output')"
+  pass "auto-loop.sh --step=G does not emit AUTO:ADVANCE (deferred to pre-dispatch)"
 fi
 
 # --------------------------------------------------------------------------
@@ -1168,16 +1168,16 @@ else
 fi
 
 # --------------------------------------------------------------------------
-# 8.7 --step=G with all tasks complete → AUTO:PHASE_COMPLETE
+# 8.7 --step=G with all tasks complete → only AUTO:RECORDED (phase detection deferred)
 # --------------------------------------------------------------------------
 # Create T01-SUMMARY.md and T02-SUMMARY.md so all tasks are done
 echo "# T01 Summary" > "$TMPDIR_AL/phases/P02/tasks/T01-SUMMARY.md"
 echo "# T02 Summary" > "$TMPDIR_AL/phases/P02/tasks/T02-SUMMARY.md"
 output=$(bash "$AUTO_LOOP" "$TMPDIR_AL" --step=G --task=T02 --outcome=success --verification_result=pass 2>/dev/null) && exit_code=$? || exit_code=$?
-if [ "$exit_code" -eq 0 ] && echo "$output" | grep -q "AUTO:PHASE_COMPLETE"; then
-  pass "auto-loop.sh --step=G all tasks done → AUTO:PHASE_COMPLETE"
+if [ "$exit_code" -eq 0 ] && echo "$output" | grep -q "AUTO:RECORDED" && ! echo "$output" | grep -q "AUTO:PHASE_COMPLETE"; then
+  pass "auto-loop.sh --step=G all tasks done → AUTO:RECORDED only (no PHASE_COMPLETE)"
 else
-  fail "auto-loop.sh --step=G all tasks done → AUTO:PHASE_COMPLETE (exit=$exit_code, output='$output')"
+  fail "auto-loop.sh --step=G all tasks done → AUTO:RECORDED only (exit=$exit_code, output='$output')"
 fi
 rm -rf "$TMPDIR_AL"
 

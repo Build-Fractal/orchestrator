@@ -4,7 +4,7 @@
 # runs external mod check, syncs roadmap, and outputs structured key=value pairs
 # that can be passed directly to write-summary.sh.
 #
-# Usage: phase-transition.sh <milestone-dir> <phase-id> [--lock-file <path>]
+# Usage: phase-transition.sh <milestone-dir> <phase-id> [--lock-file <path>] [--write --body=<text> --observability_surfaces=<text> [--verification_result=<pass|fail>]]
 #
 # Output (stdout):
 #   Key=value pairs for write-summary.sh fields, then a status line:
@@ -34,10 +34,22 @@ PHASE_ID="$2"
 shift 2
 
 LOCK_FILE=""
+WRITE_MODE=false
+BODY=""
+OBS_SURFACES=""
+VERIF_RESULT="pass"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --lock-file)
       LOCK_FILE="$2"; shift 2 ;;
+    --write)
+      WRITE_MODE=true; shift ;;
+    --body=*)
+      BODY="${1#--body=}"; shift ;;
+    --observability_surfaces=*)
+      OBS_SURFACES="${1#--observability_surfaces=}"; shift ;;
+    --verification_result=*)
+      VERIF_RESULT="${1#--verification_result=}"; shift ;;
     *)
       echo "phase-transition.sh: unknown option: $1" >&2
       exit 1
@@ -174,8 +186,45 @@ echo "duration=${duration_total}m"
 echo "completed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 echo "task_count=$task_count"
 
-# --- Sync roadmap ---
+# --- Write summary if --write is set ---
 ROADMAP_FILE="$MILESTONE_DIR/${MILESTONE_ID}-ROADMAP.md"
+
+if [[ "$WRITE_MODE" = "true" ]]; then
+  WRITE_SUMMARY="$PROJECT_ROOT/scripts/knowledge/write-summary.sh"
+  if [[ ! -f "$WRITE_SUMMARY" ]]; then
+    echo "TRANSITION:ERROR write-summary.sh not found: $WRITE_SUMMARY" >&2
+    exit 1
+  fi
+
+  if [[ -z "$BODY" ]]; then
+    echo "TRANSITION:ERROR --write requires --body=<text>" >&2
+    exit 1
+  fi
+
+  SUMMARY_FILE="$PHASE_DIR/${PHASE_ID}-SUMMARY.md"
+  completed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+  bash "$WRITE_SUMMARY" phase "$SUMMARY_FILE" \
+    "--id=$PHASE_ID" \
+    "--parent=$MILESTONE_ID" \
+    "--milestone=$MILESTONE_ID" \
+    "--provides=$provides_list" \
+    "--requires=${requires_list:-none}" \
+    "--affects=${affects_list:-none}" \
+    "--key_files=$key_files_list" \
+    "--key_decisions=${key_decisions_list:-none}" \
+    "--patterns_established=${patterns_list:-none}" \
+    "--drill_down_paths=$drill_down_list" \
+    "--duration=${duration_total}m" \
+    "--verification_result=$VERIF_RESULT" \
+    "--completed_at=$completed_at" \
+    "--observability_surfaces=${OBS_SURFACES:-none}" \
+    "--body=$BODY"
+
+  echo "TRANSITION:WRITTEN phase=$PHASE_ID summary=$SUMMARY_FILE"
+fi
+
+# --- Sync roadmap (after writing summary so checkboxes reflect new state) ---
 if [[ -f "$ROADMAP_FILE" ]]; then
   sync_output=$(bash "$SYNC_ROADMAP" "$ROADMAP_FILE" "$MILESTONE_DIR" --fix 2>/dev/null) || true
   echo "roadmap_sync=$sync_output"

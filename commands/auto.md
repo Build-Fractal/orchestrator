@@ -63,7 +63,14 @@ test -f .claude/settings.json && echo "EXISTS" || echo "MISSING"
 
   Report: "Created `.claude/settings.json` with orchestrator permissions. Review and adjust for your project's toolchain if needed."
 
-The template at `templates/claude-settings.json` includes permissions for common build tools (npm, npx, node, tsc, eslint, jest, python, cargo, go, make) and shell utilities (grep, test, cat, wc, mkdir, find, etc.). For projects with custom toolchains, the developer should add project-specific patterns before starting auto mode.
+The template at `templates/claude-settings.json` includes permissions for common build tools (npm, npx, node, tsc, eslint, jest, python, cargo, go, make), shell utilities (grep, test, cat, wc, mkdir, find, etc.), and compound command patterns (for loops, echo, if statements, test expressions). For projects with custom toolchains, the developer should add project-specific patterns before starting auto mode.
+
+**Common patterns that trigger prompts** (add project-specific equivalents):
+- Compound commands: `Bash(for *)`, `Bash(if *)`, `Bash(echo *)`, `Bash([ *)`
+- Build tools: `Bash(cargo test *)`, `Bash(go test *)`, `Bash(pytest *)`
+- Verification idioms: `Bash(test -f *)`, `Bash(test -d *)`, `Bash(wc -l *)`
+
+**Subagent permissions**: Subagents dispatched via the Agent tool inherit the project's `.claude/settings.json` permissions. Ensure the settings file exists before dispatching.
 
 ### 5. Worktree Isolation (FR-075)
 
@@ -125,13 +132,13 @@ Parse the output to get milestone, phase, task, and payload file path. The `AUTO
 
 Do NOT rely on `detect-capabilities.sh` for in-process tool detection — shell scripts cannot detect in-process agent tools. The script is useful only for detecting CLI-level capabilities (git, shell, worktree).
 
-**b. Task-Level Verification**: After the task completes, run the **task plan's verification commands** (from the task plan's Verification / Must-Haves section). This is a quick Tier 1 check — grep patterns, line counts, command exit codes — NOT the full `speckit.orchestrator.verify` pipeline.
+**b. Task-Level Verification**: After the task completes, run mechanical verification via `auto-loop.sh --step=V`:
 
 ```bash
-# Example: run the verification commands listed in the task plan
-grep -q "expected_pattern" path/to/file.ts && echo "PASS" || echo "FAIL"
-test -f path/to/expected-file.ts && echo "PASS" || echo "FAIL"
+output=$(bash scripts/lifecycle/auto-loop.sh <milestone-dir> --step=V --phase=P## --task=T##)
 ```
+
+This extracts verification commands from the task plan's Verification / Must-Haves section and runs each one. It reports `AUTO:VERIFY_PASS` or `AUTO:VERIFY_FAIL` with check counts.
 
 The full `speckit.orchestrator.verify` command (4-tier verification pipeline) runs only at **phase boundaries** — see the Phase Transition section below. Running it after every task would be wasteful.
 
@@ -158,10 +165,8 @@ bash scripts/lifecycle/auto-loop.sh <milestone-dir> --step=G \
 ```
 
 Parse the output:
-- **AUTO:ADVANCE next_task=T##** → loop back to Stage 1
-- **AUTO:PHASE_COMPLETE phase=P##** → handle phase transition (see below)
-- **AUTO:MILESTONE_VALIDATING** → handle milestone validation (see below)
-- **AUTO:MILESTONE_COMPLETE** → release lock, report completion
+- **AUTO:RECORDED** → loop back to Stage 1 (pre-dispatch determines the next task)
+- **AUTO:PHASE_COMPLETE phase=P##** is NOT emitted from post-dispatch; phase transitions are detected by pre-dispatch
 
 ## Phase Planning
 
@@ -169,17 +174,7 @@ When `auto-loop.sh` returns `AUTO:PLANNING phase=P## milestone=M###`, the active
 
 ### Planning Dispatch
 
-1. **Assemble planning context**: Run `build-context.sh` at the phase level to gather the roadmap, spec, upstream summaries, and decisions:
-
-   ```bash
-   bash scripts/dispatch/build-context.sh <orchestrator-root> <M###> <P##> PHASE_PLAN 2>/dev/null || true
-   ```
-
-   If `build-context.sh` does not support a `PHASE_PLAN` pseudo-task, assemble the context manually by reading:
-   - The roadmap (`M###-ROADMAP.md`) for the phase's goal, demo, dependencies, and boundary map
-   - Upstream phase summaries (`P##-SUMMARY.md` for each dependency)
-   - The feature spec (`specs/{NNN}-{name}/spec.md`) for relevant requirements
-   - The context draft (if it exists at `<orchestrator-root>/CONTEXT.md`)
+1. **Read planning context**: The `AUTO:PLANNING` output includes `payload_file=<path>` pointing to a pre-assembled planning payload on disk. Read this file directly — it contains the roadmap phase section, upstream summaries, feature spec, context draft, decisions, and knowledge, assembled by `build-context.sh` in `PHASE_PLAN` mode.
 
 2. **Dispatch planning**: Use the Agent tool (or equivalent) with a prompt that includes:
    - The assembled context from step 1
@@ -234,30 +229,18 @@ Parse the output to extract the derived field values, then review them before wr
 
 1. **Stage 1 — Phase Verification**: Run `speckit.orchestrator.verify` on the phase to execute the full 4-tier verification pipeline. This is the only point where the full verification command runs — NOT after individual tasks.
 
-2. **Stage 2 — Phase Summary**: If verification passes, produce the phase summary using `write-summary.sh` with the field values derived by `phase-transition.sh`:
+2. **Stage 2 — Phase Summary**: If verification passes, produce the phase summary using `phase-transition.sh --write`. This derives all mechanical fields from task summaries and writes the summary in one call. Only `--body` and `--observability_surfaces` require agent judgment:
 
    ```bash
-   bash scripts/knowledge/write-summary.sh phase <milestone-dir>/phases/<P##>/<P##>-SUMMARY.md \
-     --id=<id from phase-transition.sh> \
-     --parent=<parent from phase-transition.sh> \
-     --milestone=<milestone from phase-transition.sh> \
-     --provides="<provides from phase-transition.sh — review and refine>" \
-     --requires="<requires from phase-transition.sh>" \
-     --affects="<affects from phase-transition.sh>" \
-     --key_files="<key_files from phase-transition.sh>" \
-     --key_decisions="<key_decisions from phase-transition.sh>" \
-     --patterns_established="<patterns_established from phase-transition.sh>" \
-     --drill_down_paths="<drill_down_paths from phase-transition.sh>" \
-     --duration=<duration from phase-transition.sh> \
-     --verification_result=pass \
-     --completed_at=<completed_at from phase-transition.sh> \
+   bash scripts/lifecycle/phase-transition.sh <milestone-dir> <P##> \
+     --lock-file .specify/orchestrator/orchestrator.lock \
+     --write \
+     --body="<synthesized summary: what was built, key decisions, patterns, verification results>" \
      --observability_surfaces="<metrics or logs if applicable>" \
-     --body="<synthesized summary: what was built, key decisions, patterns, verification results>"
+     --verification_result=pass
    ```
 
-   The `--body` and `--observability_surfaces` fields still require agent judgment — `phase-transition.sh` provides the factual fields, the agent synthesizes the narrative.
-
-   Do NOT write phase summaries freeform. The 16 frontmatter fields are required for downstream consumption by `consolidate-artifacts.sh` and knowledge compounding.
+   Do NOT write phase summaries freeform or call `write-summary.sh` directly for phase transitions. The 16 frontmatter fields are required for downstream consumption by `consolidate-artifacts.sh` and knowledge compounding.
 
 3. **Roadmap Reassessment (FR-009 / FR-061)**: After the phase summary is written, perform mandatory roadmap reassessment:
    - Check for deviations from the original plan

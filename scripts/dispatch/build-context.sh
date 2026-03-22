@@ -6,8 +6,12 @@
 #   orchestrator-root: the .specify/orchestrator/ directory (or fixture milestone dir)
 #   milestone-id: M### (e.g., M001)
 #   phase-id: P## (e.g., P02)
-#   task-id: T## (e.g., T01)
+#   task-id: T## (e.g., T01) or PHASE_PLAN for planning payload
 #   --config-defaults: optional config file for context_verbosity etc.
+#
+# When task-id is PHASE_PLAN, assembles a planning context payload instead of
+# a task execution payload. Includes roadmap phase section, upstream summaries,
+# feature spec references, context draft, decisions, and knowledge.
 #
 # Output: assembled dispatch prompt to stdout (following dispatch-prompt.md template)
 # Stderr: "Context payload: X bytes (Y% of total artifacts)" — budget monitoring
@@ -70,24 +74,30 @@ else
 fi
 
 PHASE_DIR="$MILESTONE_DIR/phases/$PHASE_ID"
-TASK_PLAN="$PHASE_DIR/tasks/${TASK_ID}-PLAN.md"
-PHASE_PLAN="$PHASE_DIR/${PHASE_ID}-PLAN.md"
 ROADMAP="$MILESTONE_DIR/${MILESTONE_ID}-ROADMAP.md"
-
-# Validate required files exist
-if [[ ! -f "$TASK_PLAN" ]]; then
-  echo "build-context.sh: task plan not found: $TASK_PLAN" >&2
-  exit 1
-fi
-
-if [[ ! -f "$PHASE_PLAN" ]]; then
-  echo "build-context.sh: phase plan not found: $PHASE_PLAN" >&2
-  exit 1
+IS_PLANNING=false
+if [[ "$TASK_ID" = "PHASE_PLAN" ]]; then
+  IS_PLANNING=true
 fi
 
 if [[ ! -f "$ROADMAP" ]]; then
   echo "build-context.sh: roadmap not found: $ROADMAP" >&2
   exit 1
+fi
+
+if [[ "$IS_PLANNING" = "false" ]]; then
+  TASK_PLAN="$PHASE_DIR/tasks/${TASK_ID}-PLAN.md"
+  PHASE_PLAN="$PHASE_DIR/${PHASE_ID}-PLAN.md"
+
+  if [[ ! -f "$TASK_PLAN" ]]; then
+    echo "build-context.sh: task plan not found: $TASK_PLAN" >&2
+    exit 1
+  fi
+
+  if [[ ! -f "$PHASE_PLAN" ]]; then
+    echo "build-context.sh: phase plan not found: $PHASE_PLAN" >&2
+    exit 1
+  fi
 fi
 
 # --- Read config values ---
@@ -120,6 +130,183 @@ if [[ -n "$PHASE_DATA" ]]; then
   DEPENDS=$(echo "$PHASE_DATA" | awk '{print $4}')
 fi
 
+# --- Gather upstream summaries (shared by both modes) ---
+gather_upstream_summaries() {
+  local summaries=""
+  if [[ "$DEPENDS" != "none" && "$CONTEXT_VERBOSITY" != "minimal" ]]; then
+    IFS=',' read -ra dep_list <<< "$DEPENDS"
+    for dep in "${dep_list[@]}"; do
+      dep=$(echo "$dep" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+      local summary_file="$MILESTONE_DIR/phases/$dep/${dep}-SUMMARY.md"
+      if [[ -f "$summary_file" ]]; then
+        summaries="${summaries}
+### ${dep} Summary
+$(cat "$summary_file")
+"
+      fi
+    done
+  fi
+  if [[ -z "$summaries" ]]; then
+    echo "No upstream summaries available."
+  else
+    echo "$summaries"
+  fi
+}
+
+# --- Scope-filtered knowledge (shared) ---
+gather_knowledge() {
+  local entries=""
+  if [[ "$CONTEXT_VERBOSITY" != "minimal" ]]; then
+    local knowledge_file="$MILESTONE_DIR/KNOWLEDGE.md"
+    if [[ -f "$knowledge_file" ]]; then
+      local dep_flag=""
+      if [[ "$DEPENDS" != "none" ]]; then
+        dep_flag="--depends $DEPENDS"
+      fi
+      entries=$(bash "$SCOPE_FILTER" "$knowledge_file" "$MILESTONE_ID/$PHASE_ID" --type knowledge $dep_flag 2>/dev/null) || true
+    fi
+  fi
+  if [[ -z "$entries" ]]; then
+    echo "No knowledge entries in scope."
+  else
+    echo "$entries"
+  fi
+}
+
+# --- Scope-filtered decisions (shared) ---
+gather_decisions() {
+  local entries=""
+  if [[ "$CONTEXT_VERBOSITY" != "minimal" ]]; then
+    local decisions_file="$MILESTONE_DIR/DECISIONS.md"
+    if [[ -f "$decisions_file" ]]; then
+      local dep_flag=""
+      if [[ "$DEPENDS" != "none" ]]; then
+        dep_flag="--depends $DEPENDS"
+      fi
+      entries=$(bash "$SCOPE_FILTER" "$decisions_file" "$MILESTONE_ID/$PHASE_ID" --type decisions $dep_flag 2>/dev/null) || true
+    fi
+  fi
+  if [[ -z "$entries" ]]; then
+    echo "No decision entries in scope."
+  else
+    echo "$entries"
+  fi
+}
+
+UPSTREAM_SUMMARIES=$(gather_upstream_summaries)
+KNOWLEDGE_ENTRIES=$(gather_knowledge)
+DECISION_ENTRIES=$(gather_decisions)
+
+# ============================================================================
+# PHASE_PLAN mode — planning context payload
+# ============================================================================
+if [[ "$IS_PLANNING" = "true" ]]; then
+  # --- Extract roadmap section for this phase ---
+  ROADMAP_SECTION=""
+  if [[ -f "$ROADMAP" ]]; then
+    # Extract the phase block from roadmap (from phase heading to next phase or section)
+    ROADMAP_SECTION=$(sed -n "/\\*\\*${PHASE_ID}\\*\\*/,/\\*\\*P[0-9]/p" "$ROADMAP" | sed '$d' || true)
+    if [[ -z "$ROADMAP_SECTION" ]]; then
+      # Try: last phase (no following phase heading)
+      ROADMAP_SECTION=$(sed -n "/\\*\\*${PHASE_ID}\\*\\*/,\$p" "$ROADMAP" || true)
+    fi
+  fi
+  if [[ -z "$ROADMAP_SECTION" ]]; then
+    ROADMAP_SECTION="Phase section not found in roadmap."
+  fi
+
+  # --- Read context draft if it exists ---
+  CONTEXT_DRAFT=""
+  CONTEXT_FILE="$ORCH_ROOT/CONTEXT.md"
+  if [[ -f "$CONTEXT_FILE" ]]; then
+    CONTEXT_DRAFT=$(cat "$CONTEXT_FILE")
+  fi
+  # Also check milestone-level context
+  if [[ -z "$CONTEXT_DRAFT" && -f "$MILESTONE_DIR/CONTEXT.md" ]]; then
+    CONTEXT_DRAFT=$(cat "$MILESTONE_DIR/CONTEXT.md")
+  fi
+  if [[ -z "$CONTEXT_DRAFT" ]]; then
+    CONTEXT_DRAFT="No context draft available."
+  fi
+
+  # --- Find feature spec ---
+  FEATURE_SPEC=""
+  # Look for spec.md in specs/ directories at the project root level
+  # Walk up from ORCH_ROOT to find the project root (parent of .specify/)
+  PROJECT_DIR=""
+  candidate="$ORCH_ROOT"
+  while [[ "$candidate" != "/" ]]; do
+    if [[ "$(basename "$candidate")" = ".specify" ]]; then
+      PROJECT_DIR="$(dirname "$candidate")"
+      break
+    fi
+    # Check if .specify/ is a child
+    if [[ -d "$candidate/.specify" ]]; then
+      PROJECT_DIR="$candidate"
+      break
+    fi
+    candidate="$(dirname "$candidate")"
+  done
+  if [[ -n "$PROJECT_DIR" ]]; then
+    spec_file=$(find "$PROJECT_DIR/specs" -name "spec.md" -type f 2>/dev/null | head -1)
+    if [[ -n "$spec_file" && -f "$spec_file" ]]; then
+      FEATURE_SPEC=$(cat "$spec_file")
+    fi
+  fi
+  if [[ -z "$FEATURE_SPEC" ]]; then
+    FEATURE_SPEC="Feature spec not found."
+  fi
+
+  PAYLOAD=$(cat <<PLANNING_EOF
+---
+schema_version: "1.0"
+type: planning-prompt
+---
+
+## State Context
+
+- **Current State**: planning
+- **Milestone**: $MILESTONE_ID
+- **Phase**: $PHASE_ID
+- **Tier**: $TIER
+
+## Phase Roadmap Section
+
+$ROADMAP_SECTION
+
+## Upstream Context
+
+$UPSTREAM_SUMMARIES
+
+## Knowledge
+
+$KNOWLEDGE_ENTRIES
+
+## Decisions
+
+$DECISION_ENTRIES
+
+## Context Draft
+
+$CONTEXT_DRAFT
+
+## Feature Spec
+
+$FEATURE_SPEC
+
+## Instructions
+
+Plan phase $PHASE_ID for milestone $MILESTONE_ID following the speckit.orchestrator.plan-phase command.
+Produce a phase plan (${PHASE_ID}-PLAN.md) with goal, demo, must-haves, and task breakdown.
+Each task plan should be self-contained with zero-context assumptions.
+PLANNING_EOF
+)
+
+else
+# ============================================================================
+# Normal task dispatch mode
+# ============================================================================
+
 # --- Read task plan content ---
 TASK_PLAN_CONTENT=$(cat "$TASK_PLAN")
 
@@ -141,60 +328,6 @@ $demo_line
 
 ### Must-Haves
 $must_haves"
-fi
-
-# --- Gather upstream summaries ---
-UPSTREAM_SUMMARIES=""
-if [[ "$DEPENDS" != "none" && "$CONTEXT_VERBOSITY" != "minimal" ]]; then
-  IFS=',' read -ra dep_list <<< "$DEPENDS"
-  for dep in "${dep_list[@]}"; do
-    dep=$(echo "$dep" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
-    summary_file="$MILESTONE_DIR/phases/$dep/${dep}-SUMMARY.md"
-    if [[ -f "$summary_file" ]]; then
-      UPSTREAM_SUMMARIES="${UPSTREAM_SUMMARIES}
-### ${dep} Summary
-$(cat "$summary_file")
-"
-    fi
-  done
-fi
-
-if [[ -z "$UPSTREAM_SUMMARIES" ]]; then
-  UPSTREAM_SUMMARIES="No upstream summaries available."
-fi
-
-# --- Scope-filtered knowledge ---
-KNOWLEDGE_ENTRIES=""
-if [[ "$CONTEXT_VERBOSITY" != "minimal" ]]; then
-  KNOWLEDGE_FILE="$MILESTONE_DIR/KNOWLEDGE.md"
-  if [[ -f "$KNOWLEDGE_FILE" ]]; then
-    dep_flag=""
-    if [[ "$DEPENDS" != "none" ]]; then
-      dep_flag="--depends $DEPENDS"
-    fi
-    KNOWLEDGE_ENTRIES=$(bash "$SCOPE_FILTER" "$KNOWLEDGE_FILE" "$MILESTONE_ID/$PHASE_ID" --type knowledge $dep_flag 2>/dev/null) || true
-  fi
-fi
-
-if [[ -z "$KNOWLEDGE_ENTRIES" ]]; then
-  KNOWLEDGE_ENTRIES="No knowledge entries in scope."
-fi
-
-# --- Scope-filtered decisions ---
-DECISION_ENTRIES=""
-if [[ "$CONTEXT_VERBOSITY" != "minimal" ]]; then
-  DECISIONS_FILE="$MILESTONE_DIR/DECISIONS.md"
-  if [[ -f "$DECISIONS_FILE" ]]; then
-    dep_flag=""
-    if [[ "$DEPENDS" != "none" ]]; then
-      dep_flag="--depends $DEPENDS"
-    fi
-    DECISION_ENTRIES=$(bash "$SCOPE_FILTER" "$DECISIONS_FILE" "$MILESTONE_ID/$PHASE_ID" --type decisions $dep_flag 2>/dev/null) || true
-  fi
-fi
-
-if [[ -z "$DECISION_ENTRIES" ]]; then
-  DECISION_ENTRIES="No decision entries in scope."
 fi
 
 # --- Derive current state ---
@@ -252,6 +385,8 @@ $TASK_PLAN_CONTENT
 - **Budget Enforcement**: $BUDGET_ENFORCEMENT
 DISPATCH_EOF
 )
+
+fi  # end IS_PLANNING branch
 
 # --- Output payload ---
 echo "$PAYLOAD"

@@ -29,12 +29,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This pr
 - **`templates/evaluation.md`** — New template for evaluation output with tier, metrics, reasoning, spec path, and tier source fields
 - **`references/installation.md`** — New reference doc documenting how to install the extension in a consumer project (which files to copy, what to exclude, directory structure, verification steps)
 - **EVALUATION.md format** documented in `references/file-formats.md` with frontmatter schema and role description
+- **auto-loop.sh: `--step=V` verification** — New verification step that reads task plan Verification/Must-Haves section and mechanically executes check commands, reporting `AUTO:VERIFY_PASS` or `AUTO:VERIFY_FAIL` with check counts
+- **build-context.sh: `PHASE_PLAN` mode** — New planning payload assembly when task-id is `PHASE_PLAN`; includes roadmap phase section, upstream summaries, feature spec, context draft, decisions, and knowledge
+- **auto-loop.sh: planning payload assembly** — `AUTO:PLANNING` output now includes `payload_bytes` and `payload_file` fields pointing to pre-assembled planning context on disk
+- **phase-transition.sh: `--write` flag** — Accepts `--body`, `--observability_surfaces`, and `--verification_result` args; calls `write-summary.sh` directly with all derived + provided fields in a single command
+- **claude-settings.json: compound command patterns** — Added `echo`, `for`, `if`, `[`, `true`, `false`, `wc -l`, `test -f`, `test -d` permission patterns for verification idioms
 
 ### Changed
 
 - **`derive-phase.sh`** — Added design note comment explaining why the script is intentionally not tier-aware (tier-specific policy is at the command layer)
 - **`references/state-machine.md`** — Added "Tier-Agnostic Derivation" section documenting the intentional separation between state derivation (file presence) and tier policy (command layer)
 - **`references/file-formats.md`** — Added EVALUATION.md to directory structure diagram and file format reference
+- **auto-loop.sh: ORCH_ROOT computation** — Fixed off-by-one: changed `$MILESTONE_DIR/..` to `$MILESTONE_DIR/../..` so ORCH_ROOT resolves to `.specify/orchestrator/` instead of `.specify/orchestrator/milestones/`; added stderr logging when `build-context.sh` fails instead of silently falling back to 40-byte minimal payload
+- **auto-loop.sh: post-dispatch simplification** — Removed next-task scanning and phase-complete detection from `--step=G` post-dispatch; post-dispatch now only records result and updates lock; next-task determination deferred to pre-dispatch to avoid race with summary writing
+- **phase-transition.sh: roadmap sync ordering** — Moved `sync-roadmap.sh --fix` to run after `--write` summary creation so roadmap checkboxes reflect the newly-completed phase
+- **auto.md: permission documentation** — Added guidance on common permission patterns that trigger prompts, compound command patterns, and subagent permission inheritance
+- **auto.md: verification integration** — Updated task-level verification instructions to use `auto-loop.sh --step=V` instead of manual grep checks
+- **auto.md: phase summary workflow** — Updated to use `phase-transition.sh --write` instead of manual `write-summary.sh` invocation with 16 flags
+- **auto.md: planning payload** — Updated to reference pre-assembled `payload_file` from `AUTO:PLANNING` output instead of manual context assembly
 
 ## [0.1.0] — 2026-03-20
 

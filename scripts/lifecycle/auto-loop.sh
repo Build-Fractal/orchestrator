@@ -9,17 +9,22 @@
 #     Outputs payload to stdout, exits with status indicating "ready to dispatch"
 #
 #   Phase 2 (post-dispatch): auto-loop.sh <milestone-dir> --step=G --task=T## --outcome=<success|failure> [options]
-#     Steps G→I: record result, update lock, check for more tasks / sync roadmap
+#     Steps G→H: record result, update lock
+#
+#   Verification: auto-loop.sh <milestone-dir> --step=V --phase=P## --task=T##
+#     Runs task-level verification from the task plan's Verification section
 #
 # Usage:
 #   auto-loop.sh <milestone-dir>
 #   auto-loop.sh <milestone-dir> --step=G --task=T## --outcome=<success|failure> \
 #     [--verification_result=<pass|fail|skipped>] [--duration_s=N]
+#   auto-loop.sh <milestone-dir> --step=V --phase=P## --task=T##
 #
 # Structured output (stdout):
 #   AUTO:READY milestone=<M###> phase=<P##> task=<T##> payload_bytes=<N>
 #   AUTO:RECORDED milestone=<M###> phase=<P##> task=<T##>
-#   AUTO:ADVANCE next_task=<T##>
+#   AUTO:VERIFY_PASS phase=<P##> task=<T##> checks_passed=<N>
+#   AUTO:VERIFY_FAIL phase=<P##> task=<T##> checks_passed=<N> checks_failed=<N>
 #   AUTO:PHASE_COMPLETE phase=<P##>
 #   AUTO:MILESTONE_VALIDATING
 #   AUTO:MILESTONE_COMPLETE
@@ -48,6 +53,8 @@ STUCK_DETECTOR="$PROJECT_ROOT/scripts/lifecycle/stuck-detector.sh"
 LOCK_MANAGER="$PROJECT_ROOT/scripts/lifecycle/lock-manager.sh"
 RECORD_RESULT="$PROJECT_ROOT/scripts/lifecycle/record-result.sh"
 SYNC_ROADMAP="$PROJECT_ROOT/scripts/lifecycle/sync-roadmap.sh"
+CHECK_MUST_HAVES="$PROJECT_ROOT/scripts/verify/check-must-haves.sh"
+RUN_COMMANDS="$PROJECT_ROOT/scripts/verify/run-commands.sh"
 
 # --- Validate required scripts exist ---
 for required_script in "$DERIVE_PHASE" "$READ_ROADMAP" "$BUILD_CONTEXT" \
@@ -77,6 +84,7 @@ fi
 
 STEP=""
 TASK=""
+PHASE=""
 OUTCOME=""
 VERIFICATION_RESULT=""
 DURATION_S=""
@@ -85,6 +93,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --step=*)             STEP="${1#--step=}" ;;
     --task=*)             TASK="${1#--task=}" ;;
+    --phase=*)            PHASE="${1#--phase=}" ;;
     --outcome=*)          OUTCOME="${1#--outcome=}" ;;
     --verification_result=*) VERIFICATION_RESULT="${1#--verification_result=}" ;;
     --duration_s=*)       DURATION_S="${1#--duration_s=}" ;;
@@ -110,7 +119,7 @@ fi
 ROADMAP_FILE="$MILESTONE_DIR/${MILESTONE_ID}-ROADMAP.md"
 EXECUTION_LOG="$MILESTONE_DIR/execution-log.jsonl"
 LOCK_FILE="$MILESTONE_DIR/../orchestrator.lock"
-ORCH_ROOT="$(cd "$MILESTONE_DIR/.." 2>/dev/null && pwd)" || ORCH_ROOT="$MILESTONE_DIR"
+ORCH_ROOT="$(cd "$MILESTONE_DIR/../.." 2>/dev/null && pwd)" || ORCH_ROOT="$MILESTONE_DIR"
 
 # If the lock file path doesn't resolve (fixture mode), use milestone dir
 if [[ ! -d "$(dirname "$LOCK_FILE")" ]]; then
@@ -163,49 +172,89 @@ if [[ "$STEP" = "G" ]]; then
     bash "$LOCK_MANAGER" update "$LOCK_FILE" "$MILESTONE_ID/$active_phase/$TASK" >/dev/null 2>&1 || true
   fi
 
-  # --- Step I: Advance — check for more tasks / phase complete / milestone state ---
-  tasks_dir="$MILESTONE_DIR/phases/$active_phase/tasks"
-  next_task=""
-  if [[ -d "$tasks_dir" ]]; then
-    for plan_file in "$tasks_dir"/T*-PLAN.md; do
-      [[ -f "$plan_file" ]] || continue
-      task_id=$(basename "$plan_file" | sed 's/-PLAN\.md$//')
-      summary_file="$tasks_dir/${task_id}-SUMMARY.md"
-      if [[ ! -f "$summary_file" ]]; then
-        next_task="$task_id"
-        break
-      fi
-    done
-  fi
-
-  if [[ -n "$next_task" ]]; then
-    echo "AUTO:ADVANCE next_task=$next_task"
-  else
-    # All tasks in phase complete — check milestone state
-    state=$(bash "$DERIVE_PHASE" "$MILESTONE_DIR" 2>/dev/null) || state="unknown"
-
-    # Sync roadmap if it exists
-    if [[ -f "$ROADMAP_FILE" ]]; then
-      bash "$SYNC_ROADMAP" "$ROADMAP_FILE" "$MILESTONE_DIR" --fix >/dev/null 2>&1 || true
-    fi
-
-    case "$state" in
-      verifying|summarizing)
-        echo "AUTO:PHASE_COMPLETE phase=$active_phase"
-        ;;
-      validating)
-        echo "AUTO:MILESTONE_VALIDATING"
-        ;;
-      complete)
-        echo "AUTO:MILESTONE_COMPLETE"
-        ;;
-      *)
-        echo "AUTO:PHASE_COMPLETE phase=$active_phase"
-        ;;
-    esac
-  fi
+  # --- Step I: Post-dispatch is complete ---
+  # Next-task determination is deferred to the next pre-dispatch call (Stage 1).
+  # This avoids race conditions where summaries haven't been written yet when
+  # scanning for the next incomplete task.
 
   exit 0
+fi
+
+# ============================================================================
+# VERIFICATION PHASE (--step=V)
+# ============================================================================
+if [[ "$STEP" = "V" ]]; then
+  if [[ -z "$TASK" || -z "$PHASE" ]]; then
+    echo "auto-loop.sh: --step=V requires --phase=P## and --task=T##" >&2
+    exit 1
+  fi
+
+  task_plan="$MILESTONE_DIR/phases/$PHASE/tasks/${TASK}-PLAN.md"
+  if [[ ! -f "$task_plan" ]]; then
+    echo "auto-loop.sh: task plan not found: $task_plan" >&2
+    exit 1
+  fi
+
+  # Extract verification commands from the task plan's Verification section
+  # Look for lines with backtick-wrapped commands under ## Verification or ## Must-Haves
+  verify_section=$(sed -n '/^## \(Verification\|Must-Haves\)/,/^## [^#]/p' "$task_plan" | sed '$d' || true)
+  if [[ -z "$verify_section" ]]; then
+    # Try without trailing delimiter (section is last in file)
+    verify_section=$(sed -n '/^## \(Verification\|Must-Haves\)/,$p' "$task_plan" || true)
+  fi
+
+  if [[ -z "$verify_section" ]]; then
+    echo "AUTO:VERIFY_PASS phase=$PHASE task=$TASK checks_passed=0"
+    exit 0
+  fi
+
+  # Resolve project root for running check commands
+  VERIFY_PROJECT_ROOT=""
+  candidate="$MILESTONE_DIR"
+  while [[ "$candidate" != "/" ]]; do
+    parent_name=$(basename "$(dirname "$candidate")")
+    if [[ "$parent_name" = "milestones" ]]; then
+      # Go up through milestones/ → orchestrator/ → .specify/ → project root
+      VERIFY_PROJECT_ROOT="$(cd "$candidate/../../.." 2>/dev/null && pwd)" || true
+      break
+    fi
+    candidate="$(dirname "$candidate")"
+  done
+  if [[ -z "$VERIFY_PROJECT_ROOT" ]]; then
+    VERIFY_PROJECT_ROOT="$(cd "$MILESTONE_DIR/../.." 2>/dev/null && pwd)" || VERIFY_PROJECT_ROOT="."
+  fi
+
+  # Extract and run check commands from backtick-wrapped lines
+  checks_passed=0
+  checks_failed=0
+  fail_details=""
+
+  while IFS= read -r line; do
+    # Match lines containing `command` backtick patterns (Check: `cmd` or - `cmd`)
+    check_cmd=""
+    if echo "$line" | grep -qE '`[^`]+`'; then
+      check_cmd=$(echo "$line" | sed 's/.*`\([^`]*\)`.*/\1/')
+    fi
+    [[ -z "$check_cmd" ]] && continue
+
+    # Run the check command relative to project root
+    if (cd "$VERIFY_PROJECT_ROOT" && eval "$check_cmd") >/dev/null 2>&1; then
+      echo "PASS: $check_cmd"
+      checks_passed=$((checks_passed + 1))
+    else
+      echo "FAIL: $check_cmd"
+      checks_failed=$((checks_failed + 1))
+      fail_details="${fail_details}FAIL: $check_cmd\n"
+    fi
+  done <<< "$verify_section"
+
+  if [[ "$checks_failed" -gt 0 ]]; then
+    echo "AUTO:VERIFY_FAIL phase=$PHASE task=$TASK checks_passed=$checks_passed checks_failed=$checks_failed"
+    exit 1
+  else
+    echo "AUTO:VERIFY_PASS phase=$PHASE task=$TASK checks_passed=$checks_passed"
+    exit 0
+  fi
 fi
 
 # ============================================================================
@@ -235,7 +284,15 @@ case "$state" in
   planning)
     # Phase needs planning before tasks can be dispatched
     active_phase=$(bash "$READ_ROADMAP" "$ROADMAP_FILE" active-phase 2>/dev/null) || active_phase="unknown"
-    echo "AUTO:PLANNING phase=$active_phase milestone=$MILESTONE_ID"
+    # Build planning payload using PHASE_PLAN mode
+    plan_payload=$(bash "$BUILD_CONTEXT" "$ORCH_ROOT" "$MILESTONE_ID" "$active_phase" "PHASE_PLAN" 2>/dev/null) || {
+      plan_payload="Plan phase $active_phase for milestone $MILESTONE_ID"
+    }
+    plan_payload_bytes=$(printf '%s' "$plan_payload" | wc -c | tr -d ' ')
+    plan_payload_file="$MILESTONE_DIR/phases/$active_phase/${active_phase}-PLANNING-PAYLOAD.md"
+    mkdir -p "$(dirname "$plan_payload_file")"
+    printf '%s' "$plan_payload" > "$plan_payload_file"
+    echo "AUTO:PLANNING phase=$active_phase milestone=$MILESTONE_ID payload_bytes=$plan_payload_bytes payload_file=$plan_payload_file"
     exit 0
     ;;
   verifying|summarizing)
@@ -320,10 +377,14 @@ if [[ -f "$EXECUTION_LOG" ]]; then
 fi
 
 # --- Step D: Build context payload ---
-payload=$(bash "$BUILD_CONTEXT" "$ORCH_ROOT" "$MILESTONE_ID" "$active_phase" "$next_task" 2>/dev/null) || {
-  # If build-context fails (e.g. missing phase plan in fixture), output minimal info
+build_stderr=""
+payload=$(bash "$BUILD_CONTEXT" "$ORCH_ROOT" "$MILESTONE_ID" "$active_phase" "$next_task" 2>"$MILESTONE_DIR/build-context-stderr.log") || {
+  # Log the error so the orchestrating agent can diagnose payload assembly failures
+  build_stderr=$(cat "$MILESTONE_DIR/build-context-stderr.log" 2>/dev/null || true)
+  echo "auto-loop.sh: build-context.sh failed: $build_stderr" >&2
   payload="Task: $next_task in phase $active_phase of milestone $MILESTONE_ID"
 }
+rm -f "$MILESTONE_DIR/build-context-stderr.log"
 
 payload_bytes=$(printf '%s' "$payload" | wc -c | tr -d ' ')
 

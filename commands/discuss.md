@@ -22,11 +22,51 @@ If the state is anything else, report: "Discussion is not available in the curre
 - `planning` or `executing` → suggest `speckit.orchestrator.status` or `speckit.orchestrator.dispatch`
 - `complete` → suggest `speckit.orchestrator.status`
 
-### 2. Tier Behavior
+### 2. Read the Tier
 
-The discussion phase has different requirements depending on the orchestration tier:
-- **Tier B** — Discussion is optional and skippable. The user can proceed directly to `speckit.orchestrator.roadmap` without creating a context draft. If skipped, no context draft file is created and the state transitions directly from `pre-planning` to `planning` when the roadmap command is invoked.
-- **Tier C** — Discussion is a required gate before roadmap generation (FR-056). The roadmap command should refuse to run until the context draft is finalized (`status: finalized`).
+Read the tier classification from the evaluation file in the milestone directory:
+
+```
+<milestone-dir>/M###-EVALUATION.md
+```
+
+Extract the `tier` field from the YAML frontmatter. If the evaluation file doesn't exist, warn: "No evaluation found. Run `speckit.orchestrator.evaluate` first to classify the project tier." and exit.
+
+Report the tier to inform behavior:
+
+- **Tier A** — Discussion is not applicable. Tier A bypasses the orchestrator entirely. Report: "Tier A project — discussion is not applicable. Use standard spec-kit commands directly."
+- **Tier B** — Discussion is optional and skippable. Report: "Tier B project — discussion is optional. You can skip this and proceed directly to `speckit.orchestrator.roadmap`." Then proceed if the developer wants to continue.
+- **Tier C** — Discussion is a required gate before roadmap generation (FR-056). Report: "Tier C project — discussion is required before roadmap generation. The roadmap command will not proceed until the context draft is finalized." Then proceed.
+
+### 3. Read the Feature Spec
+
+Read the feature spec path from the evaluation file's `feature_spec` frontmatter field. Read the spec content — it is needed for question generation (see below). If the spec path is missing or the file doesn't exist, warn and proceed without spec-driven questions.
+
+## Question Generation
+
+Before creating or updating the context draft, analyze the feature spec to generate targeted discussion questions for the developer. This helps the developer think through decisions that will affect planning.
+
+### Heuristic: Spec-Driven Questions
+
+For each area, scan the spec and identify gaps or ambiguity:
+
+1. **Technology choices not specified**: For each functional requirement, check if the spec leaves implementation technology open. Example: "The spec requires a game loop — what rendering approach? Canvas 2D, WebGL, or DOM-based?"
+2. **Integration boundaries**: Where does this feature connect to existing systems? What APIs, databases, or services does it touch? Are there compatibility constraints?
+3. **Performance and scale**: Does the spec mention performance targets? If not, ask: "Are there performance constraints (frame rate, response time, data volume)?"
+4. **Data model ambiguity**: Are data structures and storage mechanisms specified? If not, ask about persistence, state management, and data flow.
+5. **Scope edges**: Identify requirements that could expand in scope. Ask about explicit boundaries: "The spec mentions X — does that include Y, or is Y out of scope?"
+6. **Deployment and environment**: Where will this run? Are there browser/platform/environment constraints?
+7. **Testing strategy**: Does the spec specify how to verify? If not, ask about test approach preferences.
+
+Present the generated questions organized by the context draft sections (Architectural Decisions, Scope Boundaries, Design Constraints, Open Questions). The developer's answers populate the draft.
+
+### If No Spec Available
+
+If the spec cannot be read, fall back to general discussion prompts:
+- "What are the key architectural decisions for this milestone?"
+- "What is explicitly in scope and out of scope?"
+- "Are there technical, resource, or timeline constraints?"
+- "What open questions need resolution before planning?"
 
 ## Core Workflow
 
@@ -40,7 +80,7 @@ If no context draft exists at `<milestone-dir>/<M###>-CONTEXT.md`:
    - `status`: set to `draft`
    - `created_at`: set to the current ISO-8601 timestamp
    - `finalized_at`: leave as `null`
-3. Replace the placeholder text in each section with initial content from the developer's input:
+3. Replace the placeholder text in each section with initial content from the developer's input (informed by the question generation above):
    - `## Architectural Decisions` — key architectural choices
    - `## Scope Boundaries` — what is in scope and out of scope
    - `## Design Constraints` — technical, resource, or process constraints
@@ -91,6 +131,7 @@ After finalizing, suggest: "Context finalized. Run `speckit.orchestrator.roadmap
 ## Error Handling
 
 - **State is not `pre-planning` or `discussing`**: Report current state and suggest the appropriate command (see Prerequisites section above).
+- **Evaluation file missing**: Report "No evaluation found at `<M###>-EVALUATION.md`. Run `speckit.orchestrator.evaluate` first." and exit.
 - **Context file has malformed frontmatter** (missing `---` delimiters or missing `status` field): Warn "Context file has malformed frontmatter. Attempting to repair." Re-add the frontmatter block with `status: draft`, preserving the existing body content. If repair fails, report the error and suggest manual inspection.
 - **Template file missing** (`templates/context-draft.md` not found): Report "Context draft template not found at `templates/context-draft.md`. Cannot create context draft." and exit 1.
 - **Developer provides empty content**: Warn "No content provided. The context draft sections are empty." Allow the draft to be created (it can be updated later), but warn that finalizing an empty draft provides no value for planning.
@@ -100,6 +141,8 @@ After finalizing, suggest: "Context finalized. Run `speckit.orchestrator.roadmap
 - **Running discuss on a Tier B project is allowed but optional**: It will create a context draft that is not required for roadmap generation. Running it on Tier A is a no-op — Tier A bypasses the orchestrator entirely.
 - **Finalizing an empty context draft is allowed**: The command warns but does not block. The result is a vacuous planning gate that adds no value to roadmap generation.
 - **Context draft malformed frontmatter**: The command attempts repair (re-adding `---` delimiters), but if the `status` field is missing after repair, the state machine cannot transition — `derive-phase.sh` will not recognize the file as a valid context draft.
+- **The tier is read from EVALUATION.md, not config**: The evaluated tier may differ from `default_tier` in config if auto-classification or `--tier` override was used. Always read from `M###-EVALUATION.md`.
+- **Question generation is guidance, not enforcement**: The spec-driven questions are suggestions to help the developer think through decisions. The developer may skip questions, answer partially, or raise entirely different concerns. The goal is to surface non-obvious decisions, not to follow a rigid questionnaire.
 
 ## Referenced Scripts
 
@@ -108,3 +151,7 @@ After finalizing, suggest: "Context finalized. Run `speckit.orchestrator.roadmap
 ## Referenced Templates
 
 - `templates/context-draft.md` — template for the context draft file structure
+
+## Referenced Files
+
+- `<milestone-dir>/M###-EVALUATION.md` — source of tier classification and feature spec path

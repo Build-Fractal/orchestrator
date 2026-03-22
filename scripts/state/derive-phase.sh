@@ -17,6 +17,15 @@
 #   9. completing    — validation marker exists, no M###-SUMMARY.md
 #  10. complete      — M###-SUMMARY.md exists
 #
+# DESIGN NOTE: This script is intentionally NOT tier-aware. It derives state
+# purely from file presence, which means it cannot distinguish "Tier C needs
+# discussion" from "Tier B can skip discussion." When no context draft and no
+# roadmap exist, it returns "planning" regardless of tier. The Tier C discussion
+# gate is enforced by the roadmap command (which reads the tier from
+# M###-EVALUATION.md and blocks if the context draft isn't finalized).
+# This separation keeps the state machine simple and deterministic — tier-specific
+# policy is applied at the command layer, not the state derivation layer.
+#
 # Exits 0 on successful derivation (outputs state to stdout).
 # Exits 1 with usage/error message to stderr on bad input.
 

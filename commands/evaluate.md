@@ -8,14 +8,40 @@ Classify a feature's scope into Tier A, B, or C and activate the corresponding o
 
 ## Prerequisites
 
-1. A feature spec must exist at `specs/{NNN}-{name}/spec.md`.
-2. Identify the feature number and name from the spec directory.
+### 1. Extension Availability Check
+
+Before invoking any orchestrator scripts, verify that the extension files are available in the current project:
+
+```bash
+# Check for the scaffold script specifically
+if [ ! -f "scripts/lifecycle/scaffold.sh" ]; then
+  echo "ERROR: spec-kit-orchestrator extension not installed."
+  echo "Copy the extension into this project first. See references/installation.md."
+  exit 1
+fi
+```
+
+If the extension scripts are not present, stop with a clear error: **"spec-kit-orchestrator extension not installed in this project. Copy the extension's commands/, scripts/, templates/, and references/ directories into your project root before running evaluate. See `references/installation.md` for details."**
+
+Do NOT attempt to manually create the directory structure that `scaffold.sh` would produce — the scaffold script is the authoritative source for the orchestrator's directory layout.
+
+### 2. Spec Discovery
+
+A feature spec must exist at `specs/{NNN}-{name}/spec.md`. Since the project may have multiple spec directories (or the correct one may not be obvious), discover and confirm the spec before proceeding:
+
+1. **List available specs**: Scan `specs/` for directories matching the `{NNN}-{name}` pattern. For each, check if `spec.md` exists inside it.
+2. **If exactly one spec exists**: Use it, but confirm with the user: "Found spec at `specs/{NNN}-{name}/spec.md`. Proceeding with this spec."
+3. **If multiple specs exist**: Present them as a numbered list and ask the user to select: "Multiple specs found:\n  1. specs/001-feature-a/spec.md\n  2. specs/002-feature-b/spec.md\nWhich spec should be evaluated?"
+4. **If no specs exist**: Exit with error: "No feature specs found in `specs/`. Run `speckit.specify` first to create a feature spec."
+5. **If a spec path was provided as an argument**: Use it directly after verifying the file exists.
+
+Record the confirmed spec path — it will be written to the evaluation output and used by all downstream commands.
 
 ## Scope Analysis
 
 Analyze the feature spec to determine the scope of work:
 
-1. **Read the feature spec** at `specs/{NNN}-{name}/spec.md`.
+1. **Read the feature spec** at the confirmed path.
 2. **Count structural elements**:
    - Number of user stories (sections with "As a…" or "US-" prefixed items)
    - Number of acceptance scenarios (AC items, "Given/When/Then" blocks)
@@ -55,7 +81,7 @@ Apply the tier classification criteria from `references/tier-definitions.md`:
 Check for a default tier override in the project configuration:
 
 ```bash
-bash scripts/state/read-config.sh <orchestrator-root> default_tier
+bash scripts/state/read-config.sh default_tier
 ```
 
 If `default_tier` is set (A, B, or C), use that value instead of auto-classification. Report that the tier was set by configuration, not by analysis.
@@ -75,17 +101,29 @@ Based on the classified tier:
 1. **Scaffold the orchestrator directory structure**:
 
 ```bash
-bash scripts/lifecycle/scaffold.sh <orchestrator-root> <milestone-id> <feature-spec-path>
+bash scripts/lifecycle/scaffold.sh <orchestrator-root> <milestone-id>
 ```
 
-This creates the `.specify/orchestrator/milestones/{M###}/` directory tree and initializes the orchestrator config.
+Where `<orchestrator-root>` is `.specify/orchestrator` and `<milestone-id>` is the milestone ID (e.g., `M001`). This creates the `.specify/orchestrator/milestones/{M###}/` directory tree and global state files.
 
-2. **Write evaluation result to stdout**:
-   - Tier classification (A, B, or C)
-   - Reasoning: number of user stories, estimated SDD flows, key complexity factors
+2. **Write the evaluation file** to the milestone directory using the `templates/evaluation.md` template:
+
+Write to `<milestone-dir>/M###-EVALUATION.md` with:
+- `milestone`: the milestone ID (e.g., `M001`)
+- `feature_ref`: the feature reference from the spec directory name (e.g., `001-galaga-clone`)
+- `feature_spec`: the full path to the spec file (e.g., `specs/001-galaga-clone/spec.md`)
+- `tier`: the classified tier (B or C)
+- `tier_source`: how the tier was determined — `auto` (analysis), `config` (default_tier override), or `override` (--tier flag)
+- `created_at`: ISO-8601 timestamp
+- Metrics section: user story count, acceptance scenario count, functional requirement count, estimated SDD flows
+- Reasoning section: narrative explanation of why this tier was chosen
+- Complexity factors: key factors that influenced the classification
+
+This file is the authoritative source of the tier classification and spec path for all downstream commands (`discuss`, `roadmap`, `plan-phase`, etc.).
+
+3. **Report to the user**:
+   - Tier classification (A, B, or C) with reasoning
    - Next recommended command: `speckit.orchestrator.roadmap` (Tier B) or `speckit.orchestrator.discuss` (Tier C)
-
-3. **Write a brief evaluation summary** to the milestone directory summarizing the classification rationale.
 
 ## Override Support
 
@@ -95,9 +133,11 @@ Accept `--tier A|B|C` to explicitly override auto-classification (FR-002):
 - **Override to a lower tier** (e.g., C → B): Not recommended. If the project truly needs less orchestration, report this and suggest starting a new milestone at the lower tier instead.
 - **Override to Tier A**: Report that Tier A bypasses the orchestrator entirely. If orchestrator artifacts already exist, warn that they will be unused but not deleted.
 
+When overriding, set `tier_source: override` in the evaluation file.
+
 ## Idempotency
 
-If an evaluation has already been performed (a roadmap file or evaluation summary exists in the milestone directory):
+If an evaluation has already been performed (an `M###-EVALUATION.md` file exists in the milestone directory):
 
 1. **Report the existing tier** without re-evaluating: "Milestone {M###} already classified as Tier {X}."
 2. **Do not re-scaffold or overwrite** existing artifacts.
@@ -107,7 +147,8 @@ This satisfies R012 (idempotent commands) — running `evaluate` twice with no i
 
 ## Error Handling
 
-- If no feature spec is found at the expected path, exit with error: "Feature spec not found at specs/{NNN}-{name}/spec.md. Run speckit.specify first."
+- If no feature spec is found at the expected path, exit with error: "Feature spec not found. Run speckit.specify first."
+- If extension scripts are not installed (see Extension Availability Check above), exit with the installation error message. Do NOT attempt to manually create scaffold directories.
 - If `scripts/lifecycle/scaffold.sh` fails, report the error and do not write partial state.
 - If `scripts/state/read-config.sh` is unavailable, proceed with auto-classification (no config override).
 
@@ -116,9 +157,13 @@ This satisfies R012 (idempotent commands) — running `evaluate` twice with no i
 - **Tier A produces zero orchestrator state**: Promotion to Tier B/C requires a fresh evaluate with `--tier` override — there is no upgrade path from existing Tier A artifacts because none exist.
 - **Re-evaluation with --force overwrites tier metadata**: If a roadmap already exists, the tier classification changes but the roadmap becomes inconsistent with the new tier's expectations. Re-run `speckit.orchestrator.roadmap` after a tier change.
 - **read-config.sh failure is non-fatal**: Falls back to auto-classification silently. If the config file has a `default_tier` override, that override will be missed — the tier may differ from what the developer expected.
+- **The state machine (derive-phase.sh) is not tier-aware**: After evaluation, `derive-phase.sh` returns `planning` regardless of tier. For Tier C, the discussion gate is enforced by the `roadmap` command (which reads the tier from `M###-EVALUATION.md` and refuses to proceed without a finalized context draft), not by the state machine. This is intentional — the state machine derives state from file presence, and the tier is a policy overlay applied by commands.
+- **The EVALUATION.md file is the tier authority**: All downstream commands (`discuss`, `roadmap`, `plan-phase`, etc.) should read the tier from `M###-EVALUATION.md` in the milestone directory. Do not rely on config alone — the evaluated tier may differ from the default_tier config if auto-classification or --tier override was used.
 
 ## Reference Files
 
+- `templates/evaluation.md` — output template for the evaluation file
 - `scripts/state/read-config.sh` — resolves configuration values including `default_tier`
 - `scripts/lifecycle/scaffold.sh` — creates orchestrator directory structure
 - `references/tier-definitions.md` — detailed tier classification criteria and decision table
+- `references/installation.md` — how to install the extension in a consumer project

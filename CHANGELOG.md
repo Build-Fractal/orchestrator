@@ -4,6 +4,38 @@ All notable changes to spec-kit-orchestrator are documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This project uses semantic versioning.
 
+## [0.1.1] — 2026-03-22
+
+### Fixed
+
+- **evaluate command: spec discovery** — Added spec discovery step that lists available specs and confirms with the user instead of requiring the agent to guess the correct spec path
+- **evaluate command: extension availability** — Added prerequisite check for extension scripts; exits with clear installation error instead of letting the agent create a manual scaffold that diverges from `scaffold.sh` output
+- **evaluate command: scaffold.sh signature** — Fixed documented signature from `scaffold.sh <root> <milestone> <spec-path>` (3 args) to the correct `scaffold.sh <root> <milestone>` (2 args)
+- **evaluate command: structured output** — Added `templates/evaluation.md` template for evaluation output; replaces unstructured "brief evaluation summary" that caused agents to invent ad-hoc formats (e.g., config.json with non-standard fields)
+- **discuss command: tier awareness** — Added tier reading from `M###-EVALUATION.md` so the command informs the agent whether discussion is required (Tier C), optional (Tier B), or not applicable (Tier A)
+- **discuss command: question guidance** — Added spec-driven question generation heuristic so the agent analyzes the spec for technology gaps, integration boundaries, scope edges, and other ambiguities instead of formulating questions from scratch
+- **roadmap command: explicit tier reading** — Added explicit instruction to read tier from `M###-EVALUATION.md` with documentation that the Tier C discussion gate is enforced here (not in `derive-phase.sh`)
+- **roadmap command: cross-cutting concerns** — Added guidance for identifying, recording, and referencing cross-cutting concerns that span multiple phases
+- **roadmap command: dependency graph and execution order** — Added instructions to produce ASCII DAG visualization and ordered execution list with parallelization notes for dispatch scheduling
+- **roadmap command: boundary map granularity** — Added scaling heuristic for boundary map specificity based on phase count (file paths < 8, interfaces 8–15, modules > 15)
+- **roadmap command: validation output** — Validation results now recorded inline in the roadmap's `## Validation` section instead of ephemeral response text
+- **roadmap command: demo sentence traceability** — Clarified that demo sentences are phase-level observables, not acceptance scenario paraphrases; traceability handled at task level during `plan-phase`
+- **roadmap command: state/context-draft edge case** — Documented behavior when `derive-phase.sh` returns `planning` but Tier C context draft exists as `status: draft` (treat as `discussing`, block)
+- **roadmap command: check-boundary-map.sh reference** — Added `scripts/verify/check-boundary-map.sh` to Reference Files with note that it runs during `verify`, not `roadmap`
+- **roadmap template: structural expansion** — Added `## Cross-Cutting Concerns`, `## Dependency Graph`, `## Execution Order`, and `## Validation` sections to `templates/roadmap.md` for consistent roadmap structure across projects
+
+### Added
+
+- **`templates/evaluation.md`** — New template for evaluation output with tier, metrics, reasoning, spec path, and tier source fields
+- **`references/installation.md`** — New reference doc documenting how to install the extension in a consumer project (which files to copy, what to exclude, directory structure, verification steps)
+- **EVALUATION.md format** documented in `references/file-formats.md` with frontmatter schema and role description
+
+### Changed
+
+- **`derive-phase.sh`** — Added design note comment explaining why the script is intentionally not tier-aware (tier-specific policy is at the command layer)
+- **`references/state-machine.md`** — Added "Tier-Agnostic Derivation" section documenting the intentional separation between state derivation (file presence) and tier policy (command layer)
+- **`references/file-formats.md`** — Added EVALUATION.md to directory structure diagram and file format reference
+
 ## [0.1.0] — 2026-03-20
 
 ### Added

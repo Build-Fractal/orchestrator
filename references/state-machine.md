@@ -152,6 +152,14 @@ The derivation script evaluates these conditions in strict priority order. The *
 
 **"Active phase"** = the first incomplete phase in dependency order, with high-risk phases prioritized among those whose dependencies are satisfied (per FR-043).
 
+### Important: Tier-Agnostic Derivation
+
+The state derivation script is **intentionally not tier-aware**. It derives state purely from file presence and cannot distinguish tier-specific requirements (e.g., "Tier C requires discussion before planning" vs "Tier B can skip discussion").
+
+When no context draft and no roadmap exist, `derive-phase.sh` returns `planning` regardless of tier. The Tier C discussion gate is enforced by the `roadmap` command, which reads the tier from `M###-EVALUATION.md` and blocks if the context draft isn't finalized.
+
+This separation keeps the state machine deterministic and simple — tier-specific policy is applied at the command layer, not the state derivation layer.
+
 ---
 
 ## State Transition Diagram

@@ -23,6 +23,7 @@ Every file write is idempotent (FR-066): writing a file that already exists is a
 ├── continue.md                     # Pause resume point (ephemeral)
 └── milestones/
     └── M001/
+        ├── M001-EVALUATION.md      # Tier classification + spec path
         ├── M001-ROADMAP.md         # Phase definitions + boundary maps
         ├── M001-CONTEXT.md         # Discussion context draft (Tier C)
         ├── M001-SUMMARY.md         # Milestone rollup summary
@@ -287,6 +288,58 @@ observability_surfaces:      # How to inspect this unit's health
 ```
 
 Phase summaries are compressed rollups of all task summaries. Milestone summaries are compressed rollups of all phase summaries. Each includes `drill_down_paths` to the next level of detail.
+
+---
+
+## Evaluation (`M###-EVALUATION.md`)
+
+**Location**: `.specify/orchestrator/milestones/{M###}/M###-EVALUATION.md`
+**Format**: YAML frontmatter + markdown body
+**Mutability**: Written at evaluation. Updated only on re-evaluation with `--force`.
+
+### Frontmatter Fields
+
+```yaml
+---
+schema_version: "1.0"
+type: evaluation
+milestone: M001                              # Milestone ID
+feature_ref: "001-galaga-clone"              # Feature reference from spec dir
+feature_spec: "specs/001-galaga-clone/spec.md"  # Path to feature spec
+tier: C                                      # A, B, or C
+tier_source: auto                            # auto | config | override
+created_at: "2026-03-22T10:00:00Z"          # ISO 8601
+---
+```
+
+### Body Sections
+
+```markdown
+# M001 Evaluation
+
+## Classification
+- **Tier**: C
+- **Source**: auto
+- **Next command**: speckit.orchestrator.discuss
+
+## Metrics
+| Metric | Count |
+|--------|-------|
+| User stories | 8 |
+| Acceptance scenarios | 24 |
+| Functional requirements | 45 |
+| Estimated SDD flows | 3 |
+
+## Reasoning
+[Narrative explanation of tier classification]
+
+## Complexity Factors
+[Key factors that influenced the classification]
+```
+
+### Role in the System
+
+The evaluation file is the **authoritative source of tier classification** for all downstream commands. Commands like `discuss`, `roadmap`, and `plan-phase` read the `tier` and `feature_spec` fields from this file rather than re-deriving them. This ensures consistency — the tier used during planning matches the tier determined during evaluation, even if `default_tier` in config changes later.
 
 ---
 

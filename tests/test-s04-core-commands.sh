@@ -447,24 +447,24 @@ else
 fi
 
 # --------------------------------------------------------------------------
-# 2.5b detect-capabilities.sh — Claude Code environment detection
+# 2.5b detect-capabilities.sh — agent tool environment detection
 # --------------------------------------------------------------------------
 
-cc_output=$(CLAUDE_CODE=1 bash "$DETECT_CAP" 2>/dev/null)
+cc_output=$(SPECKIT_AGENT_TOOL=1 bash "$DETECT_CAP" 2>/dev/null)
 if echo "$cc_output" | grep -q "agent_tool_available=true"; then
-  pass "detect-capabilities.sh CLAUDE_CODE=1 → agent_tool_available=true"
+  pass "detect-capabilities.sh SPECKIT_AGENT_TOOL=1 → agent_tool_available=true"
 else
-  fail "detect-capabilities.sh CLAUDE_CODE=1 → agent_tool_available=true (got: '$cc_output')"
+  fail "detect-capabilities.sh SPECKIT_AGENT_TOOL=1 → agent_tool_available=true (got: '$cc_output')"
 fi
 
 no_cc_output=$(bash "$DETECT_CAP" 2>/dev/null)
 if echo "$no_cc_output" | grep -q "agent_tool_available=false"; then
-  pass "detect-capabilities.sh without CLAUDE_CODE → agent_tool_available=false"
+  pass "detect-capabilities.sh without SPECKIT_AGENT_TOOL → agent_tool_available=false"
 else
-  fail "detect-capabilities.sh without CLAUDE_CODE → agent_tool_available=false (got: '$no_cc_output')"
+  fail "detect-capabilities.sh without SPECKIT_AGENT_TOOL → agent_tool_available=false (got: '$no_cc_output')"
 fi
 
-json_output=$(CLAUDE_CODE=1 bash "$DETECT_CAP" --format json 2>/dev/null)
+json_output=$(SPECKIT_AGENT_TOOL=1 bash "$DETECT_CAP" --format json 2>/dev/null)
 if echo "$json_output" | grep -q '"agent_tool_available"'; then
   pass "detect-capabilities.sh JSON output contains agent_tool_available key"
 else

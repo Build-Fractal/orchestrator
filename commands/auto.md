@@ -45,7 +45,27 @@ Auto mode is only available for **Tier C** projects (FR-054). If the tier is B, 
 
 If the tier is A, report "Tier A projects do not use orchestrator dispatch. Use spec-kit commands directly." and exit.
 
-### 4. Worktree Isolation (FR-075)
+### 4. Permission Pre-Flight
+
+Check that `.claude/settings.json` exists in the target project with orchestrator permissions. Without this, autonomous execution will be interrupted by permission prompts for every tool call.
+
+```bash
+test -f .claude/settings.json && echo "EXISTS" || echo "MISSING"
+```
+
+- **EXISTS**: Continue (permissions are already configured).
+- **MISSING**: Copy the recommended permissions template to the project:
+
+  ```bash
+  mkdir -p .claude
+  cp templates/claude-settings.json .claude/settings.json
+  ```
+
+  Report: "Created `.claude/settings.json` with orchestrator permissions. Review and adjust for your project's toolchain if needed."
+
+The template at `templates/claude-settings.json` includes permissions for common build tools (npm, npx, node, tsc, eslint, jest, python, cargo, go, make) and shell utilities (grep, test, cat, wc, mkdir, find, etc.). For projects with custom toolchains, the developer should add project-specific patterns before starting auto mode.
+
+### 5. Worktree Isolation (FR-075)
 
 If `git_isolation` is configured to `true`:
 
@@ -83,10 +103,11 @@ Each iteration has three stages:
 output=$(bash scripts/lifecycle/auto-loop.sh <milestone-dir>)
 ```
 
-Parse the output to get milestone, phase, task, and payload. The payload is written to stdout. Handle exit codes:
+Parse the output to get milestone, phase, task, and payload file path. The `AUTO:READY` line includes `payload_file=<path>` pointing to the assembled dispatch payload on disk. Handle exit codes:
 - **0 + AUTO:READY** → proceed to Stage 2
 - **0 + AUTO:PHASE_COMPLETE** → handle phase transition (see below)
 - **0 + AUTO:MILESTONE_VALIDATING** → handle milestone validation (see below)
+- **0 + AUTO:PLANNING** → handle phase planning (see below)
 - **2** → budget exceeded, release lock and exit
 - **3** → stuck detected, release lock and exit
 - **10** → milestone complete, release lock and exit
@@ -95,13 +116,24 @@ Parse the output to get milestone, phase, task, and payload. The payload is writ
 
 #### Stage 2 — Dispatch + Verify (agent judgment)
 
-**a. Dispatch**: Use the assembled payload to execute the task.
+**a. Dispatch**: Read the payload file from the `payload_file` path in the `AUTO:READY` output. Pass its contents directly as the Agent tool prompt — do NOT manually read task plans, upstream summaries, knowledge files, or decisions yourself. The payload is pre-assembled by `build-context.sh` with scope-filtered context.
 
-- If `agent_tool_available=true` (from `detect-capabilities.sh`): Use the Agent tool with the payload as prompt. See `templates/claude-code-appendix.md`.
-- If `subagent_dispatch=true` but no agent tool: Use CLI subagent dispatch.
-- If `subagent_dispatch=false`: Execute sequentially in current context.
+**Capability self-check**: Check your own toolkit to determine the dispatch method:
+- If you have the **Agent tool** available: Use it with the payload as prompt and `subagent_type='general-purpose'`. See `templates/claude-code-appendix.md`.
+- If you have **CLI access** to `claude` or `cursor`: Use CLI subagent dispatch.
+- If neither is available: Execute sequentially in current context.
 
-**b. Verify**: Run `speckit.orchestrator.verify` on the completed task. Capture the verification report output.
+Do NOT rely on `detect-capabilities.sh` for in-process tool detection — shell scripts cannot detect in-process agent tools. The script is useful only for detecting CLI-level capabilities (git, shell, worktree).
+
+**b. Task-Level Verification**: After the task completes, run the **task plan's verification commands** (from the task plan's Verification / Must-Haves section). This is a quick Tier 1 check — grep patterns, line counts, command exit codes — NOT the full `speckit.orchestrator.verify` pipeline.
+
+```bash
+# Example: run the verification commands listed in the task plan
+grep -q "expected_pattern" path/to/file.ts && echo "PASS" || echo "FAIL"
+test -f path/to/expected-file.ts && echo "PASS" || echo "FAIL"
+```
+
+The full `speckit.orchestrator.verify` command (4-tier verification pipeline) runs only at **phase boundaries** — see the Phase Transition section below. Running it after every task would be wasteful.
 
 - **Pass** → proceed to Stage 3 with `outcome=success`, `verification_result=pass`
 - **Fail (first attempt)** → retry dispatch. Construct the retry payload by appending a verification failure section to the original dispatch payload:
@@ -131,6 +163,44 @@ Parse the output:
 - **AUTO:MILESTONE_VALIDATING** → handle milestone validation (see below)
 - **AUTO:MILESTONE_COMPLETE** → release lock, report completion
 
+## Phase Planning
+
+When `auto-loop.sh` returns `AUTO:PLANNING phase=P## milestone=M###`, the active phase needs a plan before tasks can be dispatched. This is a first-class stage in the auto loop.
+
+### Planning Dispatch
+
+1. **Assemble planning context**: Run `build-context.sh` at the phase level to gather the roadmap, spec, upstream summaries, and decisions:
+
+   ```bash
+   bash scripts/dispatch/build-context.sh <orchestrator-root> <M###> <P##> PHASE_PLAN 2>/dev/null || true
+   ```
+
+   If `build-context.sh` does not support a `PHASE_PLAN` pseudo-task, assemble the context manually by reading:
+   - The roadmap (`M###-ROADMAP.md`) for the phase's goal, demo, dependencies, and boundary map
+   - Upstream phase summaries (`P##-SUMMARY.md` for each dependency)
+   - The feature spec (`specs/{NNN}-{name}/spec.md`) for relevant requirements
+   - The context draft (if it exists at `<orchestrator-root>/CONTEXT.md`)
+
+2. **Dispatch planning**: Use the Agent tool (or equivalent) with a prompt that includes:
+   - The assembled context from step 1
+   - Instructions to follow the `speckit.orchestrator.plan-phase` command (reference `commands/plan-phase.md`)
+   - The target phase ID and milestone directory path
+
+   ```
+   Agent(prompt="Plan phase P## for milestone M### following the speckit.orchestrator.plan-phase command.\n\n<assembled context>\n\nMilestone directory: <milestone-dir>", subagent_type="general-purpose")
+   ```
+
+3. **Verify planning completed**: After the planning agent returns, check that the phase plan and task plans exist:
+
+   ```bash
+   test -f <milestone-dir>/phases/P##/P##-PLAN.md && echo "PLAN_EXISTS" || echo "PLAN_MISSING"
+   ls <milestone-dir>/phases/P##/tasks/T*-PLAN.md 2>/dev/null | wc -l
+   ```
+
+   If the plan exists and task plans were generated, loop back to Stage 1 — `derive-phase.sh` will now return `executing` and the normal dispatch flow resumes.
+
+   If planning failed, write a continue file with the failure details, release the lock, and exit.
+
 ## Pause Handling (FR-047)
 
 The autonomous loop checks for a pause request via `auto-loop.sh` (exit code 11) at the top of each pre-dispatch iteration.
@@ -148,38 +218,44 @@ When a pause is detected:
 
 When `auto-loop.sh` returns `AUTO:PHASE_COMPLETE` or `derive-phase.sh` returns `summarizing`:
 
-### External Modification Check (FR-064)
+### Automated Field Derivation
+
+Run `phase-transition.sh` to automate the mechanical parts of phase transition — external mod check, task summary synthesis, and roadmap sync:
 
 ```bash
-bash scripts/verify/check-external-mods.sh .specify/orchestrator/orchestrator.lock --scope "<phase-scope-pattern>"
+output=$(bash scripts/lifecycle/phase-transition.sh <milestone-dir> <P##> --lock-file .specify/orchestrator/orchestrator.lock)
 ```
 
-If `WARN` lines are returned, include them in the phase transition report. External modifications are informational — they do not block phase transition.
+This script reads all task summaries from the completed phase and outputs key=value pairs for `write-summary.sh` fields: `provides`, `requires`, `affects`, `key_files`, `key_decisions`, `patterns_established`, `drill_down_paths`, `duration`, `completed_at`, and `task_count`. It also runs the external modification check and roadmap sync automatically.
+
+Parse the output to extract the derived field values, then review them before writing the phase summary. The agent should review and potentially refine the values (especially `provides` and `body`) but should use the derived values as the starting point rather than reading all task summaries manually.
 
 ### Two-Stage Review (FR-015 / FR-059 / FR-060)
 
-1. **Stage 1 — Verification**: Run `speckit.orchestrator.verify` on the phase to execute the full 4-tier verification pipeline.
+1. **Stage 1 — Phase Verification**: Run `speckit.orchestrator.verify` on the phase to execute the full 4-tier verification pipeline. This is the only point where the full verification command runs — NOT after individual tasks.
 
-2. **Stage 2 — Phase Summary**: If verification passes, produce the phase summary using `write-summary.sh`. Read all task summaries from the phase to derive field values, then run:
+2. **Stage 2 — Phase Summary**: If verification passes, produce the phase summary using `write-summary.sh` with the field values derived by `phase-transition.sh`:
 
    ```bash
    bash scripts/knowledge/write-summary.sh phase <milestone-dir>/phases/<P##>/<P##>-SUMMARY.md \
-     --id=P## \
-     --parent=M### \
-     --milestone=M### \
-     --provides="<what this phase delivers — derive from task summaries>" \
-     --requires="<upstream dependencies — derive from phase plan>" \
-     --affects="<downstream phases — derive from roadmap>" \
-     --key_files="<key files created/modified across all tasks>" \
-     --key_decisions="<decision IDs from this phase>" \
-     --patterns_established="<patterns established across tasks>" \
-     --drill_down_paths="<paths to task summaries>" \
-     --duration=<total phase duration from execution log> \
+     --id=<id from phase-transition.sh> \
+     --parent=<parent from phase-transition.sh> \
+     --milestone=<milestone from phase-transition.sh> \
+     --provides="<provides from phase-transition.sh — review and refine>" \
+     --requires="<requires from phase-transition.sh>" \
+     --affects="<affects from phase-transition.sh>" \
+     --key_files="<key_files from phase-transition.sh>" \
+     --key_decisions="<key_decisions from phase-transition.sh>" \
+     --patterns_established="<patterns_established from phase-transition.sh>" \
+     --drill_down_paths="<drill_down_paths from phase-transition.sh>" \
+     --duration=<duration from phase-transition.sh> \
      --verification_result=pass \
-     --completed_at=<ISO-8601 timestamp> \
+     --completed_at=<completed_at from phase-transition.sh> \
      --observability_surfaces="<metrics or logs if applicable>" \
      --body="<synthesized summary: what was built, key decisions, patterns, verification results>"
    ```
+
+   The `--body` and `--observability_surfaces` fields still require agent judgment — `phase-transition.sh` provides the factual fields, the agent synthesizes the narrative.
 
    Do NOT write phase summaries freeform. The 16 frontmatter fields are required for downstream consumption by `consolidate-artifacts.sh` and knowledge compounding.
 
@@ -316,6 +392,7 @@ If `lock-manager.sh` returns a non-zero exit code:
 ## Referenced Scripts
 
 - `scripts/lifecycle/auto-loop.sh` — mechanical loop driver (pre-dispatch + post-dispatch)
+- `scripts/lifecycle/phase-transition.sh` — phase boundary automation (field derivation, external mod check, roadmap sync)
 - `scripts/lifecycle/lock-manager.sh` — lock file lifecycle (create, status, break, update)
 - `scripts/lifecycle/stuck-detector.sh` — stuck detection from execution log
 - `scripts/lifecycle/budget-checker.sh` — budget enforcement (dispatch count and duration)

@@ -230,8 +230,14 @@ fi
 state=$(bash "$DERIVE_PHASE" "$MILESTONE_DIR" 2>/dev/null) || state="unknown"
 
 case "$state" in
-  executing|planning)
-    ;; # Valid states for pre-dispatch, continue
+  executing)
+    ;; # Valid state for task dispatch, continue
+  planning)
+    # Phase needs planning before tasks can be dispatched
+    active_phase=$(bash "$READ_ROADMAP" "$ROADMAP_FILE" active-phase 2>/dev/null) || active_phase="unknown"
+    echo "AUTO:PLANNING phase=$active_phase milestone=$MILESTONE_ID"
+    exit 0
+    ;;
   verifying|summarizing)
     # Phase transition needed — report phase complete
     active_phase=$(bash "$READ_ROADMAP" "$ROADMAP_FILE" active-phase 2>/dev/null) || active_phase="unknown"
@@ -321,10 +327,13 @@ payload=$(bash "$BUILD_CONTEXT" "$ORCH_ROOT" "$MILESTONE_ID" "$active_phase" "$n
 
 payload_bytes=$(printf '%s' "$payload" | wc -c | tr -d ' ')
 
-# Output the payload to stdout first (agent will capture this)
-echo "$payload"
+# Write payload to a file so the orchestrating agent can pass it directly to a subagent
+# without holding the full payload in its own context
+payload_file="$MILESTONE_DIR/phases/$active_phase/tasks/${next_task}-PAYLOAD.md"
+mkdir -p "$(dirname "$payload_file")"
+printf '%s' "$payload" > "$payload_file"
 
-# Output the structured status line last (agent parses this)
-echo "AUTO:READY milestone=$MILESTONE_ID phase=$active_phase task=$next_task payload_bytes=$payload_bytes"
+# Output the structured status line with payload file path
+echo "AUTO:READY milestone=$MILESTONE_ID phase=$active_phase task=$next_task payload_bytes=$payload_bytes payload_file=$payload_file"
 
 exit 0

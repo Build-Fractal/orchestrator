@@ -117,6 +117,8 @@ provides:
       executable: true
     - file: scripts/lifecycle/auto-loop.sh
       executable: true
+    - file: scripts/lifecycle/phase-transition.sh
+      executable: true
     - file: scripts/util/json-field.sh
       executable: true
 

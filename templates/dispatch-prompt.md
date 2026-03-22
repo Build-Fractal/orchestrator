@@ -48,3 +48,25 @@ type: dispatch-prompt
 - **Duration Budget**: {{duration_budget}}
 - **Dispatch Budget**: {{dispatch_budget}}
 - **Budget Enforcement**: {{budget_enforcement}}
+
+## Payload Size Guidance
+
+Target payload size: **< 30,000 tokens** (~120KB). Payloads beyond this threshold waste context window capacity in the dispatched agent without proportional benefit.
+
+### Priority ordering for context inclusion
+
+When assembling payloads, include sections in this priority order. If the payload exceeds the target size, truncate from the bottom of this list:
+
+1. **Task plan** (always include in full — this is the task's primary instruction)
+2. **Phase must-haves** (the verification criteria the task must satisfy)
+3. **Direct upstream API signatures** (method signatures, types, and behavioral contracts from immediate dependency summaries — the `provides` fields)
+4. **Knowledge entries** (scoped patterns and lessons)
+5. **Decision entries** (scoped architectural decisions)
+6. **Full upstream summaries** (complete summary bodies — reduce to just `provides` fields if over budget)
+
+### Truncation strategy
+
+When over budget:
+- Drop knowledge and decision entries first (they inform but don't constrain)
+- Reduce upstream summaries to just their `provides` YAML field values
+- Never truncate the task plan or must-haves

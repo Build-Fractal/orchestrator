@@ -35,12 +35,13 @@ elif command -v copilot >/dev/null 2>&1; then
   subagent_dispatch=true
 fi
 
-# agent_tool_available: detect in-process agent tool via environment
+# agent_tool_available: in-process agent tools (e.g. Claude Code's Agent tool)
+# cannot be reliably detected from a shell script because they exist in the
+# agent's tool namespace, not as env vars or CLI commands. This field defaults
+# to false. The orchestrating agent should self-check its own toolkit instead.
+# Set SPECKIT_AGENT_TOOL=1 in the environment to override if needed.
 agent_tool_available=false
-if [[ -n "${CLAUDE_CODE:-}" ]]; then
-  agent_tool_available=true
-  subagent_dispatch=true
-elif [[ -n "${CURSOR_AGENT:-}" ]]; then
+if [[ -n "${SPECKIT_AGENT_TOOL:-}" ]]; then
   agent_tool_available=true
   subagent_dispatch=true
 fi

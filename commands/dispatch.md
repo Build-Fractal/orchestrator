@@ -75,11 +75,18 @@ This prevents concurrent task executions from conflicting. Clean up the worktree
 
 ## Execution Recording
 
-After dispatching, record the execution in the append-only log:
+After dispatching, record the execution using `record-result.sh`. Do NOT use inline echo to append to the execution log.
 
 ```bash
-# Append to execution-log.jsonl
-echo '{"timestamp":"<ISO-8601>","milestone":"<M###>","phase":"<P##>","task":"<T##>","tier":"<tier>","dispatch_method":"<subagent|sequential>","payload_bytes":<N>,"budget_pct":<N>}' >> <milestone-dir>/execution-log.jsonl
+bash scripts/lifecycle/record-result.sh <milestone-dir>/execution-log.jsonl \
+  --milestone=M### \
+  --phase=P## \
+  --task=T## \
+  --outcome=success \
+  --tier=<tier> \
+  --dispatch_method=<subagent|sequential> \
+  --attempt=1 \
+  --duration_s=<elapsed-seconds>
 ```
 
 The execution log is append-only (JSONL format) and provides the audit trail for dispatch history.
@@ -89,7 +96,7 @@ The execution log is append-only (JSONL format) and provides the audit trail for
 After the dispatched task completes:
 
 1. **Run verification**: Invoke `speckit.orchestrator.verify` on the completed task to confirm must-haves are met.
-2. **Record result**: Update the execution log entry with the verification result and duration.
+2. **Record result**: Record the verification outcome using `record-result.sh` with `--verification_result=<pass|fail|skipped>` and `--outcome=<success|failure>`.
 3. **State transition**: If verification passes, the task is marked complete. The orchestrator state may transition based on remaining incomplete tasks.
 
 ## Idempotency
@@ -106,6 +113,15 @@ If the target task already has a `<T##>-SUMMARY.md` file, the dispatch is skippe
 - Context budget exceeded (payload > 20% of total artifacts) → warn to stderr but continue (unless budget_enforcement=strict)
 - Dispatch failure (subagent crashes, timeout) → record failure in execution log, do NOT retry automatically
 
+## Claude Code Appendix
+
+When running in Claude Code (detected via `CLAUDE_CODE` environment variable by `detect-capabilities.sh`), see `templates/claude-code-appendix.md` for platform-specific dispatch instructions including:
+
+- Agent tool invocation pattern for fresh-context dispatch
+- Mandatory `write-summary.sh` usage for structured summaries
+- Mandatory `record-result.sh` usage for execution logging
+- Recommended permission settings via `templates/claude-settings.json`
+
 ## Gotchas
 
 - **Context budget exceeded is a warning unless budget_enforcement is "strict"**: The dispatch continues with an oversized payload by default. Set `budget_enforcement: strict` in orchestrator config to block dispatch when the payload exceeds the configured threshold.
@@ -120,6 +136,7 @@ If the target task already has a `<T##>-SUMMARY.md` file, the dispatch is skippe
 - `scripts/state/derive-phase.sh` — derives current orchestrator state
 - `scripts/state/read-roadmap.sh` — parses roadmap for tier and dependencies
 - `scripts/state/read-config.sh` — resolves configuration values
+- `scripts/lifecycle/record-result.sh` — execution log recording (append-only JSONL)
 
 ## Referenced Templates
 

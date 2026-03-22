@@ -45,18 +45,9 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# --- Helper: Read a JSON field value (simple grep-based, no jq required) ---
-json_field() {
-  local file="$1"
-  local key="$2"
-  grep "\"${key}\"" "$file" 2>/dev/null \
-    | head -1 \
-    | sed 's/.*"'"$key"'"[[:space:]]*:[[:space:]]*//' \
-    | sed 's/^"//' \
-    | sed 's/"[[:space:]]*,*[[:space:]]*$//' \
-    | sed 's/,*[[:space:]]*$//' \
-    | sed 's/[[:space:]]*$//'
-}
+# --- Helper: Read a JSON field value (shared utility) ---
+SCRIPT_DIR_EM="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR_EM}/../util/json-field.sh"
 
 # --- Graceful skip: no git available ---
 if ! command -v git >/dev/null 2>&1; then

@@ -499,6 +499,69 @@ else
   fail "auto.md missing sections:$missing_sections"
 fi
 
+# --------------------------------------------------------------------------
+# 2.12 auto.md references scripts/knowledge/write-summary.sh
+# --------------------------------------------------------------------------
+if grep -q 'scripts/knowledge/write-summary.sh' "$AUTO_CMD"; then
+  pass "auto.md references scripts/knowledge/write-summary.sh"
+else
+  fail "auto.md references scripts/knowledge/write-summary.sh"
+fi
+
+# --------------------------------------------------------------------------
+# 2.13 auto.md Phase Transition enforces write-summary.sh (not freeform)
+# --------------------------------------------------------------------------
+if grep -q 'Do NOT write phase summaries freeform' "$AUTO_CMD"; then
+  pass "auto.md Phase Transition enforces write-summary.sh (not freeform)"
+else
+  fail "auto.md Phase Transition enforces write-summary.sh (not freeform)"
+fi
+
+# --------------------------------------------------------------------------
+# 2.14 auto.md Stage 2b documents verification failure payload construction
+# --------------------------------------------------------------------------
+if grep -q 'Verification Failure Context' "$AUTO_CMD"; then
+  pass "auto.md Stage 2b documents verification failure payload construction"
+else
+  fail "auto.md Stage 2b documents verification failure payload construction"
+fi
+
+# --------------------------------------------------------------------------
+# 2.15 auto.md references scripts/knowledge/append-knowledge.sh
+# --------------------------------------------------------------------------
+if grep -q 'scripts/knowledge/append-knowledge.sh' "$AUTO_CMD"; then
+  pass "auto.md references scripts/knowledge/append-knowledge.sh"
+else
+  fail "auto.md references scripts/knowledge/append-knowledge.sh"
+fi
+
+# --------------------------------------------------------------------------
+# 2.16 auto.md references scripts/knowledge/append-decision.sh
+# --------------------------------------------------------------------------
+if grep -q 'scripts/knowledge/append-decision.sh' "$AUTO_CMD"; then
+  pass "auto.md references scripts/knowledge/append-decision.sh"
+else
+  fail "auto.md references scripts/knowledge/append-decision.sh"
+fi
+
+# --------------------------------------------------------------------------
+# 2.17 auto.md enforces no freeform knowledge appending
+# --------------------------------------------------------------------------
+if grep -q 'Do NOT append to KNOWLEDGE.md freeform' "$AUTO_CMD"; then
+  pass "auto.md enforces no freeform knowledge appending"
+else
+  fail "auto.md enforces no freeform knowledge appending"
+fi
+
+# --------------------------------------------------------------------------
+# 2.18 auto.md enforces no freeform decision appending
+# --------------------------------------------------------------------------
+if grep -q 'Do NOT append to DECISIONS.md freeform' "$AUTO_CMD"; then
+  pass "auto.md enforces no freeform decision appending"
+else
+  fail "auto.md enforces no freeform decision appending"
+fi
+
 # ==========================================================================
 # Section 3: Command File Tests — resume.md and discuss.md
 # ==========================================================================
@@ -904,6 +967,283 @@ if grep -q "Recovery Type Detection" "$RESUME_CMD" && grep -q "Path A" "$RESUME_
   pass "resume.md documents crash vs pause detection with separate paths"
 else
   fail "resume.md documents crash vs pause detection with separate paths"
+fi
+
+# ==========================================================================
+# Section 6: record-result.sh Tests
+# ==========================================================================
+echo ""
+echo "--- Section 6: record-result.sh ---"
+
+RECORD_SCRIPT="$PROJECT_ROOT/scripts/lifecycle/record-result.sh"
+
+# 6.1 Missing args → exit 1
+stderr_output=$(bash "$RECORD_SCRIPT" 2>&1 1>/dev/null) && exit_code=$? || exit_code=$?
+if [ "$exit_code" -ne 0 ] && [ -n "$stderr_output" ]; then
+  pass "record-result.sh no-args → non-zero exit + stderr"
+else
+  fail "record-result.sh no-args → non-zero exit + stderr (exit=$exit_code)"
+fi
+
+# 6.2 Missing required fields → exit 1
+TMPDIR_RECORD="$(mktemp -d)"
+stderr_output=$(bash "$RECORD_SCRIPT" "$TMPDIR_RECORD/test.jsonl" --milestone=M001 --phase=P01 2>&1 1>/dev/null) && exit_code=$? || exit_code=$?
+if [ "$exit_code" -ne 0 ] && echo "$stderr_output" | grep -q "missing required"; then
+  pass "record-result.sh missing fields → exit 1 with descriptive error"
+else
+  fail "record-result.sh missing fields → exit 1 (exit=$exit_code, stderr='$stderr_output')"
+fi
+
+# 6.3 Valid input → RECORD:APPENDED + valid JSON line
+TMPLOG="$TMPDIR_RECORD/log.jsonl"
+output=$(bash "$RECORD_SCRIPT" "$TMPLOG" --milestone=M001 --phase=P01 --task=T01 --outcome=success --duration_s=30 2>/dev/null) && exit_code=$? || exit_code=$?
+if [ "$exit_code" -eq 0 ] && echo "$output" | grep -q "^RECORD:APPENDED"; then
+  pass "record-result.sh valid input → RECORD:APPENDED"
+else
+  fail "record-result.sh valid input → RECORD:APPENDED (exit=$exit_code, output='$output')"
+fi
+
+# 6.4 Output contains required JSON fields
+if [ -f "$TMPLOG" ]; then
+  log_line=$(head -1 "$TMPLOG")
+  has_fields=true
+  for field in "unitId" "milestone" "phase" "task" "outcome" "timestamp"; do
+    if ! echo "$log_line" | grep -q "\"$field\""; then
+      has_fields=false
+    fi
+  done
+  if [ "$has_fields" = "true" ]; then
+    pass "record-result.sh output JSON has all required fields"
+  else
+    fail "record-result.sh output JSON missing fields (got: $log_line)"
+  fi
+else
+  fail "record-result.sh output JSON has all required fields (log file not created)"
+fi
+
+# 6.5 Invalid outcome → exit 1
+stderr_output=$(bash "$RECORD_SCRIPT" "$TMPLOG" --milestone=M001 --phase=P01 --task=T01 --outcome=invalid 2>&1 1>/dev/null) && exit_code=$? || exit_code=$?
+if [ "$exit_code" -ne 0 ] && echo "$stderr_output" | grep -q "invalid outcome"; then
+  pass "record-result.sh invalid outcome → exit 1"
+else
+  fail "record-result.sh invalid outcome → exit 1 (exit=$exit_code)"
+fi
+
+# 6.6 Multiple appends → multiple lines
+bash "$RECORD_SCRIPT" "$TMPLOG" --milestone=M001 --phase=P01 --task=T02 --outcome=failure 2>/dev/null
+line_count=$(wc -l < "$TMPLOG" | tr -d ' ')
+if [ "$line_count" -eq 2 ]; then
+  pass "record-result.sh multiple appends produce multiple lines"
+else
+  fail "record-result.sh multiple appends produce multiple lines (got $line_count lines)"
+fi
+
+rm -rf "$TMPDIR_RECORD"
+
+# ==========================================================================
+# Section 7: sync-roadmap.sh Tests
+# ==========================================================================
+echo ""
+echo "--- Section 7: sync-roadmap.sh ---"
+
+SYNC_SCRIPT="$PROJECT_ROOT/scripts/lifecycle/sync-roadmap.sh"
+
+# 7.1 Missing args → exit 1
+stderr_output=$(bash "$SYNC_SCRIPT" 2>&1 1>/dev/null) && exit_code=$? || exit_code=$?
+if [ "$exit_code" -ne 0 ] && [ -n "$stderr_output" ]; then
+  pass "sync-roadmap.sh no-args → non-zero exit + stderr"
+else
+  fail "sync-roadmap.sh no-args → non-zero exit + stderr (exit=$exit_code)"
+fi
+
+# 7.2 Matching state → SYNC:OK
+output=$(bash "$SYNC_SCRIPT" "$PROJECT_ROOT/tests/fixtures/state-verifying/M001-ROADMAP.md" "$PROJECT_ROOT/tests/fixtures/state-verifying" 2>/dev/null) && exit_code=$? || exit_code=$?
+if [ "$exit_code" -eq 0 ] && echo "$output" | grep -q "^SYNC:OK"; then
+  pass "sync-roadmap.sh matching state → SYNC:OK"
+else
+  fail "sync-roadmap.sh matching state → SYNC:OK (exit=$exit_code, output='$output')"
+fi
+
+# 7.3 Mismatch detection — create temp fixture with [x] but no summary
+TMPDIR_SYNC="$(mktemp -d)"
+mkdir -p "$TMPDIR_SYNC/phases/P01"
+cat > "$TMPDIR_SYNC/roadmap.md" <<'ROADMAPEOF'
+---
+milestone: M001
+tier: C
+---
+
+## Phases
+
+- [x] **P01**: Test Phase — "test"
+  - Risk: low
+  - Depends: none
+ROADMAPEOF
+
+output=$(bash "$SYNC_SCRIPT" "$TMPDIR_SYNC/roadmap.md" "$TMPDIR_SYNC" 2>/dev/null) && exit_code=$? || exit_code=$?
+if [ "$exit_code" -eq 0 ] && echo "$output" | grep -q "SYNC:MISMATCH.*P01.*roadmap=complete.*disk=incomplete"; then
+  pass "sync-roadmap.sh mismatch detection → SYNC:MISMATCH"
+else
+  fail "sync-roadmap.sh mismatch detection → SYNC:MISMATCH (output='$output')"
+fi
+
+# 7.4 Missing roadmap file → exit 1
+stderr_output=$(bash "$SYNC_SCRIPT" "/tmp/nonexistent-roadmap-$$" "$TMPDIR_SYNC" 2>&1 1>/dev/null) && exit_code=$? || exit_code=$?
+if [ "$exit_code" -ne 0 ]; then
+  pass "sync-roadmap.sh missing roadmap → exit 1"
+else
+  fail "sync-roadmap.sh missing roadmap → exit 1 (exit=$exit_code)"
+fi
+
+rm -rf "$TMPDIR_SYNC"
+
+# ==========================================================================
+# Section 8: auto-loop.sh Tests
+# ==========================================================================
+echo ""
+echo "--- Section 8: auto-loop.sh ---"
+
+AUTO_LOOP="$PROJECT_ROOT/scripts/lifecycle/auto-loop.sh"
+AUTO_LOOP_FIXTURE="$PROJECT_ROOT/tests/fixtures/auto-loop/milestones/M001"
+
+# --------------------------------------------------------------------------
+# 8.1 auto-loop.sh no args → exit 1 with usage
+# --------------------------------------------------------------------------
+stderr_output=$(bash "$AUTO_LOOP" 2>&1 1>/dev/null) && exit_code=$? || exit_code=$?
+if [ "$exit_code" -ne 0 ] && echo "$stderr_output" | grep -qi "usage"; then
+  pass "auto-loop.sh no args → exit 1 with usage"
+else
+  fail "auto-loop.sh no args → exit 1 with usage (exit=$exit_code)"
+fi
+
+# --------------------------------------------------------------------------
+# 8.2 auto-loop.sh with fixture → exit 0 + AUTO:READY output
+# --------------------------------------------------------------------------
+output=$(bash "$AUTO_LOOP" "$AUTO_LOOP_FIXTURE" 2>/dev/null) && exit_code=$? || exit_code=$?
+if [ "$exit_code" -eq 0 ] && echo "$output" | grep -q "^AUTO:READY"; then
+  pass "auto-loop.sh pre-dispatch → exit 0 + AUTO:READY"
+else
+  fail "auto-loop.sh pre-dispatch → exit 0 + AUTO:READY (exit=$exit_code, output='$output')"
+fi
+
+# --------------------------------------------------------------------------
+# 8.3 AUTO:READY output contains milestone, phase, task
+# --------------------------------------------------------------------------
+if echo "$output" | grep -q "milestone=M001" && echo "$output" | grep -q "phase=P02" && echo "$output" | grep -q "task=T01"; then
+  pass "auto-loop.sh AUTO:READY contains milestone=M001 phase=P02 task=T01"
+else
+  fail "auto-loop.sh AUTO:READY missing expected fields (output='$output')"
+fi
+
+# --------------------------------------------------------------------------
+# 8.4 auto-loop.sh --step=G with required args → AUTO:RECORDED
+# --------------------------------------------------------------------------
+TMPDIR_AL="$(mktemp -d)"
+cp -r "$AUTO_LOOP_FIXTURE"/* "$TMPDIR_AL/"
+# Ensure execution log exists
+touch "$TMPDIR_AL/execution-log.jsonl"
+output=$(bash "$AUTO_LOOP" "$TMPDIR_AL" --step=G --task=T01 --outcome=success --verification_result=pass --duration_s=30 2>/dev/null) && exit_code=$? || exit_code=$?
+if [ "$exit_code" -eq 0 ] && echo "$output" | grep -q "^AUTO:RECORDED"; then
+  pass "auto-loop.sh --step=G → AUTO:RECORDED"
+else
+  fail "auto-loop.sh --step=G → AUTO:RECORDED (exit=$exit_code, output='$output')"
+fi
+
+# --------------------------------------------------------------------------
+# 8.5 --step=G also outputs AUTO:ADVANCE with next task
+# --------------------------------------------------------------------------
+if echo "$output" | grep -q "AUTO:ADVANCE"; then
+  pass "auto-loop.sh --step=G → AUTO:ADVANCE"
+else
+  fail "auto-loop.sh --step=G → AUTO:ADVANCE (output='$output')"
+fi
+
+# --------------------------------------------------------------------------
+# 8.6 --step=G writes to execution log via record-result.sh
+# --------------------------------------------------------------------------
+if [ -f "$TMPDIR_AL/execution-log.jsonl" ] && grep -q '"outcome":"success"' "$TMPDIR_AL/execution-log.jsonl"; then
+  pass "auto-loop.sh --step=G writes to execution log"
+else
+  fail "auto-loop.sh --step=G writes to execution log (log missing or no entry)"
+fi
+
+# --------------------------------------------------------------------------
+# 8.7 --step=G with all tasks complete → AUTO:PHASE_COMPLETE
+# --------------------------------------------------------------------------
+# Create T01-SUMMARY.md and T02-SUMMARY.md so all tasks are done
+echo "# T01 Summary" > "$TMPDIR_AL/phases/P02/tasks/T01-SUMMARY.md"
+echo "# T02 Summary" > "$TMPDIR_AL/phases/P02/tasks/T02-SUMMARY.md"
+output=$(bash "$AUTO_LOOP" "$TMPDIR_AL" --step=G --task=T02 --outcome=success --verification_result=pass 2>/dev/null) && exit_code=$? || exit_code=$?
+if [ "$exit_code" -eq 0 ] && echo "$output" | grep -q "AUTO:PHASE_COMPLETE"; then
+  pass "auto-loop.sh --step=G all tasks done → AUTO:PHASE_COMPLETE"
+else
+  fail "auto-loop.sh --step=G all tasks done → AUTO:PHASE_COMPLETE (exit=$exit_code, output='$output')"
+fi
+rm -rf "$TMPDIR_AL"
+
+# --------------------------------------------------------------------------
+# 8.8 auto-loop.sh with pause-requested file → exit 11
+# --------------------------------------------------------------------------
+TMPDIR_PAUSE="$(mktemp -d)"
+cp -r "$AUTO_LOOP_FIXTURE"/* "$TMPDIR_PAUSE/"
+touch "$TMPDIR_PAUSE/pause-requested"
+output=$(bash "$AUTO_LOOP" "$TMPDIR_PAUSE" 2>/dev/null) && exit_code=$? || exit_code=$?
+if [ "$exit_code" -eq 11 ]; then
+  pass "auto-loop.sh with pause-requested → exit 11"
+else
+  fail "auto-loop.sh with pause-requested → exit 11 (exit=$exit_code)"
+fi
+rm -rf "$TMPDIR_PAUSE"
+
+# --------------------------------------------------------------------------
+# 8.9 auto-loop.sh with complete milestone → exit 10
+# --------------------------------------------------------------------------
+TMPDIR_COMPLETE="$(mktemp -d)"
+cp -r "$AUTO_LOOP_FIXTURE"/* "$TMPDIR_COMPLETE/"
+# Create task summaries, phase artifacts, and milestone artifacts to reach "complete" state
+echo "# T01 Summary" > "$TMPDIR_COMPLETE/phases/P02/tasks/T01-SUMMARY.md"
+echo "# T02 Summary" > "$TMPDIR_COMPLETE/phases/P02/tasks/T02-SUMMARY.md"
+echo "# P02 Summary" > "$TMPDIR_COMPLETE/phases/P02/P02-SUMMARY.md"
+echo "# Verification" > "$TMPDIR_COMPLETE/phases/P02/P02-VERIFICATION.md"
+echo "# Validation" > "$TMPDIR_COMPLETE/M001-VALIDATION.md"
+echo "# Milestone Summary" > "$TMPDIR_COMPLETE/M001-SUMMARY.md"
+# Fix roadmap to mark P02 as complete
+sed 's/- \[ \] \*\*P02\*\*/- [x] **P02**/' "$TMPDIR_COMPLETE/M001-ROADMAP.md" > "$TMPDIR_COMPLETE/M001-ROADMAP.md.tmp"
+mv "$TMPDIR_COMPLETE/M001-ROADMAP.md.tmp" "$TMPDIR_COMPLETE/M001-ROADMAP.md"
+output=$(bash "$AUTO_LOOP" "$TMPDIR_COMPLETE" 2>/dev/null) && exit_code=$? || exit_code=$?
+if [ "$exit_code" -eq 10 ]; then
+  pass "auto-loop.sh complete milestone → exit 10"
+else
+  fail "auto-loop.sh complete milestone → exit 10 (exit=$exit_code, output='$output')"
+fi
+rm -rf "$TMPDIR_COMPLETE"
+
+# --------------------------------------------------------------------------
+# 8.10 auto-loop.sh --step=G missing args → exit 1
+# --------------------------------------------------------------------------
+stderr_output=$(bash "$AUTO_LOOP" "$AUTO_LOOP_FIXTURE" --step=G 2>&1 1>/dev/null) && exit_code=$? || exit_code=$?
+if [ "$exit_code" -ne 0 ]; then
+  pass "auto-loop.sh --step=G missing args → exit 1"
+else
+  fail "auto-loop.sh --step=G missing args → exit 1 (exit=$exit_code)"
+fi
+
+# --------------------------------------------------------------------------
+# 8.11 auto-loop.sh has shebang and set -euo pipefail
+# --------------------------------------------------------------------------
+if head -1 "$AUTO_LOOP" | grep -q '#!/usr/bin/env bash' && grep -q 'set -euo pipefail' "$AUTO_LOOP"; then
+  pass "auto-loop.sh has #!/usr/bin/env bash and set -euo pipefail"
+else
+  fail "auto-loop.sh missing shebang or strict mode"
+fi
+
+# --------------------------------------------------------------------------
+# 8.12 auto-loop.sh is executable
+# --------------------------------------------------------------------------
+if [ -x "$AUTO_LOOP" ]; then
+  pass "auto-loop.sh is executable (-x)"
+else
+  fail "auto-loop.sh is not executable"
 fi
 
 # ==========================================================================

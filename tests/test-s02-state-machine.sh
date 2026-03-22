@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # tests/test-s02-state-machine.sh — Validates all S02 state machine contracts
-# Tests: 9 state derivations, config resolution (4 layers), roadmap parsing,
+# Tests: 10 state derivations, config resolution (4 layers), roadmap parsing,
 #         scaffold idempotency, and error paths.
 # Outputs structured PASS/FAIL lines per check. Exits 0 if all pass, 1 if any fail.
 # Dependencies: bash only (scripts under test use POSIX sh)
@@ -28,7 +28,7 @@ fail() {
 }
 
 # --------------------------------------------------------------------------
-# 1. State derivation tests (9 states)
+# 1. State derivation tests (10 states)
 # --------------------------------------------------------------------------
 # Each fixture directory simulates a milestone directory tree at a specific state.
 # derive-phase.sh reads the directory and outputs the current state.
@@ -43,6 +43,7 @@ STATE_NAMES=(
   "planning"
   "replanning"
   "executing"
+  "verifying"
   "summarizing"
   "validating"
   "completing"
@@ -55,6 +56,7 @@ STATE_DIRS=(
   "$PROJECT_ROOT/tests/fixtures/state-planning"
   "$PROJECT_ROOT/tests/fixtures/state-replanning"
   "$PROJECT_ROOT/tests/fixtures/state-executing"
+  "$PROJECT_ROOT/tests/fixtures/state-verifying"
   "$PROJECT_ROOT/tests/fixtures/state-summarizing"
   "$PROJECT_ROOT/tests/fixtures/state-validating"
   "$PROJECT_ROOT/tests/fixtures/state-completing"

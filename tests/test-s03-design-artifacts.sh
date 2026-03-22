@@ -28,7 +28,7 @@ fail() {
 }
 
 # --------------------------------------------------------------------------
-# 1. Template file existence (12 files)
+# 1. Template file existence (13 files)
 # --------------------------------------------------------------------------
 
 TEMPLATE_FILES=(
@@ -44,6 +44,7 @@ TEMPLATE_FILES=(
   "templates/recovery-briefing.md"
   "templates/continue-file.md"
   "templates/context-draft.md"
+  "templates/claude-code-appendix.md"
 )
 
 for tpl in "${TEMPLATE_FILES[@]}"; do
@@ -53,6 +54,24 @@ for tpl in "${TEMPLATE_FILES[@]}"; do
     fail "$tpl exists (file not found)"
   fi
 done
+
+# --------------------------------------------------------------------------
+# 1b. claude-settings.json exists and is valid JSON
+# --------------------------------------------------------------------------
+SETTINGS_JSON="$PROJECT_ROOT/templates/claude-settings.json"
+if [ -f "$SETTINGS_JSON" ]; then
+  pass "templates/claude-settings.json exists"
+  # Validate it's parseable JSON (basic check: starts with { and ends with })
+  first_char=$(head -c 1 "$SETTINGS_JSON")
+  if [ "$first_char" = "{" ]; then
+    pass "templates/claude-settings.json is valid JSON (starts with {)"
+  else
+    fail "templates/claude-settings.json is valid JSON (first char: '$first_char')"
+  fi
+else
+  fail "templates/claude-settings.json exists"
+  fail "templates/claude-settings.json is valid JSON (file not found)"
+fi
 
 # --------------------------------------------------------------------------
 # 2. Reference file existence (4 files)
@@ -74,7 +93,7 @@ for ref in "${REFERENCE_FILES[@]}"; do
 done
 
 # --------------------------------------------------------------------------
-# 3. All 12 templates have schema_version in frontmatter (first 10 lines)
+# 3. All 13 templates have schema_version in frontmatter (first 10 lines)
 # --------------------------------------------------------------------------
 
 for tpl in "${TEMPLATE_FILES[@]}"; do
@@ -97,7 +116,7 @@ else
 fi
 
 # --------------------------------------------------------------------------
-# 5. state-machine.md mentions all 9 states
+# 5. state-machine.md mentions all 10 states
 # --------------------------------------------------------------------------
 
 STATE_NAMES=(
@@ -106,6 +125,7 @@ STATE_NAMES=(
   "planning"
   "replanning"
   "executing"
+  "verifying"
   "summarizing"
   "validating"
   "completing"

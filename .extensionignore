@@ -7,6 +7,10 @@ tests/
 # Spec-kit SDD state (used during development, not part of the extension)
 .specify/
 
+# GSD orchestration state (not part of the extension)
+.gsd
+.bg-shell/
+
 # Standard dev files
 .gitignore
 .extensionignore

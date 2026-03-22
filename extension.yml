@@ -3,7 +3,7 @@ schema_version: "1.0"
 extension:
   id: speckit-orchestrator
   name: Speckit Orchestrator
-  version: 0.1.0
+  version: 0.2.0
   description: "Autonomous multi-phase orchestration for spec-kit's spec-driven development workflow. Adds milestone/phase/task hierarchy, state machine dispatch, crash recovery, and knowledge generation."
   author: clariti-care
   repository: https://github.com/clariti-care/spec-kit-orchestrator
@@ -110,6 +110,12 @@ provides:
     - file: scripts/lifecycle/recovery-briefing.sh
       executable: true
     - file: scripts/lifecycle/budget-checker.sh
+      executable: true
+    - file: scripts/lifecycle/record-result.sh
+      executable: true
+    - file: scripts/lifecycle/sync-roadmap.sh
+      executable: true
+    - file: scripts/lifecycle/auto-loop.sh
       executable: true
     - file: scripts/util/json-field.sh
       executable: true

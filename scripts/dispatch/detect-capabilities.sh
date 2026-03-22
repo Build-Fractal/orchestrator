@@ -35,6 +35,16 @@ elif command -v copilot >/dev/null 2>&1; then
   subagent_dispatch=true
 fi
 
+# agent_tool_available: detect in-process agent tool via environment
+agent_tool_available=false
+if [[ -n "${CLAUDE_CODE:-}" ]]; then
+  agent_tool_available=true
+  subagent_dispatch=true
+elif [[ -n "${CURSOR_AGENT:-}" ]]; then
+  agent_tool_available=true
+  subagent_dispatch=true
+fi
+
 # shell_execution: always true (we're running in bash)
 shell_execution=true
 
@@ -68,6 +78,7 @@ if [[ "$FORMAT" = "json" ]]; then
   cat <<EOF
 {
   "subagent_dispatch": $subagent_dispatch,
+  "agent_tool_available": $agent_tool_available,
   "shell_execution": $shell_execution,
   "git_available": $git_available,
   "git_worktree": $git_worktree,
@@ -77,6 +88,7 @@ if [[ "$FORMAT" = "json" ]]; then
 EOF
 else
   echo "subagent_dispatch=$subagent_dispatch"
+  echo "agent_tool_available=$agent_tool_available"
   echo "shell_execution=$shell_execution"
   echo "git_available=$git_available"
   echo "git_worktree=$git_worktree"

@@ -28,8 +28,9 @@ Every file write is idempotent (FR-066): writing a file that already exists is a
         ├── M001-SUMMARY.md         # Milestone rollup summary
         └── phases/
             └── P01/
-                ├── P01-PLAN.md     # Task decomposition + must-haves
-                ├── P01-SUMMARY.md  # Phase summary
+                ├── P01-PLAN.md          # Task decomposition + must-haves
+                ├── P01-VERIFICATION.md  # Phase verification report
+                ├── P01-SUMMARY.md       # Phase summary
                 └── tasks/
                     ├── T01-PLAN.md
                     ├── T01-SUMMARY.md
@@ -176,6 +177,52 @@ milestone: M001                   # Parent milestone
 ## Expected Output
 - [Files and artifacts this task produces]
 ```
+
+---
+
+## Phase Verification Report (`P##-VERIFICATION.md`)
+
+**Location**: `.specify/orchestrator/milestones/{M###}/phases/{P##}/P##-VERIFICATION.md`
+**Format**: YAML frontmatter + markdown body
+**Mutability**: Written once at phase verification. Never edited after creation.
+
+### Frontmatter Fields
+
+```yaml
+---
+schema_version: "1.0"
+type: verification-report
+phase: P01
+milestone: M001
+overall_result: pass             # pass | fail
+verified_at: "2026-03-20T15:00:00Z"
+---
+```
+
+### Body Sections
+
+```markdown
+# P01 Verification Report
+
+## Tier 1 — Static Checks
+[Must-have verification results from check-must-haves.sh]
+
+## Tier 2 — Command Execution
+[Test/lint results from run-commands.sh]
+
+## Tier 3 — Behavioral Review
+[Agent-driven truth evaluation results]
+
+## Tier 4 — Human/UAT Review
+[Human review items and their status]
+
+## Summary
+[Overall assessment: pass/fail with specific failures listed]
+```
+
+### State Machine Role
+
+The presence of `P##-VERIFICATION.md` is what transitions the state from `verifying` → `summarizing`. Without this file, `derive-phase.sh` returns `verifying` when all tasks have summaries.
 
 ---
 
@@ -382,28 +429,38 @@ The `runtime` field determines the liveness check strategy:
 **Format**: JSONL (one JSON object per line)
 **Mutability**: Append-only. Never edit or delete existing entries.
 
-### Entry Format
+### Entry Format (via `record-result.sh`)
 
 ```json
 {
   "timestamp": "2026-03-19T10:15:00Z",
   "unitId": "M001/P01/T01",
-  "unitType": "execute-task",
+  "milestone": "M001",
+  "phase": "P01",
+  "task": "T01",
   "tier": "C",
-  "duration": "5m",
   "outcome": "success",
-  "model": "claude-opus-4-6",
-  "featureBranch": "001-speckit-orchestrator"
+  "dispatch_method": "subagent",
+  "attempt": 1,
+  "verification_result": "pass",
+  "duration_s": 300,
+  "payload_bytes": 4096
 }
 ```
 
-### Unit Types
+Use `scripts/lifecycle/record-result.sh` to append entries with field validation. The script generates `timestamp` and `unitId` automatically from `milestone`, `phase`, and `task` fields.
 
-`evaluate`, `discuss`, `plan-phase`, `execute-task`, `verify-phase`, `summarize-phase`, `validate-milestone`, `complete-milestone`, `consolidate`
+### Required Fields
+
+`timestamp`, `unitId`, `milestone`, `phase`, `task`, `tier`, `outcome`, `dispatch_method`, `attempt`
+
+### Optional Fields
+
+`verification_result`, `duration_s`, `payload_bytes`, `concerns`
 
 ### Outcome Values
 
-`success`, `failure`, `blocked`, `concerns`, `timeout`, `stuck`
+`success`, `failure`, `retry`, `blocked`, `timeout`, `stuck`
 
 ### Verification Entry
 

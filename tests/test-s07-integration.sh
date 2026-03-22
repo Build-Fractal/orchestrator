@@ -310,9 +310,9 @@ else
   fail "detect-capabilities.sh --format json exited non-zero — ${DETECT_SCRIPT}"
 fi
 
-# 3e. JSON output contains all 6 expected keys
+# 3e. JSON output contains all 7 expected keys
 JSON_OUTPUT=$(bash "$DETECT_SCRIPT" --format json 2>/dev/null)
-EXPECTED_JSON_KEYS="subagent_dispatch shell_execution git_available git_worktree github_actions runtime"
+EXPECTED_JSON_KEYS="subagent_dispatch agent_tool_available shell_execution git_available git_worktree github_actions runtime"
 JSON_KEYS_MISSING=0
 JSON_KEYS_MISSING_LIST=""
 for key in $EXPECTED_JSON_KEYS; do
@@ -323,7 +323,7 @@ for key in $EXPECTED_JSON_KEYS; do
 done
 
 if [ "$JSON_KEYS_MISSING" -eq 0 ]; then
-  pass "JSON output contains all 6 expected capability keys"
+  pass "JSON output contains all 7 expected capability keys"
 else
   fail "JSON output missing keys:${JSON_KEYS_MISSING_LIST} — ${DETECT_SCRIPT}"
 fi

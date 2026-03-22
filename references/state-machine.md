@@ -5,13 +5,13 @@
 
 ## Overview
 
-The orchestrator uses a **file-presence state machine** with 9 canonical states. State is never stored as a field — it is derived deterministically by examining which files exist on disk under `.specify/orchestrator/milestones/{M###}/`. This means state survives crashes, is always consistent with reality, and requires no migration when resuming interrupted sessions.
+The orchestrator uses a **file-presence state machine** with 10 canonical states. State is never stored as a field — it is derived deterministically by examining which files exist on disk under `.specify/orchestrator/milestones/{M###}/`. This means state survives crashes, is always consistent with reality, and requires no migration when resuming interrupted sessions.
 
 The derivation script (`scripts/state/derive-phase.sh`) evaluates conditions in priority order and returns the first matching state.
 
 ---
 
-## The 9 States
+## The 10 States
 
 ### 1. `pre-planning`
 
@@ -73,9 +73,21 @@ The derivation script (`scripts/state/derive-phase.sh`) evaluates conditions in 
 
 ---
 
-### 6. `summarizing`
+### 6. `verifying`
 
-**Condition**: All tasks in the active phase have summaries, but no phase summary (`P##-SUMMARY.md`) exists yet.
+**Condition**: All tasks in the active phase have summaries, but no phase verification report (`P##-VERIFICATION.md`) exists yet.
+
+**What it means for the developer**: All tasks are complete. Before the phase can be summarized, the 4-tier verification pipeline must run to confirm that must-haves are met.
+
+**What it means for the orchestrator**: Run `speckit.orchestrator.verify` on the active phase. This executes static checks (Tier 1), configured commands (Tier 2), behavioral checks (Tier 3), and human review (Tier 4 if applicable). Write the verification report to `P##-VERIFICATION.md`. On pass, the state advances to `summarizing`. On failure, the report documents what failed for remediation.
+
+**Tier availability**: All tiers (Tier B and C).
+
+---
+
+### 7. `summarizing`
+
+**Condition**: All tasks in the active phase have summaries, a verification report (`P##-VERIFICATION.md`) exists, but no phase summary (`P##-SUMMARY.md`) exists yet.
 
 **What it means for the developer**: All planned work for this phase is done and verified. The phase needs its rollup summary before moving to the next phase.
 
@@ -85,7 +97,7 @@ The derivation script (`scripts/state/derive-phase.sh`) evaluates conditions in 
 
 ---
 
-### 7. `validating`
+### 8. `validating`
 
 **Condition**: All phases in the milestone are complete (all have summaries), but no milestone validation has been performed.
 
@@ -97,7 +109,7 @@ The derivation script (`scripts/state/derive-phase.sh`) evaluates conditions in 
 
 ---
 
-### 8. `completing`
+### 9. `completing`
 
 **Condition**: Milestone validation passed, but no milestone summary (`M###-SUMMARY.md`) exists yet.
 
@@ -109,7 +121,7 @@ The derivation script (`scripts/state/derive-phase.sh`) evaluates conditions in 
 
 ---
 
-### 9. `complete`
+### 10. `complete`
 
 **Condition**: The milestone summary (`M###-SUMMARY.md`) exists on disk.
 
@@ -132,10 +144,11 @@ The derivation script evaluates these conditions in strict priority order. The *
 | 3 | No roadmap file exists | `planning` | `M001-ROADMAP.md` is absent |
 | 4 | Any phase marked stale in roadmap | `replanning` | A phase line contains a stale marker |
 | 5 | Active phase has incomplete tasks | `executing` | `T02-PLAN.md` exists but `T02-SUMMARY.md` does not |
-| 6 | Active phase: all tasks done, no phase summary | `summarizing` | All `T##-SUMMARY.md` exist but `P01-SUMMARY.md` does not |
-| 7 | All phases done, no milestone validation | `validating` | All `P##-SUMMARY.md` exist, no validation marker |
-| 8 | Milestone validated, no milestone summary | `completing` | Validation passed but `M001-SUMMARY.md` absent |
-| 9 | Milestone summary exists | `complete` | `M001-SUMMARY.md` exists |
+| 6 | Active phase: all tasks done, no verification | `verifying` | All `T##-SUMMARY.md` exist but `P01-VERIFICATION.md` does not |
+| 7 | Active phase: all tasks done + verified, no phase summary | `summarizing` | `P01-VERIFICATION.md` exists but `P01-SUMMARY.md` does not |
+| 8 | All phases done, no milestone validation | `validating` | All `P##-SUMMARY.md` exist, no validation marker |
+| 9 | Milestone validated, no milestone summary | `completing` | Validation passed but `M001-SUMMARY.md` absent |
+| 10 | Milestone summary exists | `complete` | `M001-SUMMARY.md` exists |
 
 **"Active phase"** = the first incomplete phase in dependency order, with high-risk phases prioritized among those whose dependencies are satisfied (per FR-043).
 
@@ -157,9 +170,13 @@ The derivation script evaluates these conditions in strict priority order. The *
                     └──────┬───────┘
                            │ plan complete, dispatch first task
               ┌────────────▼────────────┐
-              │       executing         │ ◄── dispatch tasks, verify each
+              │       executing         │ ◄── dispatch tasks
               └────────────┬────────────┘
                            │ all tasks in phase done
+              ┌────────────▼────────────┐
+              │       verifying         │ ◄── run 4-tier verification
+              └────────────┬────────────┘
+                           │ verification report written
               ┌────────────▼────────────┐
               │      summarizing        │ ◄── generate phase summary
               └────────────┬────────────┘
@@ -191,10 +208,10 @@ The derivation script evaluates these conditions in strict priority order. The *
 
 ### Tier B (Single SDD Flow)
 
-Tier B uses a **5-state subset** of the full state machine:
+Tier B uses a **6-state subset** of the full state machine:
 
 ```
-pre-planning → planning → executing → summarizing → complete
+pre-planning → planning → executing → verifying → summarizing → complete
 ```
 
 **Excluded states**: `discussing`, `replanning`, `validating`, `completing`
@@ -209,11 +226,11 @@ pre-planning → planning → executing → summarizing → complete
 
 ### Tier C (Full Orchestration)
 
-Tier C uses the **full 9-state machine** with all transitions:
+Tier C uses the **full 10-state machine** with all transitions:
 
 ```
 pre-planning → discussing → planning → [replanning] → executing →
-  summarizing → [back to planning if more phases] →
+  verifying → summarizing → [back to planning if more phases] →
   validating → completing → complete
 ```
 

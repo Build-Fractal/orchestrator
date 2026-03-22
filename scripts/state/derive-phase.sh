@@ -11,10 +11,11 @@
 #   3. planning      — no M###-ROADMAP.md, OR active phase has no P##-PLAN.md
 #   4. replanning    — any phase marked stale in the roadmap
 #   5. executing     — active phase has task plans without matching summaries
-#   6. summarizing   — active phase: all tasks done, no P##-SUMMARY.md
-#   7. validating    — all phases complete (have summaries), no validation marker
-#   8. completing    — validation marker exists, no M###-SUMMARY.md
-#   9. complete      — M###-SUMMARY.md exists
+#   6. verifying     — active phase: all tasks done, no P##-VERIFICATION.md
+#   7. summarizing   — active phase: all tasks done + verified, no P##-SUMMARY.md
+#   8. validating    — all phases complete (have summaries), no validation marker
+#   9. completing    — validation marker exists, no M###-SUMMARY.md
+#  10. complete      — M###-SUMMARY.md exists
 #
 # Exits 0 on successful derivation (outputs state to stdout).
 # Exits 1 with usage/error message to stderr on bad input.
@@ -107,7 +108,7 @@ if [[ -n "$active_phase" && "$active_phase" != "none" ]]; then
   fi
 fi
 
-# --- Rules 5-6: Check active phase task completion ---
+# --- Rules 5-7: Check active phase task completion ---
 if [[ -n "$active_phase" && "$active_phase" != "none" ]]; then
   tasks_dir="$MILESTONE_DIR/phases/${active_phase}/tasks"
 
@@ -133,7 +134,16 @@ if [[ -n "$active_phase" && "$active_phase" != "none" ]]; then
       exit 0
     fi
 
-    # Rule 6: All tasks complete but no phase summary → summarizing
+    # Rule 6: All tasks complete, no verification report → verifying
+    if [[ "$has_any_task" = "true" && "$has_incomplete_task" != "true" ]]; then
+      verification_file="$MILESTONE_DIR/phases/${active_phase}/${active_phase}-VERIFICATION.md"
+      if [[ ! -f "$verification_file" ]]; then
+        echo "verifying"
+        exit 0
+      fi
+    fi
+
+    # Rule 7: All tasks complete, verification exists, no phase summary → summarizing
     if [[ "$has_any_task" = "true" ]]; then
       phase_summary="$MILESTONE_DIR/phases/${active_phase}/${active_phase}-SUMMARY.md"
       if [[ ! -f "$phase_summary" ]]; then
@@ -144,7 +154,7 @@ if [[ -n "$active_phase" && "$active_phase" != "none" ]]; then
   fi
 fi
 
-# --- Rule 7: All phases complete (have summaries), no validation marker → validating ---
+# --- Rule 8: All phases complete (have summaries), no validation marker → validating ---
 all_phases_complete=true
 
 # Read phase IDs from the roadmap and check each for a summary
@@ -165,14 +175,14 @@ if [[ "$all_phases_complete" = "true" ]]; then
     exit 0
   fi
 
-  # --- Rule 8: Validated but no milestone summary → completing ---
+  # --- Rule 9: Validated but no milestone summary → completing ---
   summary_file="$MILESTONE_DIR/${MILESTONE_ID}-SUMMARY.md"
   if [[ ! -f "$summary_file" ]]; then
     echo "completing"
     exit 0
   fi
 
-  # --- Rule 9: Milestone summary exists → complete ---
+  # --- Rule 10: Milestone summary exists → complete ---
   echo "complete"
   exit 0
 fi

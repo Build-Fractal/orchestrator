@@ -103,7 +103,7 @@ Based on the current state, recommend the next orchestrator command:
 | `executing` | Run `speckit.orchestrator.dispatch` to execute the next task. |
 | `summarizing` | Run `speckit.orchestrator.verify` and write the phase summary. |
 | `validating` | Validate milestone success criteria across all phases. |
-| `completing` | Write the milestone summary via `speckit.orchestrator.consolidate`. |
+| `completing` | Write the milestone summary using `write-summary.sh`, then compress knowledge. |
 | `complete` | Milestone complete. Consider `speckit.orchestrator.consolidate` for knowledge compression. |
 
 ## Concurrent Safety

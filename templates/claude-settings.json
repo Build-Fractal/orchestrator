@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Write",
+      "Edit",
+      "Bash(bash scripts/*)",
+      "Bash(git *)",
+      "Bash(rm -f .specify/orchestrator/pause-requested)",
+      "Bash(rm -f .specify/orchestrator/continue.md)",
+      "Bash(mkdir *)",
+      "Bash(ls *)",
+      "Bash(find *)",
+      "Bash(wc *)",
+      "Bash(date *)",
+      "Agent"
+    ]
+  }
+}

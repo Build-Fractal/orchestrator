@@ -58,7 +58,7 @@ while IFS= read -r line; do
   if [[ "$IN_SECTION" = "true" ]]; then
     # Extract file paths from "- path/to/file" lines
     if echo "$line" | grep -qE '^- '; then
-      file_path=$(echo "$line" | sed 's/^- //' | sed 's/[[:space:]]*$//')
+      file_path=$(echo "$line" | sed 's/^- //' | sed 's/ *(.*)//' | sed 's/[[:space:]]*$//')
       if [[ -n "$file_path" ]]; then
         DECLARED_FILES+=("$file_path")
       fi

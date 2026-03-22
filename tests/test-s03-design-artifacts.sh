@@ -108,7 +108,9 @@ done
 # 4. No hardcoded IDs in templates
 # --------------------------------------------------------------------------
 
-hardcoded_matches=$(grep -rn 'M[0-9]\{3\}\|P[0-9]\{2\}\|T[0-9]\{2\}' "$PROJECT_ROOT"/templates/*.md 2>/dev/null || true)
+# Strip HTML comment blocks (<!-- ... -->) before checking for hardcoded IDs.
+# Comments may span multiple lines, so use sed to remove them first.
+hardcoded_matches=$(sed '/<!--/,/-->/d' "$PROJECT_ROOT"/templates/*.md 2>/dev/null | grep -n 'M[0-9]\{3\}\|P[0-9]\{2\}\|T[0-9]\{2\}' || true)
 if [ -z "$hardcoded_matches" ]; then
   pass "No hardcoded IDs (M###, P##, T##) in templates"
 else

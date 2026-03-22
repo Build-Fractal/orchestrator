@@ -5,6 +5,7 @@ task: "{{task_id}}"
 phase: "{{phase_id}}"
 milestone: "{{milestone_id}}"
 name: "{{task_name}}"
+depends_on: [{{upstream_task_ids}}]
 ---
 
 ## Description
@@ -25,7 +26,15 @@ name: "{{task_name}}"
 
 ## Inputs
 
-{{inputs}}
+### From Previous Tasks
+<!-- For each upstream file this task reads or imports: -->
+- `{{file_path}}` (from {{task_id}})
+  - Key API: `{{method signatures this task calls}}`
+  - Key types: `{{types/interfaces this task uses}}`
+
+### From Disk (Pre-existing)
+<!-- Files that exist before any phase tasks run -->
+- `{{file_path}}` — {{what this task uses from it}}
 
 ## Expected Output
 

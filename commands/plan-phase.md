@@ -59,6 +59,8 @@ Observable behaviors that can be mechanically verified. Each truth should have a
   - Check: `<grep|command that returns exit 0 if truth holds>`
 ```
 
+Truth `Check:` commands verify observable proxies for behavior, not behavior itself. They are Tier 1 (static) checks — they catch "forgot to implement" but cannot catch "implemented with different names." When writing checks: use broad regex alternation for common naming variants, prefer structural checks over naming checks where possible (e.g., check the logic pattern, not the variable name), and accept that some truths genuinely need Tier 3 (behavioral) verification rather than writing fragile Tier 1 checks.
+
 Truths without `Check:` sub-items are classified as Tier 3 behavioral checks — they require agent judgment rather than mechanical verification. Use sparingly and only for behaviors that genuinely cannot be reduced to a command.
 
 #### Artifacts
@@ -94,9 +96,12 @@ Decompose the phase into 1–7 tasks, each fitting in one context window (FR-005
 Each task plan must be completely self-contained — an agent starting with zero knowledge of the project must be able to execute the task using only the task plan and the codebase. Each task plan includes:
 
 - **Exact file paths**: every file to create, read, or modify — full relative paths from project root
-- **Complete code snippets**: not "implement the handler" but the actual code to write (or a precise description with all inputs, outputs, types, and edge cases)
+- **Complete code snippets**: not "implement the handler" but the actual code to write, or a precise specification. Use this heuristic for verbosity level:
+  - **Include verbatim code** for: configuration files, data definitions, shader source, and any code where exact syntax matters (regex patterns, math formulas).
+  - **Include interface specifications** (method signatures, parameter types, return types, behavioral contracts) for: classes and modules where the implementing agent needs flexibility in internal structure but must match a specific API surface.
+  - **Include architecture descriptions** (pattern name, key data structures, interaction protocol) for: complex systems where the approach matters more than exact code.
 - **Exact commands with expected output**: `bash scripts/verify/check-must-haves.sh <path>` should output `PASS: ...`
-- **Inputs**: what files from previous tasks this task reads (with the key content summarized, not just the file path)
+- **Inputs**: what files from previous tasks this task reads. The Inputs section must summarize the API surface of upstream outputs — method signatures, key types, behavioral contracts — not just list file paths. An agent reading only this task plan must know what methods to call, what types to use, and what behavior to expect without reading upstream files.
 - **Must-haves**: the subset of phase must-haves that this specific task addresses
 
 ## Scope Declaration
@@ -119,6 +124,15 @@ Write the plan files to the phase directory:
 1. **Write the phase plan** to `<milestone-dir>/phases/P##/P##-PLAN.md`.
 2. **Create the tasks directory** at `<milestone-dir>/phases/P##/tasks/` if it doesn't exist.
 3. **Write individual task plans** to `<milestone-dir>/phases/P##/tasks/T##-PLAN.md` for each task, using the `templates/task-plan.md` template format.
+
+## Post-Completion
+
+After writing the phase plan and all task plans:
+
+1. **Verify state transition**: Run `bash scripts/state/derive-phase.sh <milestone-dir>`. The state should now be `executing` (task plans exist without summaries).
+2. **Report next step**: Inform the developer that the phase is ready for execution via `speckit.orchestrator.dispatch` (one task at a time) or `speckit.orchestrator.auto` (autonomous execution).
+
+Note: Running `plan-phase` again without `--phase P##` would attempt to re-plan the same phase since it is still the active phase. Use `--phase` to target a different phase.
 
 ## Idempotency
 

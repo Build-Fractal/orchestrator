@@ -119,6 +119,8 @@ provides:
       executable: true
     - file: scripts/lifecycle/budget-checker.sh
       executable: true
+    - file: scripts/lifecycle/context-monitor.sh
+      executable: true
     - file: scripts/lifecycle/record-result.sh
       executable: true
     - file: scripts/lifecycle/sync-roadmap.sh
@@ -148,6 +150,7 @@ defaults:
   dispatch_budget: null
   duration_budget: null
   budget_enforcement: advisory
+  session_weight_limit: 15
 
 config_schema:
   type: object
@@ -172,6 +175,10 @@ config_schema:
     budget_enforcement:
       type: string
       enum: [advisory, enforced]
+    session_weight_limit:
+      type: [integer, "null"]
+      minimum: 5
+      description: "Max session context weight before rotating to a fresh context. Each task dispatch = 1 unit, each retry = +1, each phase transition = +3. Default 15 (~2-3 phases)."
 
 hooks:
   before_tasks:

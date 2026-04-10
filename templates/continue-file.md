@@ -7,6 +7,7 @@ task: "{{task_id}}"
 step: {{step}}
 total_steps: {{total_steps}}
 saved_at: "{{saved_at}}"
+reason: "{{reason}}"
 ---
 
 ## Completed Work

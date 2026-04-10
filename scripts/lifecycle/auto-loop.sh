@@ -19,6 +19,7 @@
 #   auto-loop.sh <milestone-dir> --step=G --task=T## --outcome=<success|failure> \
 #     [--verification_result=<pass|fail|skipped>] [--duration_s=N]
 #   auto-loop.sh <milestone-dir> --step=V --phase=P## --task=T##
+#   auto-loop.sh <milestone-dir> --step=X
 #
 # Structured output (stdout):
 #   AUTO:READY milestone=<M###> phase=<P##> task=<T##> payload_bytes=<N>
@@ -28,6 +29,8 @@
 #   AUTO:PHASE_COMPLETE phase=<P##>
 #   AUTO:MILESTONE_VALIDATING
 #   AUTO:MILESTONE_COMPLETE
+#   CONTEXT:OK weight=<N> limit=<L> headroom=<H>
+#   CONTEXT:ROTATE weight=<N> limit=<L> next_est=<E> reason=<msg>
 #
 # Exit codes:
 #   0  — success (check stdout for action type)
@@ -37,6 +40,7 @@
 #   10 — milestone already complete
 #   11 — pause requested
 #   12 — unexpected state
+#   14 — context rotation recommended
 
 set -euo pipefail
 
@@ -53,6 +57,7 @@ STUCK_DETECTOR="$PROJECT_ROOT/scripts/lifecycle/stuck-detector.sh"
 LOCK_MANAGER="$PROJECT_ROOT/scripts/lifecycle/lock-manager.sh"
 RECORD_RESULT="$PROJECT_ROOT/scripts/lifecycle/record-result.sh"
 SYNC_ROADMAP="$PROJECT_ROOT/scripts/lifecycle/sync-roadmap.sh"
+CONTEXT_MONITOR="$PROJECT_ROOT/scripts/lifecycle/context-monitor.sh"
 CHECK_MUST_HAVES="$PROJECT_ROOT/scripts/verify/check-must-haves.sh"
 RUN_COMMANDS="$PROJECT_ROOT/scripts/verify/run-commands.sh"
 
@@ -255,6 +260,43 @@ if [[ "$STEP" = "V" ]]; then
     echo "AUTO:VERIFY_PASS phase=$PHASE task=$TASK checks_passed=$checks_passed"
     exit 0
   fi
+fi
+
+# ============================================================================
+# CONTEXT CHECK PHASE (--step=X)
+# ============================================================================
+if [[ "$STEP" = "X" ]]; then
+  # Check session context weight at phase boundaries.
+  # Returns exit code 14 if rotation is recommended.
+  if [[ ! -f "$CONTEXT_MONITOR" ]]; then
+    # Context monitor not available — skip check, proceed
+    echo "CONTEXT:OK weight=0 limit=0 headroom=0 (monitor unavailable)"
+    exit 0
+  fi
+
+  monitor_args=("$EXECUTION_LOG" "$LOCK_FILE")
+
+  if [[ -f "$ROADMAP_FILE" ]]; then
+    monitor_args+=("--roadmap" "$ROADMAP_FILE")
+  fi
+
+  # Read configured session weight limit
+  weight_limit=""
+  if [[ -f "$READ_CONFIG" ]]; then
+    weight_limit=$(bash "$READ_CONFIG" session_weight_limit 2>/dev/null) || weight_limit=""
+  fi
+  if [[ -n "$weight_limit" && "$weight_limit" != "null" ]]; then
+    monitor_args+=("--limit" "$weight_limit")
+  fi
+
+  context_output=$(bash "$CONTEXT_MONITOR" "${monitor_args[@]}" 2>/dev/null) || context_output="CONTEXT:OK weight=0 limit=15 headroom=15"
+  echo "$context_output"
+
+  if echo "$context_output" | grep -q "^CONTEXT:ROTATE"; then
+    exit 14
+  fi
+
+  exit 0
 fi
 
 # ============================================================================

@@ -112,7 +112,7 @@ output=$(bash scripts/lifecycle/auto-loop.sh <milestone-dir>)
 
 Parse the output to get milestone, phase, task, and payload file path. The `AUTO:READY` line includes `payload_file=<path>` pointing to the assembled dispatch payload on disk. Handle exit codes:
 - **0 + AUTO:READY** → proceed to Stage 2
-- **0 + AUTO:PHASE_COMPLETE** → handle phase transition (see below)
+- **0 + AUTO:PHASE_COMPLETE** → handle phase transition (see below), then context check
 - **0 + AUTO:MILESTONE_VALIDATING** → handle milestone validation (see below)
 - **0 + AUTO:PLANNING** → handle phase planning (see below)
 - **2** → budget exceeded, release lock and exit
@@ -120,6 +120,7 @@ Parse the output to get milestone, phase, task, and payload file path. The `AUTO
 - **10** → milestone complete, release lock and exit
 - **11** → pause requested, release lock and exit
 - **12** → unexpected state, release lock and exit
+- **14** → context rotation recommended, release lock and exit (from `--step=X`)
 
 #### Stage 2 — Dispatch + Verify (agent judgment)
 
@@ -258,7 +259,43 @@ Parse the output to extract the derived field values, then review them before wr
      Do NOT append to DECISIONS.md freeform.
    - Reassessment MUST NOT modify completed or just-finished phases
 
-4. **Advance**: `derive-phase.sh` returns the next phase's state on the next loop iteration.
+4. **Context Rotation Check** (FR-CONTEXT): Before advancing, check whether the orchestrator's own context is deep enough to warrant a fresh session:
+
+   ```bash
+   output=$(bash scripts/lifecycle/auto-loop.sh <milestone-dir> --step=X)
+   ```
+
+   - **Exit 0 + CONTEXT:OK** → context headroom is sufficient, advance to the next phase normally
+   - **Exit 14 + CONTEXT:ROTATE** → context rotation recommended. Handle as follows:
+
+   **On context rotation:**
+
+   a. Parse the `CONTEXT:ROTATE` output to extract `weight`, `limit`, and `next_est` values.
+
+   b. Count completed and remaining phases from the roadmap for the progress report.
+
+   c. Write a continue file at `<milestone-dir>/continue.md` with `reason: context_rotation` in the frontmatter:
+      - **Completed Work**: List all phases completed in this session (from the lock file's `completedUnits`)
+      - **Remaining Work**: List remaining incomplete phases from the roadmap
+      - **Context**: "Proactive context rotation — no errors. Session weight {weight}/{limit}, next phase estimated at {next_est} units."
+      - **Next Action**: "Run `speckit.orchestrator.auto` to continue autonomous execution from the next incomplete phase."
+
+   d. Release the lock: `bash scripts/lifecycle/lock-manager.sh break .specify/orchestrator/orchestrator.lock`
+
+   e. Report to the developer with a clear, actionable message:
+
+      ```
+      ✓ Phase {completed_phase} complete.
+      ⚠ Context rotation — session weight at {weight}/{limit}. Next phase est. {next_est} units.
+        Completed: {completed_count}/{total_count} phases in this session.
+        Run `speckit.orchestrator.auto` to continue from {next_phase}.
+      ```
+
+   f. Exit cleanly. The developer runs `speckit.orchestrator.auto` again, which picks up seamlessly — `derive-phase.sh` identifies the next incomplete phase, task scanning finds the next incomplete task, and the loop resumes in a fresh context.
+
+   **Note:** Context rotation is a proactive reliability measure, not an error. The orchestrator exits *between* phases (never mid-task), so all state is on disk and no work is lost. The continue file is informational — `auto` does not require it to resume because state derivation from disk is authoritative.
+
+5. **Advance**: `derive-phase.sh` returns the next phase's state on the next loop iteration.
 
 ### Phase Verification Failure
 
@@ -325,6 +362,7 @@ The lock MUST be released on every exit:
 - Normal completion → release after reporting
 - Pause requested → release after writing continue file
 - Budget exceeded → release after writing continue file
+- Context rotation → release after writing continue file (proactive, not error)
 - Stuck detected → release after writing continue file
 - Verification failure → release after recording
 - Unexpected state → release before exiting
@@ -379,6 +417,7 @@ If `lock-manager.sh` returns a non-zero exit code:
 - `scripts/lifecycle/lock-manager.sh` — lock file lifecycle (create, status, break, update)
 - `scripts/lifecycle/stuck-detector.sh` — stuck detection from execution log
 - `scripts/lifecycle/budget-checker.sh` — budget enforcement (dispatch count and duration)
+- `scripts/lifecycle/context-monitor.sh` — session context weight estimation for rotation decisions
 - `scripts/lifecycle/record-result.sh` — execution log recording
 - `scripts/lifecycle/sync-roadmap.sh` — roadmap-to-disk state synchronization
 - `scripts/lifecycle/recovery-briefing.sh` — crash recovery context synthesis

@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# --- Portable sed -i helper (BSD/GNU compatible) ---
+sed_i() {
+  if sed --version 2>/dev/null | grep -q GNU; then
+    sed -i "$@"
+  else
+    sed -i '' "$@"
+  fi
+}
 # scripts/lifecycle/sync-roadmap.sh — Cross-reference roadmap checkboxes with disk state
 # Compares roadmap phase checkboxes ([x]/[ ]) with P##-SUMMARY.md existence.
 # Reports mismatches and optionally updates checkboxes to match disk state.
@@ -79,8 +87,7 @@ while IFS=' ' read -r pid pstatus prisk pdepends; do
     echo "SYNC:MISMATCH phase=$pid roadmap=complete disk=incomplete"
     if [[ "$FIX_MODE" = "true" ]]; then
       # Change [x] to [ ] for this phase
-      sed -i.bak "s/- \[x\] \*\*${pid}\*\*/- [ ] **${pid}**/" "$ROADMAP_FILE"
-      rm -f "${ROADMAP_FILE}.bak"
+      sed_i "s/- \[x\] \*\*${pid}\*\*/- [ ] **${pid}**/" "$ROADMAP_FILE"
       echo "SYNC:FIXED phase=$pid old=complete new=incomplete"
     fi
   elif [[ "$pstatus" = "incomplete" && "$disk_state" = "complete" ]]; then
@@ -88,8 +95,7 @@ while IFS=' ' read -r pid pstatus prisk pdepends; do
     echo "SYNC:MISMATCH phase=$pid roadmap=incomplete disk=complete"
     if [[ "$FIX_MODE" = "true" ]]; then
       # Change [ ] to [x] for this phase
-      sed -i.bak "s/- \[ \] \*\*${pid}\*\*/- [x] **${pid}**/" "$ROADMAP_FILE"
-      rm -f "${ROADMAP_FILE}.bak"
+      sed_i "s/- \[ \] \*\*${pid}\*\*/- [x] **${pid}**/" "$ROADMAP_FILE"
       echo "SYNC:FIXED phase=$pid old=incomplete new=complete"
     fi
   fi

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # scripts/dispatch/build-context.sh — Assemble dispatch payload for task execution
-# Builds a complete context payload from orchestrator state, filtered by scope (R007 — <20% of artifacts).
+# Builds a pre-inlined dispatch payload with manifest header from orchestrator state,
+# using the knowledge index architecture (P04).
 #
 # Usage: build-context.sh <orchestrator-root> <milestone-id> <phase-id> <task-id> [--config-defaults <file>]
 #   orchestrator-root: the .specify/orchestrator/ directory (or fixture milestone dir)
@@ -13,9 +14,19 @@
 # a task execution payload. Includes roadmap phase section, upstream summaries,
 # feature spec references, context draft, decisions, and knowledge.
 #
-# Output: assembled dispatch prompt to stdout (following dispatch-prompt.md template)
+# Section ordering (static first for prompt caching):
+#   1. Project context (project-level knowledge) — STATIC
+#   2. Architectural decisions — STATIC
+#   3. Project-wide knowledge — STATIC
+#   4. Phase Goal & Must-Haves — SEMI-STATIC
+#   5. Upstream Summaries — DYNAMIC
+#   6. Task Plan — DYNAMIC
+#
+# Output: assembled dispatch prompt to stdout (with manifest header)
 # Stderr: "Context payload: X bytes (Y% of total artifacts)" — budget monitoring
 # Exit 0 on success. Exit 1 on missing arguments or required files.
+#
+# Bash 3.2 compatible.
 
 set -euo pipefail
 
@@ -24,6 +35,11 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 SCOPE_FILTER="$SCRIPT_DIR/scope-filter.sh"
 READ_ROADMAP="$PROJECT_ROOT/scripts/state/read-roadmap.sh"
 READ_CONFIG="$PROJECT_ROOT/scripts/state/read-config.sh"
+
+# Knowledge scripts
+TRAVERSE_GRAPH="$PROJECT_ROOT/scripts/knowledge/traverse-graph.sh"
+RESOLVE_ENTRIES="$PROJECT_ROOT/scripts/knowledge/resolve-entries.sh"
+INCREMENT_HITS="$PROJECT_ROOT/scripts/knowledge/increment-hits.sh"
 
 # --- Argument parsing ---
 ORCH_ROOT=""
@@ -130,7 +146,158 @@ if [[ -n "$PHASE_DATA" ]]; then
   DEPENDS=$(echo "$PHASE_DATA" | awk '{print $4}')
 fi
 
-# --- Gather upstream summaries (shared by both modes) ---
+# ============================================================================
+# Knowledge index-based context gathering
+# ============================================================================
+
+# Locate the knowledge index (try project root via index-utils, then milestone dir)
+KNOWLEDGE_INDEX=""
+if [[ -f "$PROJECT_ROOT/KNOWLEDGE-INDEX.md" ]]; then
+  KNOWLEDGE_INDEX="$PROJECT_ROOT/KNOWLEDGE-INDEX.md"
+elif [[ -f "$MILESTONE_DIR/KNOWLEDGE-INDEX.md" ]]; then
+  KNOWLEDGE_INDEX="$MILESTONE_DIR/KNOWLEDGE-INDEX.md"
+fi
+
+# Temp file for passing included entry IDs from subshell back to parent
+INCLUDED_IDS_FILE="$(mktemp)"
+
+# --- Gather knowledge via index pipeline ---
+# Note: this function runs in a subshell via $(...), so it writes entry IDs
+# to INCLUDED_IDS_FILE instead of setting a variable.
+gather_knowledge_from_index() {
+  local entries=""
+  if [[ "$CONTEXT_VERBOSITY" = "minimal" ]]; then
+    echo "No knowledge entries in scope."
+    return
+  fi
+
+  if [[ -z "$KNOWLEDGE_INDEX" ]]; then
+    # Fall back to flat KNOWLEDGE.md
+    gather_knowledge_flat
+    return
+  fi
+
+  # Step 1: Run scope-filter on the index to get matching entry lines
+  local dep_flag=""
+  if [[ "$DEPENDS" != "none" ]]; then
+    dep_flag="--depends $DEPENDS"
+  fi
+
+  local filtered_lines
+  filtered_lines=$(bash "$SCOPE_FILTER" "$KNOWLEDGE_INDEX" "$MILESTONE_ID/$PHASE_ID" --type knowledge $dep_flag 2>/dev/null) || true
+
+  if [[ -z "$filtered_lines" ]]; then
+    echo "No knowledge entries in scope."
+    return
+  fi
+
+  # Step 2: Extract entry IDs from filtered lines
+  local matched_ids=""
+  while IFS= read -r line; do
+    local eid
+    eid=$(echo "$line" | grep -oE '^MEM[0-9]+' || true)
+    if [[ -n "$eid" ]]; then
+      if [[ -z "$matched_ids" ]]; then
+        matched_ids="$eid"
+      else
+        matched_ids="$matched_ids
+$eid"
+      fi
+    fi
+  done <<EOF_FILTERED
+$filtered_lines
+EOF_FILTERED
+
+  if [[ -z "$matched_ids" ]]; then
+    echo "No knowledge entries in scope."
+    return
+  fi
+
+  # Step 3: For each matched entry, traverse graph for related entries (1-hop, max 5)
+  local related_ids=""
+  while IFS= read -r mid; do
+    [[ -z "$mid" ]] && continue
+    local traversed
+    traversed=$(bash "$TRAVERSE_GRAPH" --id "$mid" --max-depth 1 --max-entries 5 2>/dev/null) || true
+    if [[ -n "$traversed" ]]; then
+      if [[ -z "$related_ids" ]]; then
+        related_ids="$traversed"
+      else
+        related_ids="$related_ids
+$traversed"
+      fi
+    fi
+  done <<EOF_MATCHED
+$matched_ids
+EOF_MATCHED
+
+  # Step 4: Combine matched + related IDs (deduplicate)
+  local all_ids="$matched_ids"
+  if [[ -n "$related_ids" ]]; then
+    all_ids="$all_ids
+$related_ids"
+  fi
+  # Deduplicate
+  all_ids=$(echo "$all_ids" | sort -u)
+
+  # Write IDs to temp file for hit counting (survives subshell)
+  echo "$all_ids" > "$INCLUDED_IDS_FILE"
+
+  # Step 5: Resolve entries to get actual content
+  local resolved
+  resolved=$(echo "$all_ids" | bash "$RESOLVE_ENTRIES" 2>/dev/null) || true
+
+  if [[ -z "$resolved" ]]; then
+    echo "No knowledge entries in scope."
+  else
+    # Count entries
+    local entry_count
+    entry_count=$(echo "$all_ids" | grep -c 'MEM' || echo "0")
+    echo "<!-- $entry_count knowledge entries resolved from index -->"
+    echo ""
+    echo "$resolved"
+  fi
+}
+
+# Fallback: flat KNOWLEDGE.md (original behavior)
+gather_knowledge_flat() {
+  local entries=""
+  local knowledge_file="$MILESTONE_DIR/KNOWLEDGE.md"
+  if [[ -f "$knowledge_file" ]]; then
+    local dep_flag=""
+    if [[ "$DEPENDS" != "none" ]]; then
+      dep_flag="--depends $DEPENDS"
+    fi
+    entries=$(bash "$SCOPE_FILTER" "$knowledge_file" "$MILESTONE_ID/$PHASE_ID" --type knowledge $dep_flag 2>/dev/null) || true
+  fi
+  if [[ -z "$entries" ]]; then
+    echo "No knowledge entries in scope."
+  else
+    echo "$entries"
+  fi
+}
+
+# --- Scope-filtered decisions ---
+gather_decisions() {
+  local entries=""
+  if [[ "$CONTEXT_VERBOSITY" != "minimal" ]]; then
+    local decisions_file="$MILESTONE_DIR/DECISIONS.md"
+    if [[ -f "$decisions_file" ]]; then
+      local dep_flag=""
+      if [[ "$DEPENDS" != "none" ]]; then
+        dep_flag="--depends $DEPENDS"
+      fi
+      entries=$(bash "$SCOPE_FILTER" "$decisions_file" "$MILESTONE_ID/$PHASE_ID" --type decisions $dep_flag 2>/dev/null) || true
+    fi
+  fi
+  if [[ -z "$entries" ]]; then
+    echo "No decision entries in scope."
+  else
+    echo "$entries"
+  fi
+}
+
+# --- Gather upstream summaries ---
 gather_upstream_summaries() {
   local summaries=""
   if [[ "$DEPENDS" != "none" && "$CONTEXT_VERBOSITY" != "minimal" ]]; then
@@ -153,61 +320,45 @@ $(cat "$summary_file")
   fi
 }
 
-# --- Scope-filtered knowledge (shared) ---
-gather_knowledge() {
-  local entries=""
-  if [[ "$CONTEXT_VERBOSITY" != "minimal" ]]; then
-    local knowledge_file="$MILESTONE_DIR/KNOWLEDGE.md"
-    if [[ -f "$knowledge_file" ]]; then
-      local dep_flag=""
-      if [[ "$DEPENDS" != "none" ]]; then
-        dep_flag="--depends $DEPENDS"
-      fi
-      entries=$(bash "$SCOPE_FILTER" "$knowledge_file" "$MILESTONE_ID/$PHASE_ID" --type knowledge $dep_flag 2>/dev/null) || true
-    fi
-  fi
-  if [[ -z "$entries" ]]; then
-    echo "No knowledge entries in scope."
-  else
-    echo "$entries"
-  fi
-}
-
-# --- Scope-filtered decisions (shared) ---
-gather_decisions() {
-  local entries=""
-  if [[ "$CONTEXT_VERBOSITY" != "minimal" ]]; then
-    local decisions_file="$MILESTONE_DIR/DECISIONS.md"
-    if [[ -f "$decisions_file" ]]; then
-      local dep_flag=""
-      if [[ "$DEPENDS" != "none" ]]; then
-        dep_flag="--depends $DEPENDS"
-      fi
-      entries=$(bash "$SCOPE_FILTER" "$decisions_file" "$MILESTONE_ID/$PHASE_ID" --type decisions $dep_flag 2>/dev/null) || true
-    fi
-  fi
-  if [[ -z "$entries" ]]; then
-    echo "No decision entries in scope."
-  else
-    echo "$entries"
-  fi
-}
-
-UPSTREAM_SUMMARIES=$(gather_upstream_summaries)
-KNOWLEDGE_ENTRIES=$(gather_knowledge)
+# --- Gather content ---
+KNOWLEDGE_ENTRIES=$(gather_knowledge_from_index)
 DECISION_ENTRIES=$(gather_decisions)
+UPSTREAM_SUMMARIES=$(gather_upstream_summaries)
+
+# ============================================================================
+# Assemble sections into ordered list for manifest generation
+# ============================================================================
+
+# We build each section as a named block, then assemble with accurate line counting.
+# Temp file approach: write each section to temp files, then concatenate with manifest.
+
+TMPDIR_BUILD="$(mktemp -d)"
+trap 'rm -rf "$TMPDIR_BUILD"; rm -f "$INCLUDED_IDS_FILE"' EXIT
+
+# --- Estimate tokens: chars / 4, rounded to nearest 100 ---
+estimate_tokens() {
+  local text="$1"
+  local chars
+  chars=$(printf '%s' "$text" | wc -c | tr -d ' ')
+  local raw_tokens=$((chars / 4))
+  # Round to nearest 100
+  local rounded=$(( ((raw_tokens + 50) / 100) * 100 ))
+  if [[ "$rounded" -eq 0 && "$raw_tokens" -gt 0 ]]; then
+    rounded=100
+  fi
+  echo "$rounded"
+}
 
 # ============================================================================
 # PHASE_PLAN mode — planning context payload
 # ============================================================================
 if [[ "$IS_PLANNING" = "true" ]]; then
+
   # --- Extract roadmap section for this phase ---
   ROADMAP_SECTION=""
   if [[ -f "$ROADMAP" ]]; then
-    # Extract the phase block from roadmap (from phase heading to next phase or section)
     ROADMAP_SECTION=$(sed -n "/\\*\\*${PHASE_ID}\\*\\*/,/\\*\\*P[0-9]/p" "$ROADMAP" | sed '$d' || true)
     if [[ -z "$ROADMAP_SECTION" ]]; then
-      # Try: last phase (no following phase heading)
       ROADMAP_SECTION=$(sed -n "/\\*\\*${PHASE_ID}\\*\\*/,\$p" "$ROADMAP" || true)
     fi
   fi
@@ -221,7 +372,6 @@ if [[ "$IS_PLANNING" = "true" ]]; then
   if [[ -f "$CONTEXT_FILE" ]]; then
     CONTEXT_DRAFT=$(cat "$CONTEXT_FILE")
   fi
-  # Also check milestone-level context
   if [[ -z "$CONTEXT_DRAFT" && -f "$MILESTONE_DIR/CONTEXT.md" ]]; then
     CONTEXT_DRAFT=$(cat "$MILESTONE_DIR/CONTEXT.md")
   fi
@@ -231,8 +381,6 @@ if [[ "$IS_PLANNING" = "true" ]]; then
 
   # --- Find feature spec ---
   FEATURE_SPEC=""
-  # Look for spec.md in specs/ directories at the project root level
-  # Walk up from ORCH_ROOT to find the project root (parent of .specify/)
   PROJECT_DIR=""
   candidate="$ORCH_ROOT"
   while [[ "$candidate" != "/" ]]; do
@@ -240,7 +388,6 @@ if [[ "$IS_PLANNING" = "true" ]]; then
       PROJECT_DIR="$(dirname "$candidate")"
       break
     fi
-    # Check if .specify/ is a child
     if [[ -d "$candidate/.specify" ]]; then
       PROJECT_DIR="$candidate"
       break
@@ -257,70 +404,89 @@ if [[ "$IS_PLANNING" = "true" ]]; then
     FEATURE_SPEC="Feature spec not found."
   fi
 
-  PAYLOAD=$(cat <<PLANNING_EOF
----
-schema_version: "1.0"
-type: planning-prompt
----
+  # --- Build sections in cache-friendly order ---
+  # Section 1: Knowledge (STATIC — project-level)
+  SEC_KNOWLEDGE="## Knowledge
 
-## State Context
+$KNOWLEDGE_ENTRIES"
+
+  # Section 2: Decisions (STATIC)
+  SEC_DECISIONS="## Decisions
+
+$DECISION_ENTRIES"
+
+  # Section 3: Context Draft (SEMI-STATIC)
+  SEC_CONTEXT="## Context Draft
+
+$CONTEXT_DRAFT"
+
+  # Section 4: Feature Spec (SEMI-STATIC)
+  SEC_FEATURE="## Feature Spec
+
+$FEATURE_SPEC"
+
+  # Section 5: Upstream Context (DYNAMIC)
+  SEC_UPSTREAM="## Upstream Context
+
+$UPSTREAM_SUMMARIES"
+
+  # Section 6: Phase Roadmap Section (DYNAMIC)
+  SEC_ROADMAP="## Phase Roadmap
+
+$ROADMAP_SECTION"
+
+  # Section 7: State Context + Instructions (DYNAMIC)
+  SEC_STATE="## State Context
 
 - **Current State**: planning
 - **Milestone**: $MILESTONE_ID
 - **Phase**: $PHASE_ID
-- **Tier**: $TIER
+- **Tier**: $TIER"
 
-## Phase Roadmap Section
-
-$ROADMAP_SECTION
-
-## Upstream Context
-
-$UPSTREAM_SUMMARIES
-
-## Knowledge
-
-$KNOWLEDGE_ENTRIES
-
-## Decisions
-
-$DECISION_ENTRIES
-
-## Context Draft
-
-$CONTEXT_DRAFT
-
-## Feature Spec
-
-$FEATURE_SPEC
-
-## Instructions
+  SEC_INSTRUCTIONS="## Instructions
 
 Plan phase $PHASE_ID for milestone $MILESTONE_ID following the speckit.orchestrator.plan-phase command.
 Produce a phase plan (${PHASE_ID}-PLAN.md) with goal, demo, must-haves, and task breakdown.
-Each task plan should be self-contained with zero-context assumptions.
-PLANNING_EOF
-)
+Each task plan should be self-contained with zero-context assumptions."
+
+  # --- Build the frontmatter ---
+  FRONTMATTER="---
+schema_version: \"1.0\"
+type: planning-prompt
+---"
+
+  # --- Assemble sections array (name|content|priority) ---
+  SECTION_NAMES="Knowledge|Decisions|Context Draft|Feature Spec|Upstream Context|Phase Roadmap|State Context|Instructions"
+  SECTION_PRIORITIES="filtered|filtered|optional|optional|required|required|required|required"
+
+  # Write sections to temp files for line counting
+  echo "$SEC_KNOWLEDGE" > "$TMPDIR_BUILD/s1.txt"
+  echo "$SEC_DECISIONS" > "$TMPDIR_BUILD/s2.txt"
+  echo "$SEC_CONTEXT" > "$TMPDIR_BUILD/s3.txt"
+  echo "$SEC_FEATURE" > "$TMPDIR_BUILD/s4.txt"
+  echo "$SEC_UPSTREAM" > "$TMPDIR_BUILD/s5.txt"
+  echo "$SEC_ROADMAP" > "$TMPDIR_BUILD/s6.txt"
+  echo "$SEC_STATE" > "$TMPDIR_BUILD/s7.txt"
+  echo "$SEC_INSTRUCTIONS" > "$TMPDIR_BUILD/s8.txt"
+
+  SECTION_COUNT=8
 
 else
 # ============================================================================
 # Normal task dispatch mode
 # ============================================================================
 
-# --- Read task plan content ---
-TASK_PLAN_CONTENT=$(cat "$TASK_PLAN")
+  # --- Read task plan content ---
+  TASK_PLAN_CONTENT=$(cat "$TASK_PLAN")
 
-# --- Read phase plan excerpt (goal, demo, must-haves) ---
-PHASE_EXCERPT=""
-if [[ -f "$PHASE_PLAN" ]]; then
-  # Extract Goal section
-  goal_line=$(grep -E '^## Goal' "$PHASE_PLAN" -A 2 | tail -n +2 | head -2 || true)
-  # Extract Demo section
-  demo_line=$(grep -E '^## Demo' "$PHASE_PLAN" -A 2 | tail -n +2 | head -2 || true)
-  # Extract Must-Haves section (up to next ##)
-  must_haves=$(sed -n '/^## Must-Haves/,/^## [^M]/p' "$PHASE_PLAN" | head -20 || true)
+  # --- Read phase plan excerpt (goal, demo, must-haves) ---
+  PHASE_EXCERPT=""
+  if [[ -f "$PHASE_PLAN" ]]; then
+    goal_line=$(grep -E '^## Goal' "$PHASE_PLAN" -A 2 | tail -n +2 | head -2 || true)
+    demo_line=$(grep -E '^## Demo' "$PHASE_PLAN" -A 2 | tail -n +2 | head -2 || true)
+    must_haves=$(sed -n '/^## Must-Haves/,/^## [^M]/p' "$PHASE_PLAN" | head -20 || true)
 
-  PHASE_EXCERPT="### Goal
+    PHASE_EXCERPT="### Goal
 $goal_line
 
 ### Demo
@@ -328,80 +494,202 @@ $demo_line
 
 ### Must-Haves
 $must_haves"
-fi
+  fi
 
-# --- Derive current state ---
-CURRENT_STATE="executing"
+  # --- Derive current state ---
+  CURRENT_STATE="executing"
 
-# --- Read verification criteria from phase plan ---
-VERIFICATION_CRITERIA=""
-verification_cmds=$(config_read "verification_commands" "")
-if [[ -n "$verification_cmds" && "$verification_cmds" != "null" ]]; then
-  VERIFICATION_CRITERIA="$verification_cmds"
-else
-  VERIFICATION_CRITERIA="See phase plan must-haves"
-fi
+  # --- Read verification criteria from phase plan ---
+  VERIFICATION_CRITERIA=""
+  verification_cmds=$(config_read "verification_commands" "")
+  if [[ -n "$verification_cmds" && "$verification_cmds" != "null" ]]; then
+    VERIFICATION_CRITERIA="$verification_cmds"
+  else
+    VERIFICATION_CRITERIA="See phase plan must-haves"
+  fi
 
-# --- Assemble the dispatch payload (following dispatch-prompt.md template) ---
-PAYLOAD=$(cat <<DISPATCH_EOF
----
-schema_version: "1.0"
-type: dispatch-prompt
----
+  # --- Build sections in cache-friendly order (static first) ---
 
-## State Context
+  # Section 1: Knowledge (STATIC — project-level entries)
+  SEC_KNOWLEDGE="## Knowledge
+
+$KNOWLEDGE_ENTRIES"
+
+  # Section 2: Decisions (STATIC)
+  SEC_DECISIONS="## Decisions
+
+$DECISION_ENTRIES"
+
+  # Section 3: Phase Goal & Must-Haves (SEMI-STATIC)
+  SEC_SCOPE="## Scope
+
+$PHASE_EXCERPT"
+
+  # Section 4: Upstream Summaries (DYNAMIC)
+  SEC_UPSTREAM="## Upstream Context
+
+$UPSTREAM_SUMMARIES"
+
+  # Section 5: Task Plan (DYNAMIC)
+  SEC_TASK="## Task Plan
+
+$TASK_PLAN_CONTENT"
+
+  # Section 6: State + Constraints (DYNAMIC)
+  SEC_STATE="## State Context
 
 - **Current State**: $CURRENT_STATE
 - **Milestone**: $MILESTONE_ID
 - **Phase**: $PHASE_ID
 - **Task**: $TASK_ID
-- **Tier**: $TIER
+- **Tier**: $TIER"
 
-## Scope
-
-$PHASE_EXCERPT
-
-## Upstream Context
-
-$UPSTREAM_SUMMARIES
-
-## Knowledge
-
-$KNOWLEDGE_ENTRIES
-
-## Decisions
-
-$DECISION_ENTRIES
-
-## Task Plan
-
-$TASK_PLAN_CONTENT
-
-## Constraints
+  SEC_CONSTRAINTS="## Constraints
 
 - **Verification Criteria**: $VERIFICATION_CRITERIA
 - **Duration Budget**: $DURATION_BUDGET
 - **Dispatch Budget**: $DISPATCH_BUDGET
-- **Budget Enforcement**: $BUDGET_ENFORCEMENT
-DISPATCH_EOF
-)
+- **Budget Enforcement**: $BUDGET_ENFORCEMENT"
+
+  # --- Build the frontmatter ---
+  FRONTMATTER="---
+schema_version: \"1.0\"
+type: dispatch-prompt
+---"
+
+  SECTION_NAMES="Knowledge|Decisions|Scope|Upstream Context|Task Plan|State Context|Constraints"
+  SECTION_PRIORITIES="filtered|filtered|required|required|required|required|required"
+
+  # Write sections to temp files for line counting
+  echo "$SEC_KNOWLEDGE" > "$TMPDIR_BUILD/s1.txt"
+  echo "$SEC_DECISIONS" > "$TMPDIR_BUILD/s2.txt"
+  echo "$SEC_SCOPE" > "$TMPDIR_BUILD/s3.txt"
+  echo "$SEC_UPSTREAM" > "$TMPDIR_BUILD/s4.txt"
+  echo "$SEC_TASK" > "$TMPDIR_BUILD/s5.txt"
+  echo "$SEC_STATE" > "$TMPDIR_BUILD/s6.txt"
+  echo "$SEC_CONSTRAINTS" > "$TMPDIR_BUILD/s7.txt"
+
+  SECTION_COUNT=7
 
 fi  # end IS_PLANNING branch
 
+# ============================================================================
+# Build manifest and final payload
+# ============================================================================
+
+# Count lines in frontmatter
+FM_LINES=$(echo "$FRONTMATTER" | wc -l | tr -d ' ')
+
+# Build the title line
+if [[ "$IS_PLANNING" = "true" ]]; then
+  TITLE="# Dispatch Context -- PHASE_PLAN (Phase $PHASE_ID, Milestone $MILESTONE_ID)"
+else
+  TITLE="# Dispatch Context -- $TASK_ID (Phase $PHASE_ID, Milestone $MILESTONE_ID)"
+fi
+
+# We need to calculate the manifest size first (chicken-and-egg problem).
+# Strategy: build manifest with placeholder line numbers, count manifest lines,
+# then rebuild with correct offsets.
+
+# Count lines in each section
+section_line_counts=""
+section_token_counts=""
+IFS='|' read -ra S_NAMES <<< "$SECTION_NAMES"
+IFS='|' read -ra S_PRIORITIES <<< "$SECTION_PRIORITIES"
+
+total_tokens=0
+for i in $(seq 1 "$SECTION_COUNT"); do
+  sec_file="$TMPDIR_BUILD/s${i}.txt"
+  sec_lines=$(wc -l < "$sec_file" | tr -d ' ')
+  sec_content=$(cat "$sec_file")
+  sec_tokens=$(estimate_tokens "$sec_content")
+  section_line_counts="$section_line_counts $sec_lines"
+  section_token_counts="$section_token_counts $sec_tokens"
+  total_tokens=$((total_tokens + sec_tokens))
+done
+
+# Calculate manifest table lines: header(1) + title(1) + blank(1) + "## Manifest"(1) + table_header(3) + data_rows(N) + total_row(1) + blank(1)
+# = 9 + SECTION_COUNT
+MANIFEST_HEADER_LINES=$((9 + SECTION_COUNT))
+
+# Frontmatter lines + blank line after frontmatter
+OFFSET=$((FM_LINES + 1))
+# Add title + blank + "## Manifest" + blank + table header (3 lines: header, separator, blank implied)
+# Actually: title(1) + blank(1) + "## Manifest"(1) + table_header_row(1) + separator_row(1) = 5
+# Then data rows (SECTION_COUNT) + total row(1) + blank(1) = SECTION_COUNT + 2
+MANIFEST_LINES=$((5 + SECTION_COUNT + 2))
+CONTENT_START=$((OFFSET + MANIFEST_LINES))
+
+# Build manifest table
+MANIFEST_TABLE="| Section | Lines | Est. Tokens | Priority |
+|---------|-------|-------------|----------|"
+
+current_line=$CONTENT_START
+idx=0
+for i in $(seq 1 "$SECTION_COUNT"); do
+  sec_lc=$(echo "$section_line_counts" | awk -v n="$i" '{print $n}')
+  sec_tc=$(echo "$section_token_counts" | awk -v n="$i" '{print $n}')
+  sec_name="${S_NAMES[$idx]}"
+  sec_pri="${S_PRIORITIES[$idx]}"
+
+  # Add knowledge entry count to name if applicable
+  if [[ "$sec_name" = "Knowledge" && -s "$INCLUDED_IDS_FILE" ]]; then
+    entry_ct=$(grep -c 'MEM' "$INCLUDED_IDS_FILE" || echo "0")
+    sec_name="Knowledge ($entry_ct entries)"
+  fi
+
+  end_line=$((current_line + sec_lc - 1))
+  MANIFEST_TABLE="$MANIFEST_TABLE
+| $sec_name | ${current_line}-${end_line} | ~${sec_tc} | $sec_pri |"
+  current_line=$((end_line + 2))  # +1 for blank line between sections
+  idx=$((idx + 1))
+done
+
+MANIFEST_TABLE="$MANIFEST_TABLE
+| **Total** | | **~${total_tokens}** | |"
+
+# --- Assemble final payload ---
+PAYLOAD="$FRONTMATTER
+
+$TITLE
+## Manifest
+$MANIFEST_TABLE
+"
+
+# Append all sections with blank line separators
+for i in $(seq 1 "$SECTION_COUNT"); do
+  sec_file="$TMPDIR_BUILD/s${i}.txt"
+  PAYLOAD="$PAYLOAD
+$(cat "$sec_file")
+"
+done
+
 # --- Output payload ---
 echo "$PAYLOAD"
+
+# --- Increment hit counts for included knowledge entries ---
+if [[ -s "$INCLUDED_IDS_FILE" ]]; then
+  while IFS= read -r eid; do
+    [[ -z "$eid" ]] && continue
+    bash "$INCREMENT_HITS" --id "$eid" 2>/dev/null || true
+  done < "$INCLUDED_IDS_FILE"
+fi
+rm -f "$INCLUDED_IDS_FILE"
 
 # --- Report context budget to stderr ---
 PAYLOAD_BYTES=$(echo "$PAYLOAD" | wc -c | tr -d ' ')
 
 # Calculate total artifact bytes (all files under milestone dir)
 TOTAL_BYTES=0
+_tmp_filelist="$(mktemp)"
+find "$MILESTONE_DIR" -type f \( -name "*.md" -o -name "*.yml" -o -name "*.yaml" -o -name "*.sh" \) 2>/dev/null > "$_tmp_filelist"
 while IFS= read -r f; do
   if [[ -f "$f" ]]; then
     file_size=$(wc -c < "$f" | tr -d ' ')
     TOTAL_BYTES=$((TOTAL_BYTES + file_size))
   fi
-done < <(find "$MILESTONE_DIR" -type f -name "*.md" -o -name "*.yml" -o -name "*.yaml" -o -name "*.sh" 2>/dev/null)
+done < "$_tmp_filelist"
+rm -f "$_tmp_filelist"
 
 if [[ "$TOTAL_BYTES" -gt 0 ]]; then
   BUDGET_PCT=$((PAYLOAD_BYTES * 100 / TOTAL_BYTES))

@@ -1,0 +1,22 @@
+# .specify/orchestrator/routing.yaml — Model routing configuration
+# Controls which model handles each task complexity tier.
+# Optional: if this file does not exist, all tasks use the same model.
+
+models:
+  heavy:
+    id: "claude-opus-4-6"
+    context_budget: 200000
+  standard:
+    id: "claude-sonnet-4-6"
+    context_budget: 150000
+  light:
+    id: "claude-haiku-4-5"
+    context_budget: 80000
+
+classification:
+  heavy: "new subsystem, >5 files, architectural decision, first phase"
+  standard: "feature implementation, 2-5 files, follows established pattern"
+  light: "config change, test addition, single-file edit, documentation"
+
+history_weight: 0.3
+budget_ceiling_usd: 50.00

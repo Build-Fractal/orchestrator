@@ -95,11 +95,14 @@ if [[ -n "$FILES_LIST" ]]; then
   IFS=',' read -ra MODIFIED_FILES <<< "$FILES_LIST"
 else
   # Use git diff
+  _tmp_gitdiff="$(mktemp)"
+  git diff --name-only HEAD 2>/dev/null > "$_tmp_gitdiff" || true
   while IFS= read -r line; do
     if [[ -n "$line" ]]; then
       MODIFIED_FILES+=("$line")
     fi
-  done < <(git diff --name-only HEAD 2>/dev/null || true)
+  done < "$_tmp_gitdiff"
+  rm -f "$_tmp_gitdiff"
 fi
 
 if [[ ${#MODIFIED_FILES[@]} -eq 0 ]]; then

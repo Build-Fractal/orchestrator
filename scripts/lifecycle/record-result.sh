@@ -20,6 +20,12 @@
 #   --duration_s=<N>             Duration in seconds
 #   --payload_bytes=<N>          Payload size in bytes
 #   --concerns=<text>            Concern notes (optional)
+#   --model=<model-id>           Model used for the dispatch (telemetry)
+#   --tokens-input=<N>           Input token count (telemetry)
+#   --tokens-output=<N>          Output token count (telemetry)
+#   --tokens-cache-read=<N>      Cache-read token count (telemetry)
+#   --cost=<amount>              Estimated cost in dollars (telemetry)
+#   --cache-hit-rate=<rate>      Cache hit rate 0.0-1.0 (telemetry)
 #
 # Structured output (stdout):
 #   RECORD:APPENDED <log-file>
@@ -49,6 +55,12 @@ ATTEMPT="1"
 DURATION_S=""
 PAYLOAD_BYTES=""
 CONCERNS=""
+MODEL_USED=""
+TOKENS_INPUT=""
+TOKENS_OUTPUT=""
+TOKENS_CACHE_READ=""
+COST_ESTIMATED=""
+CACHE_HIT_RATE=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -63,6 +75,12 @@ while [[ $# -gt 0 ]]; do
     --duration_s=*) DURATION_S="${1#--duration_s=}" ;;
     --payload_bytes=*) PAYLOAD_BYTES="${1#--payload_bytes=}" ;;
     --concerns=*)  CONCERNS="${1#--concerns=}" ;;
+    --model=*)     MODEL_USED="${1#--model=}" ;;
+    --tokens-input=*) TOKENS_INPUT="${1#--tokens-input=}" ;;
+    --tokens-output=*) TOKENS_OUTPUT="${1#--tokens-output=}" ;;
+    --tokens-cache-read=*) TOKENS_CACHE_READ="${1#--tokens-cache-read=}" ;;
+    --cost=*)      COST_ESTIMATED="${1#--cost=}" ;;
+    --cache-hit-rate=*) CACHE_HIT_RATE="${1#--cache-hit-rate=}" ;;
     *)
       echo "record-result.sh: unknown option: $1" >&2
       exit 1
@@ -125,6 +143,31 @@ if [[ -n "$CONCERNS" ]]; then
   # Escape double quotes in concerns text
   escaped_concerns=$(printf '%s' "$CONCERNS" | sed 's/"/\\"/g')
   json="${json},\"concerns\":\"${escaped_concerns}\""
+fi
+
+# Telemetry fields (optional, appended only when provided)
+if [[ -n "$MODEL_USED" ]]; then
+  json="${json},\"model_used\":\"${MODEL_USED}\""
+fi
+
+if [[ -n "$TOKENS_INPUT" ]]; then
+  json="${json},\"tokens_input\":${TOKENS_INPUT}"
+fi
+
+if [[ -n "$TOKENS_OUTPUT" ]]; then
+  json="${json},\"tokens_output\":${TOKENS_OUTPUT}"
+fi
+
+if [[ -n "$TOKENS_CACHE_READ" ]]; then
+  json="${json},\"tokens_cache_read\":${TOKENS_CACHE_READ}"
+fi
+
+if [[ -n "$COST_ESTIMATED" ]]; then
+  json="${json},\"cost_estimated\":${COST_ESTIMATED}"
+fi
+
+if [[ -n "$CACHE_HIT_RATE" ]]; then
+  json="${json},\"cache_hit_rate\":${CACHE_HIT_RATE}"
 fi
 
 json="${json}}"

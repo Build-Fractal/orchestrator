@@ -61,6 +61,14 @@ provides:
       file: commands/consolidate.md
       description: "Use when compressing knowledge and archiving verbose artifacts after milestone completion."
 
+    - name: speckit.orchestrator.migrate
+      file: commands/migrate.md
+      description: "Use when migrating project data from GSD2, GSD v1, or spec-kit into orchestrator format."
+
+    - name: speckit.orchestrator.doctor
+      file: commands/doctor.md
+      description: "Use when running diagnostics — detects orphaned artifacts, stale knowledge, scope mismatches, cost spikes."
+
   config:
     - file: orchestrator-config.yml
       template: templates/orchestrator-config-default.yml
@@ -120,6 +128,16 @@ provides:
     - file: scripts/lifecycle/phase-transition.sh
       executable: true
     - file: scripts/util/json-field.sh
+      executable: true
+    - file: scripts/diagnostics/run-doctor.sh
+      executable: true
+    - file: scripts/diagnostics/check-orphaned.sh
+      executable: true
+    - file: scripts/diagnostics/check-stale.sh
+      executable: true
+    - file: scripts/diagnostics/check-scope.sh
+      executable: true
+    - file: scripts/diagnostics/check-cost-spikes.sh
       executable: true
 
 defaults:

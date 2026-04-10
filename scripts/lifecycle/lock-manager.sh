@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# --- Portable sed -i helper (BSD/GNU compatible) ---
+sed_i() {
+  if sed --version 2>/dev/null | grep -q GNU; then
+    sed -i "$@"
+  else
+    sed -i '' "$@"
+  fi
+}
 # scripts/lifecycle/lock-manager.sh — Lock file management for autonomous dispatch
 # Creates, checks, and breaks lock files with PID validation to prevent
 # concurrent orchestrator sessions and detect stale locks from crashed runs.
@@ -186,16 +194,15 @@ op_update() {
   else
     # Fallback: sed-based JSON manipulation
     # 1. Update unitStartedAt
-    sed -i.bak "s/\"unitStartedAt\"[[:space:]]*:[[:space:]]*\"[^\"]*\"/\"unitStartedAt\": \"$now\"/" "$lock_file"
+    sed_i "s/\"unitStartedAt\"[[:space:]]*:[[:space:]]*\"[^\"]*\"/\"unitStartedAt\": \"$now\"/" "$lock_file"
     # 2. Append to completedUnits array
     # Handle empty array: [] → ["unit-id"]
     if grep -q '"completedUnits"[[:space:]]*:[[:space:]]*\[\]' "$lock_file"; then
-      sed -i.bak "s/\"completedUnits\"[[:space:]]*:[[:space:]]*\[\]/\"completedUnits\": [\"$completed_unit_id\"]/" "$lock_file"
+      sed_i "s/\"completedUnits\"[[:space:]]*:[[:space:]]*\[\]/\"completedUnits\": [\"$completed_unit_id\"]/" "$lock_file"
     else
       # Non-empty array: [...] → [..., "unit-id"]
-      sed -i.bak "s/\"completedUnits\"[[:space:]]*:[[:space:]]*\[/\"completedUnits\": [/;s/\]/,\"$completed_unit_id\"]/" "$lock_file"
+      sed_i "s/\"completedUnits\"[[:space:]]*:[[:space:]]*\[/\"completedUnits\": [/;s/\]/,\"$completed_unit_id\"]/" "$lock_file"
     fi
-    rm -f "${lock_file}.bak"
   fi
 
   echo "LOCK:UPDATED $lock_file"

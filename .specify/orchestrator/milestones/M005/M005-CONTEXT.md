@@ -5,6 +5,7 @@ milestone: "M005"
 status: finalized
 created_at: "2026-04-10T23:00:00Z"
 finalized_at: "2026-04-10T23:45:00Z"
+updated_at: "2026-04-10T23:55:00Z"
 ---
 
 ## Architectural Decisions
@@ -113,6 +114,69 @@ A richer schema with capability categories (reads/writes/network/shell) that tra
 
 The `_generated_at` ISO-8601 timestamp in generated permission files is metadata only. The drift detector compares content between current and regenerated output; it does NOT treat a stale timestamp as a drift signal on its own. A project with zero changes can have a months-old `_generated_at` and still report `ok`. This avoids false-positive regeneration noise for stable projects.
 
+### AD-19: Harness safety heuristics sit above the allow list — task plan verification uses script-file shape
+
+Claude Code's bash permission system has two independent layers:
+
+1. **The permission layer** — `.claude/settings.json` `defaultMode` plus allow/deny pattern matching. This is what P07's generator targets.
+2. **The safety heuristic layer** — built-in checks in the harness that detect obfuscation-shaped commands and force a user prompt *regardless* of the allow list. This layer cannot be disabled from `settings.json`, is invisible to the orchestrator, and fires on command shape rather than command content. It exists precisely because pattern-matching allow lists can be defeated by obfuscation, so the harness has a second gate that does not trust patterns alone.
+
+**Observed trigger classes** (enumerated from M004/P02/T01 and M004/P05 task verification; the list is expected to grow as the harness evolves, so treat it as indicative, not exhaustive):
+
+- `brace expansion containing quote characters` — e.g. `grep -q 'done\[[:space:]]*\\\''`
+- `simple_expansion` — complex `$variable` expansion inside compound blocks
+- `expansion obfuscation` — any `bash -c '...'` with embedded quoted regex or character classes
+- `Contains subshell` — a plain `( ... )` group, **even without `&&`/`||`**; e.g. `( . lib.sh && fn arg )` or `( ! grep … ) && echo`
+- `'.' evaluates arguments as shell code` — the `.` / `source` builtin with arguments, especially in a subshell
+- `Contains process_substitution` — `<(...)` or `>(...)` used anywhere in the command
+- `zsh ~[ dynamic directory syntax` (false positive) — fires on `cmd <file` input redirection nested inside `$(...)`, e.g. `lines=$(wc -l < path/to/file)`
+- `shell operators require approval for safety` — any `&&`/`||` outside a trivial two-token pair
+- Command substitution `$(...)` **containing pipes** — e.g. `rc=$(bash … | grep -c '^RESULT:')`
+- Compound `;`-separated statements chaining more than two commands — e.g. `cmd1; rc=$?; echo; cat file`
+- Inline `for`/`while`/`if` blocks embedded in a single command — e.g. `for fn in a b c; do grep -q "$fn" file && echo PASS; done`
+- Heredocs (`<<EOF` / `<<'YAML'`) feeding commands with further pipes/redirects
+- `Unhandled node type: string` — a separate parser failure (not a heuristic), triggered by nested heredocs in git commit commands; same remedy applies
+
+**Consequence:** inline compound verification blocks — even when every component would individually match an allow pattern — trip one or more of these heuristics and interrupt unattended Tier C execution. This was observed repeatedly during M004/P02/T01 and across every task of M004/P05. P07's allow-list generator cannot eliminate this class of prompt; the remedy is upstream, in how task plan `Check:` commands and inline verification blocks are authored.
+
+**Remedy (P07 scope — preventive):**
+- `commands/plan-phase.md` Truths guidance explicitly forbids inline compound `Check:` commands and directs authors to use single-script invocations (e.g., `bash scripts/verify/P##-T##-verify.sh`) for any multi-step verification. Guidance enumerates every trigger class above so downstream planners can recognize the full shape family, not just `&&`-chained `bash -c`.
+- `templates/phase-plan.md` and `templates/task-plan.md` examples exclusively show the script-file shape — no `&&`-chained `bash -c` blocks, no heredoc-embedded quoted regex, no `( . lib.sh && fn )` subshells, no `rc=$(bash … | grep -c …)` patterns, no `<(process_sub)`.
+- `commands/auto.md` Permission Pre-Flight gains a "Known Limitations: Harness Safety Heuristics" subsection naming this residual prompt class, documenting the remedy (script-file verification shape), enumerating the observed trigger classes, and explicitly acknowledging that P07's generator does not and cannot eliminate it from the allow list.
+- Bundled helper `scripts/verify/task-verify.sh <phase-dir> <task-id>` (optional, P07 may produce it) encapsulates the common "run a command, grep its output, emit PASS/FAIL" idiom as a single-script invocation that task plans can call uniformly — eliminating the temptation to inline compound pipelines.
+
+**Remedy (P06 scope — detective):**
+- `scripts/diagnostics/check-plans.sh` (new diagnostic, registered via run-doctor.sh) scans existing task plan `Check:` commands AND task plan inline verification blocks (recognized by ```` ```bash ```` fences) and flags any of the trigger shapes above. Specifically: `bash -c '` with embedded quoted character classes or escape sequences; `&&`/`||` chained compound bash invocations beyond a trivial two-token pair; heredocs containing bash expansion; **plain `(…)` subshells containing `.`/`source` or pipes**; **command substitution `$(…)` containing pipes**; **process substitution `<(…)` / `>(…)`**; **`cmd <file` input redirection nested inside `$(…)`**; **compound `;`-separated statements with more than two commands**; **inline `for`/`while`/`if` blocks**. Emits `DOCTOR:PLANS status=<ok|warn> heuristic_risk=N trigger=<class>`. **Advisory, not blocking** — the developer can proceed, but the doctor surfaces the likelihood of prompt interruption during auto mode so it can be fixed before a long unattended run.
+
+Safety and unattendedness come from writing commands the harness recognizes as benign, not from trying to defeat the harness.
+
+### AD-20: Baseline allow list includes system temp directories
+
+Orchestrator scripts read from and write to platform temp directories for dry-run output capture, parity fixtures, recipe-expansion tests, and compression golden-file generation (observed in M004/P02–P05 verification). `templates/autonomy-defaults.yaml` baseline allow list therefore includes (Principle X: Templating Over Inference):
+
+- `Bash(* > /tmp/*)`, `Bash(* >> /tmp/*)`, `Bash(cat /tmp/*)`, `Bash(cat > /tmp/*)`, `Bash(rm -f /tmp/*)`, `Bash(rm -rf /tmp/*)`, `Bash(ls /tmp/*)`, `Bash(find /tmp/*)`
+- macOS equivalents: `Bash(* > /var/folders/*)`, `Bash(ls /var/folders/*)`, `Bash(find /var/folders/*)`, plus `Read(//var/folders/**)`
+- `Read(//tmp/**)` and `Read(//private/tmp/**)` (macOS resolves `/tmp` → `/private/tmp`)
+
+The deny list continues to forbid temp-path patterns that are actually dangerous — none exist today because `/tmp` is by convention ephemeral. Should a deny pattern emerge (e.g., a named socket or device-like path under `/tmp`), it lives in `autonomy-defaults.yaml` `deny` and `generate-permissions.sh` emits it unchanged.
+
+This is narrower than it sounds: these patterns are only baseline *defaults*. Projects that do not touch temp can override via `.local` to remove them; projects on non-Unix hosts (hypothetical) override via the agent host translator.
+
+### AD-21: Baseline allow list includes env-prefixed script invocations
+
+Orchestrator scripts are routinely invoked with test/config environment variables on the same command line — `ORCH_RUN_SEED=p03-dry ORCH_DRY_RUN=1 bash scripts/engine/run.sh …`, `ORCH_RUN_SEED=test-seed bash scripts/dispatch/build-context.sh …`, etc. This is explicit, deterministic, and directly observable; hiding it behind a wrapper script would harm debugging, so the baseline allow list accepts it.
+
+`templates/autonomy-defaults.yaml` baseline includes:
+
+- `Bash(ORCH_*=* bash scripts/*)`
+- `Bash(ORCH_*=* ORCH_*=* bash scripts/*)` (two-variable form — most common orchestrator pattern)
+- `Bash(ORCH_*=* bash .specify/*)`
+- `Bash(ORCH_*=* ORCH_*=* bash .specify/*)`
+
+Note: Claude Code's pattern matcher treats the env-assignment prefix as part of the command pattern, so prefix-match against `ORCH_*=*` is load-bearing. The baseline intentionally scopes these patterns to `ORCH_*` rather than `*=*` — unconstrained env-prefix matching would weaken the allow list.
+
+`generate-permissions.sh` extends this with project-specific env-prefix patterns discovered from introspection (e.g., `NODE_ENV=* npm run *` when a `package.json` script uses NODE_ENV; `CI=* …` when a CI config references env prefixes), but the `ORCH_*` patterns above are invariant orchestrator baseline and always emitted regardless of project state.
+
 ## Scope Boundaries
 
 ### In Scope
@@ -133,7 +197,11 @@ The `_generated_at` ISO-8601 timestamp in generated permission files is metadata
 - **Permission pre-flight enhancement in `commands/auto.md`** — regenerate when orchestrator-generated, merge when user-authored, validate completeness
 - **Permission drift detection** via `scripts/diagnostics/check-permissions.sh`, wired into the P06 aggregated doctor report
 - **Multi-agent-host abstraction** — canonical permissions format + pluggable host writer (Claude Code first, others extensible)
-- Conformance test kit expansion (constitution v2.0 compliance checking, recipe validation, event emission verification, permission drift checking)
+- **Task plan verification command shape guidance** — `commands/plan-phase.md`, `templates/phase-plan.md`, and `templates/task-plan.md` updated to forbid inline compound `bash -c '...' && bash -c '...'` `Check:` commands and require single-script-file shape; guidance enumerates the full observed trigger list from AD-19 (plain subshells, source-in-subshell, command-substitution-with-pipes, process substitution, input-redirect false positives, compound `;`, inline `for`/`while`); `commands/auto.md` Permission Pre-Flight documents the residual harness-heuristic prompt class (per AD-19)
+- **Advisory task plan lint** via `scripts/diagnostics/check-plans.sh`, flagging the full AD-19 trigger set (not just `bash -c`+`&&`), wired into the P06 aggregated doctor report
+- **System-temp-directory baseline** in `templates/autonomy-defaults.yaml` — `/tmp/**` and macOS `/var/folders/**` read/write allow patterns plus `Read(//tmp/**)`, `Read(//private/tmp/**)`, `Read(//var/folders/**)` (per AD-20)
+- **Env-prefixed script-invocation baseline** in `templates/autonomy-defaults.yaml` — `ORCH_*=* bash scripts/*`, two-variable form, and `.specify/*` equivalents (per AD-21)
+- Conformance test kit expansion (constitution v2.0 compliance checking, recipe validation, event emission verification, permission drift checking, task plan shape checking)
 
 ### Out of Scope
 

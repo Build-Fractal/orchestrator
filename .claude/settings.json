@@ -1,7 +1,7 @@
 {
   "_generated_by": "speckit-orchestrator",
   "_generated_mode": "full",
-  "_note": "Comprehensive autonomy template for unattended auto mode. This is the MVP fallback; project-introspected generation, config schema, and doctor drift detection are planned as M005 P07 (see .specify/orchestrator/milestones/M005/M005-ROADMAP.md and M005-CONTEXT.md AD-7 through AD-18).",
+  "_note": "Comprehensive autonomy template for unattended auto mode. This is the MVP fallback; project-introspected generation, config schema, and doctor drift detection are planned as M005 P07 (see .specify/orchestrator/milestones/M005/M005-ROADMAP.md and M005-CONTEXT.md AD-7 through AD-21). System-temp and env-prefix patterns below trace to AD-20 and AD-21 respectively.",
   "permissions": {
     "defaultMode": "acceptEdits",
     "deny": [
@@ -55,12 +55,23 @@
       "Skill(speckit.*)",
       "Skill(speckit.orchestrator.*)",
 
+      "Read(//tmp/**)",
+      "Read(//private/tmp/**)",
+      "Read(//var/folders/**)",
+
       "Bash(bash scripts/*)",
       "Bash(bash .specify/*)",
       "Bash(bash spec-kit-orchestrator/scripts/*)",
       "Bash(bash ./scripts/*)",
       "Bash(bash ./.specify/*)",
       "Bash(sh scripts/*)",
+
+      "Bash(ORCH_*=* bash scripts/*)",
+      "Bash(ORCH_*=* bash .specify/*)",
+      "Bash(ORCH_*=* ORCH_*=* bash scripts/*)",
+      "Bash(ORCH_*=* ORCH_*=* bash .specify/*)",
+      "Bash(ORCH_*=* bash ./scripts/*)",
+      "Bash(ORCH_*=* ORCH_*=* bash ./scripts/*)",
 
       "Bash(output=*)",
       "Bash(result=*)",
@@ -161,6 +172,26 @@
       "Bash(rm -f .worktrees/*)",
       "Bash(rm -rf .worktrees/*)",
       "Bash(rm -rf /tmp/*)",
+      "Bash(rm -f /tmp/*)",
+
+      "Bash(ls /tmp/*)",
+      "Bash(ls /tmp)",
+      "Bash(ls /var/folders/*)",
+      "Bash(ls /private/tmp/*)",
+      "Bash(cat /tmp/*)",
+      "Bash(cat > /tmp/*)",
+      "Bash(cat >> /tmp/*)",
+      "Bash(find /tmp *)",
+      "Bash(find /tmp/*)",
+      "Bash(find /var/folders *)",
+      "Bash(find /var/folders/*)",
+      "Bash(find /private/tmp *)",
+      "Bash(head /tmp/*)",
+      "Bash(tail /tmp/*)",
+      "Bash(wc /tmp/*)",
+      "Bash(wc -l /tmp/*)",
+      "Bash(grep /tmp/*)",
+      "Bash(stat /tmp/*)",
 
       "Bash(sed *)",
       "Bash(awk *)",

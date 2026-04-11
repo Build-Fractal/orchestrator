@@ -4,10 +4,10 @@ type: roadmap
 milestone: "M005"
 feature_ref: "005-hardening-integration-prep"
 feature_spec: null
-vision: "Harden the M004 engine architecture with content-hash idempotency, cost transparency, pure transform extraction, and formalized interfaces — establishing the concrete integration seam for Conversus deliberation gates and future execution providers."
+vision: "Harden the M004 engine architecture with content-hash idempotency, cost transparency, pure transform extraction, autonomy permission generation, and formalized interfaces — establishing the concrete integration seam for Conversus deliberation gates and future execution providers, and making Tier C auto mode genuinely unattended."
 tier: "C"
 created_at: "2026-04-10T23:00:00Z"
-updated_at: "2026-04-10T23:00:00Z"
+updated_at: "2026-04-10T23:30:00Z"
 ---
 
 ## Phases
@@ -78,18 +78,41 @@ updated_at: "2026-04-10T23:00:00Z"
       - `scripts/lib/hash.sh` (from P01) — providers may report content hashes
       - Cost source enum (from P02) — providers report cost_source alongside cost
 
-- [ ] **P06**: Conformance Test Kit Expansion — "run-doctor.sh performs full constitution v2.0 compliance checking: verifies all 13 principles are referenced in active phase plans, all engine-path scripts emit events, all recipes have valid structure, all knowledge entries have content hashes, all JSONL entries have run_id — producing a scored health report."
+- [ ] **P06**: Conformance Test Kit Expansion — "run-doctor.sh performs full constitution v2.0 compliance checking: verifies all 13 principles are referenced in active phase plans, all engine-path scripts emit events, all recipes have valid structure, all knowledge entries have content hashes, all JSONL entries have run_id, and current autonomy permissions match introspected-generator output — producing a scored health report."
   - Risk: low
-  - Depends: P01, P02, P03, P04, P05
+  - Depends: P01, P02, P03, P04, P05, P07
   - Boundary Map:
     - Produces:
       - Updated `scripts/diagnostics/check-constitution.sh` — full v2.0 principle coverage check across plans
       - Updated `scripts/diagnostics/check-events.sh` — verifies emit_event presence in all engine-path scripts
       - `scripts/diagnostics/check-hashes.sh` — verifies all knowledge entries have valid content_hash fields
       - `scripts/diagnostics/check-run-ids.sh` — verifies recent JSONL entries include run_id field
-      - Updated `scripts/diagnostics/run-doctor.sh` — aggregates all checks into scored health report (checks passed / total checks)
+      - Updated `scripts/diagnostics/run-doctor.sh` — aggregates all checks (including P07's permission drift check) into scored health report (checks passed / total checks)
       - Updated `extension.yml` — registers new diagnostic scripts
-    - Consumes: all prior phases' outputs for validation
+    - Consumes:
+      - All prior phases' outputs for validation
+      - `scripts/diagnostics/check-permissions.sh` (from P07) — wired into the aggregated doctor report as the permission drift signal (FR-8)
+
+- [ ] **P07**: Autonomy Permission Generator — "A developer runs `bash scripts/lifecycle/generate-permissions.sh` on a Node.js project with a Makefile and the script emits a canonical JSON permissions object to stdout that includes every script from extension.yml, every package.json script key, every Makefile target, the comprehensive deny list, and a tier-appropriate defaultMode — running twice with unchanged project state produces byte-identical output, and `bash scripts/diagnostics/check-permissions.sh` reports `DOCTOR:PERMISSIONS status=ok gaps=0 stale=0`."
+  - Risk: medium
+  - Depends: none (parallel track — independent of other M005 phases)
+  - Boundary Map:
+    - Produces:
+      - `scripts/lifecycle/generate-permissions.sh` — project-introspecting permission generator (FR-2). Reads package.json scripts / yarn.lock / pnpm-lock.yaml, Makefile targets, `orchestrator-config.yml` verification_commands, `extension.yml` provides.scripts, toolchain config files (tsconfig.json, Cargo.toml, go.mod, pyproject.toml, Gemfile, .eslintrc*, .prettierrc*, jest.config*, vitest.config*, docker-compose.yml, supabase/config.toml), and agent host markers (.claude/, .cursor/, .github/copilot/). Emits canonical JSON permissions object to stdout. Idempotent. No side effects (reads only; writing is P07's separate script). Bash 3.2 compatible. Works without jq.
+      - `scripts/lifecycle/write-permissions.sh` — agent-host translator (FR-10). Reads canonical permissions from stdin or file, detects target host, writes `.claude/settings.json` for Claude Code (other hosts pluggable). Embeds `_generated_by: "speckit-orchestrator"`, `_generated_at` ISO-8601, and `_autonomy_mode` markers. When target file already exists without the `_generated_by` marker, merges generated allow patterns into the existing allow list rather than overwriting (user-authored respect, per FR-6).
+      - `scripts/diagnostics/check-permissions.sh` — permission drift detector (FR-8). Compares the current `.claude/settings.json` to what `generate-permissions.sh` would produce. Reports missing patterns (scripts without allow entries), stale patterns (allow entries for deleted scripts), and deny-list gaps. Emits structured result: `DOCTOR:PERMISSIONS status=<ok|drift|missing> gaps=N stale=N`. Consumed by P06 run-doctor.sh aggregation.
+      - `templates/autonomy-defaults.yaml` — declarative policy file (Principle X: Templating Over Inference). Declares tier-to-mode mapping (A→minimal, B→standard, C→full), baseline deny list, introspection rules (package.json key extraction patterns, toolchain config file markers, agent host marker directories), and compound-command / shell-builtin allow patterns. Consumed by generate-permissions.sh; no rules hardcoded in scripts.
+      - Updated `templates/orchestrator-config-default.yml` — adds `autonomy:` section with `mode`, `generate_on_init`, `deny_patterns`, `extra_allow` keys (FR-1). Default values are tier-appropriate (Tier C gets `mode: full`, `generate_on_init: true`).
+      - Updated `extension.yml` — registers three new scripts under `provides.scripts`; adds `autonomy` block to `config_schema` (FR-1 four-layer resolution: env > .local > project > defaults).
+      - Updated `commands/auto.md` — rewrites Section "Permission Pre-Flight" per FR-6. Reads autonomy config. If `.claude/settings.json` exists and has the `_generated_by` marker, regenerates (catches toolchain changes between sessions). If exists but user-authored, merges orchestrator allow patterns into existing list without overwriting and warns on gaps. If absent, generates from introspection and writes. Validates completeness after write (every extension.yml script has a matching allow pattern).
+      - Updated `commands/evaluate.md` — triggers permission generation during initial scaffold when `autonomy.generate_on_init` is true and tier default applies (FR-7).
+      - Updated `references/installation.md` — documents autonomy configuration: the three modes, introspection sources, `deny_patterns` / `extra_allow` overrides, drift detection via doctor.
+    - Consumes:
+      - `extension.yml` — canonical list of orchestrator scripts (Principle XI: Single Source of Truth). The introspector does NOT maintain a parallel script list.
+      - `templates/claude-settings.json` — fallback template already shipped in MVP commit `50f7098`. Used when introspection cannot run (minimal environment, no bash). Generator output is a superset of this template.
+      - `scripts/lib/errors.sh` (from M004 P02) — generate-permissions.sh, write-permissions.sh, and check-permissions.sh all emit structured `emit_result` lines on completion.
+      - `scripts/lib/events.sh` (from M004 P02) — emit events during generation for debugging (`EVENT:introspection source=package.json entries=N`).
+      - `scripts/capabilities/detect-capabilities.sh` — extended for agent host detection (`.claude/`, `.cursor/`, `.github/copilot/`) so generator knows which host format to emit.
 
 ## Dependency Graph
 
@@ -98,24 +121,25 @@ P01 (Hashes) ──────────────────→ P05 (Verd
 P02 (Cost) ────────────────────→ P05
 P03 (Pure Transforms)               │
 P04 (Instruction Schema)            │
+P07 (Autonomy Generator)            │
                                      ▼
-P01, P02, P03, P04, P05 ──────→ P06 (Conformance)
+P01, P02, P03, P04, P05, P07 ──→ P06 (Conformance)
 ```
 
-P01, P02, P03, P04 are all independent — can execute concurrently.
+P01, P02, P03, P04, P07 are all independent — can execute concurrently.
 P05 depends on P01 and P02.
-P06 depends on all prior phases.
+P06 depends on all prior phases (including P07, which supplies the permission drift check).
 
 ## Execution Order
 
-1. **P01** (Hashes), **P02** (Cost), **P03** (Pure Transforms), **P04** (Instruction Schema) — all independent, can execute concurrently or in any order. All medium or low risk.
+1. **P01** (Hashes), **P02** (Cost), **P03** (Pure Transforms), **P04** (Instruction Schema), **P07** (Autonomy Generator) — all independent, can execute concurrently or in any order. P01/P03/P07 are medium risk; P02/P04 are low risk.
 2. **P05** (Verdicts & Providers) — depends on P01 and P02. Medium risk.
-3. **P06** (Conformance Expansion) — depends on all prior phases. Low risk. Executes last.
+3. **P06** (Conformance Expansion) — depends on all prior phases including P07 (wires the permission drift check into the aggregated doctor report). Low risk. Executes last.
 
 ## Validation
 
-- **No conflicting producers**: PASS — P01 touches knowledge scripts + hash lib. P02 touches telemetry scripts. P03 touches dispatch lib functions. P04 produces instruction schema + check. P05 produces verdict lib + provider convention. P06 produces diagnostic checks. No overlaps.
+- **No conflicting producers**: PASS — P01 touches knowledge scripts + hash lib. P02 touches telemetry scripts. P03 touches dispatch lib functions. P04 produces instruction schema + check. P05 produces verdict lib + provider convention. P06 produces constitution/event/hash/run-id diagnostic checks and aggregates all checks into the doctor. P07 produces the lifecycle generator, host translator, permission drift check, autonomy defaults template, and autonomy config schema. The only cross-phase touch is P07 `extension.yml` (adds autonomy schema + three scripts) and P06 `extension.yml` (registers new diagnostic scripts) — these are additive non-overlapping sections of the same file.
 
-- **All consumed items have producers**: PASS — P05 consumes P01 hash lib and P02 cost source. P06 consumes all prior outputs. All satisfied.
+- **All consumed items have producers**: PASS — P05 consumes P01 hash lib and P02 cost source. P06 consumes all prior outputs plus `check-permissions.sh` from P07. P07 consumes `extension.yml` (existing), `templates/claude-settings.json` (MVP from commit `50f7098`), M004 P02 error/event libs, and existing `detect-capabilities.sh`. All satisfied.
 
-- **DAG is acyclic**: PASS — {P01, P02, P03, P04} → {P05} → {P06}. No cycles.
+- **DAG is acyclic**: PASS — {P01, P02, P03, P04, P07} → {P05} → {P06}. P07 is an additional independent leaf that feeds into P06 alongside the existing dependencies. No cycles introduced.

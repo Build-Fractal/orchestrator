@@ -1,32 +1,44 @@
 <!--
   Sync Impact Report
   ==================
-  Version change: N/A → 1.0.0 (initial ratification)
+  Version change: 1.0.0 → 2.0.0 (MAJOR — new principles change compliance requirements)
 
   Added principles:
+    - VIII. No Dead Infrastructure
+    - IX. Reproducibility Over Convenience
+    - X. Templating Over Inference
+    - XI. Single Source of Truth
+    - XII. Hook Isolation
+    - XIII. Agent Instruction Schema
+
+  Amended principles:
+    - II. Evidence Before Claims — added structured event emission requirement
+      for engine-managed scripts (emit_event / emit_result)
+
+  Unchanged principles:
     - I. Context Minimization
-    - II. Evidence Before Claims
     - III. Design Before Code
     - IV. Plans Assume Zero Context
     - V. Fresh Context Per Unit
     - VI. State On Disk Is Truth
     - VII. Knowledge Compounds
 
-  Added sections:
-    - Constraints
-    - Quality Gates
-    - Governance
+  Unchanged sections:
+    - Constraints (no changes)
+    - Quality Gates (no changes)
+    - Governance (no changes)
 
   Templates requiring updates:
-    ✅ .specify/templates/plan-template.md — Constitution Check section
-       dynamically loads from this file; no edits needed.
-    ✅ .specify/templates/spec-template.md — Generic template; no
-       constitution-specific references to update.
-    ✅ .specify/templates/tasks-template.md — Generic template; no
-       constitution-specific references to update.
-    ✅ .specify/templates/commands/*.md — No outdated references found.
+    ⚠️ templates/phase-plan.md — Constitution Check should reference
+       principles VIII-XIII where applicable. Low urgency: templates
+       dynamically load constitution; no hardcoded principle references.
+    ✅ All other templates — no constitution-specific references to update.
 
-  Follow-up TODOs: None.
+  Follow-up TODOs:
+    - Phase plans from M004 P02+ should reference new principles in
+      their must-haves where applicable.
+    - run-doctor.sh conformance check (P07) will verify principle
+      references in phase plans.
 -->
 
 # Speckit-Orchestrator Constitution
@@ -63,6 +75,11 @@ No task is marked complete without fresh verification evidence.
   human judgment.
 - If verification cannot be performed mechanically, the task plan
   MUST specify what evidence constitutes proof.
+- Engine-managed scripts MUST emit structured events (`emit_event`)
+  and a final result (`emit_result`). A script that runs to
+  completion without emitting a RESULT line is treated as a silent
+  failure. Events are the observable evidence trail for engine
+  coordination — they are NOT optional instrumentation.
 
 ### III. Design Before Code
 
@@ -145,6 +162,100 @@ documentation.
   knowledge at the root, phase-specific knowledge near the phase,
   component-specific knowledge near the component.
 
+### VIII. No Dead Infrastructure
+
+Every file, script, template, and configuration entry MUST be
+reachable from a live code path. Infrastructure that exists "for
+future use" or "just in case" violates Context Minimization
+(Principle I) by consuming context budget without delivering value.
+
+- New files MUST be referenced by at least one command, script, or
+  template before the phase is marked complete.
+- Audit tooling (`run-doctor.sh`) MUST detect unreachable files and
+  report them as warnings.
+- Removing dead infrastructure is always cheaper than maintaining it.
+  When in doubt, delete.
+
+### IX. Reproducibility Over Convenience
+
+Given identical inputs (disk state, configuration, environment), any
+orchestrator operation MUST produce identical outputs.
+Non-determinism is a bug, not a feature.
+
+- No inline `date` calls — use `$ORCH_STARTED_AT` or run-context
+  timestamps.
+- No random identifiers without seed control — `ORCH_RUN_ID` is
+  deterministic when seeded.
+- Recipe-driven assembly produces the same payload given the same
+  recipe and source files.
+- If a script's output varies between runs with identical inputs, it
+  is broken.
+
+### X. Templating Over Inference
+
+Configuration and policy MUST be declared in templates (YAML recipes,
+routing config, hooks config), not inferred by scripts at runtime.
+Scripts implement mechanics; templates declare policy.
+
+- Context assembly sections, order, and priority: declared in
+  `context-recipe.yaml`.
+- Compression strategy and thresholds: declared in the recipe's
+  `compression:` block.
+- Model selection and fallback chains: declared in `routing.yaml`.
+- Hook lifecycle points and behavior: declared in `hooks.yaml`.
+- When a behavior is controlled by a template, changing it requires
+  editing the template — not the script. This is the design goal.
+
+### XI. Single Source of Truth
+
+Every piece of orchestrator state, configuration, and knowledge MUST
+have exactly one authoritative location. Duplication across files is
+a consistency bug waiting to happen.
+
+- State: derived from disk by `derive-phase.sh` — no cached state
+  variables.
+- Configuration: `orchestrator-config.yml` with specificity resolution
+  (task > phase > milestone > default).
+- Knowledge: three-temperature storage (hot index, warm detail files,
+  cold archive) with one entry per concept.
+- Roadmap phase status: the roadmap file is the single source; phase
+  directories are artifacts, not status indicators.
+
+### XII. Hook Isolation
+
+Hook scripts operate in a sandbox: they receive a read-only state
+snapshot and produce stdout/stderr output. They MUST NOT modify
+engine state, write to orchestrator directories, or have side effects
+on the dispatch pipeline.
+
+- State snapshots are `chmod 444` temp files deleted after hook
+  execution.
+- Hooks that violate isolation (force-write to snapshot, write to
+  orchestrator paths) trigger a `HOOK_VIOLATION` event.
+- Hook timeout is enforced (default 30s). Hooks that exceed timeout
+  are killed and recorded as failures.
+- This principle exists because hooks are the integration seam for
+  external tools (Conversus, monitoring). An untrusted hook MUST NOT
+  be able to corrupt orchestrator state.
+
+### XIII. Agent Instruction Schema
+
+Dispatch instructions (the payload assembled for executing agents)
+MUST follow a declared, inspectable schema. Ad-hoc instruction
+assembly produces inconsistent agent behavior and prevents variance
+analysis.
+
+- The instruction schema declares required sections, optional
+  sections, and section ordering.
+- Context recipes (`context-recipe.yaml`) are the mechanism for
+  schema declaration.
+- New instruction formats require a recipe change — not a script
+  change.
+- This principle enables systematic analysis of what context agents
+  receive and how it correlates with task outcomes. Progressive
+  migration: new instructions conform immediately, existing
+  instructions migrate as they are touched.
+
 ## Constraints
 
 - This is a spec-kit extension — MUST be installable via
@@ -204,4 +315,4 @@ documentation.
   review MUST include an explicit constitution check section
   referencing each applicable principle by number.
 
-**Version**: 1.0.0 | **Ratified**: 2026-03-18 | **Last Amended**: 2026-03-18
+**Version**: 2.0.0 | **Ratified**: 2026-03-18 | **Last Amended**: 2026-04-10

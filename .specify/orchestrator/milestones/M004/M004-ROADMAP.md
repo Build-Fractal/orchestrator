@@ -12,7 +12,7 @@ updated_at: "2026-04-10T22:00:00Z"
 
 ## Phases
 
-- [ ] **P01**: Constitution v2.0 and Antipattern Register — "The constitution contains 13 principles (7 original + 6 new), an amended Principle II requiring structured events, and an ANTIPATTERNS.md exists at the root with at least 2 entries referencing real observed incidents from M001-M003."
+- [x] **P01**: Constitution v2.0 and Antipattern Register — "The constitution contains 13 principles (7 original + 6 new), an amended Principle II requiring structured events, and an ANTIPATTERNS.md exists at the root with at least 2 entries referencing real observed incidents from M001-M003."
   - Risk: low
   - Depends: none
   - Boundary Map:

@@ -22,7 +22,7 @@ updated_at: "2026-04-10T22:00:00Z"
       - Sync Impact Report in constitution HTML comment
     - Consumes: nothing (governance phase, no code dependencies)
 
-- [ ] **P02**: Shared Libraries — "A developer can `source lib/errors.sh` to get `emit_result` with typed error kinds, `source lib/events.sh` to get `emit_event` with structured output, and `source lib/run-context.sh` to initialize a deterministic run context with run_id and timestamps — all Bash 3.2 compatible with double-sourcing guards."
+- [x] **P02**: Shared Libraries — "A developer can `source lib/errors.sh` to get `emit_result` with typed error kinds, `source lib/events.sh` to get `emit_event` with structured output, and `source lib/run-context.sh` to initialize a deterministic run context with run_id and timestamps — all Bash 3.2 compatible with double-sourcing guards."
   - Risk: medium
   - Depends: P01
   - Boundary Map:

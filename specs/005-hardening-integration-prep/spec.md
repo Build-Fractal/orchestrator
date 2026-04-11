@@ -10,7 +10,7 @@ M004 delivers the engine, shared libraries, YAML recipes, and hook system. M005 
 
 ## Status
 
-Spec stub — full user stories and functional requirements to be written during M005 discuss phase. Roadmap and context already drafted at `.specify/orchestrator/milestones/M005/`. Full autonomy feature prompt (FR-1 through FR-10) captured at `.planning/prompts/autonomy-mode-feature.md`; MVP template shipped in commit `50f7098` covers FR-3/FR-4/FR-5/FR-9, and P07 implements the remaining FR-1/FR-2/FR-6/FR-7/FR-8/FR-10.
+Spec stub — full user stories and functional requirements to be written during M005 discuss phase. Roadmap and context already drafted at `.specify/orchestrator/milestones/M005/`. Autonomy feature (FR-1 through FR-10) is split across: the MVP template shipped in commit `50f7098` (covers FR-3/FR-4/FR-5/FR-9, minus GSD patterns per AD-10), and P07 which implements the remaining FR-1/FR-2/FR-6/FR-7/FR-8/FR-10. Architectural decisions AD-7 through AD-18 in `M005-CONTEXT.md` capture the design rationale; the original feature prompt has been consumed and retired.
 
 ## Planned Scope
 

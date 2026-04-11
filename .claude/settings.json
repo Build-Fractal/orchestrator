@@ -1,7 +1,7 @@
 {
   "_generated_by": "speckit-orchestrator",
   "_generated_mode": "full",
-  "_note": "Comprehensive autonomy template for unattended auto mode. For config schema and introspection-based generation (FR-1/FR-2 from autonomy-mode-feature.md), see .planning/prompts/autonomy-mode-feature.md — this is the MVP template-only version.",
+  "_note": "Comprehensive autonomy template for unattended auto mode. This is the MVP fallback; project-introspected generation, config schema, and doctor drift detection are planned as M005 P07 (see .specify/orchestrator/milestones/M005/M005-ROADMAP.md and M005-CONTEXT.md AD-7 through AD-18).",
   "permissions": {
     "defaultMode": "acceptEdits",
     "deny": [
@@ -54,7 +54,6 @@
       "NotebookEdit",
       "Skill(speckit.*)",
       "Skill(speckit.orchestrator.*)",
-      "Skill(gsd:*)",
 
       "Bash(bash scripts/*)",
       "Bash(bash .specify/*)",

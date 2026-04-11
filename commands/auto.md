@@ -83,12 +83,12 @@ The comprehensive template at `templates/claude-settings.json` includes:
 - **`defaultMode: "acceptEdits"`** — Reads and file edits are auto-approved; bash commands use the allow list.
 - **Deny list** — Irreversible or destructive operations (rm -rf /, force push, curl|bash, sudo, package publishes) always prompt regardless of autonomy mode.
 - **Compound command patterns** — `Bash(output=*)`, `Bash(result=*)`, `Bash(payload=*)`, etc. cover the `output=$(bash scripts/...)` idiom used throughout the orchestrator lifecycle.
-- **Skill permissions** — `Skill(speckit.orchestrator.*)`, `Skill(speckit.*)`, `Skill(gsd:*)` allow recursive orchestrator skill invocation without prompts.
+- **Skill permissions** — `Skill(speckit.orchestrator.*)`, `Skill(speckit.*)` allow recursive orchestrator skill invocation without prompts.
 - **Orchestrator script paths** — `Bash(bash scripts/*)`, `Bash(bash .specify/*)` cover lifecycle, dispatch, verify, knowledge, and state scripts.
 - **Shell builtins and flow control** — `export`, `source`, `for`, `while`, `case`, `if`, `[`, `[[`, etc.
 - **Common toolchains** — Node (npm/npx/yarn/pnpm/bun), Python (python/pip/pytest/mypy/ruff), Rust (cargo/rustc), Go, Make, Docker, Supabase.
 
-For projects with custom toolchains, add project-specific patterns to the settings file. The template is the MVP implementation of the autonomy mode feature; see `.planning/prompts/autonomy-mode-feature.md` for the full design (project-introspected generation, config schema, doctor drift detection).
+For projects with custom toolchains, add project-specific patterns to the settings file. The template is the MVP implementation of the autonomy mode feature; project-introspected generation, config schema, and doctor drift detection are planned as M005 P07 (see `.specify/orchestrator/milestones/M005/M005-ROADMAP.md` and `M005-CONTEXT.md` AD-7 through AD-18).
 
 **Subagent permissions**: Subagents dispatched via the Agent tool inherit the project's `.claude/settings.json` permissions. Ensure the settings file exists before dispatching.
 

@@ -109,7 +109,7 @@ updated_at: "2026-04-10T23:45:00Z"
       - Updated `references/installation.md` — documents autonomy configuration: the three modes, introspection sources, `deny_patterns` / `extra_allow` overrides, drift detection via doctor.
     - Consumes:
       - `extension.yml` — canonical list of orchestrator scripts (Principle XI: Single Source of Truth). The introspector does NOT maintain a parallel script list.
-      - `templates/claude-settings.json` — fallback template already shipped in MVP commit `50f7098`. Used only as nuclear fallback when bash itself cannot execute (per AD-11). Generator output is a superset of this template. **Note:** the MVP template's blanket `Skill(gsd:*)` entry is inconsistent with AD-10 and must be removed as part of P07's fallback template refresh, or as a standalone MVP cleanup before P07 ships.
+      - `templates/claude-settings.json` — fallback template already shipped in MVP commit `50f7098`, with GSD patterns removed per AD-10. Used only as nuclear fallback when bash itself cannot execute (per AD-11). Generator output is a superset of this template.
       - `scripts/lib/errors.sh` (from M004 P02) — generate-permissions.sh, write-permissions.sh, and check-permissions.sh all emit structured `emit_result` lines on completion.
       - `scripts/lib/events.sh` (from M004 P02) — emit events during generation for debugging (`EVENT:introspection source=package.json entries=N`).
       - `scripts/lib/recipe-parser.sh` (from M004 P04) — YAML reader for `templates/autonomy-defaults.yaml`. Per AD-14, P07 reuses the existing parser rather than writing a narrower one. The policy file conforms to the same YAML schema constraints as `context-recipe.yaml` (max 2 levels of nesting, comma-separated inline arrays, jq-free).

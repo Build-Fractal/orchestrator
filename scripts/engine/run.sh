@@ -121,7 +121,16 @@ fi
 # Discover pending tasks: every T##-PLAN.md without a sibling T##-SUMMARY.md.
 # Use a mktemp temp file + while-read loop per AP-001 (no process substitution redirect).
 _pending_tmp="$(mktemp)"
-trap 'rm -f "$_pending_tmp"' EXIT
+# --- T04: Temp files cleaned on any exit ---
+_payload_file=""
+_compressed_file=""
+_output_file=""
+trap '
+  rm -f "$_pending_tmp" 2>/dev/null
+  [ -n "$_payload_file" ]    && rm -f "$_payload_file"    2>/dev/null
+  [ -n "$_compressed_file" ] && rm -f "$_compressed_file" 2>/dev/null
+  [ -n "$_output_file" ]     && rm -f "$_output_file"     2>/dev/null
+' EXIT
 
 _pending_count=0
 for plan in "$TASKS_DIR"/T*-PLAN.md; do
@@ -164,6 +173,23 @@ _max_cost_cents=0   # 0 = disabled per guard_budget contract
 _cum_dur_sec=0
 _max_dur_sec=0      # 0 = disabled per guard_budget contract
 
+# --- T04: Resolve model + context budget from routing.yaml ---
+# For T04, all tasks use the "standard" tier. Future tiers (heavy/light) can be
+# parameterized by classify-complexity.sh output — see P05 for the recipe-driven
+# refactor. The engine reads the model id and budget once per session.
+_model_budget_line=""
+if _model_budget_line="$(bash scripts/dispatch/select-model.sh standard --routing-config templates/routing.yaml 2>/dev/null)"; then
+  _selected_model="$(printf '%s' "$_model_budget_line" | awk '{print $1}')"
+  _context_budget="$(printf '%s' "$_model_budget_line" | awk '{print $2}')"
+  : "${_selected_model:=claude-sonnet-4-6}"
+  : "${_context_budget:=150000}"
+else
+  _selected_model="claude-sonnet-4-6"
+  _context_budget="150000"
+  emit_event SAFETY_WARNING reason="select_model_fallback" tier="standard"
+fi
+emit_event SAFETY_WARNING reason="model_selected" model="$_selected_model" budget="$_context_budget"
+
 while IFS= read -r task_id; do
   [ -z "$task_id" ] && continue
 
@@ -183,9 +209,45 @@ while IFS= read -r task_id; do
   cat /tmp/engine-hook-pre-dispatch.$$.out 2>/dev/null || true
   rm -f /tmp/engine-hook-pre-dispatch.$$.out
 
-  # --- T03: Pre-dispatch safety rails ---
-  # In dry-run mode, payload does not exist yet (T04 will create it). Emit a
-  # dry-run warning for auditability but skip the file-based guard.
+  # --- T04: Context assembly pipeline (build → compress) ---
+  # Must run BEFORE the T03 payload_sanity guard so $_payload_file is populated
+  # when the guard inspects it. The compressed payload replaces $_payload_file
+  # so the rest of the pipeline operates on the compressed variant.
+  _payload_file="$(mktemp)"
+  _compressed_file="$(mktemp)"
+
+  if ! bash scripts/dispatch/build-context.sh .specify/orchestrator "$ENGINE_MILESTONE" "$ENGINE_PHASE" "$task_id" > "$_payload_file" 2>/dev/null; then
+    emit_event SAFETY_WARNING reason="build_context_failed" task="$task_id"
+    _blocked=$((_blocked + 1))
+    emit_event TASK_COMPLETE task="$task_id" outcome="failed" reason="build_context"
+    rm -f "$_payload_file" "$_compressed_file"
+    _payload_file=""; _compressed_file=""
+    continue
+  fi
+
+  if ! bash scripts/dispatch/compress-payload.sh --budget "$_context_budget" --input "$_payload_file" > "$_compressed_file" 2>/dev/null; then
+    emit_event SAFETY_WARNING reason="compress_failed" task="$task_id"
+    _blocked=$((_blocked + 1))
+    emit_event TASK_COMPLETE task="$task_id" outcome="failed" reason="compress"
+    rm -f "$_payload_file" "$_compressed_file"
+    _payload_file=""; _compressed_file=""
+    continue
+  fi
+
+  # Replace _payload_file with the compressed file for guard_payload_sanity
+  # (T03 uses $_payload_file). The rest of the pipeline operates on the
+  # compressed variant from here forward.
+  rm -f "$_payload_file"
+  _payload_file="$_compressed_file"
+  _compressed_file=""
+
+  _payload_bytes=$(wc -c < "$_payload_file" 2>/dev/null | tr -d ' ')
+  _tokens_est=$(( _payload_bytes / 4 ))
+
+  # --- T03: Pre-dispatch safety rails (relocated by T04 to run AFTER context build) ---
+  # In dry-run mode, the file-based guard is still auditable via the companion
+  # SAFETY_WARNING for observability, but we continue past it because the build
+  # output may not meet the production-grade threshold for a synthetic dry run.
   if orch_is_dry_run; then
     emit_event SAFETY_WARNING reason="dry_run_guard_skipped" guard="payload_sanity" task="$task_id"
     # Audit marker with literal-quoted guard field for must-have pattern match.
@@ -193,18 +255,12 @@ while IFS= read -r task_id; do
     # guarantees downstream tooling can grep for guard="payload_sanity".
     printf 'EVENT:SAFETY_WARNING_AUDIT reason=dry_run_guard_skipped guard="payload_sanity" task=%s\n' "$task_id"
   else
-    # Payload file path is established by T04. For T03, use a placeholder that
-    # points at a temp file the engine will populate in T04. If T04 has not run
-    # yet, the guard will legitimately block — that is expected.
-    _payload_file="${_payload_file:-}"
-    if [ -n "$_payload_file" ]; then
-      if ! guard_payload_sanity "$_payload_file"; then
-        _blocked=$((_blocked + 1))
-        emit_event TASK_COMPLETE task="$task_id" outcome="blocked" reason="payload_sanity"
-        continue
-      fi
-    else
-      emit_event SAFETY_WARNING reason="payload_file_unset" task="$task_id"
+    if ! guard_payload_sanity "$_payload_file"; then
+      _blocked=$((_blocked + 1))
+      emit_event TASK_COMPLETE task="$task_id" outcome="blocked" reason="payload_sanity"
+      rm -f "$_payload_file" 2>/dev/null
+      _payload_file=""
+      continue
     fi
   fi
 
@@ -212,10 +268,33 @@ while IFS= read -r task_id; do
   if ! guard_budget "$_cum_cost_cents" "$_max_cost_cents" "$_cum_dur_sec" "$_max_dur_sec"; then
     _blocked=$((_blocked + 1))
     emit_event TASK_COMPLETE task="$task_id" outcome="blocked" reason="budget"
+    rm -f "$_payload_file" 2>/dev/null
+    _payload_file=""
     continue
   fi
 
-  # T04 inserts build-context → compress → select-model → dispatch here.
+  # --- T04: DISPATCH_START event (also fires in dry-run mode) ---
+  if orch_is_dry_run; then
+    emit_event DISPATCH_START task="$task_id" model="$_selected_model" \
+      tokens_estimated="$_tokens_est" payload_bytes="$_payload_bytes" dry_run=1
+  else
+    emit_event DISPATCH_START task="$task_id" model="$_selected_model" \
+      tokens_estimated="$_tokens_est" payload_bytes="$_payload_bytes"
+  fi
+
+  # --- T04: Dispatch (real mode) / dry-run skip ---
+  _output_file="$(mktemp)"
+  if orch_is_dry_run; then
+    printf 'dry-run: %s %s %s\n' "$ENGINE_MILESTONE" "$ENGINE_PHASE" "$task_id" > "$_output_file"
+    emit_event SAFETY_WARNING reason="dispatch_skipped_dry_run" task="$task_id"
+  else
+    # Real agent dispatch is out of M004 scope — the engine writes a stub so the
+    # downstream output-sanity guard and verify/record pipeline can observe a
+    # non-empty file. P05+ will replace this with an actual model call.
+    printf 'stub-dispatch: %s %s %s (agent invocation not implemented in M004)\n' \
+      "$ENGINE_MILESTONE" "$ENGINE_PHASE" "$task_id" > "$_output_file"
+    emit_event SAFETY_WARNING reason="dispatch_stub" task="$task_id"
+  fi
 
   # --- T03: Post-dispatch output sanity check (pre-verify) ---
   if orch_is_dry_run; then
@@ -223,29 +302,26 @@ while IFS= read -r task_id; do
     # Audit marker with literal-quoted guard field (see pre-dispatch rationale).
     printf 'EVENT:SAFETY_WARNING_AUDIT reason=dry_run_guard_skipped guard="output_sanity" task=%s\n' "$task_id"
   else
-    _output_file="${_output_file:-}"
-    if [ -n "$_output_file" ]; then
-      if ! guard_output_sanity "$_output_file"; then
-        _blocked=$((_blocked + 1))
-        emit_event TASK_COMPLETE task="$task_id" outcome="blocked" reason="output_sanity"
-        continue
-      fi
-    else
-      emit_event SAFETY_WARNING reason="output_file_unset" task="$task_id"
+    if ! guard_output_sanity "$_output_file"; then
+      _blocked=$((_blocked + 1))
+      emit_event TASK_COMPLETE task="$task_id" outcome="blocked" reason="output_sanity"
+      rm -f "$_payload_file" "$_output_file" 2>/dev/null
+      _payload_file=""; _output_file=""
+      continue
     fi
   fi
 
   # T05 inserts check-must-haves / record-result / checkpoint_write here.
 
-  if orch_is_dry_run; then
-    emit_event TASK_COMPLETE task="$task_id" outcome="dry_run" phase="$ENGINE_PHASE"
-  else
-    # Real-dispatch placeholder. T04/T05 replace this branch with the actual
-    # context-build / dispatch / verify pipeline.
-    emit_event TASK_COMPLETE task="$task_id" outcome="skeleton_noop" phase="$ENGINE_PHASE"
-  fi
+  # --- T04 provisional TASK_COMPLETE (T05 may replace this with verify-gated outcome) ---
+  emit_event TASK_COMPLETE task="$task_id" outcome="dispatched" \
+    model="$_selected_model" tokens_estimated="$_tokens_est"
 
   _completed=$((_completed + 1))
+
+  # Cleanup task-scoped temp files
+  rm -f "$_payload_file" "$_output_file" 2>/dev/null
+  _payload_file=""; _output_file=""
 
   # T06 debug stop-after hook for simulated-crash testing.
   if [ -n "${ORCH_ENGINE_STOP_AFTER_TASK:-}" ] && [ "$task_id" = "$ORCH_ENGINE_STOP_AFTER_TASK" ]; then

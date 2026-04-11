@@ -8,6 +8,10 @@ Thumbs.db
 .specify/orchestrator/execution-log.jsonl
 .specify/orchestrator/milestones/**/continue.md
 
+# Ephemeral dispatch artifacts (rebuildable from task plan + state via build-context.sh)
+.specify/orchestrator/milestones/**/phases/*/tasks/T*-PAYLOAD.md
+.specify/orchestrator/milestones/**/phases/*/P*-PLANNING-PAYLOAD.md
+
 # Spec-kit extension install cache
 .specify/extensions/.cache/
 .specify/extensions/.backup/

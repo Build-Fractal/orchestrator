@@ -7,7 +7,7 @@ feature_spec: null
 vision: "Harden the M004 engine architecture with content-hash idempotency, cost transparency, pure transform extraction, autonomy permission generation, and formalized interfaces — establishing the concrete integration seam for Conversus deliberation gates and future execution providers, and making Tier C auto mode genuinely unattended."
 tier: "C"
 created_at: "2026-04-10T23:00:00Z"
-updated_at: "2026-04-10T23:30:00Z"
+updated_at: "2026-04-10T23:45:00Z"
 ---
 
 ## Phases
@@ -95,10 +95,10 @@ updated_at: "2026-04-10T23:30:00Z"
 
 - [ ] **P07**: Autonomy Permission Generator — "A developer runs `bash scripts/lifecycle/generate-permissions.sh` on a Node.js project with a Makefile and the script emits a canonical JSON permissions object to stdout that includes every script from extension.yml, every package.json script key, every Makefile target, the comprehensive deny list, and a tier-appropriate defaultMode — running twice with unchanged project state produces byte-identical output, and `bash scripts/diagnostics/check-permissions.sh` reports `DOCTOR:PERMISSIONS status=ok gaps=0 stale=0`."
   - Risk: medium
-  - Depends: none (parallel track — independent of other M005 phases)
+  - Depends: none within M005 (parallel track — independent of M005 P01-P04). Cross-milestone: consumes M004 P02 (errors.sh, events.sh) and M004 P04 (recipe-parser.sh) — cannot start until both are committed.
   - Boundary Map:
     - Produces:
-      - `scripts/lifecycle/generate-permissions.sh` — project-introspecting permission generator (FR-2). Reads package.json scripts / yarn.lock / pnpm-lock.yaml, Makefile targets, `orchestrator-config.yml` verification_commands, `extension.yml` provides.scripts, toolchain config files (tsconfig.json, Cargo.toml, go.mod, pyproject.toml, Gemfile, .eslintrc*, .prettierrc*, jest.config*, vitest.config*, docker-compose.yml, supabase/config.toml), and agent host markers (.claude/, .cursor/, .github/copilot/). Emits canonical JSON permissions object to stdout. Idempotent. No side effects (reads only; writing is P07's separate script). Bash 3.2 compatible. Works without jq.
+      - `scripts/lifecycle/generate-permissions.sh` — project-introspecting permission generator (FR-2). Reads package.json scripts / yarn.lock / pnpm-lock.yaml, Makefile targets, `orchestrator-config.yml` verification_commands, `extension.yml` provides.scripts, toolchain config files (tsconfig.json, Cargo.toml, go.mod, pyproject.toml, Gemfile, .eslintrc*, .prettierrc*, jest.config*, vitest.config*, docker-compose.yml, supabase/config.toml), and agent host markers (.claude/, .cursor/, .github/copilot/). Emits canonical JSON permissions object to stdout per AD-16 format. Idempotent. No side effects (reads only; writing is P07's separate script). Bash 3.2 compatible. Works without jq. Always runs with graceful per-source fallback (AD-11) — no "minimal environment" mode. **Does not detect or emit GSD-specific patterns** (no `.gsd/` introspection, no `Skill(gsd:*)`, no GSD bash patterns — per AD-10).
       - `scripts/lifecycle/write-permissions.sh` — agent-host translator (FR-10). Reads canonical permissions from stdin or file, detects target host, writes `.claude/settings.json` for Claude Code (other hosts pluggable). Embeds `_generated_by: "speckit-orchestrator"`, `_generated_at` ISO-8601, and `_autonomy_mode` markers. When target file already exists without the `_generated_by` marker, merges generated allow patterns into the existing allow list rather than overwriting (user-authored respect, per FR-6).
       - `scripts/diagnostics/check-permissions.sh` — permission drift detector (FR-8). Compares the current `.claude/settings.json` to what `generate-permissions.sh` would produce. Reports missing patterns (scripts without allow entries), stale patterns (allow entries for deleted scripts), and deny-list gaps. Emits structured result: `DOCTOR:PERMISSIONS status=<ok|drift|missing> gaps=N stale=N`. Consumed by P06 run-doctor.sh aggregation.
       - `templates/autonomy-defaults.yaml` — declarative policy file (Principle X: Templating Over Inference). Declares tier-to-mode mapping (A→minimal, B→standard, C→full), baseline deny list, introspection rules (package.json key extraction patterns, toolchain config file markers, agent host marker directories), and compound-command / shell-builtin allow patterns. Consumed by generate-permissions.sh; no rules hardcoded in scripts.
@@ -109,10 +109,11 @@ updated_at: "2026-04-10T23:30:00Z"
       - Updated `references/installation.md` — documents autonomy configuration: the three modes, introspection sources, `deny_patterns` / `extra_allow` overrides, drift detection via doctor.
     - Consumes:
       - `extension.yml` — canonical list of orchestrator scripts (Principle XI: Single Source of Truth). The introspector does NOT maintain a parallel script list.
-      - `templates/claude-settings.json` — fallback template already shipped in MVP commit `50f7098`. Used when introspection cannot run (minimal environment, no bash). Generator output is a superset of this template.
+      - `templates/claude-settings.json` — fallback template already shipped in MVP commit `50f7098`. Used only as nuclear fallback when bash itself cannot execute (per AD-11). Generator output is a superset of this template. **Note:** the MVP template's blanket `Skill(gsd:*)` entry is inconsistent with AD-10 and must be removed as part of P07's fallback template refresh, or as a standalone MVP cleanup before P07 ships.
       - `scripts/lib/errors.sh` (from M004 P02) — generate-permissions.sh, write-permissions.sh, and check-permissions.sh all emit structured `emit_result` lines on completion.
       - `scripts/lib/events.sh` (from M004 P02) — emit events during generation for debugging (`EVENT:introspection source=package.json entries=N`).
-      - `scripts/capabilities/detect-capabilities.sh` — extended for agent host detection (`.claude/`, `.cursor/`, `.github/copilot/`) so generator knows which host format to emit.
+      - `scripts/lib/recipe-parser.sh` (from M004 P04) — YAML reader for `templates/autonomy-defaults.yaml`. Per AD-14, P07 reuses the existing parser rather than writing a narrower one. The policy file conforms to the same YAML schema constraints as `context-recipe.yaml` (max 2 levels of nesting, comma-separated inline arrays, jq-free).
+      - `scripts/capabilities/detect-capabilities.sh` — extended for agent host detection (`.claude/`, `.cursor/`, `.github/copilot/`) so generator knows which host format to emit. Not extended for GSD detection (per AD-10).
 
 ## Dependency Graph
 

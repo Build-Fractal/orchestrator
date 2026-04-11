@@ -133,7 +133,24 @@ parse_phases() {
       # Depends line
       if echo "$line" | grep -qiE '^[[:space:]]+-?[[:space:]]*Depends:'; then
         local deps
-        deps=$(echo "$line" | sed 's/.*Depends:[[:space:]]*//' | sed 's/[[:space:]]*$//')
+        # Strip leading "Depends:", then any parenthesized commentary, then
+        # truncate at the first sentence boundary, then normalize whitespace
+        # and commas. This lets roadmap authors write
+        #   Depends: none (operates on M004 P05)
+        #   Depends: P01, P02 (hash utility)
+        #   Depends: none within M005 (parallel track). Cross-milestone: ...
+        # without the parser capturing commentary as dependency tokens.
+        deps=$(echo "$line" \
+          | sed 's/.*Depends:[[:space:]]*//' \
+          | sed 's/([^)]*)//g' \
+          | sed 's/\.[[:space:]].*//' \
+          | sed 's/^[[:space:]]*//' \
+          | sed 's/[[:space:]]*$//' \
+          | sed 's/[[:space:]]*,[[:space:]]*/,/g')
+        # "none <qualifier>" forms (e.g. "none within M005") mean no deps.
+        if echo "$deps" | grep -qiE '^none([[:space:]]|$)'; then
+          deps="none"
+        fi
         if [[ "$deps" != "none" && -n "$deps" ]]; then
           phase_depends="$deps"
         fi
@@ -233,7 +250,14 @@ case "$QUERY" in
         IFS=',' read -ra dep_list <<< "$pdepends"
         for dep in "${dep_list[@]}"; do
           dep=$(echo "$dep" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
-          dep_status=$(echo "$phases_data" | grep "^${dep} " | awk '{print $2}')
+          # Skip empty or malformed tokens (defensive — parse_phases should
+          # already normalize to P## form, but survive unexpected input).
+          if [[ -z "$dep" || ! "$dep" =~ ^P[0-9] ]]; then
+            continue
+          fi
+          # `|| true` is load-bearing: under `set -e + pipefail`, a no-match
+          # grep would otherwise abort the whole script silently.
+          dep_status=$(echo "$phases_data" | grep "^${dep} " | awk '{print $2}' 2>/dev/null || true)
           if [[ "$dep_status" != "complete" ]]; then
             deps_satisfied=false
             break

@@ -136,6 +136,106 @@ your-project/
 └── CLAUDE.md              # Your project instructions
 ```
 
+## Autonomy Configuration
+
+Spec-kit-orchestrator's Tier C autonomous mode (`speckit.orchestrator.auto`)
+runs unattended — it dispatches tasks, verifies results, and advances
+phase boundaries without developer interaction. For this to work
+reliably, the agent host (Claude Code, Cursor, etc.) must have a
+sufficient allow list so tool calls execute without permission prompts.
+
+**How it works**: the orchestrator ships a generator at
+`scripts/lifecycle/generate-permissions.sh` that introspects the
+current project and emits a canonical JSON permissions object that
+covers every orchestrator script (from `extension.yml`), every
+`package.json` script key, every Makefile target, and the standard
+toolchain commands for the languages in use. The writer at
+`scripts/lifecycle/write-permissions.sh` translates the canonical
+object to your agent host's specific settings file (today:
+`.claude/settings.json`). A drift detector at
+`scripts/diagnostics/check-permissions.sh` reports when the current
+settings file has fallen behind the generated output.
+
+### Autonomy Modes
+
+Three modes ship in `templates/autonomy-defaults.yaml`:
+
+| Mode | Tier default | Use case |
+|------|--------------|----------|
+| `minimal` | Tier A | Reads/edits only. No unattended bash. |
+| `standard` | Tier B | Common toolchains + scripts/. Guided dispatch. |
+| `full` | Tier C | Comprehensive allow list for unattended auto mode. |
+
+The mode is tier-derived by default but can be overridden in
+`orchestrator-config.yml`:
+
+```yaml
+autonomy:
+  mode: full                # null (tier default) | minimal | standard | full
+  generate_on_init: true    # Run generator during speckit.orchestrator.evaluate
+  deny_patterns: []         # Extra deny patterns appended to baseline_deny
+  extra_allow: []           # Extra allow patterns appended to baseline_allow
+```
+
+**Note**: `bypassPermissions` is **not** a supported mode. Per AD-7 in
+`.specify/orchestrator/milestones/M005/M005-CONTEXT.md`, safety comes
+from explicit allow-list enumeration, never from disabling checks.
+
+### Running the Generator
+
+```bash
+# Emit canonical JSON to stdout (preview)
+bash scripts/lifecycle/generate-permissions.sh --tier C
+
+# Generate + write in one step
+bash scripts/lifecycle/generate-permissions.sh --tier C > /tmp/canon.json
+bash scripts/lifecycle/write-permissions.sh --input /tmp/canon.json
+
+# Check for drift
+bash scripts/diagnostics/check-permissions.sh
+# -> DOCTOR:PERMISSIONS status=ok gaps=0 stale=0
+```
+
+### Drift Detection
+
+`scripts/diagnostics/check-permissions.sh` compares the current
+`.claude/settings.json` against what the generator would produce. It
+emits a structured line consumable by diagnostics and returns:
+
+- `status=ok` — zero gaps, zero stale patterns, baseline deny intact.
+- `status=drift` — one or more missing patterns (regeneration needed).
+- `status=missing` — `.claude/settings.json` does not exist at all.
+
+`speckit.orchestrator.auto` runs this check as part of its pre-flight.
+User-authored settings files trigger an informational warning but do
+not block execution — AD-13 says user autonomy wins over orchestrator
+opinion.
+
+### Known Limitation: Harness Safety Heuristics
+
+Generating a comprehensive allow list covers the allow-list layer of
+the host's bash permission system, but there is a **second, independent
+layer** — the safety heuristic check — that fires on command **shape**
+(not content) to catch obfuscation patterns. This layer sits above the
+allow list and cannot be disabled from `settings.json`. Even a command
+whose individual tokens are fully allow-listed will trigger a prompt if
+its shape matches one of the heuristic classes (plain subshells,
+command substitution containing pipes, process substitution, inline
+compound bash, etc.).
+
+The orchestrator's remedy is **preventive**: task plan Truth `Check:`
+commands and verification scripts must use the **single-script-file
+shape** — extract multi-step logic into a helper script under
+`scripts/verify/` and invoke the helper as a plain `bash scripts/...`
+command. The authoritative list of forbidden shapes lives in AD-19 at
+`.specify/orchestrator/milestones/M005/M005-CONTEXT.md` and in the
+authoring guidance at `commands/plan-phase.md`.
+
+If you are writing a new extension command or phase plan, follow the
+shape guidance in `commands/plan-phase.md`. The advisory lint at
+`scripts/diagnostics/check-plans.sh` (M005 P06) scans task plans and
+flags violations so you can fix them before running auto mode.
+
 ## Updating
 
 To update the orchestrator, re-copy the `commands/`, `scripts/`, `templates/`, and `references/` directories from a newer version of the spec-kit-orchestrator repo. Your project-specific files (`specs/`, `.specify/`, `orchestrator-config.yml`, `CLAUDE.md`) are unaffected.

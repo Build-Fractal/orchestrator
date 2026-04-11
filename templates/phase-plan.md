@@ -13,7 +13,21 @@ depends_on: {{depends_on}}
 
 ### Truths
 
-- {{truth}}
+<!-- Each truth is a behavioral statement + a single-script-file Check.
+     Per AD-19, Truth Check commands MUST use single-invocation script-
+     file shape — no inline compound bash, no plain subshells, no
+     command-substitution-with-pipes. See commands/plan-phase.md for
+     the full forbidden-shape enumeration.
+
+     Forbidden:
+       - Check: `( . scripts/lib/errors.sh && fn | grep -q X )`
+       - Check: `test $(grep -c foo file) -gt 0`
+
+     Required:
+       - Check: `bash scripts/verify/<phase>-<task>-<name>.sh`
+-->
+- {{truth statement}}
+  - Check: `bash scripts/verify/{{check-script}}.sh`
 
 ### Artifacts
 

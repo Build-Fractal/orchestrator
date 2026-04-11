@@ -63,6 +63,75 @@ Truth `Check:` commands verify observable proxies for behavior, not behavior its
 
 Truths without `Check:` sub-items are classified as Tier 3 behavioral checks — they require agent judgment rather than mechanical verification. Use sparingly and only for behaviors that genuinely cannot be reduced to a command.
 
+#### Truth `Check:` command shape — mandatory script-file shape (AD-19)
+
+Truth `Check:` commands run through the harness bash permission system,
+which has two layers:
+
+1. **The allow list** (`.claude/settings.json`) — P07 generates this from
+   project introspection to cover every orchestrator script. Patterns
+   that match the allow list execute without prompting.
+
+2. **The safety heuristic layer** — built into the host and **cannot be
+   disabled from `settings.json`**. It fires on command *shape*, not
+   content, to catch obfuscation patterns. Even a command whose
+   individual tokens are fully allow-listed will trigger a prompt if its
+   shape matches one of the heuristic classes.
+
+**Forbidden shapes** (observed to trigger the harness heuristic — see
+AD-19 in `.specify/orchestrator/milestones/M005/M005-CONTEXT.md` for the
+authoritative trigger list):
+
+- Inline compound `bash -c '...' && bash -c '...'` chains.
+- Plain `( … )` subshells — even without `&&`/`||` — e.g.
+  `( . scripts/lib/errors.sh && fn arg )`.
+- `source` / `.` builtin with arguments inside a subshell.
+- Command substitution `$(…)` containing pipes — e.g.
+  `rc=$(bash cmd | grep -c '^RESULT:')`.
+- Process substitution `<(…)` or `>(…)` anywhere.
+- `cmd <file` input redirection nested inside `$(…)` — e.g.
+  `lines=$(wc -l < path)`.
+- Compound `;`-separated statements chaining more than two commands.
+- Inline `for`/`while`/`if` blocks embedded in a single command.
+- Heredocs feeding commands with pipes or further redirects.
+- Brace expansion containing quote characters.
+- `bash -c '...'` with embedded quoted regex or character classes.
+
+**Required shape**: **single-script-file invocations**. Instead of
+writing a compound command inline, extract the logic into a short
+helper script under `scripts/verify/` or into the task's own phase
+directory, then invoke the helper as the `Check:` command.
+
+```markdown
+# FORBIDDEN — triggers harness heuristic (plain subshell + source)
+- My truth statement
+  - Check: `( . scripts/lib/errors.sh && emit_result ok "" "test" | grep -q RESULT )`
+
+# FORBIDDEN — triggers harness heuristic ($(...) containing pipe)
+- My truth statement
+  - Check: `test $(grep -c "pattern" file.txt) -gt 0`
+
+# REQUIRED — single-script-file shape
+- My truth statement
+  - Check: `bash scripts/verify/p07-my-check.sh`
+```
+
+**Why this matters**: the orchestrator's `speckit.orchestrator.auto`
+command runs unattended. Every harness prompt interrupts that
+unattended run — even for commands the developer has allow-listed.
+Writing `Check:` commands in the script-file shape keeps auto mode
+genuinely unattended. This is preventive; P06's
+`scripts/diagnostics/check-plans.sh` is the detective counterpart, an
+advisory lint that scans task plans and flags violations before they
+reach auto mode.
+
+Rationale: the rule exists because the harness heuristic layer is
+*above* the allow list, cannot be configured away, and fires on shape
+family rather than specific patterns. Future planners encountering an
+edge case should read AD-19 in full rather than mechanically following
+the bulleted list — the list is indicative, not exhaustive, and will
+grow as new triggers are observed.
+
 #### Artifacts
 
 File paths with verifiable properties:

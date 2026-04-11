@@ -22,6 +22,24 @@ depends_on: [{{upstream_task_ids}}]
 
 ## Verification
 
+<!-- Verification commands MUST use single-script-file shape per AD-19.
+     The harness safety heuristic layer sits above the allow list and
+     cannot be configured away. Inline compound bash, plain subshells,
+     $() containing pipes, and process substitution all trigger the
+     heuristic and interrupt unattended auto mode execution.
+
+     See commands/plan-phase.md "Truth Check: command shape" for the
+     full forbidden-shape enumeration and rationale (AD-19).
+
+     Required form:
+       bash scripts/verify/<phase>-<task>-<name>.sh
+       bash scripts/verify/check-must-haves.sh <phase-dir>
+
+     Forbidden forms:
+       ( . scripts/lib/errors.sh && fn arg )
+       result=$(bash cmd | grep -c 'RESULT')
+       diff <(cmd1) <(cmd2)
+-->
 {{verification_criteria}}
 
 ## Inputs

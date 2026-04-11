@@ -64,7 +64,7 @@ updated_at: "2026-04-10T22:00:00Z"
     - Consumes:
       - `.specify/memory/constitution.md` (from P01) — recipe design must comply with Principle X (Templating Over Inference) and Principle IX (Reproducibility)
 
-- [ ] **P05**: Recipe-Driven Script Refactor — "build-context.sh reads context-recipe.yaml to determine which sections to assemble and in what order; compress-payload.sh reads the compression block to determine graduated steps; select-model.sh reads fallback chains from routing.yaml — all three scripts produce identical output to their pre-refactor versions when given the default recipe."
+- [x] **P05**: Recipe-Driven Script Refactor — "build-context.sh reads context-recipe.yaml to determine which sections to assemble and in what order; compress-payload.sh reads the compression block to determine graduated steps; select-model.sh reads fallback chains from routing.yaml — all three scripts produce identical output to their pre-refactor versions when given the default recipe."
   - Risk: high
   - Depends: P02, P03, P04
   - Boundary Map:

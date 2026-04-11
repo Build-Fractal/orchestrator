@@ -380,6 +380,9 @@ if [[ "$IS_PLANNING" = "true" ]]; then
   fi
 
   # --- Find feature spec ---
+  # Resolve the correct spec for THIS milestone via roadmap frontmatter, not
+  # via `find ... -name spec.md | head -1` (which is non-deterministic in repos
+  # with multiple feature specs — see AP-00x: wrong feature spec in payload).
   FEATURE_SPEC=""
   PROJECT_DIR=""
   candidate="$ORCH_ROOT"
@@ -394,8 +397,39 @@ if [[ "$IS_PLANNING" = "true" ]]; then
     fi
     candidate="$(dirname "$candidate")"
   done
+
+  spec_file=""
   if [[ -n "$PROJECT_DIR" ]]; then
-    spec_file=$(find "$PROJECT_DIR/specs" -name "spec.md" -type f 2>/dev/null | head -1)
+    # 1. Prefer explicit feature_spec from roadmap frontmatter
+    fm_feature_spec=$(bash "$READ_ROADMAP" "$ROADMAP" frontmatter 2>/dev/null \
+      | grep '^feature_spec=' | head -1 | sed 's/^feature_spec=//')
+    if [[ -n "$fm_feature_spec" && "$fm_feature_spec" != "null" ]]; then
+      # Resolve relative paths against the project dir
+      if [[ "$fm_feature_spec" = /* ]]; then
+        spec_file="$fm_feature_spec"
+      else
+        spec_file="$PROJECT_DIR/$fm_feature_spec"
+      fi
+    fi
+
+    # 2. Fall back to feature_ref -> specs/<feature_ref>/spec.md
+    if [[ -z "$spec_file" || ! -f "$spec_file" ]]; then
+      fm_feature_ref=$(bash "$READ_ROADMAP" "$ROADMAP" frontmatter 2>/dev/null \
+        | grep '^feature_ref=' | head -1 | sed 's/^feature_ref=//')
+      if [[ -n "$fm_feature_ref" && "$fm_feature_ref" != "null" ]]; then
+        spec_file="$PROJECT_DIR/specs/$fm_feature_ref/spec.md"
+      fi
+    fi
+
+    # 3. Last-resort fallback: scan specs dir only if exactly one spec.md exists
+    #    (multi-spec repos must set feature_spec or feature_ref in the roadmap)
+    if [[ -z "$spec_file" || ! -f "$spec_file" ]]; then
+      spec_count=$(find "$PROJECT_DIR/specs" -name "spec.md" -type f 2>/dev/null | wc -l | tr -d ' ')
+      if [[ "$spec_count" = "1" ]]; then
+        spec_file=$(find "$PROJECT_DIR/specs" -name "spec.md" -type f 2>/dev/null | head -1)
+      fi
+    fi
+
     if [[ -n "$spec_file" && -f "$spec_file" ]]; then
       FEATURE_SPEC=$(cat "$spec_file")
     fi

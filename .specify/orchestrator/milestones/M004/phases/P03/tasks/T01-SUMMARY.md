@@ -1,0 +1,26 @@
+---
+schema_version: "1.0"
+type: task-summary
+id: "T01"
+parent: "P03"
+milestone: "M004"
+provides:
+  - "scripts/engine/checkpoint.sh — Bash 3.2 sourced library delivering atomic crash-recovery checkpoint primitives for scripts/engine/run.sh. Public API: checkpoint_path <milestone> (echoes .specify/orchestrator/milestones/<m>/engine-checkpoint.json), checkpoint_write <milestone> <phase> <task> <outcome> (atomic temp-file-then-mv JSON persist with run_id/milestone/phase/last_task/outcome/timestamp fields; emits EVENT:CHECKPOINT_WRITE), checkpoint_read <milestone> <field> (grep+sed parser extracting run_id|milestone|phase|last_task|outcome|timestamp), checkpoint_detect <milestone> (returns 0 if non-empty checkpoint file exists), checkpoint_clear <milestone> (idempotent rm -f). Internal _checkpoint_escape helper for minimal JSON escaping (backslash, double-quote, control chars → space) without jq. ORCH_CHECKPOINT_ROOT env override with .specify/orchestrator/milestones default."
+requires:
+  - "from:P02/T01 what:emit_event interface and double-sourcing guard pattern; from:P02/T02 what:CHECKPOINT_WRITE canonical event-type registry entry; from:P02/T03 what:orch_now frozen-timestamp helper reading ORCH_STARTED_AT per Principle IX; from:P02/T01-T03 what:sibling-source pattern via "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" for cwd independence"
+affects:
+  - "P03/T02 (engine run.sh will call checkpoint_write after each task boundary and checkpoint_read/detect at startup for CHECKPOINT_RESUME); P03/T03+ (all engine coordinator scripts inherit the checkpoint contract); FR-225 crash-recovery contract; Principle VI (State On Disk Is Truth)"
+key_files:
+  - "scripts/engine/checkpoint.sh"
+key_decisions:
+  - "Checkpoint file lives at .specify/orchestrator/milestones/<m>/engine-checkpoint.json (sibling of execution-log.jsonl/summary.md) with ORCH_CHECKPOINT_ROOT env override for test isolation; atomic write uses "${cp}.tmp.$$" temp file + mv (inherits M002 lock-manager convention); JSON assembled via printf lines (no jq) with 6 fields; parser uses grep -E for field line then sed to strip whitespace/quotes/trailing comma; checkpoint_write treats missing milestone/phase/task as SAFETY_WARNING + return 1 rather than hard error so caller can decide whether to abort; checkpoint_detect uses [ -s ] so an empty file returns 1; checkpoint_clear is idempotent (rm -f) so engine.sh can call it unconditionally on full phase success; only checkpoint_write emits an event — checkpoint_read does NOT emit CHECKPOINT_RESUME because that is a caller-level state transition"
+patterns_established:
+  - "Double-sourcing guard _CHECKPOINT_SOURCED on lines 3-4 (after shebang + one-line comment) to satisfy head -5 must-have check — inherits P02/T01 lesson; sibling library sources deferred to lines 22-28 after the guard using "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/../lib/ relative path for cwd independence; atomic JSON write via temp-file-then-mv with rm -f cleanup on any failure branch; SAFETY_WARNING (not hard error) on argument validation so caller retains control; ORCH_CHECKPOINT_ROOT env override with safe default enables per-test tmp roots without mocking filesystem; no inline date — orch_now threads ORCH_STARTED_AT through every persisted timestamp for Principle IX determinism"
+drill_down_paths:
+  - ".specify/orchestrator/milestones/M004/phases/P03/tasks/T01-PAYLOAD.md, scripts/engine/checkpoint.sh, scripts/lib/errors.sh, scripts/lib/events.sh, scripts/lib/run-context.sh"
+duration: "8m"
+verification_result: "pass"
+completed_at: "2026-04-10T22:45:00Z"
+---
+
+Created scripts/engine/checkpoint.sh (170 lines, executable) — the atomic crash-recovery library that T02+ engine/run.sh will call after each task boundary to persist position and at startup to detect/resume interrupted runs. The library exposes 5 public functions (checkpoint_path, checkpoint_write, checkpoint_read, checkpoint_detect, checkpoint_clear) plus 1 internal helper (_checkpoint_escape) and sources the three P02 libraries it depends on (errors.sh, events.sh, run-context.sh) via the standard cwd-independent sibling-source pattern. checkpoint_write assembles a 6-field JSON document via printf lines (no jq), writes to "${cp}.tmp.$$", and mv's into place atomically — matching the M002 lock-manager.sh convention. Every persisted timestamp comes from orch_now (ORCH_STARTED_AT) honoring Principle IX. The double-sourcing guard sits on lines 3-4 (shebang line 1, one-line comment line 2) so the head -5 phase must-have check passes preemptively per the P02/T01 lesson. All 8 phase must-haves pass (bash -n, guard in head -5, sources all 3 libs, 5 functions defined, no inline date, Bash 3.2 compat with no declare -A/readarray/mapfile/proc-sub-redirects, atomic tmp+mv, CHECKPOINT_WRITE emission) and the full Step-4 verification block prints PASS for every line including the behavioral round-trip test (write → read run_id/last_task → detect → clear → file gone) and the CHECKPOINT_WRITE event emission probe. No deviations from the task plan — the Step-2 verbatim content was usable as written because the guard was already on line 3 and no descriptive comment contained forbidden strings (unlike the P02/T01 plan which had to be rephrased). No files outside scripts/engine/checkpoint.sh were touched.

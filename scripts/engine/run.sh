@@ -103,6 +103,10 @@ export ORCH_FORCE="${ENGINE_FORCE:-}"
 # --- Initialize run context (deterministic if ORCH_RUN_SEED is set) ---
 init_run_context "$ENGINE_MILESTONE" "$ENGINE_PHASE"
 
+# Repo root for verify/record helpers that misbehave from nested cwd (P06 owns the fix).
+REPO_ROOT="$(cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" && pwd)"
+EXECUTION_LOG=".specify/orchestrator/milestones/${ENGINE_MILESTONE}/execution-log.jsonl"
+
 # --- Resolve phase directory and pending-task list ---
 PHASE_DIR=".specify/orchestrator/milestones/${ENGINE_MILESTONE}/phases/${ENGINE_PHASE}"
 if [ ! -d "$PHASE_DIR" ]; then
@@ -192,6 +196,19 @@ emit_event SAFETY_WARNING reason="model_selected" model="$_selected_model" budge
 
 while IFS= read -r task_id; do
   [ -z "$task_id" ] && continue
+
+  # --- T05: Resume skip — if a checkpoint says we already completed past this task, skip. ---
+  if [ -n "${_resume_from:-}" ]; then
+    if [ "$task_id" = "$_resume_from" ]; then
+      # Found the boundary; clear _resume_from so subsequent tasks run.
+      emit_event SAFETY_WARNING reason="resume_boundary_reached" task="$task_id"
+      _resume_from=""
+      continue
+    fi
+    # Still behind the resume boundary — skip this task.
+    emit_event SAFETY_WARNING reason="resume_skip" task="$task_id"
+    continue
+  fi
 
   emit_event TASK_START task="$task_id" milestone="$ENGINE_MILESTONE" phase="$ENGINE_PHASE"
 
@@ -311,11 +328,63 @@ while IFS= read -r task_id; do
     fi
   fi
 
-  # T05 inserts check-must-haves / record-result / checkpoint_write here.
+  # --- T05: Verification stage ---
+  emit_event VERIFY_START task="$task_id" phase="$ENGINE_PHASE"
 
-  # --- T04 provisional TASK_COMPLETE (T05 may replace this with verify-gated outcome) ---
-  emit_event TASK_COMPLETE task="$task_id" outcome="dispatched" \
-    model="$_selected_model" tokens_estimated="$_tokens_est"
+  _verify_result="skipped"
+  if orch_is_dry_run; then
+    # Dry-run: we do not actually call check-must-haves.sh because the phase
+    # summary does not exist yet. Emit a SAFETY_WARNING instead and treat the
+    # verification as passed for the purposes of the loop continuing.
+    emit_event SAFETY_WARNING reason="verify_skipped_dry_run" task="$task_id"
+    _verify_result="skipped"
+  else
+    if (cd "$REPO_ROOT" && bash scripts/verify/check-must-haves.sh "$PHASE_DIR") >/tmp/engine-verify.$$.out 2>&1; then
+      _verify_result="pass"
+    else
+      _verify_result="fail"
+    fi
+    cat /tmp/engine-verify.$$.out 2>/dev/null || true
+    rm -f /tmp/engine-verify.$$.out
+  fi
+
+  emit_event VERIFY_COMPLETE task="$task_id" result="$_verify_result"
+
+  # --- T05: POST_VERIFY hooks ---
+  if ! run_hooks POST_VERIFY "$PHASE_DIR"; then
+    _blocked=$((_blocked + 1))
+    emit_event TASK_COMPLETE task="$task_id" outcome="blocked" reason="hook_post_verify"
+    rm -f "$_payload_file" "$_output_file" 2>/dev/null
+    _payload_file=""; _output_file=""
+    continue
+  fi
+
+  # --- T05: Record result to execution log ---
+  _record_outcome="success"
+  if [ "$_verify_result" = "fail" ]; then
+    _record_outcome="failure"
+  fi
+  if ! (cd "$REPO_ROOT" && bash scripts/lifecycle/record-result.sh "$EXECUTION_LOG" \
+         --milestone="$ENGINE_MILESTONE" --phase="$ENGINE_PHASE" --task="$task_id" \
+         --outcome="$_record_outcome" --verification_result="$_verify_result" \
+         --model="$_selected_model" --payload_bytes="$_payload_bytes" \
+         --dispatch_method="engine") >/dev/null 2>&1; then
+    emit_event SAFETY_WARNING reason="record_result_failed" task="$task_id"
+  fi
+
+  # --- T05: POST_DISPATCH hooks (called after record so hooks see the final outcome) ---
+  if ! run_hooks POST_DISPATCH "$PHASE_DIR"; then
+    emit_event SAFETY_WARNING reason="hook_post_dispatch_warning" task="$task_id"
+    # POST_DISPATCH failure does not block — warn only.
+  fi
+
+  # --- T05: Checkpoint after task boundary ---
+  checkpoint_write "$ENGINE_MILESTONE" "$ENGINE_PHASE" "$task_id" "$_record_outcome" || true
+
+  # --- T05: Final TASK_COMPLETE with verify-gated outcome ---
+  emit_event TASK_COMPLETE task="$task_id" outcome="$_record_outcome" \
+    model="$_selected_model" verify="$_verify_result" \
+    tokens_estimated="$_tokens_est"
 
   _completed=$((_completed + 1))
 
@@ -329,6 +398,12 @@ while IFS= read -r task_id; do
     break
   fi
 done < "$_pending_tmp"
+
+# --- T05: PRE_ADVANCE hooks (last chance for Conversus to gate phase transition) ---
+if ! run_hooks PRE_ADVANCE "$PHASE_DIR"; then
+  emit_result error STATE "PRE_ADVANCE hook blocked phase completion"
+  exit 6
+fi
 
 # --- T03: Pre-advance phase-completeness guard ---
 # Runs in both dry-run and real modes — the phase directory itself is always
@@ -347,6 +422,11 @@ fi
 # --- Phase completion ---
 emit_event PHASE_COMPLETE milestone="$ENGINE_MILESTONE" phase="$ENGINE_PHASE" \
   completed="$_completed" blocked="$_blocked"
+
+# --- T05: Clear checkpoint on successful phase completion ---
+if [ "$_blocked" -eq 0 ]; then
+  checkpoint_clear "$ENGINE_MILESTONE"
+fi
 
 # --- Session end ---
 emit_event SESSION_END milestone="$ENGINE_MILESTONE" phase="$ENGINE_PHASE" \

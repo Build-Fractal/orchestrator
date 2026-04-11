@@ -35,7 +35,7 @@ updated_at: "2026-04-10T22:00:00Z"
     - Consumes:
       - `.specify/memory/constitution.md` (from P01) — new libraries must comply with constitution v2.0
 
-- [ ] **P03**: Engine Core — "Running `bash scripts/engine/run.sh M001 P02` dispatches all pending tasks in phase P02 sequentially, emitting SESSION_START/TASK_START/TASK_COMPLETE/PHASE_COMPLETE events, checkpointing after each task, and blocking on safety rail or hook failures."
+- [x] **P03**: Engine Core — "Running `bash scripts/engine/run.sh M001 P02` dispatches all pending tasks in phase P02 sequentially, emitting SESSION_START/TASK_START/TASK_COMPLETE/PHASE_COMPLETE events, checkpointing after each task, and blocking on safety rail or hook failures."
   - Risk: high
   - Depends: P02
   - Boundary Map:

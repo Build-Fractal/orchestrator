@@ -51,7 +51,7 @@ updated_at: "2026-04-10T22:00:00Z"
       - `scripts/lib/hooks.sh` (from P02)
       - Existing scripts: `scripts/dispatch/build-context.sh`, `scripts/dispatch/compress-payload.sh`, `scripts/dispatch/select-model.sh`, `scripts/verify/check-must-haves.sh`, `scripts/lifecycle/record-result.sh`
 
-- [ ] **P04**: YAML Recipe Schema and Default Recipe — "A default `templates/context-recipe.yaml` declares 7 sections (state, knowledge, decisions, upstream, scope, task_plan, constraints) with source type, priority, order, and filter config; `templates/hooks.yaml` declares 4 lifecycle hook points; routing.yaml is extended with fallback chains — all parseable by grep/sed/awk without jq."
+- [x] **P04**: YAML Recipe Schema and Default Recipe — "A default `templates/context-recipe.yaml` declares 7 sections (state, knowledge, decisions, upstream, scope, task_plan, constraints) with source type, priority, order, and filter config; `templates/hooks.yaml` declares 4 lifecycle hook points; routing.yaml is extended with fallback chains — all parseable by grep/sed/awk without jq."
   - Risk: high
   - Depends: P01
   - Boundary Map:

@@ -1,22 +1,42 @@
-# .specify/orchestrator/routing.yaml — Model routing configuration
+# templates/routing.yaml — Model routing configuration
 # Controls which model handles each task complexity tier.
 # Optional: if this file does not exist, all tasks use the same model.
+#
+# Schema: max 2 levels of nesting. Parseable by grep/sed/awk (no jq required).
+# Fallback: when primary model fails with recoverable error, engine retries
+# with next model in the fallback chain (US10).
+#
+# Constitution: Principle X (Templating Over Inference).
 
 models:
   heavy:
     id: "claude-opus-4-6"
     context_budget: 200000
+    fallback: "claude-sonnet-4-6,claude-haiku-4-5"
   standard:
     id: "claude-sonnet-4-6"
     context_budget: 150000
+    fallback: "claude-haiku-4-5"
   light:
     id: "claude-haiku-4-5"
     context_budget: 80000
+    fallback: ""
 
 classification:
-  heavy: "new subsystem, >5 files, architectural decision, first phase"
-  standard: "feature implementation, 2-5 files, follows established pattern"
-  light: "config change, test addition, single-file edit, documentation"
+  heavy:
+    patterns: "new subsystem,>5 files,architectural decision,first phase"
+    confidence: 0.8
+  standard:
+    patterns: "feature implementation,2-5 files,follows established pattern"
+    confidence: 0.6
+  light:
+    patterns: "config change,test addition,single-file edit,documentation"
+    confidence: 0.4
+
+fallback_config:
+  recoverable_errors: "rate_limit,timeout,overloaded"
+  max_retries: 2
+  retry_delay_seconds: 5
 
 history_weight: 0.3
 budget_ceiling_usd: 50.00

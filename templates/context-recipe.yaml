@@ -1,0 +1,103 @@
+# templates/context-recipe.yaml — Default context recipe
+# Declares sections for dispatch payload assembly, compression strategy,
+# and manifest configuration.
+#
+# Schema: max 2 levels of nesting. Parseable by grep/sed/awk (no jq required).
+# Override: place a context-recipe.yaml in a milestone, phase, or task directory.
+# Resolution order: task > phase > milestone > default (FR-211).
+#
+# Constitution: Principle X (Templating Over Inference), Principle XI (Single
+# Source of Truth), Principle XIII (Agent Instruction Schema).
+
+# --- Section Declarations ---
+# Each section has: source, priority, order, filter, cache_hint
+#   source:     path pattern relative to orchestrator root (supports {milestone}, {phase}, {task} placeholders)
+#   priority:   required | compressible | optional
+#   order:      integer sort key (lower = earlier in payload, static sections first)
+#   filter:     none | scope | staleness | confidence
+#   cache_hint: static | semi-static | dynamic (guides prompt caching boundaries)
+
+sections:
+  state:
+    source: computed
+    priority: required
+    order: 60
+    filter: none
+    cache_hint: dynamic
+
+  knowledge:
+    source: KNOWLEDGE.md
+    priority: compressible
+    order: 10
+    filter: scope
+    cache_hint: static
+
+  decisions:
+    source: DECISIONS.md
+    priority: compressible
+    order: 20
+    filter: staleness
+    cache_hint: static
+
+  upstream:
+    source: phase_summaries
+    priority: compressible
+    order: 50
+    filter: none
+    cache_hint: dynamic
+
+  scope:
+    source: phase_plan
+    priority: required
+    order: 40
+    filter: none
+    cache_hint: semi-static
+
+  task_plan:
+    source: task_plan
+    priority: required
+    order: 60
+    filter: none
+    cache_hint: dynamic
+
+  constraints:
+    source: template
+    priority: optional
+    order: 30
+    filter: none
+    cache_hint: static
+
+# --- Compression Configuration ---
+# Graduated steps applied in order until payload fits within token budget.
+# Token budget is derived from model selection (routing.yaml context_budget).
+# Step types: drop_optional, summarize, drop_lowest_confidence
+#   drop_optional:         remove sections with priority optional
+#   summarize:             truncate matching sections to max_words
+#   drop_lowest_confidence: remove knowledge entries below confidence threshold
+
+compression:
+  enabled: true
+  steps:
+    step_1:
+      type: drop_optional
+      description: Remove sections marked priority optional
+    step_2:
+      type: summarize
+      target_sections: upstream
+      max_words: 200
+      description: Truncate upstream summaries to 200 words each
+    step_3:
+      type: drop_lowest_confidence
+      target_sections: knowledge
+      min_confidence: 0.5
+      description: Drop knowledge entries below 0.5 confidence
+  protected_sections: task_plan,scope,state
+
+# --- Manifest Configuration ---
+# Controls the manifest header prepended to assembled payloads.
+
+manifest:
+  enabled: true
+  include_token_count: true
+  include_section_list: true
+  include_compression_applied: true

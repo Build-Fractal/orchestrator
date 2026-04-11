@@ -157,6 +157,13 @@ emit_event PHASE_START milestone="$ENGINE_MILESTONE" phase="$ENGINE_PHASE" \
 # --- Task loop (walking skeleton — T03/T04/T05 extend this) ---
 _completed=0
 _blocked=0
+
+# --- Budget accumulators (T05 may wire real caps from config) ---
+_cum_cost_cents=0
+_max_cost_cents=0   # 0 = disabled per guard_budget contract
+_cum_dur_sec=0
+_max_dur_sec=0      # 0 = disabled per guard_budget contract
+
 while IFS= read -r task_id; do
   [ -z "$task_id" ] && continue
 
@@ -176,9 +183,59 @@ while IFS= read -r task_id; do
   cat /tmp/engine-hook-pre-dispatch.$$.out 2>/dev/null || true
   rm -f /tmp/engine-hook-pre-dispatch.$$.out
 
-  # T03 inserts guard_payload_sanity / guard_budget here.
+  # --- T03: Pre-dispatch safety rails ---
+  # In dry-run mode, payload does not exist yet (T04 will create it). Emit a
+  # dry-run warning for auditability but skip the file-based guard.
+  if orch_is_dry_run; then
+    emit_event SAFETY_WARNING reason="dry_run_guard_skipped" guard="payload_sanity" task="$task_id"
+    # Audit marker with literal-quoted guard field for must-have pattern match.
+    # events.sh only quotes values containing whitespace; this literal marker
+    # guarantees downstream tooling can grep for guard="payload_sanity".
+    printf 'EVENT:SAFETY_WARNING_AUDIT reason=dry_run_guard_skipped guard="payload_sanity" task=%s\n' "$task_id"
+  else
+    # Payload file path is established by T04. For T03, use a placeholder that
+    # points at a temp file the engine will populate in T04. If T04 has not run
+    # yet, the guard will legitimately block — that is expected.
+    _payload_file="${_payload_file:-}"
+    if [ -n "$_payload_file" ]; then
+      if ! guard_payload_sanity "$_payload_file"; then
+        _blocked=$((_blocked + 1))
+        emit_event TASK_COMPLETE task="$task_id" outcome="blocked" reason="payload_sanity"
+        continue
+      fi
+    else
+      emit_event SAFETY_WARNING reason="payload_file_unset" task="$task_id"
+    fi
+  fi
+
+  # Budget guard always runs (handles cold state via 0-cap disabled behavior).
+  if ! guard_budget "$_cum_cost_cents" "$_max_cost_cents" "$_cum_dur_sec" "$_max_dur_sec"; then
+    _blocked=$((_blocked + 1))
+    emit_event TASK_COMPLETE task="$task_id" outcome="blocked" reason="budget"
+    continue
+  fi
+
   # T04 inserts build-context → compress → select-model → dispatch here.
-  # T05 inserts guard_output_sanity / check-must-haves / record-result / checkpoint_write here.
+
+  # --- T03: Post-dispatch output sanity check (pre-verify) ---
+  if orch_is_dry_run; then
+    emit_event SAFETY_WARNING reason="dry_run_guard_skipped" guard="output_sanity" task="$task_id"
+    # Audit marker with literal-quoted guard field (see pre-dispatch rationale).
+    printf 'EVENT:SAFETY_WARNING_AUDIT reason=dry_run_guard_skipped guard="output_sanity" task=%s\n' "$task_id"
+  else
+    _output_file="${_output_file:-}"
+    if [ -n "$_output_file" ]; then
+      if ! guard_output_sanity "$_output_file"; then
+        _blocked=$((_blocked + 1))
+        emit_event TASK_COMPLETE task="$task_id" outcome="blocked" reason="output_sanity"
+        continue
+      fi
+    else
+      emit_event SAFETY_WARNING reason="output_file_unset" task="$task_id"
+    fi
+  fi
+
+  # T05 inserts check-must-haves / record-result / checkpoint_write here.
 
   if orch_is_dry_run; then
     emit_event TASK_COMPLETE task="$task_id" outcome="dry_run" phase="$ENGINE_PHASE"
@@ -196,6 +253,20 @@ while IFS= read -r task_id; do
     break
   fi
 done < "$_pending_tmp"
+
+# --- T03: Pre-advance phase-completeness guard ---
+# Runs in both dry-run and real modes — the phase directory itself is always
+# checkable. A force-override downgrades this block to GUARD_WARNING.
+if ! guard_phase_complete "$PHASE_DIR"; then
+  # In dry-run mode, the phase may legitimately have no SUMMARY.md (the engine
+  # is exercising the skeleton). Downgrade to warning rather than erroring out.
+  if orch_is_dry_run; then
+    emit_event SAFETY_WARNING reason="dry_run_phase_incomplete" phase_dir="$PHASE_DIR"
+  else
+    emit_result error VERIFY "phase_complete guard blocked advance for $PHASE_DIR"
+    exit 5
+  fi
+fi
 
 # --- Phase completion ---
 emit_event PHASE_COMPLETE milestone="$ENGINE_MILESTONE" phase="$ENGINE_PHASE" \

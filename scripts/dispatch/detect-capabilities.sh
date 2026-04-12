@@ -73,6 +73,21 @@ if [[ "$github_actions" = true ]]; then
   runtime="ci-github"
 fi
 
+# Agent host marker directories — which host format the writer should emit.
+# Per AD-10, .gsd/ is intentionally NOT detected.
+host_claude_code=false
+host_cursor=false
+host_copilot=false
+if [[ -d .claude ]]; then
+  host_claude_code=true
+fi
+if [[ -d .cursor ]]; then
+  host_cursor=true
+fi
+if [[ -d .github/copilot ]]; then
+  host_copilot=true
+fi
+
 # --- Output ---
 
 if [[ "$FORMAT" = "json" ]]; then
@@ -84,7 +99,10 @@ if [[ "$FORMAT" = "json" ]]; then
   "git_available": $git_available,
   "git_worktree": $git_worktree,
   "github_actions": $github_actions,
-  "runtime": "$runtime"
+  "runtime": "$runtime",
+  "host_claude_code": $host_claude_code,
+  "host_cursor": $host_cursor,
+  "host_copilot": $host_copilot
 }
 EOF
 else
@@ -95,4 +113,7 @@ else
   echo "git_worktree=$git_worktree"
   echo "github_actions=$github_actions"
   echo "runtime=$runtime"
+  echo "host_claude_code=$host_claude_code"
+  echo "host_cursor=$host_cursor"
+  echo "host_copilot=$host_copilot"
 fi

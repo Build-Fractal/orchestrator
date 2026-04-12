@@ -121,7 +121,37 @@ Write to `<milestone-dir>/M###-EVALUATION.md` with:
 
 This file is the authoritative source of the tier classification and spec path for all downstream commands (`discuss`, `roadmap`, `plan-phase`, etc.).
 
-3. **Report to the user**:
+3. **Generate autonomy permissions** (FR-7):
+
+Check the `autonomy.generate_on_init` config value:
+
+```bash
+gen_on_init=$(bash scripts/state/read-config.sh autonomy.generate_on_init 2>/dev/null || echo true)
+```
+
+If `gen_on_init` is `true` (default) and the tier is B or C, run the
+generator → writer pipeline so the fresh project is unattended-ready
+before the first `auto` invocation:
+
+```bash
+if [ "$gen_on_init" = "true" ]; then
+  mkdir -p /tmp
+  bash scripts/lifecycle/generate-permissions.sh --tier $TIER > /tmp/p07-evaluate-canon.json
+  bash scripts/lifecycle/write-permissions.sh --input /tmp/p07-evaluate-canon.json
+  rm -f /tmp/p07-evaluate-canon.json
+fi
+```
+
+This step is idempotent: running `evaluate` again with an existing
+`.claude/settings.json` that has the `_generated_by` marker overwrites
+it with a fresh generation (reflecting any `extension.yml` or toolchain
+changes since the last run). User-authored `.claude/settings.json`
+files are merged additively (AD-13) — never overwritten.
+
+Report: "Wrote `.claude/settings.json` with introspection-based
+permissions (autonomy mode: full, tier: C)."
+
+4. **Report to the user**:
    - Tier classification (A, B, or C) with reasoning
    - Next recommended command: `speckit.orchestrator.roadmap` (Tier B) or `speckit.orchestrator.discuss` (Tier C)
 
@@ -133,7 +163,7 @@ Accept `--tier A|B|C` to explicitly override auto-classification (FR-002):
 - **Override to a lower tier** (e.g., C → B): Not recommended. If the project truly needs less orchestration, report this and suggest starting a new milestone at the lower tier instead.
 - **Override to Tier A**: Report that Tier A bypasses the orchestrator entirely. If orchestrator artifacts already exist, warn that they will be unused but not deleted.
 
-When overriding, set `tier_source: override` in the evaluation file.
+When overriding, set `tier_source: override` in the evaluation file. Note that tier overrides re-trigger the permission generator when `autonomy.generate_on_init` is true — a tier change refreshes the autonomy mode (e.g., B→C upgrades `minimal` → `full`).
 
 ## Idempotency
 

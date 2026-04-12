@@ -9,3 +9,24 @@ git_isolation: false            # Use git worktree per milestone
 dispatch_budget: null           # Max dispatches per milestone (null = unlimited)
 duration_budget: null           # Max cumulative duration (null = unlimited, e.g., "2h")
 budget_enforcement: advisory    # advisory (warn only) | enforced (hard stop)
+
+# Autonomy permission generation (P07 — FR-1)
+# Policy defaults live in templates/autonomy-defaults.yaml (baseline deny,
+# baseline allow, tier->mode mapping, introspection rules). This block lets
+# projects override or extend those defaults.
+#
+# Four-layer resolution (FR-1): env > .local > project > defaults. Resolution
+# is implemented in scripts/state/read-config.sh and operates key-by-key: the
+# first layer that declares a non-empty value for a given key wins, and other
+# keys at the same block continue to resolve from lower layers independently.
+# There is no deep-merge of nested objects — setting `autonomy.extra_allow`
+# in orchestrator-config.local.yml overrides only that key, while
+# `autonomy.mode`, `autonomy.generate_on_init`, and `autonomy.deny_patterns`
+# continue to resolve from the project file (or defaults). This matches the
+# existing semantics for verification_commands and every other config block
+# (AD-17: document actual behavior, do not invent new semantics).
+autonomy:
+  mode: null                    # null = tier default (A=minimal, B=standard, C=full). Override: minimal, standard, full
+  generate_on_init: true        # Run generate-permissions.sh during evaluate scaffold (FR-7)
+  deny_patterns: []             # Extra Bash/Read patterns to append to the baseline deny list
+  extra_allow: []               # Extra Bash/Read patterns to append to the baseline allow list

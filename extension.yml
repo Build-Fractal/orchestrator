@@ -141,6 +141,12 @@ provides:
       executable: true
     - file: scripts/diagnostics/check-cost-spikes.sh
       executable: true
+    - file: scripts/lifecycle/generate-permissions.sh
+      executable: true
+    - file: scripts/lifecycle/write-permissions.sh
+      executable: true
+    - file: scripts/diagnostics/check-permissions.sh
+      executable: true
 
 defaults:
   default_tier: null
@@ -151,6 +157,11 @@ defaults:
   duration_budget: null
   budget_enforcement: advisory
   session_weight_limit: 15
+  autonomy:
+    mode: null
+    generate_on_init: true
+    deny_patterns: []
+    extra_allow: []
 
 config_schema:
   type: object
@@ -179,6 +190,27 @@ config_schema:
       type: [integer, "null"]
       minimum: 5
       description: "Max session context weight before rotating to a fresh context. Each task dispatch = 1 unit, each retry = +1, each phase transition = +3. Default 15 (~2-3 phases)."
+    autonomy:
+      type: object
+      description: "Autonomy permission generation (P07). Policy defaults live in templates/autonomy-defaults.yaml."
+      properties:
+        mode:
+          type: [string, "null"]
+          enum: [minimal, standard, full, null]
+          description: "Autonomy mode. null = tier default (A=minimal, B=standard, C=full)."
+        generate_on_init:
+          type: boolean
+          description: "Run generate-permissions.sh during evaluate scaffold (FR-7)."
+        deny_patterns:
+          type: array
+          items:
+            type: string
+          description: "Extra Bash/Read patterns appended to baseline_deny from autonomy-defaults.yaml."
+        extra_allow:
+          type: array
+          items:
+            type: string
+          description: "Extra Bash/Read patterns appended to baseline_allow from autonomy-defaults.yaml."
 
 hooks:
   before_tasks:

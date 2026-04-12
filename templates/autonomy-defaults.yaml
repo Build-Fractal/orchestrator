@@ -1,0 +1,182 @@
+# templates/autonomy-defaults.yaml — declarative autonomy policy
+#
+# Single source of truth for tier->mode mapping, baseline deny list, baseline
+# allow list, and introspection rules. Consumed by:
+#   - scripts/lifecycle/generate-permissions.sh (reads every section)
+#   - scripts/diagnostics/check-permissions.sh  (compares against current state)
+#
+# Constitution: Principle X (Templating Over Inference), Principle XI (Single
+# Source of Truth). Zero hardcoded policy in any script.
+#
+# Schema: max 2 levels of nesting, inline or block arrays (jq-free).
+# Same constraints as templates/context-recipe.yaml.
+
+schema_version: "1.0"
+
+# Tier -> autonomy mode mapping (FR-1, AD-7)
+# minimal  = Tier A default — only essential reads/edits, no unattended bash
+# standard = Tier B default — common toolchains + read/write scripts/
+# full     = Tier C default — comprehensive allow list for unattended auto mode
+tier_defaults:
+  A: "minimal"
+  B: "standard"
+  C: "full"
+
+# Tier -> Claude Code defaultMode mapping
+default_mode:
+  minimal: "default"
+  standard: "acceptEdits"
+  full: "acceptEdits"
+
+# Baseline deny list (AD-7: safety via explicit enumeration, never bypass)
+# Applies to every mode. Projects can extend via autonomy.deny_patterns,
+# cannot remove baseline entries via config. User-authored settings.json files
+# keep their own deny list intact (AD-13: additive merge only).
+baseline_deny:
+  - "Bash(rm -rf /)"
+  - "Bash(rm -rf /*)"
+  - "Bash(rm -rf ~)"
+  - "Bash(rm -rf ~/*)"
+  - "Bash(rm -rf $HOME)"
+  - "Bash(rm -rf $HOME/*)"
+  - "Bash(sudo *)"
+  - "Bash(chmod 777 *)"
+  - "Bash(chmod -R 777 *)"
+  - "Bash(dd *)"
+  - "Bash(mkfs *)"
+  - "Bash(mkfs.* *)"
+  - "Bash(> /dev/sda*)"
+  - "Bash(> /dev/disk*)"
+  - "Bash(git push --force *)"
+  - "Bash(git push -f *)"
+  - "Bash(git push * --force*)"
+  - "Bash(git push * -f*)"
+  - "Bash(git reset --hard origin/*)"
+  - "Bash(git reset --hard upstream/*)"
+  - "Bash(git clean -fdx*)"
+  - "Bash(git branch -D main)"
+  - "Bash(git branch -D master)"
+  - "Bash(curl * | bash*)"
+  - "Bash(curl * | sh*)"
+  - "Bash(wget * | bash*)"
+  - "Bash(wget * | sh*)"
+  - "Bash(curl * | sudo*)"
+  - "Bash(npm publish*)"
+  - "Bash(yarn publish*)"
+  - "Bash(pnpm publish*)"
+  - "Bash(cargo publish*)"
+  - "Bash(pip upload*)"
+  - "Bash(twine upload*)"
+  - "Bash(gh release create*)"
+  - "Bash(gh repo delete*)"
+
+# Baseline allow list — orchestrator-invariant patterns always emitted
+# regardless of project state. Includes:
+#   - Core tool primitives (Read/Write/Edit/Glob/Grep/Agent/WebFetch)
+#   - Skill(speckit.*) for recursive orchestrator invocation
+#   - AD-20 system-temp-directory patterns (/tmp, /var/folders, /private/tmp)
+#   - AD-21 env-prefixed orchestrator script invocation patterns
+#   - Shell builtins (export, source, flow control, test)
+baseline_allow:
+  - "Read"
+  - "Write"
+  - "Edit"
+  - "Glob"
+  - "Grep"
+  - "Agent"
+  - "WebSearch"
+  - "WebFetch"
+  - "NotebookEdit"
+  - "Skill(speckit.*)"
+  - "Skill(speckit.orchestrator.*)"
+  # --- AD-20: system temp directories ---
+  - "Read(//tmp/**)"
+  - "Read(//private/tmp/**)"
+  - "Read(//var/folders/**)"
+  - "Bash(cat /tmp/*)"
+  - "Bash(cat > /tmp/*)"
+  - "Bash(cat >> /tmp/*)"
+  - "Bash(ls /tmp/*)"
+  - "Bash(ls /tmp)"
+  - "Bash(ls /var/folders/*)"
+  - "Bash(ls /private/tmp/*)"
+  - "Bash(find /tmp/*)"
+  - "Bash(find /var/folders/*)"
+  - "Bash(find /private/tmp/*)"
+  - "Bash(head /tmp/*)"
+  - "Bash(tail /tmp/*)"
+  - "Bash(wc /tmp/*)"
+  - "Bash(wc -l /tmp/*)"
+  - "Bash(grep /tmp/*)"
+  - "Bash(stat /tmp/*)"
+  - "Bash(rm -f /tmp/*)"
+  - "Bash(rm -rf /tmp/*)"
+  # --- AD-21: env-prefixed orchestrator script invocation ---
+  - "Bash(ORCH_*=* bash scripts/*)"
+  - "Bash(ORCH_*=* ORCH_*=* bash scripts/*)"
+  - "Bash(ORCH_*=* bash .specify/*)"
+  - "Bash(ORCH_*=* ORCH_*=* bash .specify/*)"
+  - "Bash(ORCH_*=* bash ./scripts/*)"
+  - "Bash(ORCH_*=* ORCH_*=* bash ./scripts/*)"
+  # --- orchestrator script paths ---
+  - "Bash(bash scripts/*)"
+  - "Bash(bash .specify/*)"
+  - "Bash(bash ./scripts/*)"
+  - "Bash(bash ./.specify/*)"
+  - "Bash(sh scripts/*)"
+  # --- compound-command destinations (the output=$(...) idiom) ---
+  - "Bash(output=*)"
+  - "Bash(result=*)"
+  - "Bash(exit_code=*)"
+  - "Bash(status=*)"
+  - "Bash(payload=*)"
+  - "Bash(state=*)"
+  - "Bash(phase=*)"
+  - "Bash(task=*)"
+  - "Bash(milestone=*)"
+  - "Bash(tier=*)"
+  - "Bash(count=*)"
+  - "Bash(path=*)"
+  - "Bash(file=*)"
+  - "Bash(dir=*)"
+  - "Bash(name=*)"
+  - "Bash(value=*)"
+  - "Bash(config=*)"
+  # --- shell builtins + flow control ---
+  - "Bash(export *)"
+  - "Bash(source *)"
+  - "Bash(. *)"
+  - "Bash(set *)"
+  - "Bash(eval *)"
+  - "Bash(exec *)"
+  - "Bash(trap *)"
+  - "Bash(for *)"
+  - "Bash(if *)"
+  - "Bash(while *)"
+  - "Bash(until *)"
+  - "Bash(case *)"
+  - "Bash([ *)"
+  - "Bash([[ *)"
+  - "Bash(test *)"
+
+# Introspection source -> allow-pattern rules (FR-2)
+# Generator reads each source at runtime and emits the corresponding patterns.
+# Missing sources are skipped silently (AD-11: graceful per-source fallback).
+introspection:
+  extension_yml: "Bash(bash scripts/*)"
+  package_json_scripts: "Bash(npm run *)"
+  makefile_targets: "Bash(make *)"
+  toolchain_typescript: "Bash(tsc *)"
+  toolchain_rust: "Bash(cargo *)"
+  toolchain_go: "Bash(go *)"
+  toolchain_python: "Bash(python *)"
+  toolchain_ruby: "Bash(bundle *)"
+  docker_compose: "Bash(docker compose *)"
+  supabase: "Bash(supabase *)"
+
+# Agent host marker directories -> which writer to invoke (FR-10)
+# NOTE: Per AD-10, .gsd/ is intentionally NOT listed.
+agent_hosts:
+  claude_code: ".claude/"
+  cursor: ".cursor/"
+  copilot: ".github/copilot/"

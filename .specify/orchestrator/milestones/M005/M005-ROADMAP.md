@@ -95,7 +95,7 @@ updated_at: "2026-04-10T23:55:00Z"
       - `scripts/diagnostics/check-permissions.sh` (from P07) — wired into the aggregated doctor report as the permission drift signal (FR-8)
       - Shape guidance in `commands/plan-phase.md` and the phase-plan / task-plan templates (from P07) — establishes the convention that `check-plans.sh` lints against
 
-- [ ] **P07**: Autonomy Permission Generator — "A developer runs `bash scripts/lifecycle/generate-permissions.sh` on a Node.js project with a Makefile and the script emits a canonical JSON permissions object to stdout that includes every script from extension.yml, every package.json script key, every Makefile target, the comprehensive deny list, and a tier-appropriate defaultMode — running twice with unchanged project state produces byte-identical output, and `bash scripts/diagnostics/check-permissions.sh` reports `DOCTOR:PERMISSIONS status=ok gaps=0 stale=0`."
+- [x] **P07**: Autonomy Permission Generator — "A developer runs `bash scripts/lifecycle/generate-permissions.sh` on a Node.js project with a Makefile and the script emits a canonical JSON permissions object to stdout that includes every script from extension.yml, every package.json script key, every Makefile target, the comprehensive deny list, and a tier-appropriate defaultMode — running twice with unchanged project state produces byte-identical output, and `bash scripts/diagnostics/check-permissions.sh` reports `DOCTOR:PERMISSIONS status=ok gaps=0 stale=0`."
   - Risk: medium
   - Depends: none within M005 (parallel track — independent of M005 P01-P04). Cross-milestone: consumes M004 P02 (errors.sh, events.sh) and M004 P04 (recipe-parser.sh) — cannot start until both are committed.
   - Boundary Map:

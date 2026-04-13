@@ -15,11 +15,21 @@
 #     Runs task-level verification from the task plan's Verification section
 #
 # Usage:
-#   auto-loop.sh <milestone-dir>
+#   auto-loop.sh <milestone-dir> [--output-file=<path>]
 #   auto-loop.sh <milestone-dir> --step=G --task=T## --outcome=<success|failure> \
-#     [--verification_result=<pass|fail|skipped>] [--duration_s=N]
-#   auto-loop.sh <milestone-dir> --step=V --phase=P## --task=T##
-#   auto-loop.sh <milestone-dir> --step=X
+#     [--verification_result=<pass|fail|skipped>] [--duration_s=N] \
+#     [--model=<id>] [--tokens-input=N] [--tokens-output=N] \
+#     [--tokens-cache-read=N] [--cost=<amount>] [--cache-hit-rate=<rate>] \
+#     [--output-file=<path>]
+#   auto-loop.sh <milestone-dir> --step=V --phase=P## --task=T## [--output-file=<path>]
+#   auto-loop.sh <milestone-dir> --step=X [--output-file=<path>]
+#
+# When --output-file is provided, structured output (AUTO:*, CONTEXT:*) is
+# written to that file instead of stdout. This allows callers to avoid command
+# substitution — output=$(bash auto-loop.sh ...) — which triggers Claude Code's
+# harness safety heuristic (AD-19). Instead:
+#   bash auto-loop.sh <dir> --output-file=<path>
+#   # then read the file for structured output
 #
 # Structured output (stdout):
 #   AUTO:READY milestone=<M###> phase=<P##> task=<T##> payload_bytes=<N>
@@ -93,6 +103,13 @@ PHASE=""
 OUTCOME=""
 VERIFICATION_RESULT=""
 DURATION_S=""
+MODEL_USED=""
+TOKENS_INPUT=""
+TOKENS_OUTPUT=""
+TOKENS_CACHE_READ=""
+COST_ESTIMATED=""
+CACHE_HIT_RATE=""
+OUTPUT_FILE=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -102,6 +119,14 @@ while [[ $# -gt 0 ]]; do
     --outcome=*)          OUTCOME="${1#--outcome=}" ;;
     --verification_result=*) VERIFICATION_RESULT="${1#--verification_result=}" ;;
     --duration_s=*)       DURATION_S="${1#--duration_s=}" ;;
+    --model=*)            MODEL_USED="${1#--model=}" ;;
+    --tokens-input=*)     TOKENS_INPUT="${1#--tokens-input=}" ;;
+    --tokens-output=*)    TOKENS_OUTPUT="${1#--tokens-output=}" ;;
+    --tokens-cache-read=*) TOKENS_CACHE_READ="${1#--tokens-cache-read=}" ;;
+    --cost=*)             COST_ESTIMATED="${1#--cost=}" ;;
+    --cache-hit-rate=*)   CACHE_HIT_RATE="${1#--cache-hit-rate=}" ;;
+    --output-file=*)      OUTPUT_FILE="${1#--output-file=}" ;;
+    --output-file)        OUTPUT_FILE="$2"; shift ;;
     *)
       echo "auto-loop.sh: unknown option: $1" >&2
       exit 1
@@ -110,15 +135,25 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
+# --- Output routing: when --output-file is set, redirect structured output ---
+# This allows callers to avoid command substitution (which triggers Claude Code
+# harness safety heuristics). Instead of output=$(bash auto-loop.sh ...),
+# callers run: bash auto-loop.sh ... --output-file <path> && read the file.
+_auto_output() {
+  if [[ -n "$OUTPUT_FILE" ]]; then
+    mkdir -p "$(dirname "$OUTPUT_FILE")"
+    printf '%s\n' "$1" > "$OUTPUT_FILE"
+  else
+    echo "$1"
+  fi
+}
+
 # --- Derive milestone ID from directory ---
-MILESTONE_ID="$(basename "$MILESTONE_DIR")"
-# Try to detect M###-*.md files for a more accurate ID
-detected_id=$(find "$MILESTONE_DIR" -maxdepth 1 -name 'M[0-9]*-*' -print 2>/dev/null \
-  | head -1 \
-  | xargs -I{} basename {} \
-  | grep -oE '^M[0-9]+' || true)
-if [[ -n "$detected_id" ]]; then
-  MILESTONE_ID="$detected_id"
+DETECT_MILESTONE="$PROJECT_ROOT/scripts/util/detect-milestone-id.sh"
+if [[ -f "$DETECT_MILESTONE" ]]; then
+  MILESTONE_ID="$(bash "$DETECT_MILESTONE" "$MILESTONE_DIR")"
+else
+  MILESTONE_ID="$(basename "$MILESTONE_DIR")"
 fi
 
 ROADMAP_FILE="$MILESTONE_DIR/${MILESTONE_ID}-ROADMAP.md"
@@ -168,9 +203,27 @@ if [[ "$STEP" = "G" ]]; then
   if [[ -n "$DURATION_S" ]]; then
     record_args+=("--duration_s=$DURATION_S")
   fi
+  if [[ -n "$MODEL_USED" ]]; then
+    record_args+=("--model=$MODEL_USED")
+  fi
+  if [[ -n "$TOKENS_INPUT" ]]; then
+    record_args+=("--tokens-input=$TOKENS_INPUT")
+  fi
+  if [[ -n "$TOKENS_OUTPUT" ]]; then
+    record_args+=("--tokens-output=$TOKENS_OUTPUT")
+  fi
+  if [[ -n "$TOKENS_CACHE_READ" ]]; then
+    record_args+=("--tokens-cache-read=$TOKENS_CACHE_READ")
+  fi
+  if [[ -n "$COST_ESTIMATED" ]]; then
+    record_args+=("--cost=$COST_ESTIMATED")
+  fi
+  if [[ -n "$CACHE_HIT_RATE" ]]; then
+    record_args+=("--cache-hit-rate=$CACHE_HIT_RATE")
+  fi
 
   bash "$RECORD_RESULT" "${record_args[@]}" >/dev/null 2>&1
-  echo "AUTO:RECORDED milestone=$MILESTONE_ID phase=$active_phase task=$TASK"
+  _auto_output "AUTO:RECORDED milestone=$MILESTONE_ID phase=$active_phase task=$TASK"
 
   # --- Step H: Update lock ---
   if [[ -f "$LOCK_FILE" ]]; then
@@ -209,7 +262,7 @@ if [[ "$STEP" = "V" ]]; then
   fi
 
   if [[ -z "$verify_section" ]]; then
-    echo "AUTO:VERIFY_PASS phase=$PHASE task=$TASK checks_passed=0"
+    _auto_output "AUTO:VERIFY_PASS phase=$PHASE task=$TASK checks_passed=0"
     exit 0
   fi
 
@@ -254,10 +307,10 @@ if [[ "$STEP" = "V" ]]; then
   done <<< "$verify_section"
 
   if [[ "$checks_failed" -gt 0 ]]; then
-    echo "AUTO:VERIFY_FAIL phase=$PHASE task=$TASK checks_passed=$checks_passed checks_failed=$checks_failed"
+    _auto_output "AUTO:VERIFY_FAIL phase=$PHASE task=$TASK checks_passed=$checks_passed checks_failed=$checks_failed"
     exit 1
   else
-    echo "AUTO:VERIFY_PASS phase=$PHASE task=$TASK checks_passed=$checks_passed"
+    _auto_output "AUTO:VERIFY_PASS phase=$PHASE task=$TASK checks_passed=$checks_passed"
     exit 0
   fi
 fi
@@ -270,7 +323,7 @@ if [[ "$STEP" = "X" ]]; then
   # Returns exit code 14 if rotation is recommended.
   if [[ ! -f "$CONTEXT_MONITOR" ]]; then
     # Context monitor not available — skip check, proceed
-    echo "CONTEXT:OK weight=0 limit=0 headroom=0 (monitor unavailable)"
+    _auto_output "CONTEXT:OK weight=0 limit=0 headroom=0 (monitor unavailable)"
     exit 0
   fi
 
@@ -290,7 +343,7 @@ if [[ "$STEP" = "X" ]]; then
   fi
 
   context_output=$(bash "$CONTEXT_MONITOR" "${monitor_args[@]}" 2>/dev/null) || context_output="CONTEXT:OK weight=0 limit=15 headroom=15"
-  echo "$context_output"
+  _auto_output "$context_output"
 
   if echo "$context_output" | grep -q "^CONTEXT:ROTATE"; then
     exit 14
@@ -334,17 +387,17 @@ case "$state" in
     plan_payload_file="$MILESTONE_DIR/phases/$active_phase/${active_phase}-PLANNING-PAYLOAD.md"
     mkdir -p "$(dirname "$plan_payload_file")"
     printf '%s' "$plan_payload" > "$plan_payload_file"
-    echo "AUTO:PLANNING phase=$active_phase milestone=$MILESTONE_ID payload_bytes=$plan_payload_bytes payload_file=$plan_payload_file"
+    _auto_output "AUTO:PLANNING phase=$active_phase milestone=$MILESTONE_ID payload_bytes=$plan_payload_bytes payload_file=$plan_payload_file"
     exit 0
     ;;
   verifying|summarizing)
     # Phase transition needed — report phase complete
     active_phase=$(bash "$READ_ROADMAP" "$ROADMAP_FILE" active-phase 2>/dev/null) || active_phase="unknown"
-    echo "AUTO:PHASE_COMPLETE phase=$active_phase"
+    _auto_output "AUTO:PHASE_COMPLETE phase=$active_phase"
     exit 0
     ;;
   validating)
-    echo "AUTO:MILESTONE_VALIDATING"
+    _auto_output "AUTO:MILESTONE_VALIDATING"
     exit 0
     ;;
   completing|complete)
@@ -383,7 +436,7 @@ fi
 
 if [[ -z "$next_task" ]]; then
   # All tasks complete in active phase — state should transition
-  echo "AUTO:PHASE_COMPLETE phase=$active_phase"
+  _auto_output "AUTO:PHASE_COMPLETE phase=$active_phase"
   exit 0
 fi
 
@@ -437,6 +490,6 @@ mkdir -p "$(dirname "$payload_file")"
 printf '%s' "$payload" > "$payload_file"
 
 # Output the structured status line with payload file path
-echo "AUTO:READY milestone=$MILESTONE_ID phase=$active_phase task=$next_task payload_bytes=$payload_bytes payload_file=$payload_file"
+_auto_output "AUTO:READY milestone=$MILESTONE_ID phase=$active_phase task=$next_task payload_bytes=$payload_bytes payload_file=$payload_file"
 
 exit 0

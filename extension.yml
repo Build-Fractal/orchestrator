@@ -87,6 +87,10 @@ provides:
       executable: true
     - file: scripts/dispatch/detect-capabilities.sh
       executable: true
+    - file: scripts/dispatch/classify-complexity.sh
+      executable: true
+    - file: scripts/dispatch/select-model.sh
+      executable: true
     - file: scripts/verify/check-must-haves.sh
       executable: true
     - file: scripts/verify/check-boundary-map.sh
@@ -123,6 +127,10 @@ provides:
       executable: true
     - file: scripts/lifecycle/record-result.sh
       executable: true
+    - file: scripts/telemetry/record-telemetry.sh
+      executable: true
+    - file: scripts/telemetry/aggregate-metrics.sh
+      executable: true
     - file: scripts/lifecycle/sync-roadmap.sh
       executable: true
     - file: scripts/lifecycle/auto-loop.sh
@@ -146,6 +154,36 @@ provides:
     - file: scripts/lifecycle/write-permissions.sh
       executable: true
     - file: scripts/diagnostics/check-permissions.sh
+      executable: true
+    - file: scripts/diagnostics/check-instructions.sh
+      executable: true
+    - file: scripts/diagnostics/check-providers.sh
+      executable: true
+    - file: scripts/diagnostics/check-constitution.sh
+      executable: true
+    - file: scripts/diagnostics/check-events.sh
+      executable: true
+    - file: scripts/diagnostics/check-hashes.sh
+      executable: true
+    - file: scripts/diagnostics/check-run-ids.sh
+      executable: true
+    - file: scripts/diagnostics/check-plans.sh
+      executable: true
+    - file: scripts/diagnostics/check-recipe.sh
+      executable: true
+    - file: scripts/verify/validate-milestone.sh
+      executable: true
+    - file: scripts/state/find-active-milestone.sh
+      executable: true
+    - file: scripts/lifecycle/check-settings-state.sh
+      executable: true
+    - file: scripts/lifecycle/evaluate-preflight.sh
+      executable: true
+    - file: scripts/util/check-plan-exists.sh
+      executable: true
+    - file: scripts/util/detect-milestone-id.sh
+      executable: true
+    - file: scripts/util/classify-command.sh
       executable: true
 
 defaults:

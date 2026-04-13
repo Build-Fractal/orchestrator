@@ -10,18 +10,13 @@ Classify a feature's scope into Tier A, B, or C and activate the corresponding o
 
 ### 1. Extension Availability Check
 
-Before invoking any orchestrator scripts, verify that the extension files are available in the current project:
+Before invoking any orchestrator scripts, verify that the extension files are available in the current project. Do NOT use inline `if/then` blocks — use a single test command:
 
 ```bash
-# Check for the scaffold script specifically
-if [ ! -f "scripts/lifecycle/scaffold.sh" ]; then
-  echo "ERROR: spec-kit-orchestrator extension not installed."
-  echo "Copy the extension into this project first. See references/installation.md."
-  exit 1
-fi
+test -f scripts/lifecycle/scaffold.sh
 ```
 
-If the extension scripts are not present, stop with a clear error: **"spec-kit-orchestrator extension not installed in this project. Copy the extension's commands/, scripts/, templates/, and references/ directories into your project root before running evaluate. See `references/installation.md` for details."**
+If the exit code is non-zero (file doesn't exist), stop with a clear error: **"spec-kit-orchestrator extension not installed in this project. Copy the extension's commands/, scripts/, templates/, and references/ directories into your project root before running evaluate. See `references/installation.md` for details."**
 
 Do NOT attempt to manually create the directory structure that `scaffold.sh` would produce — the scaffold script is the authoritative source for the orchestrator's directory layout.
 
@@ -123,33 +118,23 @@ This file is the authoritative source of the tier classification and spec path f
 
 3. **Generate autonomy permissions** (FR-7):
 
-Check the `autonomy.generate_on_init` config value:
+Run the evaluate pre-flight script, which handles extension checks, config overrides, and permission generation in a single invocation. Do NOT use inline `if/then` blocks, command substitution, or `/tmp` writes — these trigger the harness safety heuristic (AD-19):
 
 ```bash
-gen_on_init=$(bash scripts/state/read-config.sh autonomy.generate_on_init 2>/dev/null || echo true)
+bash scripts/lifecycle/evaluate-preflight.sh . <TIER>
 ```
 
-If `gen_on_init` is `true` (default) and the tier is B or C, run the
-generator → writer pipeline so the fresh project is unattended-ready
-before the first `auto` invocation:
+This outputs `PREFLIGHT:OK extension=true config_tier=<auto|A|B|C> permissions=<generated|skipped|merged|error>`. The script:
+- Checks `autonomy.generate_on_init` config value
+- If enabled and tier is B/C, runs the generator → writer pipeline using project-local temp files (not `/tmp`)
+- User-authored `.claude/settings.json` files are merged additively (AD-13) — never overwritten
 
-```bash
-if [ "$gen_on_init" = "true" ]; then
-  mkdir -p /tmp
-  bash scripts/lifecycle/generate-permissions.sh --tier $TIER > /tmp/p07-evaluate-canon.json
-  bash scripts/lifecycle/write-permissions.sh --input /tmp/p07-evaluate-canon.json
-  rm -f /tmp/p07-evaluate-canon.json
-fi
-```
+Report the `permissions` field value: "generated" means fresh permissions were written, "merged" means patterns were added to existing user settings, "skipped" means generation was disabled.
 
 This step is idempotent: running `evaluate` again with an existing
 `.claude/settings.json` that has the `_generated_by` marker overwrites
 it with a fresh generation (reflecting any `extension.yml` or toolchain
-changes since the last run). User-authored `.claude/settings.json`
-files are merged additively (AD-13) — never overwritten.
-
-Report: "Wrote `.claude/settings.json` with introspection-based
-permissions (autonomy mode: full, tier: C)."
+changes since the last run).
 
 4. **Report to the user**:
    - Tier classification (A, B, or C) with reasoning

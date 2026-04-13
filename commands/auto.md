@@ -10,20 +10,35 @@ Run the autonomous dispatch loop for a Tier C milestone. This command owns the f
 
 Before entering the autonomous loop, verify all preconditions:
 
-### 1. Derive Current State
+### 1. Find Active Milestone and Derive State
+
+Use the milestone finder to identify the auto-eligible milestone and its state in a single script call:
 
 ```bash
-bash scripts/state/derive-phase.sh <milestone-dir>
+bash scripts/state/find-active-milestone.sh .specify/orchestrator
 ```
 
-Auto mode is valid when the returned state is one of:
-- `executing` — tasks are being dispatched and worked on
-- `planning` — phase plans are being generated (auto will advance to executing)
-- `summarizing` — active phase tasks are done, phase summary needed
+This returns one line: `M### <state> <tier>` for the first Tier C milestone in an auto-eligible state (executing, planning, summarizing, validating, completing).
 
-If state is `complete`, report "Milestone already complete" and exit without acquiring a lock.
+- If output is `NONE` (exit 1), no eligible milestone exists. Report "No Tier C milestone eligible for auto mode" and exit.
+- If a milestone is found, parse the milestone ID, state, and tier from the output.
 
-If state is `pre-planning`, `discussing`, or any state before a roadmap exists, report "Milestone is not ready for autonomous execution — run `speckit.orchestrator.evaluate` first" and exit.
+To see all milestones: `bash scripts/state/find-active-milestone.sh .specify/orchestrator --all`
+
+**State validation:**
+- `executing`, `planning`, `summarizing`, `validating`, `completing` — valid, proceed
+- `complete` — report "Milestone already complete" and exit without acquiring a lock
+- `pre-planning`, `discussing` — report "Milestone is not ready for autonomous execution — run `speckit.orchestrator.evaluate` first" and exit
+
+**Tier validation** (already handled by the finder, but for explicit invocation):
+
+```bash
+bash scripts/state/read-roadmap.sh <roadmap-file> tier
+```
+
+Auto mode is only available for **Tier C** (FR-054). Tier B → "Use `speckit.orchestrator.dispatch`". Tier A → "Use spec-kit commands directly."
+
+**IMPORTANT — No compound bash:** Do NOT use `for` loops, `if/elif/else` chains, or `$()` substitution in inline bash commands. The harness safety heuristic (AD-19) flags these patterns and triggers interactive prompts that block unattended execution. Always use single-script invocations.
 
 ### 2. Check for Existing Lock
 
@@ -36,6 +51,8 @@ bash scripts/lifecycle/lock-manager.sh status .specify/orchestrator/orchestrator
 - **LOCK:NONE** — No lock exists, safe to proceed.
 
 ### 3. Verify Tier C
+
+Already verified by `find-active-milestone.sh` in step 1. For explicit check:
 
 ```bash
 bash scripts/state/read-roadmap.sh <roadmap-file> tier
@@ -51,95 +68,22 @@ Check that the project has autonomy permissions wired up. Without them,
 autonomous execution will be interrupted by permission prompts for every
 tool call.
 
-#### 4a. Read autonomy configuration
+Use the single-script pre-flight check:
 
 ```bash
-autonomy_generate_on_init=$(bash scripts/state/read-config.sh autonomy.generate_on_init 2>/dev/null || echo true)
-autonomy_mode=$(bash scripts/state/read-config.sh autonomy.mode 2>/dev/null || echo null)
+bash scripts/lifecycle/check-settings-state.sh .
 ```
 
-The four-layer resolution (env > `.local` > project > defaults) comes
-from `read-config.sh`. If `autonomy_mode` is `null`, the generator
-resolves it from the tier (Tier A=minimal, Tier B=standard, Tier C=full).
+This script handles the full conditional pipeline in one invocation:
+- **SETTINGS:MISSING** — generates from project introspection (or template fallback) and writes `.claude/settings.json`
+- **SETTINGS:ORCHESTRATOR** — regenerates to catch toolchain drift since last generation
+- **SETTINGS:USER_AUTHORED** — merges orchestrator patterns into existing file (AD-13: user autonomy wins)
+- **SETTINGS:EXISTS** — settings present, pipeline unavailable, continues as-is
+- **SETTINGS:ERROR** — pre-flight failed, escalate and exit before acquiring the lock
 
-#### 4b. Detect settings file state
+The script also runs `check-permissions.sh` drift detection if available, reporting `DOCTOR:PERMISSIONS` output.
 
-```bash
-if [ ! -f .claude/settings.json ]; then
-  state=MISSING
-elif grep -q '"_generated_by": "speckit-orchestrator"' .claude/settings.json; then
-  state=ORCHESTRATOR
-else
-  state=USER_AUTHORED
-fi
-```
-
-#### 4c. Branch on state
-
-**state=MISSING** — generate from introspection and write a fresh
-`.claude/settings.json`:
-
-```bash
-bash scripts/lifecycle/generate-permissions.sh --tier C > /tmp/p07-canon.json
-bash scripts/lifecycle/write-permissions.sh --input /tmp/p07-canon.json
-```
-
-Report: "Generated `.claude/settings.json` from project introspection
-(autonomy mode: {autonomy_mode}). Review if desired."
-
-**state=ORCHESTRATOR** — regenerate. Catches toolchain drift since the
-last generation (new script registered in `extension.yml`, new
-`package.json` key, etc). The writer overwrites orchestrator-generated
-files in place.
-
-```bash
-bash scripts/lifecycle/generate-permissions.sh --tier C > /tmp/p07-canon.json
-bash scripts/lifecycle/write-permissions.sh --input /tmp/p07-canon.json
-```
-
-Then run the drift detector to confirm status is clean:
-
-```bash
-bash scripts/diagnostics/check-permissions.sh
-```
-
-The drift detector emits `DOCTOR:PERMISSIONS status=ok gaps=0 stale=0`
-on success. If it reports drift, the writer failed silently — escalate
-to the developer and exit before acquiring the lock.
-
-**state=USER_AUTHORED** — DO NOT overwrite. Per AD-13, the writer merges
-additively into user-authored files and never removes user entries.
-Invoke the writer so missing baseline patterns are added:
-
-```bash
-bash scripts/lifecycle/generate-permissions.sh --tier C > /tmp/p07-canon.json
-bash scripts/lifecycle/write-permissions.sh --input /tmp/p07-canon.json
-```
-
-Then run the drift detector for informational warnings — user-authored
-files can legitimately deviate from the orchestrator baseline. The
-doctor reports the gaps but auto mode proceeds (AD-13: user autonomy
-wins over orchestrator opinion).
-
-```bash
-bash scripts/diagnostics/check-permissions.sh || echo "User-authored settings drift — proceeding anyway per AD-13"
-```
-
-Warn the developer if any of the following critical patterns are
-missing after the merge:
-- `"defaultMode":` (missing = zero unattended execution)
-- `Bash(output=*)` (missing = `output=$(bash scripts/...)` idiom blocked)
-- `Bash(bash scripts/*)` (missing = orchestrator script invocation blocked)
-
-#### 4d. Verify readiness
-
-```bash
-bash scripts/diagnostics/check-permissions.sh > /tmp/p07-preflight.out
-grep -q 'status=ok' /tmp/p07-preflight.out || grep -q 'status=drift' /tmp/p07-preflight.out
-```
-
-If `status=missing` appears, the writer failed. Escalate and exit before
-acquiring the lock.
+**Do NOT use inline `if/elif/else` for settings state detection.** The branching logic and multi-step pipeline (`generate → write → drift check`) contains compound bash patterns that trigger the harness safety heuristic (AD-19) and cause interactive prompts. The wrapper script encapsulates all of this.
 
 ### Known Limitations: Harness Safety Heuristics
 
@@ -198,15 +142,15 @@ plans that drift from the convention.
 
 ### 5. Worktree Isolation (FR-075)
 
-If `git_isolation` is configured to `true`:
+If `git_isolation` is configured to `true`, check the config value via a single-script invocation — do NOT use command substitution `$(...)`:
 
 ```bash
-git_isolation=$(bash scripts/state/read-config.sh <root> git_isolation)
+bash scripts/state/read-config.sh git_isolation
 ```
 
-When `git_isolation=true`, dispatched tasks execute within a git worktree created by `scaffold.sh` at `.worktrees/<M###>`. This isolates orchestrator work from the main branch. The worktree is merged back during `speckit.orchestrator.consolidate`.
+Read the stdout output directly (it prints `true` or `false`). When it prints `true`, dispatched tasks execute within a git worktree created by `scaffold.sh` at `.worktrees/<M###>`. This isolates orchestrator work from the main branch. The worktree is merged back during `speckit.orchestrator.consolidate`.
 
-If `git_isolation=false` (default), tasks execute in the current working tree.
+If it prints `false` (default), tasks execute in the current working tree.
 
 ## Lock Acquisition
 
@@ -230,11 +174,13 @@ Each iteration has three stages:
 
 #### Stage 1 — Pre-Dispatch (mechanical)
 
+Run the pre-dispatch script with file-based output. Do NOT use command substitution `$(...)` — it triggers the harness safety heuristic (AD-19):
+
 ```bash
-output=$(bash scripts/lifecycle/auto-loop.sh <milestone-dir>)
+bash scripts/lifecycle/auto-loop.sh <milestone-dir> --output-file=<milestone-dir>/auto-loop-result.txt
 ```
 
-Parse the output to get milestone, phase, task, and payload file path. The `AUTO:READY` line includes `payload_file=<path>` pointing to the assembled dispatch payload on disk. Handle exit codes:
+Then read `<milestone-dir>/auto-loop-result.txt` to get milestone, phase, task, and payload file path. The `AUTO:READY` line includes `payload_file=<path>` pointing to the assembled dispatch payload on disk. Handle exit codes:
 - **0 + AUTO:READY** → proceed to Stage 2
 - **0 + AUTO:PHASE_COMPLETE** → handle phase transition (see below), then context check
 - **0 + AUTO:MILESTONE_VALIDATING** → handle milestone validation (see below)
@@ -257,13 +203,13 @@ Parse the output to get milestone, phase, task, and payload file path. The `AUTO
 
 Do NOT rely on `detect-capabilities.sh` for in-process tool detection — shell scripts cannot detect in-process agent tools. The script is useful only for detecting CLI-level capabilities (git, shell, worktree).
 
-**b. Task-Level Verification**: After the task completes, run mechanical verification via `auto-loop.sh --step=V`:
+**b. Task-Level Verification**: After the task completes, run mechanical verification via `auto-loop.sh --step=V`. Do NOT use command substitution — use file-based output:
 
 ```bash
-output=$(bash scripts/lifecycle/auto-loop.sh <milestone-dir> --step=V --phase=P## --task=T##)
+bash scripts/lifecycle/auto-loop.sh <milestone-dir> --step=V --phase=P## --task=T## --output-file=<milestone-dir>/verify-result.txt
 ```
 
-This extracts verification commands from the task plan's Verification / Must-Haves section and runs each one. It reports `AUTO:VERIFY_PASS` or `AUTO:VERIFY_FAIL` with check counts.
+Then read `<milestone-dir>/verify-result.txt` for the result. The script extracts verification commands from the task plan's Verification / Must-Haves section and runs each one. It reports `AUTO:VERIFY_PASS` or `AUTO:VERIFY_FAIL` with check counts.
 
 The full `speckit.orchestrator.verify` command (4-tier verification pipeline) runs only at **phase boundaries** — see the Phase Transition section below. Running it after every task would be wasteful.
 
@@ -285,11 +231,10 @@ The full `speckit.orchestrator.verify` command (4-tier verification pipeline) ru
 #### Stage 3 — Post-Dispatch (mechanical)
 
 ```bash
-bash scripts/lifecycle/auto-loop.sh <milestone-dir> --step=G \
-  --task=T## --outcome=success --verification_result=pass --duration_s=N
+bash scripts/lifecycle/auto-loop.sh <milestone-dir> --step=G --task=T## --outcome=success --verification_result=pass --duration_s=N --output-file=<milestone-dir>/post-dispatch-result.txt
 ```
 
-Parse the output:
+Then read `<milestone-dir>/post-dispatch-result.txt` for the result:
 - **AUTO:RECORDED** → loop back to Stage 1 (pre-dispatch determines the next task)
 - **AUTO:PHASE_COMPLETE phase=P##** is NOT emitted from post-dispatch; phase transitions are detected by pre-dispatch
 
@@ -310,14 +255,13 @@ When `auto-loop.sh` returns `AUTO:PLANNING phase=P## milestone=M###`, the active
    Agent(prompt="Plan phase P## for milestone M### following the speckit.orchestrator.plan-phase command.\n\n<assembled context>\n\nMilestone directory: <milestone-dir>", subagent_type="general-purpose")
    ```
 
-3. **Verify planning completed**: After the planning agent returns, check that the phase plan and task plans exist:
+3. **Verify planning completed**: After the planning agent returns, check that the phase plan and task plans exist. Do NOT use compound boolean chains or pipe chains — use the dedicated helper script:
 
    ```bash
-   test -f <milestone-dir>/phases/P##/P##-PLAN.md && echo "PLAN_EXISTS" || echo "PLAN_MISSING"
-   ls <milestone-dir>/phases/P##/tasks/T*-PLAN.md 2>/dev/null | wc -l
+   bash scripts/util/check-plan-exists.sh <milestone-dir> P##
    ```
 
-   If the plan exists and task plans were generated, loop back to Stage 1 — `derive-phase.sh` will now return `executing` and the normal dispatch flow resumes.
+   This outputs `PLAN_EXISTS task_plans=<N>` or `PLAN_MISSING task_plans=0`. If the plan exists and task plans were generated (`task_plans > 0`), loop back to Stage 1 — `derive-phase.sh` will now return `executing` and the normal dispatch flow resumes.
 
    If planning failed, write a continue file with the failure details, release the lock, and exit.
 
@@ -340,29 +284,34 @@ When `auto-loop.sh` returns `AUTO:PHASE_COMPLETE` or `derive-phase.sh` returns `
 
 ### Automated Field Derivation
 
-Run `phase-transition.sh` to automate the mechanical parts of phase transition — external mod check, task summary synthesis, and roadmap sync:
+Run `phase-transition.sh` to automate the mechanical parts of phase transition — external mod check, task summary synthesis, and roadmap sync. Do NOT use command substitution — use file-based output:
 
 ```bash
-output=$(bash scripts/lifecycle/phase-transition.sh <milestone-dir> <P##> --lock-file .specify/orchestrator/orchestrator.lock)
+bash scripts/lifecycle/phase-transition.sh <milestone-dir> <P##> --lock-file .specify/orchestrator/orchestrator.lock --output-file=<milestone-dir>/transition-result.txt
 ```
 
-This script reads all task summaries from the completed phase and outputs key=value pairs for `write-summary.sh` fields: `provides`, `requires`, `affects`, `key_files`, `key_decisions`, `patterns_established`, `drill_down_paths`, `duration`, `completed_at`, and `task_count`. It also runs the external modification check and roadmap sync automatically.
+Then read `<milestone-dir>/transition-result.txt` for the derived key=value pairs. The script reads all task summaries from the completed phase and outputs fields for `write-summary.sh`: `provides`, `requires`, `affects`, `key_files`, `key_decisions`, `patterns_established`, `drill_down_paths`, `duration`, `completed_at`, and `task_count`. It also runs the external modification check and roadmap sync automatically.
 
-Parse the output to extract the derived field values, then review them before writing the phase summary. The agent should review and potentially refine the values (especially `provides` and `body`) but should use the derived values as the starting point rather than reading all task summaries manually.
+Parse the file to extract the derived field values, then review them before writing the phase summary. The agent should review and potentially refine the values (especially `provides` and `body`) but should use the derived values as the starting point rather than reading all task summaries manually.
 
 ### Two-Stage Review (FR-015 / FR-059 / FR-060)
 
 1. **Stage 1 — Phase Verification**: Run `speckit.orchestrator.verify` on the phase to execute the full 4-tier verification pipeline. This is the only point where the full verification command runs — NOT after individual tasks.
 
-2. **Stage 2 — Phase Summary**: If verification passes, produce the phase summary using `phase-transition.sh --write`. This derives all mechanical fields from task summaries and writes the summary in one call. Only `--body` and `--observability_surfaces` require agent judgment:
+2. **Stage 2 — Phase Summary**: If verification passes, produce the phase summary using `phase-transition.sh --write`. This derives all mechanical fields from task summaries and writes the summary in one call. Only `--body` and `--observability_surfaces` require agent judgment.
+
+   First, write the body text to a file to avoid multiline quoted arguments (AD-19):
 
    ```bash
-   bash scripts/lifecycle/phase-transition.sh <milestone-dir> <P##> \
-     --lock-file .specify/orchestrator/orchestrator.lock \
-     --write \
-     --body="<synthesized summary: what was built, key decisions, patterns, verification results>" \
-     --observability_surfaces="<metrics or logs if applicable>" \
-     --verification_result=pass
+   # Use Write tool to create the body file — do NOT use heredoc or echo redirection
+   ```
+
+   Write to `<milestone-dir>/phases/<P##>/phase-body.txt` with the synthesized summary (what was built, key decisions, patterns, verification results).
+
+   Then run the transition with `--body-file`:
+
+   ```bash
+   bash scripts/lifecycle/phase-transition.sh <milestone-dir> <P##> --lock-file .specify/orchestrator/orchestrator.lock --write --body-file=<milestone-dir>/phases/<P##>/phase-body.txt --observability_surfaces=none --verification_result=pass
    ```
 
    Do NOT write phase summaries freeform or call `write-summary.sh` directly for phase transitions. The 16 frontmatter fields are required for downstream consumption by `consolidate-artifacts.sh` and knowledge compounding.
@@ -383,12 +332,13 @@ Parse the output to extract the derived field values, then review them before wr
      Do NOT append to DECISIONS.md freeform.
    - Reassessment MUST NOT modify completed or just-finished phases
 
-4. **Context Rotation Check** (FR-CONTEXT): Before advancing, check whether the orchestrator's own context is deep enough to warrant a fresh session:
+4. **Context Rotation Check** (FR-CONTEXT): Before advancing, check whether the orchestrator's own context is deep enough to warrant a fresh session. Do NOT use command substitution — use file-based output:
 
    ```bash
-   output=$(bash scripts/lifecycle/auto-loop.sh <milestone-dir> --step=X)
+   bash scripts/lifecycle/auto-loop.sh <milestone-dir> --step=X --output-file=<milestone-dir>/context-check-result.txt
    ```
 
+   Then read `<milestone-dir>/context-check-result.txt` for the result:
    - **Exit 0 + CONTEXT:OK** → context headroom is sufficient, advance to the next phase normally
    - **Exit 14 + CONTEXT:ROTATE** → context rotation recommended. Handle as follows:
 
@@ -435,11 +385,27 @@ When `auto-loop.sh` returns a terminal state:
 
 ### `validating`
 
-The milestone validation gate (Tier C only):
-1. Run cross-phase validation — verify boundary map produces/consumes across all phases
-2. Check that all phase summaries exist
-3. If validation passes, state transitions to `completing`
-4. If validation fails, report specific failures and exit
+The milestone validation gate (Tier C only). Use the validation script:
+
+```bash
+bash scripts/verify/validate-milestone.sh <milestone-dir>
+```
+
+This runs all cross-phase checks in one invocation:
+1. Verifies all phases in the roadmap have `P##-SUMMARY.md`
+2. Runs `check-boundary-map.sh` for each phase's produces/consumes
+3. Verifies key files from phase summaries exist on disk
+
+Output: `VALIDATE: PASS — N/N checks passed` or `VALIDATE: FAIL` with details.
+
+- If validation passes, write the validation marker using `mark-complete.sh`:
+  ```bash
+  bash scripts/lifecycle/mark-complete.sh .specify/orchestrator <M###>
+  ```
+  State transitions to `completing`.
+- If validation fails, report specific failures and exit.
+
+**Do NOT use `for` loops to iterate over phases manually.** The validation script handles all iteration internally, avoiding harness safety heuristic prompts (AD-19).
 
 ### `completing`
 

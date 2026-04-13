@@ -4,7 +4,13 @@
 # runs external mod check, syncs roadmap, and outputs structured key=value pairs
 # that can be passed directly to write-summary.sh.
 #
-# Usage: phase-transition.sh <milestone-dir> <phase-id> [--lock-file <path>] [--write --body=<text> --observability_surfaces=<text> [--verification_result=<pass|fail>]]
+# Usage: phase-transition.sh <milestone-dir> <phase-id> [--lock-file <path>] [--output-file=<path>]
+#        [--write --body=<text> --body-file=<path> --observability_surfaces=<text> [--verification_result=<pass|fail>]]
+#
+# When --output-file is set, structured output is written to a file instead of
+# stdout. This avoids command substitution at the caller (AD-19).
+# When --body-file is set, body text is read from the file instead of a quoted
+# argument, avoiding multiline quoted payloads (AD-19).
 #
 # Output (stdout):
 #   Key=value pairs for write-summary.sh fields, then a status line:
@@ -16,6 +22,25 @@
 #   1 — usage error or missing phase directory
 
 set -euo pipefail
+
+_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_LIB_DIR="$(cd "$_SCRIPT_DIR/../lib" && pwd)"
+. "$_LIB_DIR/errors.sh"
+. "$_LIB_DIR/events.sh"
+
+_PT_RESULT_EMITTED=0
+_pt_final_result() {
+  local rc=$?
+  if [ "$_PT_RESULT_EMITTED" -eq 0 ] && [ -n "${ORCH_RUN_ID:-}" ]; then
+    if [ "$rc" -eq 0 ]; then
+      emit_result ok "" "phase transition ready" >&2
+    else
+      emit_result error STATE "phase-transition failed rc=$rc" >&2
+    fi
+    _PT_RESULT_EMITTED=1
+  fi
+}
+trap _pt_final_result EXIT
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -38,6 +63,7 @@ WRITE_MODE=false
 BODY=""
 OBS_SURFACES=""
 VERIF_RESULT="pass"
+OUTPUT_FILE=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --lock-file)
@@ -46,16 +72,40 @@ while [[ $# -gt 0 ]]; do
       WRITE_MODE=true; shift ;;
     --body=*)
       BODY="${1#--body=}"; shift ;;
+    --body-file=*)
+      _body_file="${1#--body-file=}"
+      if [[ -f "$_body_file" ]]; then BODY="$(cat "$_body_file")"; fi
+      shift ;;
     --observability_surfaces=*)
       OBS_SURFACES="${1#--observability_surfaces=}"; shift ;;
     --verification_result=*)
       VERIF_RESULT="${1#--verification_result=}"; shift ;;
+    --output-file=*)
+      OUTPUT_FILE="${1#--output-file=}"; shift ;;
+    --output-file)
+      OUTPUT_FILE="$2"; shift 2 ;;
     *)
       echo "phase-transition.sh: unknown option: $1" >&2
       exit 1
       ;;
   esac
 done
+
+# --- Output routing: file-based to avoid command substitution at caller ---
+_pt_output() {
+  if [[ -n "$OUTPUT_FILE" ]]; then
+    mkdir -p "$(dirname "$OUTPUT_FILE")"
+    printf '%s\n' "$1" >> "$OUTPUT_FILE"
+  else
+    echo "$1"
+  fi
+}
+
+# Truncate output file at start if set (append during run via _pt_output)
+if [[ -n "$OUTPUT_FILE" ]]; then
+  mkdir -p "$(dirname "$OUTPUT_FILE")"
+  : > "$OUTPUT_FILE"
+fi
 
 PHASE_DIR="$MILESTONE_DIR/phases/$PHASE_ID"
 TASKS_DIR="$PHASE_DIR/tasks"
@@ -66,13 +116,16 @@ if [[ ! -d "$PHASE_DIR" ]]; then
 fi
 
 # --- Derive milestone ID ---
-MILESTONE_ID="$(basename "$MILESTONE_DIR")"
-detected_id=$(find "$MILESTONE_DIR" -maxdepth 1 -name 'M[0-9]*-*' -print 2>/dev/null \
-  | head -1 \
-  | xargs -I{} basename {} \
-  | grep -oE '^M[0-9]+' || true)
-if [[ -n "$detected_id" ]]; then
-  MILESTONE_ID="$detected_id"
+_PT_PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+DETECT_MILESTONE="$_PT_PROJECT_ROOT/scripts/util/detect-milestone-id.sh"
+if [[ -f "$DETECT_MILESTONE" ]]; then
+  MILESTONE_ID="$(bash "$DETECT_MILESTONE" "$MILESTONE_DIR")"
+else
+  MILESTONE_ID="$(basename "$MILESTONE_DIR")"
+fi
+
+if [ -n "${ORCH_RUN_ID:-}" ]; then
+  emit_event PHASE_START stage=transition milestone="$MILESTONE_ID" phase="$PHASE_ID" >&2
 fi
 
 # --- External modification check ---
@@ -80,7 +133,7 @@ external_mods=""
 if [[ -n "$LOCK_FILE" && -f "$LOCK_FILE" ]]; then
   external_mods=$(bash "$CHECK_EXTERNAL" "$LOCK_FILE" --scope ".specify/" 2>/dev/null) || true
 fi
-echo "external_mods=$external_mods"
+_pt_output "external_mods=$external_mods"
 
 # --- Read all task summaries and derive field values ---
 provides_list=""
@@ -172,19 +225,19 @@ if [[ -d "$TASKS_DIR" ]]; then
 fi
 
 # --- Output derived fields ---
-echo "id=$PHASE_ID"
-echo "parent=$MILESTONE_ID"
-echo "milestone=$MILESTONE_ID"
-echo "provides=$provides_list"
-echo "requires=${requires_list:-none}"
-echo "affects=${affects_list:-none}"
-echo "key_files=$key_files_list"
-echo "key_decisions=${key_decisions_list:-none}"
-echo "patterns_established=${patterns_list:-none}"
-echo "drill_down_paths=$drill_down_list"
-echo "duration=${duration_total}m"
-echo "completed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-echo "task_count=$task_count"
+_pt_output "id=$PHASE_ID"
+_pt_output "parent=$MILESTONE_ID"
+_pt_output "milestone=$MILESTONE_ID"
+_pt_output "provides=$provides_list"
+_pt_output "requires=${requires_list:-none}"
+_pt_output "affects=${affects_list:-none}"
+_pt_output "key_files=$key_files_list"
+_pt_output "key_decisions=${key_decisions_list:-none}"
+_pt_output "patterns_established=${patterns_list:-none}"
+_pt_output "drill_down_paths=$drill_down_list"
+_pt_output "duration=${duration_total}m"
+_pt_output "completed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+_pt_output "task_count=$task_count"
 
 # --- Write summary if --write is set ---
 ROADMAP_FILE="$MILESTONE_DIR/${MILESTONE_ID}-ROADMAP.md"
@@ -221,13 +274,17 @@ if [[ "$WRITE_MODE" = "true" ]]; then
     "--observability_surfaces=${OBS_SURFACES:-none}" \
     "--body=$BODY"
 
-  echo "TRANSITION:WRITTEN phase=$PHASE_ID summary=$SUMMARY_FILE"
+  _pt_output "TRANSITION:WRITTEN phase=$PHASE_ID summary=$SUMMARY_FILE"
 fi
 
 # --- Sync roadmap (after writing summary so checkboxes reflect new state) ---
 if [[ -f "$ROADMAP_FILE" ]]; then
   sync_output=$(bash "$SYNC_ROADMAP" "$ROADMAP_FILE" "$MILESTONE_DIR" --fix 2>/dev/null) || true
-  echo "roadmap_sync=$sync_output"
+  _pt_output "roadmap_sync=$sync_output"
 fi
 
-echo "TRANSITION:READY phase=$PHASE_ID fields_derived=$task_count"
+if [ -n "${ORCH_RUN_ID:-}" ]; then
+  emit_event PHASE_COMPLETE stage=transition phase="$PHASE_ID" task_count="$task_count" >&2
+fi
+
+_pt_output "TRANSITION:READY phase=$PHASE_ID fields_derived=$task_count"

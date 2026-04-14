@@ -36,6 +36,8 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 . "$PROJECT_ROOT/scripts/lib/run-context.sh"
 . "$PROJECT_ROOT/scripts/lib/recipe-parser.sh"
 . "$SCRIPT_DIR/lib/section-handlers.sh"
+. "$PROJECT_ROOT/scripts/lib/payload-transforms.sh"
+. "$PROJECT_ROOT/scripts/lib/manifest-builder.sh"
 
 # Pre-refactor helper scripts still used by the planning branch
 SCOPE_FILTER="$SCRIPT_DIR/scope-filter.sh"
@@ -185,18 +187,6 @@ export SH_BUDGET_ENFORCEMENT="$BUDGET_ENFORCEMENT"
 TMPDIR_BUILD="$(mktemp -d)"
 INCLUDED_IDS_FILE="$(mktemp)"
 
-# --- Estimate tokens: chars / 4, rounded to nearest 100 ---
-estimate_tokens() {
-  local text="$1"
-  local chars
-  chars="$(printf '%s' "$text" | wc -c | tr -d ' ')"
-  local raw_tokens=$((chars / 4))
-  local rounded=$(( ((raw_tokens + 50) / 100) * 100 ))
-  if [ "$rounded" -eq 0 ] && [ "$raw_tokens" -gt 0 ]; then
-    rounded=100
-  fi
-  echo "$rounded"
-}
 
 # ============================================================================
 # Planning-payload branch — verbatim port of the pre-refactor IS_PLANNING block
@@ -691,13 +681,13 @@ fi
 # preserving the recipe-as-source-of-truth contract for section *selection*.
 _bc_display_order() {
   case "$1" in
-    knowledge)   echo 1 ;;
-    decisions)   echo 2 ;;
-    scope)       echo 3 ;;
-    upstream)    echo 4 ;;
-    task_plan)   echo 5 ;;
-    state)       echo 6 ;;
-    constraints) echo 7 ;;
+    knowledge)   echo 1 ;;  # static — rarely changes
+    decisions)   echo 2 ;;  # static — rarely changes
+    constraints) echo 3 ;;  # static — template-based, same every dispatch
+    scope)       echo 4 ;;  # semi-static — changes per phase, not per task
+    upstream)    echo 5 ;;  # dynamic — changes when phases complete
+    task_plan)   echo 6 ;;  # dynamic — changes every dispatch
+    state)       echo 7 ;;  # dynamic — changes every dispatch
     *)           echo 99 ;;
   esac
 }

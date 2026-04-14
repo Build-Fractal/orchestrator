@@ -12,7 +12,7 @@ updated_at: "2026-04-09T22:30:00Z"
 
 ## Phases
 
-- [ ] **P01**: Knowledge Storage Foundation — "A developer can create individual knowledge detail files under `knowledge/{category}/`, each with YAML frontmatter, and the system builds a pipe-delimited `KNOWLEDGE-INDEX.md` that is scannable with grep/awk and rebuildable from disk."
+- [x] **P01**: Knowledge Storage Foundation — "A developer can create individual knowledge detail files under `knowledge/{category}/`, each with YAML frontmatter, and the system builds a pipe-delimited `KNOWLEDGE-INDEX.md` that is scannable with grep/awk and rebuildable from disk."
   - Risk: high
   - Depends: none
   - Boundary Map:
@@ -24,7 +24,7 @@ updated_at: "2026-04-09T22:30:00Z"
       - `knowledge/archive/` — cold storage directory for archived entries
     - Consumes: nothing (foundation phase)
 
-- [ ] **P02**: Knowledge Entry Lifecycle — "A developer can supersede an entry with a replacement, observe staleness decay reduce effective confidence over time, promote a cold entry back to warm, and see overlap flagged during consolidation — all operations idempotent."
+- [x] **P02**: Knowledge Entry Lifecycle — "A developer can supersede an entry with a replacement, observe staleness decay reduce effective confidence over time, promote a cold entry back to warm, and see overlap flagged during consolidation — all operations idempotent."
   - Risk: high
   - Depends: P01
   - Boundary Map:
@@ -42,7 +42,7 @@ updated_at: "2026-04-09T22:30:00Z"
       - `scripts/knowledge/rebuild-index.sh` (from P01)
       - `knowledge/archive/` directory (from P01)
 
-- [ ] **P03**: Graph Relationships and Scope Filtering — "When the context builder includes a knowledge entry, it traverses the entry's `relates_to` links up to 1 hop (max 5 entries), handles cycles safely, and scope-filter.sh filters the index by tag/category/confidence without reading detail files."
+- [x] **P03**: Graph Relationships and Scope Filtering — "When the context builder includes a knowledge entry, it traverses the entry's `relates_to` links up to 1 hop (max 5 entries), handles cycles safely, and scope-filter.sh filters the index by tag/category/confidence without reading detail files."
   - Risk: medium
   - Depends: P01, P02
   - Boundary Map:
@@ -55,7 +55,7 @@ updated_at: "2026-04-09T22:30:00Z"
       - `knowledge/{category}/{entry-id}.md` (from P01) — detail files read only for selected entries
       - `scripts/knowledge/compute-staleness.sh` (from P02) — effective confidence used in filtering decisions
 
-- [ ] **P04**: Pre-Inlined Dispatch with Manifest — "A dispatched agent receives a single markdown document containing an accurate manifest header with section line ranges and token estimates, all context inlined (static first, dynamic last), compressed to fit within the context budget — zero file-read tool calls needed for context."
+- [x] **P04**: Pre-Inlined Dispatch with Manifest — "A dispatched agent receives a single markdown document containing an accurate manifest header with section line ranges and token estimates, all context inlined (static first, dynamic last), compressed to fit within the context budget — zero file-read tool calls needed for context."
   - Risk: high
   - Depends: P01, P02, P03
   - Boundary Map:
@@ -73,7 +73,7 @@ updated_at: "2026-04-09T22:30:00Z"
       - `scripts/knowledge/resolve-entries.sh` (from P03) — reads selected detail files
       - `scripts/knowledge/increment-hits.sh` (from P02) — increments hit_count on included entries
 
-- [ ] **P05**: Execution Telemetry — "After dispatching 10 tasks, the execution log contains one entry per task with model, tokens, cost, cache hit rate, duration, and verification result; the /status command surfaces aggregate metrics including cross-milestone comparison."
+- [x] **P05**: Execution Telemetry — "After dispatching 10 tasks, the execution log contains one entry per task with model, tokens, cost, cache hit rate, duration, and verification result; the /status command surfaces aggregate metrics including cross-milestone comparison."
   - Risk: medium
   - Depends: none
   - Boundary Map:
@@ -84,7 +84,7 @@ updated_at: "2026-04-09T22:30:00Z"
       - Updated `/status` output section — displays aggregate telemetry metrics
     - Consumes: nothing (telemetry schema is additive to existing execution-log.jsonl; does not depend on knowledge architecture)
 
-- [ ] **P06**: Model Routing Configuration — "A developer configures routing.yaml with model tiers, dispatches tasks of varying complexity, and each task routes to the correct model based on automatic classification from task plan metadata or explicit complexity frontmatter override."
+- [x] **P06**: Model Routing Configuration — "A developer configures routing.yaml with model tiers, dispatches tasks of varying complexity, and each task routes to the correct model based on automatic classification from task plan metadata or explicit complexity frontmatter override."
   - Risk: low
   - Depends: P05
   - Boundary Map:
@@ -97,7 +97,7 @@ updated_at: "2026-04-09T22:30:00Z"
       - `scripts/telemetry/aggregate-metrics.sh` (from P05) — historical data for routing optimization suggestions
       - Extended `execution-log.jsonl` schema (from P05) — model_used field for routing history analysis
 
-- [ ] **P07**: Diagnostics Command — "Running /speckit.orchestrator.doctor detects orphaned artifacts, stale knowledge, unscoped entries, scope mismatches, and cost spikes; results appear on screen and are appended to doctor-history.jsonl for trend tracking."
+- [x] **P07**: Diagnostics Command — "Running /speckit.orchestrator.doctor detects orphaned artifacts, stale knowledge, unscoped entries, scope mismatches, and cost spikes; results appear on screen and are appended to doctor-history.jsonl for trend tracking."
   - Risk: low
   - Depends: P01, P02, P03, P04, P05, P06
   - Boundary Map:

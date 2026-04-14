@@ -16,6 +16,24 @@
 
 set -euo pipefail
 
+_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_LIB_DIR="$(cd "$_SCRIPT_DIR/../lib" && pwd)"
+. "$_LIB_DIR/errors.sh"
+. "$_LIB_DIR/events.sh"
+
+_AM_RESULT_EMITTED=0
+_am_final_result() {
+  local rc=$?
+  if [ "$_AM_RESULT_EMITTED" -eq 0 ] && [ -n "${ORCH_RUN_ID:-}" ]; then
+    if [ "$rc" -eq 0 ]; then
+      emit_result ok "" "metrics aggregated" >&2
+    else
+      emit_result error IO "aggregate-metrics failed rc=$rc" >&2
+    fi
+    _AM_RESULT_EMITTED=1
+  fi
+}
+
 # --- Helper: extract JSON string value ---
 # Usage: json_str_val <line> <field>
 json_str_val() {
@@ -64,10 +82,19 @@ telemetry_cost_sum=0
 cache_hit_sum=0
 cache_hit_count=0
 
+# Cost source tracking (AD-2: estimated|reported|unknown)
+cs_estimated_count=0
+cs_estimated_cost=0
+cs_reported_count=0
+cs_reported_cost=0
+cs_unknown_count=0
+cs_unknown_cost=0
+
 # We'll build parallel arrays using indexed temp files for model + milestone tracking
 MODEL_TMPDIR="$(mktemp -d)"
 MILESTONE_TMPDIR="$(mktemp -d)"
-trap 'rm -rf "$MODEL_TMPDIR" "$MILESTONE_TMPDIR"' EXIT
+ERRORKIND_TMPDIR="$(mktemp -d)"
+trap 'rm -rf "$MODEL_TMPDIR" "$MILESTONE_TMPDIR" "$ERRORKIND_TMPDIR"; _am_final_result' EXIT
 
 while IFS= read -r line; do
   # Skip empty lines
@@ -101,6 +128,39 @@ while IFS= read -r line; do
       cache_hit_sum=$(awk "BEGIN { printf \"%.6f\", $cache_hit_sum + $cache_val }")
       cache_hit_count=$((cache_hit_count + 1))
     fi
+
+    # Cost source classification (AD-2)
+    source_val="$(json_str_val "$line" "cost_source")"
+    if [ -z "$source_val" ]; then
+      # Legacy entry: infer source from presence of cost field
+      if [ -n "$cost_val" ]; then
+        source_val="estimated"
+      else
+        source_val="unknown"
+      fi
+    fi
+
+    # Accumulate by source
+    case "$source_val" in
+      estimated)
+        cs_estimated_count=$((cs_estimated_count + 1))
+        if [ -n "$cost_val" ]; then
+          cs_estimated_cost=$(awk "BEGIN { printf \"%.6f\", $cs_estimated_cost + $cost_val }")
+        fi
+        ;;
+      reported)
+        cs_reported_count=$((cs_reported_count + 1))
+        if [ -n "$cost_val" ]; then
+          cs_reported_cost=$(awk "BEGIN { printf \"%.6f\", $cs_reported_cost + $cost_val }")
+        fi
+        ;;
+      unknown|*)
+        cs_unknown_count=$((cs_unknown_count + 1))
+        if [ -n "$cost_val" ]; then
+          cs_unknown_cost=$(awk "BEGIN { printf \"%.6f\", $cs_unknown_cost + $cost_val }")
+        fi
+        ;;
+    esac
 
     # Model tracking
     model_name="$(json_str_val "$line" "model_used")"
@@ -147,6 +207,19 @@ while IFS= read -r line; do
     outcome="$(json_str_val "$line" "outcome")"
     if [ "$outcome" = "success" ]; then
       success_count=$((success_count + 1))
+    fi
+
+    # Error kind tracking
+    ek_val="$(json_str_val "$line" "error_kind")"
+    if [ -n "$ek_val" ]; then
+      safe_ek="$(printf '%s' "$ek_val" | sed 's/[^a-zA-Z0-9._-]/_/g')"
+      ek_file="${ERRORKIND_TMPDIR}/${safe_ek}"
+      if [ -f "$ek_file" ]; then
+        old_ek_count=$(cat "$ek_file")
+      else
+        old_ek_count=0
+      fi
+      printf '%d' "$((old_ek_count + 1))" > "$ek_file"
     fi
 
     dur_val="$(json_num_val "$line" "duration_s")"
@@ -267,6 +340,24 @@ if [ -n "$milestone_lines" ]; then
   milestone_lines=$(printf '%s\n' "$milestone_lines" | sort)
 fi
 
+# --- Collect error_kind stats ---
+errorkind_lines=""
+for ekfile in "$ERRORKIND_TMPDIR"/*; do
+  [ -f "$ekfile" ] || continue
+  ek_name="$(basename "$ekfile")"
+  ek_count=$(cat "$ekfile")
+  if [ -n "$errorkind_lines" ]; then
+    errorkind_lines="${errorkind_lines}
+"
+  fi
+  errorkind_lines="${errorkind_lines}${ek_name}	${ek_count}"
+done
+
+# Sort error_kind lines
+if [ -n "$errorkind_lines" ]; then
+  errorkind_lines=$(printf '%s\n' "$errorkind_lines" | sort)
+fi
+
 # --- Output ---
 if [ "$FORMAT" = "json" ]; then
   json="{"
@@ -316,6 +407,30 @@ EOF
   fi
   json="${json}${ms_json}}"
 
+  # Cost source breakdown
+  json="${json},\"by_cost_source\":{"
+  json="${json}\"estimated\":{\"count\":${cs_estimated_count},\"cost\":$(awk "BEGIN { printf \"%.3f\", $cs_estimated_cost }")}"
+  json="${json},\"reported\":{\"count\":${cs_reported_count},\"cost\":$(awk "BEGIN { printf \"%.3f\", $cs_reported_cost }")}"
+  json="${json},\"unknown\":{\"count\":${cs_unknown_count},\"cost\":$(awk "BEGIN { printf \"%.3f\", $cs_unknown_cost }")}"
+  json="${json}}"
+
+  # Error kind breakdown
+  json="${json},\"by_error_kind\":{"
+  ek_json=""
+  if [ -n "$errorkind_lines" ]; then
+    first_ek=1
+    while IFS='	' read -r ek_name ek_count; do
+      if [ $first_ek -eq 0 ]; then
+        ek_json="${ek_json},"
+      fi
+      ek_json="${ek_json}\"${ek_name}\":${ek_count}"
+      first_ek=0
+    done <<EOF
+$errorkind_lines
+EOF
+  fi
+  json="${json}${ek_json}}"
+
   json="${json}}"
   echo "$json"
 
@@ -352,4 +467,31 @@ else
       printf '%s: %d tasks, $%s, %s%% success\n' "$ms" "$disp" "$tcost" "$spct"
     done
   fi
+
+  cs_total=$((cs_estimated_count + cs_reported_count + cs_unknown_count))
+  if [ "$cs_total" -gt 0 ]; then
+    echo ""
+    echo "--- By Cost Source ---"
+    if [ "$cs_estimated_count" -gt 0 ]; then
+      printf 'Estimated:   %d entries, $%s\n' "$cs_estimated_count" "$(awk "BEGIN { printf \"%.3f\", $cs_estimated_cost }")"
+    fi
+    if [ "$cs_reported_count" -gt 0 ]; then
+      printf 'Reported:    %d entries, $%s\n' "$cs_reported_count" "$(awk "BEGIN { printf \"%.3f\", $cs_reported_cost }")"
+    fi
+    if [ "$cs_unknown_count" -gt 0 ]; then
+      printf 'Unknown:     %d entries, $%s\n' "$cs_unknown_count" "$(awk "BEGIN { printf \"%.3f\", $cs_unknown_cost }")"
+    fi
+  fi
+
+  if [ -n "$errorkind_lines" ]; then
+    echo ""
+    echo "--- By Error Kind ---"
+    printf '%s\n' "$errorkind_lines" | while IFS='	' read -r ek_name ek_count; do
+      printf '%-12s %d dispatches\n' "${ek_name}:" "$ek_count"
+    done
+  fi
+fi
+
+if [ -n "${ORCH_RUN_ID:-}" ]; then
+  emit_event TASK_COMPLETE stage=aggregate_metrics dispatches="$total_dispatches" >&2
 fi

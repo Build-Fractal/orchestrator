@@ -15,6 +15,7 @@
 #   --tokens-output=<N>          Output token count
 #   --tokens-cache-read=<N>      Cache-read token count
 #   --cost=<amount>              Estimated cost in dollars
+#   --cost-source=<value>        Cost provenance (estimated|reported|unknown)
 #   --cache-hit-rate=<rate>      Cache hit rate (0.0-1.0)
 #   --payload-bytes=<N>          Payload size in bytes
 #
@@ -24,6 +25,25 @@
 # Exits 0 on success, 1 on missing required fields or invalid arguments.
 
 set -euo pipefail
+
+_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_LIB_DIR="$(cd "$_SCRIPT_DIR/../lib" && pwd)"
+. "$_LIB_DIR/errors.sh"
+. "$_LIB_DIR/events.sh"
+
+_RT_RESULT_EMITTED=0
+_rt_final_result() {
+  local rc=$?
+  if [ "$_RT_RESULT_EMITTED" -eq 0 ] && [ -n "${ORCH_RUN_ID:-}" ]; then
+    if [ "$rc" -eq 0 ]; then
+      emit_result ok "" "telemetry recorded" >&2
+    else
+      emit_result error IO "record-telemetry failed rc=$rc" >&2
+    fi
+    _RT_RESULT_EMITTED=1
+  fi
+}
+trap _rt_final_result EXIT
 
 if [ $# -lt 1 ]; then
   echo "Usage: record-telemetry.sh <execution-log> --unit-id=... [--model=...] [--tokens-input=N] ..." >&2
@@ -39,6 +59,7 @@ TOKENS_INPUT=""
 TOKENS_OUTPUT=""
 TOKENS_CACHE_READ=""
 COST_ESTIMATED=""
+COST_SOURCE=""
 CACHE_HIT_RATE=""
 PAYLOAD_BYTES=""
 
@@ -50,6 +71,7 @@ while [ $# -gt 0 ]; do
     --tokens-output=*) TOKENS_OUTPUT="${1#--tokens-output=}" ;;
     --tokens-cache-read=*) TOKENS_CACHE_READ="${1#--tokens-cache-read=}" ;;
     --cost=*) COST_ESTIMATED="${1#--cost=}" ;;
+    --cost-source=*) COST_SOURCE="${1#--cost-source=}" ;;
     --cache-hit-rate=*) CACHE_HIT_RATE="${1#--cache-hit-rate=}" ;;
     --payload-bytes=*) PAYLOAD_BYTES="${1#--payload-bytes=}" ;;
     *) echo "record-telemetry.sh: unknown option: $1" >&2; exit 1 ;;
@@ -63,6 +85,17 @@ if [ -z "$UNIT_ID" ]; then
   exit 1
 fi
 
+# Validate cost_source enum
+if [ -n "$COST_SOURCE" ]; then
+  case "$COST_SOURCE" in
+    estimated|reported|unknown) ;;
+    *)
+      echo "record-telemetry.sh: invalid cost_source: $COST_SOURCE (expected: estimated|reported|unknown)" >&2
+      exit 1
+      ;;
+  esac
+fi
+
 TIMESTAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
 # Build JSON
@@ -72,10 +105,20 @@ json="{\"timestamp\":\"${TIMESTAMP}\",\"type\":\"telemetry\",\"unitId\":\"${UNIT
 [ -n "$TOKENS_OUTPUT" ] && json="${json},\"tokens_output\":${TOKENS_OUTPUT}"
 [ -n "$TOKENS_CACHE_READ" ] && json="${json},\"tokens_cache_read\":${TOKENS_CACHE_READ}"
 [ -n "$COST_ESTIMATED" ] && json="${json},\"cost_estimated\":${COST_ESTIMATED}"
+if [ -n "$COST_SOURCE" ]; then
+  json="${json},\"cost_source\":\"${COST_SOURCE}\""
+fi
 [ -n "$CACHE_HIT_RATE" ] && json="${json},\"cache_hit_rate\":${CACHE_HIT_RATE}"
 [ -n "$PAYLOAD_BYTES" ] && json="${json},\"payload_bytes\":${PAYLOAD_BYTES}"
+if [ -n "${ORCH_RUN_ID:-}" ]; then
+  json="${json},\"run_id\":\"${ORCH_RUN_ID}\""
+fi
 json="${json}}"
 
 mkdir -p "$(dirname "$EXECUTION_LOG")"
 echo "$json" >> "$EXECUTION_LOG"
 echo "TELEMETRY:RECORDED $EXECUTION_LOG"
+
+if [ -n "${ORCH_RUN_ID:-}" ]; then
+  emit_event TASK_COMPLETE stage=record_telemetry unit="$UNIT_ID" >&2
+fi

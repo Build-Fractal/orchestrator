@@ -171,6 +171,8 @@ provides:
       executable: true
     - file: scripts/diagnostics/check-recipe.sh
       executable: true
+    - file: scripts/diagnostics/check-docs.sh
+      executable: true
     - file: scripts/verify/validate-milestone.sh
       executable: true
     - file: scripts/state/find-active-milestone.sh

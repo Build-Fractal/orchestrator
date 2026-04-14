@@ -11,40 +11,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=lib/index-utils.sh
 source "$SCRIPT_DIR/lib/index-utils.sh"
-
-# --- Portable sed -i helper (BSD/GNU compatible) ---
-sed_i() {
-  if sed --version 2>/dev/null | grep -q GNU; then
-    sed -i "$@"
-  else
-    sed -i '' "$@"
-  fi
-}
-
-# --- Find detail file by scanning knowledge/*/ID.md ---
-find_detail_file() {
-  local entry_id="$1"
-  local root
-  root="$(get_project_root)"
-  for file in "$root"/knowledge/*/"${entry_id}.md"; do
-    if [ -f "$file" ]; then
-      echo "$file"
-      return 0
-    fi
-  done
-  if [ -f "$root/knowledge/archive/${entry_id}.md" ]; then
-    echo "$root/knowledge/archive/${entry_id}.md"
-    return 0
-  fi
-  return 1
-}
-
-# --- Read a field from YAML frontmatter ---
-fm_field() {
-  local file="$1"
-  local field="$2"
-  sed -n '/^---$/,/^---$/p' "$file" | grep "^${field}:" | head -1 | sed "s/^${field}:[[:space:]]*//" | sed 's/^"//' | sed 's/"$//' | sed 's/[[:space:]]*$//'
-}
+# shellcheck source=lib/detail-utils.sh
+source "$SCRIPT_DIR/lib/detail-utils.sh"
 
 # --- Argument parsing ---
 entry_id=""

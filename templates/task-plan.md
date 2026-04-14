@@ -8,6 +8,11 @@ name: "{{task_name}}"
 depends_on: [{{upstream_task_ids}}]
 ---
 
+## Prerequisites
+
+<!-- Upstream dependencies and pre-existing state this task requires. -->
+{{prerequisites}}
+
 ## Description
 
 {{description}}
@@ -53,6 +58,11 @@ depends_on: [{{upstream_task_ids}}]
 ### From Disk (Pre-existing)
 <!-- Files that exist before any phase tasks run -->
 - `{{file_path}}` — {{what this task uses from it}}
+
+## Constraints
+
+<!-- Scope boundaries, budget limits, or invariants this task must respect. -->
+{{constraints}}
 
 ## Expected Output
 

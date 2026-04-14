@@ -82,7 +82,7 @@ updated_at: "2026-04-10T22:00:00Z"
       - Extended `templates/routing.yaml` (from P04) — fallback chains
       - Existing knowledge scripts: scope-filter.sh, traverse-graph.sh, resolve-entries.sh, increment-hits.sh
 
-- [ ] **P06**: Existing Script Integration — "All 8 engine-path scripts (build-context, compress-payload, select-model, check-must-haves, record-result, record-telemetry, aggregate-metrics, phase-transition) source lib/errors.sh and lib/events.sh, emit at least one event, and emit a RESULT line — while continuing to work standalone when ORCH_RUN_ID is unset."
+- [x] **P06**: Existing Script Integration — "All 8 engine-path scripts (build-context, compress-payload, select-model, check-must-haves, record-result, record-telemetry, aggregate-metrics, phase-transition) source lib/errors.sh and lib/events.sh, emit at least one event, and emit a RESULT line — while continuing to work standalone when ORCH_RUN_ID is unset."
   - Risk: medium
   - Depends: P02
   - Boundary Map:
@@ -98,7 +98,7 @@ updated_at: "2026-04-10T22:00:00Z"
       - `scripts/lib/errors.sh` (from P02)
       - `scripts/lib/events.sh` (from P02)
 
-- [ ] **P07**: Conformance and Diagnostics Extension — "run-doctor.sh includes 3 new checks: recipe conformance (all recipe sections have valid source types), event conformance (all engine-path scripts emit at least one EVENT line), and constitution v2.0 compliance (new principles referenced in plans) — results appended to doctor-history.jsonl."
+- [x] **P07**: Conformance and Diagnostics Extension — "run-doctor.sh includes 3 new checks: recipe conformance (all recipe sections have valid source types), event conformance (all engine-path scripts emit at least one EVENT line), and constitution v2.0 compliance (new principles referenced in plans) — results appended to doctor-history.jsonl."
   - Risk: low
   - Depends: P02, P03, P04, P05, P06
   - Boundary Map:

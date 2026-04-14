@@ -34,8 +34,7 @@ done
 fm_field() {
   local file="$1"
   local field="$2"
-  # Extract frontmatter (lines between first and second ---), then grab the field
-  sed -n '/^---$/,/^---$/p' "$file" | grep "^${field}:" | head -1 | sed "s/^${field}:[[:space:]]*//" | sed 's/^"//;s/"$//' | sed "s/^'//;s/'$//"
+  sed -n '/^---$/,/^---$/p' "$file" | grep "^${field}:" | head -1 | sed "s/^${field}:[[:space:]]*//" | sed 's/^"//' | sed 's/"$//' | sed 's/[[:space:]]*$//'
 }
 
 # --- Resolve project root ---

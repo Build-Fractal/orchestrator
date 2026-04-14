@@ -4,6 +4,135 @@ All notable changes to spec-kit-orchestrator are documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This project uses semantic versioning.
 
+## [0.6.0] — 2026-04-13
+
+M006 (006-documentation-quality). Reference docs, user guides, contributor guide, and project documentation.
+
+### Added
+
+- **`references/architecture.md`** — engine pipeline diagram, data flow, state machine, file layout, subsystem relationship map
+- **`references/engine.md`** — run.sh documentation: arguments, environment variables, lifecycle stages, checkpointing, dry-run, crash recovery
+- **`references/events.md`** — complete event type registry with field schemas and examples
+- **`references/errors.md`** — error taxonomy (CONFIG, STATE, DISPATCH, VERIFY, BUDGET, IO) with emit_result protocol
+- **`references/hooks.md`** — hook lifecycle, hooks.yaml format, verdict protocol, timeout behavior, custom hook walkthrough
+- **`references/recipes.md`** — context-recipe.yaml schema: section fields, source types, compression, manifest config, resolution order
+- **`references/routing.md`** — routing.yaml schema: model tiers, fallback chains, classification rules, budget ceiling
+- **`references/constitution-walkthrough.md`** — all 13 principles with concrete codebase examples and compliance checks
+- **`docs/getting-started.md`** — installation, first project setup, running the engine, interpreting output
+- **`docs/recipe-authoring.md`** — custom recipes, per-phase overrides, compression config, troubleshooting
+- **`docs/hook-development.md`** — writing hooks, verdict protocol, testing, debugging, example hooks
+- **`docs/knowledge-management.md`** — entry lifecycle, staleness, graph relationships, scope filtering, consolidation
+- **`scripts/AGENTS.md`** — coding conventions (Bash 3.2, double-sourcing guards, event emission, result protocol), testing patterns, constitution v2.0 compliance checklist, PR review checklist
+
+### Changed
+
+- **`CHANGELOG.md`** — added entries for M001 through M006
+- **`references/file-formats.md`** — expanded schema documentation for all file formats including execution-log.jsonl, context-recipe.yaml, hooks.yaml, routing.yaml, checkpoint.json, doctor-history.jsonl
+
+## [0.5.0] — 2026-04-13
+
+M005 (005-hardening-integration-prep). Diagnostics, provider conventions, autonomy permissions, and safety refactoring.
+
+### Added
+
+- **Content-hash idempotency** — knowledge entries include `content_hash: sha256:...` in frontmatter; rebuild-index.sh uses hashes to detect actual changes; dispatch results record `outcome: unchanged` when output hash matches prior
+- **`scripts/lib/hash.sh`** — `compute_content_hash` utility (SHA-256 of body content)
+- **`scripts/lib/payload-transforms.sh`** — pure transform functions (`assemble_section`, `drop_by_priority`, `summarize_section`, `drop_lowest_confidence`) for independently testable payload operations
+- **`scripts/lib/manifest-builder.sh`** — pure manifest functions (`build_manifest_header`, `compute_section_tokens`, `format_manifest_row`)
+- **`scripts/lib/verdicts.sh`** — verdict protocol functions (`emit_verdict`, `parse_verdict`) with PASS/BLOCK/WARN/NEEDS_REVIEW constants
+- **`references/provider-convention.md`** — documented shell interface for execution providers (arguments, env vars, output format, exit codes)
+- **`templates/instruction-schema.md`** — declared schema for agent instruction files with required and optional sections
+- **`templates/autonomy-defaults.yaml`** — declarative policy for tier-to-mode mapping, deny lists, introspection rules, compound-command patterns
+- **`scripts/lifecycle/generate-permissions.sh`** — project-introspecting permission generator reading package.json, Makefile, extension.yml, toolchain configs, and agent host markers
+- **`scripts/lifecycle/write-permissions.sh`** — agent-host translator writing `.claude/settings.json` with merge support for user-authored files
+- **`scripts/diagnostics/check-permissions.sh`** — permission drift detector comparing current settings to generated baseline
+- **`scripts/diagnostics/check-instructions.sh`** — static conformance check for instruction files against schema
+- **`scripts/diagnostics/check-providers.sh`** — validates provider scripts against documented convention
+- **`scripts/diagnostics/check-hashes.sh`** — verifies all knowledge entries have valid content_hash fields
+- **`scripts/diagnostics/check-run-ids.sh`** — verifies recent JSONL entries include run_id field
+- **`scripts/diagnostics/check-plans.sh`** — advisory lint over task plan verification blocks for harness safety heuristic triggers (AD-19)
+
+### Changed
+
+- **`scripts/telemetry/record-telemetry.sh`** — adds `cost_source` field (estimated/reported/unknown) to JSONL entries
+- **`scripts/telemetry/aggregate-metrics.sh`** — groups by cost_source, distinguishes unknown costs from zero costs
+- **`scripts/dispatch/build-context.sh`** — delegates to pure lib functions for section assembly transforms
+- **`scripts/dispatch/compress-payload.sh`** — delegates to pure lib functions for compression steps
+- **`scripts/lib/hooks.sh`** — parses hook stdout for VERDICT lines, maps to block/warn/continue behavior
+- **`commands/auto.md`** — rewrites permission pre-flight section; adds Known Limitations subsection for harness safety heuristics (AD-19)
+- **`commands/plan-phase.md`** — adds full AD-19 trigger enumeration to Check guidance; forbids inline compound bash
+- **`templates/phase-plan.md`** — verification examples use script-file shape exclusively
+- **`templates/task-plan.md`** — verification examples use script-file shape; comments reference AD-19
+- **`commands/evaluate.md`** — triggers permission generation during scaffold when `autonomy.generate_on_init` is true
+- **`scripts/diagnostics/run-doctor.sh`** — aggregates all new checks into scored health report
+
+## [0.4.0] — 2026-04-13
+
+M004 (004-engine-architecture). Mechanical engine layer with run context, structured events, safety rails, hooks, and declarative YAML recipes.
+
+### Added
+
+- **Constitution v2.0** — 6 new principles (VIII-XIII) added to the original 7; Principle II amended to require structured events; `ANTIPATTERNS.md` append-only register
+- **`scripts/lib/errors.sh`** — error taxonomy (CONFIG, STATE, DISPATCH, VERIFY, BUDGET, IO) with `emit_result` function
+- **`scripts/lib/events.sh`** — `emit_event` function producing structured `EVENT:{type}` lines with typed event registry
+- **`scripts/lib/run-context.sh`** — `init_run_context` setting ORCH_RUN_ID, ORCH_STARTED_AT, ORCH_FORCE, ORCH_DRY_RUN
+- **`scripts/lib/guards.sh`** — safety rail functions: `guard_payload_sanity`, `guard_budget`, `guard_output_sanity`, `guard_phase_complete`
+- **`scripts/lib/hooks.sh`** — hook executor reading hooks.yaml, creating frozen snapshots, running hook scripts with timeout and block/warn behavior
+- **`scripts/engine/run.sh`** — pipeline coordinator: task loop, run context init, event emission, hook dispatch, safety rails, checkpointing, --dry-run support
+- **`scripts/engine/checkpoint.sh`** — checkpoint write/read/detect for crash recovery
+- **`templates/context-recipe.yaml`** — default context recipe with 7 section declarations, compression config, manifest config
+- **`templates/hooks.yaml`** — default hook configuration with 4 lifecycle points and built-in guard hooks
+- **`scripts/lib/recipe-parser.sh`** — YAML recipe reader: `parse_recipe_sections`, `parse_recipe_compression`, `read_recipe_field`
+- **`scripts/dispatch/lib/section-handlers.sh`** — handler functions for each recipe section source type (computed, index, file, phase_summaries, phase_plan, template)
+- **`scripts/diagnostics/check-recipe.sh`** — validates context-recipe.yaml structure
+- **`scripts/diagnostics/check-events.sh`** — verifies engine-path scripts contain emit_event calls
+- **`scripts/diagnostics/check-constitution.sh`** — verifies constitution v2.0 principles referenced in phase plans
+
+### Changed
+
+- **`scripts/dispatch/build-context.sh`** — refactored to recipe-driven section assembly reading from context-recipe.yaml
+- **`scripts/dispatch/compress-payload.sh`** — reads compression config from recipe
+- **`scripts/dispatch/select-model.sh`** — reads fallback chains from routing.yaml, implements retry-on-fallback
+- **`templates/routing.yaml`** — extended with `fallback` arrays per tier and `classification` rules block
+- **8 engine-path scripts** (`build-context`, `compress-payload`, `select-model`, `check-must-haves`, `record-result`, `record-telemetry`, `aggregate-metrics`, `phase-transition`) — source lib/errors.sh and lib/events.sh, emit structured events and results, while continuing to work standalone when ORCH_RUN_ID is unset
+- **`scripts/diagnostics/run-doctor.sh`** — runs recipe conformance, event conformance, and constitution v2.0 compliance checks
+
+## [0.3.0] — Unreleased
+
+M003 (003-migration-tool). Adapter-based migration from GSD2, GSD v1, and standard spec-kit formats. Roadmap defined; implementation not yet started.
+
+### Added (Planned)
+
+- **Pluggable adapter architecture** — common `extract()` interface with normalized intermediate data format; one adapter per source format (gsd2, gsd1, speckit)
+- **GSD2 adapter** — SQLite-preferred data extraction with JSON/filesystem fallback
+- **Knowledge migration pipeline** — individual detail files with frontmatter, KNOWLEDGE-INDEX.md generation, supersession chain resolution, scope tag derivation
+- **Decision and requirements migration** — DECISIONS.md in orchestrator table format with supersession notes, REQUIREMENTS.md/REQUIREMENTS-ARCHIVE.md split
+- **Milestone history tiering** — active/recent/historical/archived classification with configurable `--recent-count`; active milestone renumbered as M001; aggregated telemetry in EXECUTION-HISTORY.md
+- **GSD v1 adapter** — flat-file `.planning/` directory parsing with inferred categories
+- **Spec-kit adapter** — wraps existing `specs/` directories in orchestrator evaluation scaffold
+- **Migration CLI** — `/speckit.orchestrator.migrate` command with `--source`, `--path`, `--merge`/`--force`/`--abort` flags, idempotency enforcement, MIGRATION-REPORT.md generation
+
+## [0.2.0] — 2026-04-13
+
+M002 (002-knowledge-architecture). Three-temperature knowledge architecture replacing flat KNOWLEDGE.md.
+
+### Added
+
+- **Three-temperature knowledge architecture** — hot/warm/cold entries with individual detail files at `knowledge/{category}/{entry-id}.md` and pipe-delimited `KNOWLEDGE-INDEX.md` index
+- **7 knowledge CRUD scripts** — `create-entry.sh`, `update-entry.sh`, `supersede-entry.sh`, `archive-entry.sh`, `promote-entry.sh`, `rebuild-index.sh`, `scope-filter.sh`
+- **3 shared knowledge libraries** — `staleness.sh` (staleness decay with 180-day horizon), `index-utils.sh` (atomic index operations), `detail-utils.sh` (portable frontmatter helpers)
+- **Knowledge lifecycle management** — staleness decay, overlap detection, hit count tracking, confidence adjustment
+- **Graph traversal** — `traverse-graph.sh` with 1-hop BFS, cycle-safe, max 5 entry cap; `resolve-entries.sh` for detail resolution
+- **Pre-inlined dispatch integration** — manifest-header dispatch payloads with static-first ordering for prompt caching (FR-111/FR-112/FR-113)
+- **Execution telemetry pipeline** — `record-telemetry.sh` and `aggregate-metrics.sh` for cost/performance monitoring
+- **Model routing configuration** — `classify-complexity.sh` and `select-model.sh` with `routing.yaml` for complexity-based model selection with custom keyword classification
+- **Diagnostics command** — `run-doctor.sh` with 4 check scripts; `doctor-history.jsonl` for trend tracking
+
+### Changed
+
+- **`scripts/dispatch/build-context.sh`** — knowledge-aware context building with scope-filtered entries and manifest headers
+- **`scripts/dispatch/compress-payload.sh`** — graduated compression with knowledge entry awareness
+
 ## [0.1.1] — 2026-03-22
 
 ### Fixed

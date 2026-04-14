@@ -5,6 +5,7 @@
 # Sets superseded_by on the old entry, supersedes on the new entry,
 # and removes the old entry from KNOWLEDGE-INDEX.md.
 # Idempotent: if already superseded by the same new-id, prints ALREADY_SUPERSEDED.
+# The old detail file stays in place (not moved to archive) for audit trail.
 # Bash 3.2 compatible.
 
 set -euo pipefail
@@ -13,40 +14,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=lib/index-utils.sh
 source "$SCRIPT_DIR/lib/index-utils.sh"
-
-# --- Portable sed -i helper (BSD/GNU compatible) ---
-sed_i() {
-  if sed --version 2>/dev/null | grep -q GNU; then
-    sed -i "$@"
-  else
-    sed -i '' "$@"
-  fi
-}
-
-# --- Find detail file by scanning knowledge/*/ID.md ---
-find_detail_file() {
-  local entry_id="$1"
-  local root
-  root="$(get_project_root)"
-  for file in "$root"/knowledge/*/"${entry_id}.md"; do
-    if [ -f "$file" ]; then
-      echo "$file"
-      return 0
-    fi
-  done
-  if [ -f "$root/knowledge/archive/${entry_id}.md" ]; then
-    echo "$root/knowledge/archive/${entry_id}.md"
-    return 0
-  fi
-  return 1
-}
-
-# --- Read a field from YAML frontmatter ---
-fm_field() {
-  local file="$1"
-  local field="$2"
-  sed -n '/^---$/,/^---$/p' "$file" | grep "^${field}:" | head -1 | sed "s/^${field}:[[:space:]]*//" | sed 's/^"//' | sed 's/"$//' | sed 's/[[:space:]]*$//'
-}
+# shellcheck source=lib/detail-utils.sh
+source "$SCRIPT_DIR/lib/detail-utils.sh"
 
 # --- Argument parsing ---
 old_id=""
@@ -96,15 +65,18 @@ new_file="$(find_detail_file "$new_id")" || {
 # --- Idempotency check ---
 current_superseded_by="$(fm_field "$old_file" "superseded_by")"
 if [ "$current_superseded_by" = "$new_id" ]; then
-  echo "ALREADY_SUPERSEDED"
+  echo "ALREADY_SUPERSEDED: $old_id by $new_id"
   exit 0
 fi
 
 # --- Set superseded_by on the old entry ---
 sed_i "s/^superseded_by: .*/superseded_by: \"${new_id}\"/" "$old_file"
 
-# --- Set supersedes on the new entry ---
-sed_i "s/^supersedes: .*/supersedes: \"${old_id}\"/" "$new_file"
+# --- Set supersedes on the new entry (if not already set) ---
+current_supersedes="$(fm_field "$new_file" "supersedes")"
+if [ "$current_supersedes" != "$old_id" ]; then
+  sed_i "s/^supersedes: .*/supersedes: \"${old_id}\"/" "$new_file"
+fi
 
 # --- Remove old entry from the index ---
 index_remove_entry "$old_id"

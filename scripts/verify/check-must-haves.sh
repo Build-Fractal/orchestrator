@@ -11,6 +11,27 @@
 
 set -euo pipefail
 
+# Engine integration libraries (standalone-safe)
+_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_LIB_DIR="$(cd "$_SCRIPT_DIR/../lib" && pwd)"
+. "$_LIB_DIR/errors.sh"
+. "$_LIB_DIR/events.sh"
+
+# --- Result emission on exit (stderr, not stdout) ---
+_CMH_RESULT_EMITTED=0
+_cmh_final_result() {
+  local rc=$?
+  if [ "$_CMH_RESULT_EMITTED" -eq 0 ] && [ -n "${ORCH_RUN_ID:-}" ]; then
+    if [ "$rc" -eq 0 ]; then
+      emit_result ok "" "must-haves verified" >&2
+    else
+      emit_result error VERIFY "check-must-haves failed rc=$rc" >&2
+    fi
+    _CMH_RESULT_EMITTED=1
+  fi
+}
+trap _cmh_final_result EXIT
+
 # --- Argument validation ---
 if [[ $# -lt 1 ]]; then
   echo "check-must-haves.sh: missing phase directory argument" >&2
@@ -39,22 +60,36 @@ if [[ -z "$PLAN_FILE" ]]; then
   exit 1
 fi
 
-# Resolve project root: walk up from phase dir to find extension.yml or use grandparent of phases/
-# Phase dir is typically: <project>/phases/P01 → project root = <phase_dir>/../..
-# Or it could be a fixture: tests/fixtures/verify-pass/phases/P01 → root = tests/fixtures/verify-pass
+if [ -n "${ORCH_RUN_ID:-}" ]; then
+  emit_event VERIFY_START stage=check_must_haves plan="$(basename "$PLAN_FILE")" >&2
+fi
+
+# Resolve project root: walk up from phase dir to find extension.yml or .git
 PROJECT_ROOT=""
-candidate="$PHASE_DIR"
-while [[ "$candidate" != "/" ]]; do
-  parent_name=$(basename "$(dirname "$candidate")")
-  if [[ "$parent_name" = "phases" ]]; then
-    PROJECT_ROOT="$(dirname "$(dirname "$candidate")")"
+candidate="$(cd "$PHASE_DIR" && pwd)"
+while [ "$candidate" != "/" ]; do
+  if [ -f "$candidate/extension.yml" ] || [ -d "$candidate/.git" ]; then
+    PROJECT_ROOT="$candidate"
     break
   fi
   candidate="$(dirname "$candidate")"
 done
 
-if [[ -z "$PROJECT_ROOT" ]]; then
-  # Fallback: use grandparent
+if [ -z "$PROJECT_ROOT" ]; then
+  # Fallback for test fixtures: use the old walk-up-to-phases-parent logic
+  candidate="$(cd "$PHASE_DIR" && pwd)"
+  while [ "$candidate" != "/" ]; do
+    parent_name="$(basename "$(dirname "$candidate")")"
+    if [ "$parent_name" = "phases" ]; then
+      PROJECT_ROOT="$(dirname "$(dirname "$candidate")")"
+      break
+    fi
+    candidate="$(dirname "$candidate")"
+  done
+fi
+
+if [ -z "$PROJECT_ROOT" ]; then
+  # Last-resort fallback
   PROJECT_ROOT="$(cd "$PHASE_DIR/../.." 2>/dev/null && pwd)"
 fi
 
@@ -200,6 +235,10 @@ while IFS= read -r line; do
       ;;
   esac
 done <<< "$MUST_HAVES_SECTION"
+
+if [ -n "${ORCH_RUN_ID:-}" ]; then
+  emit_event VERIFY_COMPLETE stage=check_must_haves failures="$FAILURES" >&2
+fi
 
 # --- Exit ---
 if [[ "$FAILURES" -gt 0 ]]; then

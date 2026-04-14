@@ -44,10 +44,13 @@ type: dispatch-prompt
 
 ## Constraints
 
-- **Verification Criteria**: {{verification_criteria}}
 - **Duration Budget**: {{duration_budget}}
 - **Dispatch Budget**: {{dispatch_budget}}
 - **Budget Enforcement**: {{budget_enforcement}}
+
+## Verification
+
+- **Verification Criteria**: {{verification_criteria}}
 
 ## Payload Size Guidance
 

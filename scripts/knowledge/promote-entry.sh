@@ -14,22 +14,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=lib/index-utils.sh
 source "$SCRIPT_DIR/lib/index-utils.sh"
-
-# --- Portable sed -i helper (BSD/GNU compatible) ---
-sed_i() {
-  if sed --version 2>/dev/null | grep -q GNU; then
-    sed -i "$@"
-  else
-    sed -i '' "$@"
-  fi
-}
-
-# --- Read a field from YAML frontmatter ---
-fm_field() {
-  local file="$1"
-  local field="$2"
-  sed -n '/^---$/,/^---$/p' "$file" | grep "^${field}:" | head -1 | sed "s/^${field}:[[:space:]]*//" | sed 's/^"//' | sed 's/"$//' | sed 's/[[:space:]]*$//'
-}
+# shellcheck source=lib/detail-utils.sh
+source "$SCRIPT_DIR/lib/detail-utils.sh"
 
 # --- Find warm file (excludes archive/) ---
 find_warm_file() {

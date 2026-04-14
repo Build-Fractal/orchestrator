@@ -3,16 +3,16 @@ schema_version: "1.0"
 type: roadmap
 milestone: "M006"
 feature_ref: "006-documentation-quality"
-feature_spec: null
+feature_spec: "specs/006-documentation-quality/spec.md"
 vision: "Produce reference docs, user guides, and architecture documentation that are verified against the actual codebase — surfacing and fixing bugs as a natural byproduct of documentation, so that the orchestrator is both well-documented and battle-tested before Conversus integration."
-tier: "B"
+tier: "C"
 created_at: "2026-04-10T23:30:00Z"
-updated_at: "2026-04-10T23:30:00Z"
+updated_at: "2026-04-13T00:00:00Z"
 ---
 
 ## Phases
 
-- [ ] **P01**: Architecture Overview and File Layout — "A developer reading `references/architecture.md` understands the engine pipeline (7 stages), data flow (recipes → build → compress → dispatch → verify → record → advance), state machine, file layout, and how M001-M005 subsystems relate — every diagram and path reference verified against actual codebase."
+- [x] **P01**: Architecture Overview and File Layout — "A developer reading `references/architecture.md` understands the engine pipeline (7 stages), data flow (recipes → build → compress → dispatch → verify → record → advance), state machine, file layout, and how M001-M005 subsystems relate — every diagram and path reference verified against actual codebase."
   - Risk: medium
   - Depends: none
   - Boundary Map:
@@ -23,7 +23,7 @@ updated_at: "2026-04-10T23:30:00Z"
     - Consumes:
       - All scripts from M001-M005 (read for verification, not modified unless bugs found)
 
-- [ ] **P02**: Engine and Library Reference Docs — "A developer reading `references/engine.md` can understand run context initialization, event types, error taxonomy, result protocol, guard checks, and hook lifecycle without reading source code — every function signature and event type verified by running the engine against a test fixture."
+- [x] **P02**: Engine and Library Reference Docs — "A developer reading `references/engine.md` can understand run context initialization, event types, error taxonomy, result protocol, guard checks, and hook lifecycle without reading source code — every function signature and event type verified by running the engine against a test fixture."
   - Risk: medium
   - Depends: none
   - Boundary Map:
@@ -37,7 +37,7 @@ updated_at: "2026-04-10T23:30:00Z"
       - `scripts/lib/*.sh` (from M004 P02) — verified against documented signatures
       - `scripts/engine/run.sh` (from M004 P03) — verified against documented lifecycle
 
-- [ ] **P03**: Recipe and Routing Reference Docs — "A developer reading `references/recipes.md` can author a custom context recipe, override it per-phase, configure compression, and set up model fallback chains — verified by creating a test recipe and running a dispatch with it."
+- [x] **P03**: Recipe and Routing Reference Docs — "A developer reading `references/recipes.md` can author a custom context recipe, override it per-phase, configure compression, and set up model fallback chains — verified by creating a test recipe and running a dispatch with it."
   - Risk: low
   - Depends: none
   - Boundary Map:
@@ -50,7 +50,7 @@ updated_at: "2026-04-10T23:30:00Z"
       - `templates/routing.yaml` (from M004 P04)
       - `scripts/lib/recipe-parser.sh` (from M004 P04) — verified against documented parsing behavior
 
-- [ ] **P04**: User Guide — "A new developer reading `docs/getting-started.md` can install the extension, run their first orchestrated milestone, customize a recipe, write a hook, and understand the output — every command verified by following the guide from scratch on a clean test project."
+- [x] **P04**: User Guide — "A new developer reading `docs/getting-started.md` can install the extension, run their first orchestrated milestone, customize a recipe, write a hook, and understand the output — every command verified by following the guide from scratch on a clean test project."
   - Risk: medium
   - Depends: P01, P02, P03 (references must exist for cross-linking)
   - Boundary Map:
@@ -64,7 +64,7 @@ updated_at: "2026-04-10T23:30:00Z"
       - All reference docs (from P01-P03) — cross-linked
       - Extension.yml — verified command list matches documented commands
 
-- [ ] **P05**: Contributor Guide and AGENTS.md — "A developer reading `AGENTS.md` understands coding conventions (Bash 3.2, double-sourcing guards, error/event emission, atomic writes), testing patterns, constitution v2.0 compliance requirements, and PR review checklist — verified by having the guide review one real M004/M005 phase for compliance."
+- [x] **P05**: Contributor Guide and AGENTS.md — "A developer reading `AGENTS.md` understands coding conventions (Bash 3.2, double-sourcing guards, error/event emission, atomic writes), testing patterns, constitution v2.0 compliance requirements, and PR review checklist — verified by having the guide review one real M004/M005 phase for compliance."
   - Risk: low
   - Depends: P01 (architecture context needed)
   - Boundary Map:
@@ -76,7 +76,7 @@ updated_at: "2026-04-10T23:30:00Z"
       - `.specify/memory/constitution.md` (v2.0 from M004 P01)
       - `ANTIPATTERNS.md` (from M004 P01) — referenced in contributor guide
 
-- [ ] **P06**: CHANGELOG, Extension Inventory, and Final Verification Sweep — "CHANGELOG.md has entries for M001-M006; extension.yml is verified to list every command, hook, and script; run-doctor.sh passes all checks including new documentation conformance — any remaining bugs found during this sweep are fixed."
+- [x] **P06**: CHANGELOG, Extension Inventory, and Final Verification Sweep — "CHANGELOG.md has entries for M001-M006; extension.yml is verified to list every command, hook, and script; run-doctor.sh passes all checks including new documentation conformance — any remaining bugs found during this sweep are fixed."
   - Risk: low
   - Depends: P01, P02, P03, P04, P05
   - Boundary Map:

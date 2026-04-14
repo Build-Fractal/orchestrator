@@ -35,6 +35,8 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 . "$PROJECT_ROOT/scripts/lib/events.sh"
 . "$PROJECT_ROOT/scripts/lib/run-context.sh"
 . "$PROJECT_ROOT/scripts/lib/recipe-parser.sh"
+. "$PROJECT_ROOT/scripts/lib/payload-transforms.sh"
+. "$PROJECT_ROOT/scripts/lib/manifest-builder.sh"
 
 # --- Result emission on exit (stderr, not stdout) ---
 _CP_RESULT_EMITTED=0
@@ -102,26 +104,6 @@ fi
 emit_event DISPATCH_START stage=compress budget="$TOKEN_BUDGET" >&2
 printf 'EVENT-AUDIT:DISPATCH_START stage="compress"\n' >&2
 
-# --- Token estimation: chars / 4, rounded to nearest 100 ---
-estimate_tokens() {
-  local text="$1"
-  local chars
-  chars=$(printf '%s' "$text" | wc -c | tr -d ' ')
-  local raw_tokens=$((chars / 4))
-  local rounded=$(( ((raw_tokens + 50) / 100) * 100 ))
-  if [ "$rounded" -eq 0 ] && [ "$raw_tokens" -gt 0 ]; then
-    rounded=100
-  fi
-  printf '%s\n' "$rounded"
-}
-
-# Raw token count (not rounded, for comparison)
-raw_token_count() {
-  local text="$1"
-  local chars
-  chars=$(printf '%s' "$text" | wc -c | tr -d ' ')
-  printf '%s\n' $((chars / 4))
-}
 
 # --- Check if already under budget ---
 ORIGINAL_TOKENS=$(raw_token_count "$PAYLOAD")

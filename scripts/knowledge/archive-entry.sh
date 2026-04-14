@@ -14,6 +14,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=lib/index-utils.sh
 source "$SCRIPT_DIR/lib/index-utils.sh"
+# shellcheck source=lib/detail-utils.sh
+source "$SCRIPT_DIR/lib/detail-utils.sh"
 
 # --- Find warm file (excludes archive/) ---
 find_warm_file() {

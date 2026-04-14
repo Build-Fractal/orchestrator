@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-[ -n "${_STALENESS_SOURCED:-}" ] && return 0
-_STALENESS_SOURCED=1
 # scripts/knowledge/lib/staleness.sh — Staleness decay helper library
 # Source this file to use compute_effective_confidence().
 #

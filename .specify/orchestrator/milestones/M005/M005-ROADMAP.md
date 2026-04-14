@@ -12,7 +12,7 @@ updated_at: "2026-04-10T23:55:00Z"
 
 ## Phases
 
-- [ ] **P01**: Content-Hash Idempotency — "Knowledge entries include a `content_hash: sha256:...` field in frontmatter; rebuild-index.sh uses hashes to detect actual changes; dispatch results recorded as `outcome: unchanged` when agent output hash matches prior dispatch — enabling stagnation signal without re-reading full content."
+- [x] **P01**: Content-Hash Idempotency — "Knowledge entries include a `content_hash: sha256:...` field in frontmatter; rebuild-index.sh uses hashes to detect actual changes; dispatch results recorded as `outcome: unchanged` when agent output hash matches prior dispatch — enabling stagnation signal without re-reading full content."
   - Risk: medium
   - Depends: none
   - Boundary Map:
@@ -27,7 +27,7 @@ updated_at: "2026-04-10T23:55:00Z"
       - Existing knowledge scripts (from M002)
       - `scripts/lib/errors.sh` (from M004 P02) — emit_result on completion
 
-- [ ] **P02**: Cost Transparency — "Execution-log.jsonl entries include `cost_source` field (estimated/reported/unknown); aggregate-metrics.sh distinguishes unknown costs from zero costs; telemetry dashboard-ready output groups by cost accuracy."
+- [x] **P02**: Cost Transparency — "Execution-log.jsonl entries include `cost_source` field (estimated/reported/unknown); aggregate-metrics.sh distinguishes unknown costs from zero costs; telemetry dashboard-ready output groups by cost accuracy."
   - Risk: low
   - Depends: none
   - Boundary Map:
@@ -39,7 +39,7 @@ updated_at: "2026-04-10T23:55:00Z"
       - Existing telemetry scripts (from M002)
       - `scripts/lib/errors.sh` (from M004 P02)
 
-- [ ] **P03**: Pure Transform Extraction — "Core payload transforms (section assembly, manifest building, compression steps) extracted into sourced lib/ functions that take stdin and return stdout with no file I/O — independently testable via pipe chains."
+- [x] **P03**: Pure Transform Extraction — "Core payload transforms (section assembly, manifest building, compression steps) extracted into sourced lib/ functions that take stdin and return stdout with no file I/O — independently testable via pipe chains."
   - Risk: medium
   - Depends: none (operates on M004 P05 refactored scripts)
   - Boundary Map:
@@ -52,7 +52,7 @@ updated_at: "2026-04-10T23:55:00Z"
       - Refactored dispatch scripts (from M004 P05)
       - `scripts/lib/recipe-parser.sh` (from M004 P04)
 
-- [ ] **P04**: Agent Instruction Schema — "A template at `templates/instruction-schema.md` defines required sections (Context, Task, Constraints, Verification, Output Format) and optional sections (Prior Art, Related Knowledge); a conformance check in run-doctor.sh verifies instruction files match the schema."
+- [x] **P04**: Agent Instruction Schema — "A template at `templates/instruction-schema.md` defines required sections (Context, Task, Constraints, Verification, Output Format) and optional sections (Prior Art, Related Knowledge); a conformance check in run-doctor.sh verifies instruction files match the schema."
   - Risk: medium
   - Depends: none
   - Boundary Map:
@@ -63,7 +63,7 @@ updated_at: "2026-04-10T23:55:00Z"
       - At least 2 existing task plan templates updated to conform (progressive migration start)
     - Consumes: nothing (standalone, references constitution Principle XIII)
 
-- [ ] **P05**: Gate Verdict Protocol and Provider Convention — "Hook scripts can return structured verdicts (PASS/BLOCK/WARN/NEEDS_REVIEW) via a documented protocol; execution providers follow a documented shell convention (arguments, env vars, output path); run-doctor.sh validates provider scripts against the convention."
+- [x] **P05**: Gate Verdict Protocol and Provider Convention — "Hook scripts can return structured verdicts (PASS/BLOCK/WARN/NEEDS_REVIEW) via a documented protocol; execution providers follow a documented shell convention (arguments, env vars, output path); run-doctor.sh validates provider scripts against the convention."
   - Risk: medium
   - Depends: P01 (hash utility), P02 (cost source)
   - Boundary Map:
@@ -78,7 +78,7 @@ updated_at: "2026-04-10T23:55:00Z"
       - `scripts/lib/hash.sh` (from P01) — providers may report content hashes
       - Cost source enum (from P02) — providers report cost_source alongside cost
 
-- [ ] **P06**: Conformance Test Kit Expansion — "run-doctor.sh performs full constitution v2.0 compliance checking: verifies all 13 principles are referenced in active phase plans, all engine-path scripts emit events, all recipes have valid structure, all knowledge entries have content hashes, all JSONL entries have run_id, current autonomy permissions match introspected-generator output, and task plan `Check:` commands do not trip the harness obfuscation heuristic — producing a scored health report."
+- [x] **P06**: Conformance Test Kit Expansion — "run-doctor.sh performs full constitution v2.0 compliance checking: verifies all 13 principles are referenced in active phase plans, all engine-path scripts emit events, all recipes have valid structure, all knowledge entries have content hashes, all JSONL entries have run_id, current autonomy permissions match introspected-generator output, and task plan `Check:` commands do not trip the harness obfuscation heuristic — producing a scored health report."
   - Risk: low
   - Depends: P01, P02, P03, P04, P05, P07
   - Boundary Map:

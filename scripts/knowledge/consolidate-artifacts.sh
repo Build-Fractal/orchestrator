@@ -143,6 +143,36 @@ else
   reduction=0
 fi
 
+# --- Knowledge lifecycle checks (advisory) ---
+KNOWLEDGE_DIR="$PROJECT_ROOT/scripts/knowledge"
+
+# Overlap detection
+if [ -f "$KNOWLEDGE_DIR/detect-overlap.sh" ]; then
+  echo "" >&2
+  echo "CONSOLIDATE: Running overlap detection..." >&2
+  overlap_output=$(bash "$KNOWLEDGE_DIR/detect-overlap.sh" 2>&1) || true
+  if echo "$overlap_output" | grep -q "^OVERLAP:"; then
+    echo "CONSOLIDATE: Overlapping entries detected:" >&2
+    echo "$overlap_output" | grep "^OVERLAP:" >&2
+  else
+    echo "CONSOLIDATE: No overlapping entries found" >&2
+  fi
+else
+  echo "CONSOLIDATE: detect-overlap.sh not found, skipping overlap check" >&2
+fi
+
+# Staleness report
+if [ -f "$KNOWLEDGE_DIR/compute-staleness.sh" ]; then
+  echo "" >&2
+  echo "CONSOLIDATE: Running staleness report..." >&2
+  staleness_output=$(bash "$KNOWLEDGE_DIR/compute-staleness.sh" 2>&1) || true
+  if [ -n "$staleness_output" ]; then
+    echo "$staleness_output" >&2
+  fi
+else
+  echo "CONSOLIDATE: compute-staleness.sh not found, skipping staleness check" >&2
+fi
+
 # Report to stderr
 echo "CONSOLIDATE: ${size_before_bytes} → ${size_after_bytes} (${reduction}% reduction)" >&2
 

@@ -90,6 +90,36 @@ Read the execution log to provide operational context:
 
 If no execution log exists, report: "No dispatch history yet."
 
+## Telemetry Metrics
+
+Surface aggregate execution telemetry from the execution log (FR-115):
+
+1. **Run aggregate metrics**: `bash scripts/telemetry/aggregate-metrics.sh <execution-log> [--milestone=<M###>]`
+   - If the active milestone is known, pass `--milestone=<M###>` to scope metrics to that milestone.
+   - If no milestone filter is needed (e.g., showing overall progress), omit the flag.
+
+2. **Report metrics** from the text output:
+   - **Total cost**: cumulative estimated cost across all dispatches
+   - **Avg cost/task**: average cost per dispatched task
+   - **Avg duration**: average task duration in seconds
+   - **Cache hit rate**: average prompt cache hit rate across telemetry entries
+   - **Success rate**: percentage of dispatches with outcome=success
+   - **By model**: breakdown of dispatch count and cost per model used
+   - **By milestone**: cross-milestone comparison (dispatches, success rate, cost per milestone)
+
+3. **Cross-milestone comparison**: When metrics exist for multiple milestones, show a comparison table:
+
+   ```
+   | Milestone | Tasks | Success | Cost    |
+   |-----------|-------|---------|---------|
+   | M001      | 24    | 95.8%   | $12.50  |
+   | M002      | 18    | 100.0%  | $8.75   |
+   ```
+
+If no execution log exists or it is empty, report: "No telemetry data available yet."
+
+If `scripts/telemetry/aggregate-metrics.sh` is unavailable, skip the telemetry section and report: "Telemetry aggregation unavailable (aggregate-metrics.sh not found)."
+
 ## Next Action
 
 Based on the current state, recommend the next orchestrator command:
@@ -138,3 +168,4 @@ Status is inherently idempotent — it only reads from disk and computes derived
 - `scripts/state/read-roadmap.sh` — parses roadmap for phase list and active phase
 - `scripts/state/read-config.sh` — resolves configuration values (budgets, enforcement)
 - `references/state-machine.md` — state descriptions, transitions, and derivation rules
+- `scripts/telemetry/aggregate-metrics.sh` — computes aggregate telemetry metrics from execution log

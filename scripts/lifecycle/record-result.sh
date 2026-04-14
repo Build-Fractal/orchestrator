@@ -3,14 +3,14 @@
 # Validates required fields, generates timestamp and unitId, appends one JSON line.
 # Replaces inline echo commands in auto.md Step G with a proper script.
 #
-# Usage: record-result.sh <execution-log> --milestone=M### --phase=P## --task=T## --outcome=<success|failure|retry> [options]
+# Usage: record-result.sh <execution-log> --milestone=M### --phase=P## --task=T## --outcome=<success|failure|retry|unchanged> [options]
 #
 # Required:
 #   <execution-log>              Path to the JSONL execution log file
 #   --milestone=<M###>           Milestone ID
 #   --phase=<P##>                Phase ID
 #   --task=<T##>                 Task ID
-#   --outcome=<value>            One of: success, failure, retry, blocked, timeout, stuck
+#   --outcome=<value>            One of: success, failure, retry, blocked, timeout, stuck, unchanged
 #
 # Optional:
 #   --tier=<A|B|C>               Execution tier (default: C)
@@ -33,6 +33,27 @@
 # Exits 0 on success, 1 on missing required fields or invalid arguments.
 
 set -euo pipefail
+
+# Engine integration libraries (standalone-safe)
+_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_LIB_DIR="$(cd "$_SCRIPT_DIR/../lib" && pwd)"
+. "$_LIB_DIR/errors.sh"
+. "$_LIB_DIR/events.sh"
+
+# --- EXIT trap: emit final RESULT to stderr (engine mode only) ---
+_RR_RESULT_EMITTED=0
+_rr_final_result() {
+  local rc=$?
+  if [ "$_RR_RESULT_EMITTED" -eq 0 ] && [ -n "${ORCH_RUN_ID:-}" ]; then
+    if [ "$rc" -eq 0 ]; then
+      emit_result ok "" "record appended" >&2
+    else
+      emit_result error IO "record-result failed rc=$rc" >&2
+    fi
+    _RR_RESULT_EMITTED=1
+  fi
+}
+trap _rr_final_result EXIT
 
 # --- Argument parsing ---
 if [[ $# -lt 1 ]]; then
@@ -61,6 +82,7 @@ TOKENS_OUTPUT=""
 TOKENS_CACHE_READ=""
 COST_ESTIMATED=""
 CACHE_HIT_RATE=""
+ERROR_KIND=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -81,6 +103,7 @@ while [[ $# -gt 0 ]]; do
     --tokens-cache-read=*) TOKENS_CACHE_READ="${1#--tokens-cache-read=}" ;;
     --cost=*)      COST_ESTIMATED="${1#--cost=}" ;;
     --cache-hit-rate=*) CACHE_HIT_RATE="${1#--cache-hit-rate=}" ;;
+    --error_kind=*) ERROR_KIND="${1#--error_kind=}" ;;
     *)
       echo "record-result.sh: unknown option: $1" >&2
       exit 1
@@ -103,12 +126,20 @@ fi
 
 # --- Validate outcome value ---
 case "$OUTCOME" in
-  success|failure|retry|blocked|timeout|stuck) ;;
+  success|failure|retry|blocked|timeout|stuck|unchanged) ;;
   *)
-    echo "record-result.sh: invalid outcome: $OUTCOME (expected: success|failure|retry|blocked|timeout|stuck)" >&2
+    echo "record-result.sh: invalid outcome: $OUTCOME (expected: success|failure|retry|blocked|timeout|stuck|unchanged)" >&2
     exit 1
     ;;
 esac
+
+# --- Validate error_kind if provided ---
+if [ -n "$ERROR_KIND" ]; then
+  if ! orch_is_error_kind "$ERROR_KIND"; then
+    echo "record-result.sh: invalid error_kind: $ERROR_KIND (expected: CONFIG|STATE|DISPATCH|VERIFY|BUDGET|IO)" >&2
+    exit 1
+  fi
+fi
 
 # --- Generate timestamp and unitId ---
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -170,6 +201,15 @@ if [[ -n "$CACHE_HIT_RATE" ]]; then
   json="${json},\"cache_hit_rate\":${CACHE_HIT_RATE}"
 fi
 
+# Engine fields (optional, added only when ORCH_RUN_ID is set)
+if [ -n "${ORCH_RUN_ID:-}" ]; then
+  json="${json},\"run_id\":\"${ORCH_RUN_ID}\""
+fi
+
+if [ -n "$ERROR_KIND" ]; then
+  json="${json},\"error_kind\":\"${ERROR_KIND}\""
+fi
+
 json="${json}}"
 
 # --- Create log file directory if needed ---
@@ -180,5 +220,9 @@ fi
 
 # --- Append to log ---
 echo "$json" >> "$EXECUTION_LOG"
+
+if [ -n "${ORCH_RUN_ID:-}" ]; then
+  emit_event TASK_COMPLETE stage=record_result unit="${MILESTONE}/${PHASE}/${TASK}" outcome="$OUTCOME" >&2
+fi
 
 echo "RECORD:APPENDED $EXECUTION_LOG"

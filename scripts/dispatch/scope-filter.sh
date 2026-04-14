@@ -3,13 +3,14 @@
 # Prevents unbounded knowledge/decision injection into dispatch payloads (FR-062, FR-063).
 #
 # Usage: scope-filter.sh <file-path> <scope-context> [--type knowledge|decisions] [--depends P01,P03]
-#                        [--min-confidence CONF] [--category CAT]
+#                        [--min-confidence CONF] [--category CAT] [--graph]
 #   scope-context: M###/P## format (e.g., M001/P02)
 #   --type: auto-detected from filename if not specified
 #   --depends: comma-separated list of upstream dependency phase IDs
 #   --min-confidence: filter entries with confidence >= threshold (knowledge index only)
 #   --category: filter entries by category name (knowledge index only)
 #   --use-effective-confidence: apply staleness decay before confidence filtering (knowledge index only)
+#   --graph: query knowledge.db directly via SQLite instead of parsing flat files
 #
 # Output: filtered entries to stdout (same format as input, just filtered)
 # Exit 0 on success or if file doesn't exist (empty output).
@@ -27,6 +28,7 @@ DEPENDS=""
 MIN_CONFIDENCE=""
 FILTER_CATEGORY=""
 USE_EFFECTIVE_CONFIDENCE=false
+GRAPH_MODE=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -40,6 +42,8 @@ while [[ $# -gt 0 ]]; do
       FILTER_CATEGORY="$2"; shift 2 ;;
     --use-effective-confidence)
       USE_EFFECTIVE_CONFIDENCE=true; shift ;;
+    --graph)
+      GRAPH_MODE=true; shift ;;
     -*)
       echo "scope-filter.sh: unknown option '$1'" >&2; exit 1 ;;
     *)
@@ -59,13 +63,13 @@ if [[ -z "$FILE_PATH" || -z "$SCOPE_CONTEXT" ]]; then
   exit 1
 fi
 
-# If file doesn't exist, exit 0 with empty output
-if [[ ! -f "$FILE_PATH" ]]; then
+# If file doesn't exist and not in graph mode, exit 0 with empty output
+if [[ "$GRAPH_MODE" != true && ! -f "$FILE_PATH" ]]; then
   exit 0
 fi
 
-# Auto-detect type from filename if not specified
-if [[ -z "$FILE_TYPE" ]]; then
+# Auto-detect type from filename if not specified (skip in graph mode)
+if [[ "$GRAPH_MODE" != true && -z "$FILE_TYPE" ]]; then
   basename_lower=$(basename "$FILE_PATH" | tr '[:upper:]' '[:lower:]')
   case "$basename_lower" in
     knowledge*) FILE_TYPE="knowledge" ;;
@@ -80,6 +84,12 @@ fi
 # Parse scope context: M###/P##
 MILESTONE_ID=$(echo "$SCOPE_CONTEXT" | cut -d/ -f1)
 PHASE_ID=$(echo "$SCOPE_CONTEXT" | cut -d/ -f2)
+
+# --- Lazy source graph-db.sh when --graph mode is active ---
+if [ "$GRAPH_MODE" = true ]; then
+  # shellcheck source=../knowledge/lib/graph-db.sh
+  source "$SCRIPT_DIR/../knowledge/lib/graph-db.sh"
+fi
 
 # Build dependency set: current phase + explicit depends
 # deps_match checks if a phase ID is in scope
@@ -321,8 +331,110 @@ filter_decisions() {
 }
 
 # ========================================================================
+# Graph-mode knowledge filtering (SQLite-based)
+# ========================================================================
+filter_knowledge_graph() {
+  local db_path
+  db_path="$(get_db_path)"
+
+  if [ ! -f "$db_path" ]; then
+    echo "scope-filter.sh: knowledge.db not found — run rebuild-index.sh first" >&2
+    exit 0
+  fi
+
+  # --- Build scope WHERE clause ---
+  local scope_clause=""
+  if [ -n "$SCOPE_CONTEXT" ]; then
+    scope_clause="AND (st.tag IS NULL OR st.tag = '[project]'"
+    if [ -n "$MILESTONE_ID" ]; then
+      scope_clause="${scope_clause} OR st.tag = '[milestone:${MILESTONE_ID}]'"
+    fi
+    if [ -n "$MILESTONE_ID" ] && [ -n "$PHASE_ID" ]; then
+      scope_clause="${scope_clause} OR st.tag = '[phase:${MILESTONE_ID}/${PHASE_ID}]'"
+    fi
+    if [ -n "$DEPENDS" ] && [ -n "$MILESTONE_ID" ]; then
+      old_ifs="$IFS"
+      IFS=','
+      for dep in $DEPENDS; do
+        dep="$(printf '%s' "$dep" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')"
+        if [ -n "$dep" ]; then
+          scope_clause="${scope_clause} OR st.tag = '[phase:${MILESTONE_ID}/${dep}]'"
+        fi
+      done
+      IFS="$old_ifs"
+    fi
+    scope_clause="${scope_clause})"
+  fi
+
+  # --- Build confidence WHERE clause ---
+  local conf_clause=""
+  if [ -n "$MIN_CONFIDENCE" ]; then
+    conf_clause="AND e.confidence >= ${MIN_CONFIDENCE}"
+  fi
+
+  # --- Build category WHERE clause ---
+  local cat_clause=""
+  if [ -n "$FILTER_CATEGORY" ]; then
+    local safe_cat
+    safe_cat="$(printf '%s' "$FILTER_CATEGORY" | sed "s/'/''/g")"
+    cat_clause="AND e.category = '${safe_cat}'"
+  fi
+
+  # --- Exclude superseded entries ---
+  local superseded_clause="AND (e.superseded_by = '' OR e.superseded_by IS NULL)"
+
+  # --- Build and execute query ---
+  # GROUP BY e.id to produce exactly one row per entry even when multiple
+  # scope_tags match the WHERE clause (e.g. [project] AND [milestone:M005]).
+  local sql="
+SELECT e.id, GROUP_CONCAT(st.tag, ', ') AS scope_tag, e.category,
+       e.confidence, e.created_at,
+       'verified:' || e.last_verified AS verified,
+       'hits:' || e.hit_count AS hits,
+       e.description
+FROM entries e
+LEFT JOIN scope_tags st ON e.id = st.entry_id
+WHERE 1=1
+  ${scope_clause}
+  ${conf_clause}
+  ${cat_clause}
+  ${superseded_clause}
+GROUP BY e.id
+ORDER BY e.confidence DESC;
+"
+
+  # --- Execute and format output ---
+  local raw_results
+  raw_results="$(db_query "$db_path" "$sql")" || true
+
+  if [ -z "$raw_results" ]; then
+    return 0
+  fi
+
+  # --- Print header ---
+  echo "# Knowledge Index"
+  echo "<!-- Generated via --graph mode from knowledge.db -->"
+  echo "<!-- Format: id | scope_tags | category | confidence | created_at | verified:date | hits:N | description -->"
+
+  # --- Format each row as pipe-delimited ---
+  # sqlite3 default separator is |, so parse and reformat with spaces around pipes
+  while IFS='|' read -r id tag cat conf created verified hits desc; do
+    echo "${id} | ${tag} | ${cat} | ${conf} | ${created} | ${verified} | ${hits} | ${desc}"
+  done <<EOF_RESULTS
+$raw_results
+EOF_RESULTS
+}
+
+# ========================================================================
 # Main dispatch
 # ========================================================================
+
+# --- Graph mode bypasses file-based filtering ---
+if [ "$GRAPH_MODE" = true ]; then
+  filter_knowledge_graph
+  exit 0
+fi
+
 case "$FILE_TYPE" in
   knowledge)
     # Auto-detect: KNOWLEDGE-INDEX.md (pipe-delimited) vs flat KNOWLEDGE.md (markdown sections)

@@ -51,6 +51,7 @@ fi
 # --- Initialize SQLite graph database ---
 db_path="$(get_db_path)"
 tmp_db="${db_path}.tmp.$$"
+trap 'rm -f "$tmp_db"' EXIT
 rm -f "$tmp_db"
 db_init "$tmp_db"
 db_entry_count=0

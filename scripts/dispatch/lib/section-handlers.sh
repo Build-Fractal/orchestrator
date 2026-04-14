@@ -217,6 +217,15 @@ handle_knowledge() {
     return 0
   fi
 
+  # If the index exists but has zero data rows (only header/comments), fall
+  # back to the flat KNOWLEDGE.md so accumulated knowledge still gets injected.
+  local _data_rows
+  _data_rows="$(grep -c '^MEM' "$knowledge_index" 2>/dev/null || true)"
+  if [ "${_data_rows:-0}" -eq 0 ]; then
+    _sh_emit_flat_knowledge "$ms_dir" "$milestone" "$phase"
+    return 0
+  fi
+
   # Read phase depends for scope-filter
   local roadmap="${ms_dir}/${milestone}-ROADMAP.md"
   local depends="none"
@@ -235,7 +244,7 @@ handle_knowledge() {
 
   # Check if graph database is available for enhanced filtering
   local graph_flag=""
-  local db_file="${_SH_PROJECT_ROOT}/knowledge.db"
+  local db_file="${_SH_PROJECT_ROOT}/../knowledge.db"
   if [ -f "$db_file" ]; then
     graph_flag="--graph"
   fi

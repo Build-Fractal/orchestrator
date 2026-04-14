@@ -13,6 +13,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=lib/index-utils.sh
 source "$SCRIPT_DIR/lib/index-utils.sh"
+# shellcheck source=lib/graph-db.sh
+source "$SCRIPT_DIR/lib/graph-db.sh"
 
 # --- Argument parsing ---
 while [ $# -gt 0 ]; do
@@ -45,6 +47,15 @@ if [ ! -d "$knowledge_dir" ]; then
   echo "ERROR: knowledge/ directory not found at $root" >&2
   exit 1
 fi
+
+# --- Initialize SQLite graph database ---
+db_path="$(get_db_path)"
+tmp_db="${db_path}.tmp.$$"
+rm -f "$tmp_db"
+db_init "$tmp_db"
+db_entry_count=0
+db_edge_count=0
+db_tag_count=0
 
 # --- Scan detail files and build entries ---
 entries=""
@@ -82,11 +93,11 @@ for file in "$knowledge_dir"/*/*.md; do
   last_verified="$(fm_field "$file" "last_verified")"
   hit_count="$(fm_field "$file" "hit_count")"
   superseded_by="$(fm_field "$file" "superseded_by")"
-
-  # Skip superseded entries (non-empty superseded_by)
-  if [ -n "$superseded_by" ]; then
-    continue
-  fi
+  source_unit="$(fm_field "$file" "source_unit")"
+  source_type="$(fm_field "$file" "source_type")"
+  supersedes="$(fm_field "$file" "supersedes")"
+  content_hash="$(fm_field "$file" "content_hash")"
+  relates_to_raw="$(fm_field "$file" "relates_to")"
 
   # Extract description from heading: # MEM###: <description>
   description="$(grep "^# ${id}:" "$file" | head -1 | sed "s/^# ${id}:[[:space:]]*//")"
@@ -94,6 +105,57 @@ for file in "$knowledge_dir"/*/*.md; do
   # Use ID as fallback if no description found
   if [ -z "$description" ]; then
     description="$id"
+  fi
+
+  # --- Populate SQLite database (all entries, including superseded) ---
+  rel_path="${file#$root/}"
+  db_insert_entry "$tmp_db" "$id" "$category" "$confidence" "$created_at" \
+    "$last_verified" "$hit_count" "$source_unit" "$source_type" \
+    "$supersedes" "$superseded_by" "$content_hash" "$description" "$rel_path"
+  db_entry_count=$((db_entry_count + 1))
+
+  # --- Insert edges for relates_to ---
+  if [ -n "$relates_to_raw" ] && [ "$relates_to_raw" != "[]" ]; then
+    relates_clean="$(printf '%s' "$relates_to_raw" | tr -d '[]' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')"
+    if [ -n "$relates_clean" ]; then
+      old_ifs="$IFS"
+      IFS=','
+      for rel_target in $relates_clean; do
+        rel_target="$(printf '%s' "$rel_target" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')"
+        if [ -n "$rel_target" ]; then
+          db_insert_edge "$tmp_db" "$id" "$rel_target" "relates_to"
+          db_edge_count=$((db_edge_count + 1))
+        fi
+      done
+      IFS="$old_ifs"
+    fi
+  fi
+
+  # --- Insert edge for supersedes ---
+  if [ -n "$supersedes" ]; then
+    db_insert_edge "$tmp_db" "$id" "$supersedes" "supersedes"
+    db_edge_count=$((db_edge_count + 1))
+  fi
+
+  # --- Insert scope_tags ---
+  if [ -n "$scope_tags" ]; then
+    tags_clean="$(printf '%s' "$scope_tags" | sed 's/^"//;s/"$//')"
+    tag_list="$(printf '%s' "$tags_clean" | sed 's/\],* *\[/]\
+[/g')"
+    while IFS= read -r single_tag; do
+      single_tag="$(printf '%s' "$single_tag" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')"
+      if [ -n "$single_tag" ]; then
+        db_insert_scope_tag "$tmp_db" "$id" "$single_tag"
+        db_tag_count=$((db_tag_count + 1))
+      fi
+    done <<EOF_TAGS
+$tag_list
+EOF_TAGS
+  fi
+
+  # Skip superseded entries for flat index only (non-empty superseded_by)
+  if [ -n "$superseded_by" ]; then
+    continue
   fi
 
   # Format the entry line
@@ -117,4 +179,8 @@ fi
 # --- Write the full index ---
 write_full_index "$entries"
 
+# --- Finalize SQLite database (atomic move) ---
+mv "$tmp_db" "$db_path"
+
 echo "REBUILT: KNOWLEDGE-INDEX.md with $entry_count entries"
+echo "REBUILT: knowledge.db with $db_entry_count entries, $db_edge_count edges, $db_tag_count scope_tags"

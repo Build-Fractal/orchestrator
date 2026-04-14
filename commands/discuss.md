@@ -6,6 +6,24 @@ description: "Use when conducting a pre-planning discussion to capture architect
 
 Facilitate a pre-planning discussion to capture architectural context before roadmap generation. This command manages the context draft lifecycle — create, update, and finalize — which controls the `discussing` → `planning` state transition (FR-056).
 
+## Intensity Behavior
+
+This command is an intensity-aware stage. At entry, call:
+
+```bash
+bash scripts/engine/intensity-gate.sh --stage discuss --intensity-metadata <path-to-metadata>
+```
+
+Parse the `execute_substeps=` and `skip_substeps=` output and branch:
+
+| Intensity | execute_substeps | Behavior |
+|-----------|------------------|----------|
+| Quick     | none             | Skip discussion entirely. Do not create a context draft. Report "Discussion skipped at Quick intensity" and exit. |
+| Standard  | optional         | Discussion is optional. If `M###-EVALUATION.md` lists `discuss_required: true`, proceed. Otherwise, prompt the developer: "Discussion is optional at Standard intensity. Proceed or skip?" |
+| Full      | required         | Discussion is a hard gate. Proceed with the full question generation and context-draft workflow described below. |
+
+If the gate is missing or returns an unknown value, default to Full (fail-safe: when in doubt, discuss more not less).
+
 ## Prerequisites
 
 ### 1. Derive Current State

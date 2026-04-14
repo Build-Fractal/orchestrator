@@ -1,21 +1,41 @@
 #!/usr/bin/env bash
-# scripts/dispatch/detect-capabilities.sh — Detect runtime capabilities
-# Reports available capabilities for graceful degradation across agent runtimes (R008).
+# scripts/dispatch/detect-capabilities.sh — Detect runtime and environment capabilities
+# Reports available capabilities for graceful degradation across agent runtimes (R008)
+# and environment-aware intensity recommendation (FR-024, FR-025, FR-026).
 #
-# Usage: detect-capabilities.sh [--format json|text]
-#   --format: output format (default: text — key=value lines)
+# Usage: detect-capabilities.sh [--format json|text] [--profile]
+#   --format:  output format (default: text — key=value lines)
+#   --profile: output high-level capability summary for intensity recommendation
+#
+# Capabilities detected:
+#   subagent_dispatch   — can dispatch to sub-agents
+#   agent_tool_available — in-process agent tools (override via SPECKIT_AGENT_TOOL=1)
+#   shell_execution     — always true (running in bash)
+#   git_available       — git CLI present
+#   git_worktree        — git worktree support
+#   github_actions      — running in GitHub Actions
+#   runtime             — local or ci-github
+#   host_claude_code    — .claude directory present
+#   host_cursor         — .cursor directory present
+#   host_copilot        — .github/copilot directory present
+#   graph_db            — sqlite3 + knowledge graph database present
+#   mcp_servers         — MCP server configuration present
+#   ci_pipeline         — CI/CD configuration files present
 #
 # Always exits 0 (capability detection never fails — unknown capabilities default to false).
 
 set -euo pipefail
 
 FORMAT="text"
+PROFILE=false
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --format)
       FORMAT="$2"; shift 2 ;;
+    --profile)
+      PROFILE=true; shift ;;
     *)
       shift ;;
   esac
@@ -88,9 +108,56 @@ if [[ -d .github/copilot ]]; then
   host_copilot=true
 fi
 
+# graph_db: check for sqlite3 AND a knowledge graph database file
+graph_db=false
+if command -v sqlite3 >/dev/null 2>&1; then
+  if [[ -f .specify/orchestrator/knowledge.db ]] || [[ -f .orchestrator/knowledge.db ]]; then
+    graph_db=true
+  fi
+fi
+
+# mcp_servers: check for MCP configuration files
+mcp_servers=false
+if [[ -f .claude/mcp_servers.json ]] || [[ -f .cursor/mcp.json ]] || [[ -f mcp.json ]]; then
+  mcp_servers=true
+elif [[ -n "${MCP_CONFIG:-}" ]] && [[ -f "${MCP_CONFIG}" ]]; then
+  mcp_servers=true
+fi
+
+# ci_pipeline: check for CI configuration files
+ci_pipeline=false
+if [[ -d .github/workflows ]] || [[ -f .gitlab-ci.yml ]] || [[ -f .circleci/config.yml ]] || [[ -f Jenkinsfile ]] || [[ -f .buildkite/pipeline.yml ]]; then
+  ci_pipeline=true
+fi
+
 # --- Output ---
 
-if [[ "$FORMAT" = "json" ]]; then
+if [[ "$PROFILE" = true ]]; then
+  # Profile mode: high-level summary for intensity recommendation engine
+  cap_execution="local"
+  if [[ "$runtime" != "local" ]]; then
+    cap_execution="ci"
+  fi
+  cap_graph="$graph_db"
+  cap_mcp="$mcp_servers"
+  cap_ci="$ci_pipeline"
+  cap_subagent="$subagent_dispatch"
+
+  # Count true capabilities for an aggregate score (0..5)
+  cap_score=0
+  [[ "$cap_graph" = true ]] && cap_score=$((cap_score + 1))
+  [[ "$cap_mcp" = true ]] && cap_score=$((cap_score + 1))
+  [[ "$cap_ci" = true ]] && cap_score=$((cap_score + 1))
+  [[ "$cap_subagent" = true ]] && cap_score=$((cap_score + 1))
+  [[ "$cap_execution" = "ci" ]] && cap_score=$((cap_score + 1))
+
+  echo "cap_execution=$cap_execution"
+  echo "cap_graph=$cap_graph"
+  echo "cap_mcp=$cap_mcp"
+  echo "cap_ci=$cap_ci"
+  echo "cap_subagent=$cap_subagent"
+  echo "cap_score=$cap_score"
+elif [[ "$FORMAT" = "json" ]]; then
   cat <<EOF
 {
   "subagent_dispatch": $subagent_dispatch,
@@ -102,7 +169,10 @@ if [[ "$FORMAT" = "json" ]]; then
   "runtime": "$runtime",
   "host_claude_code": $host_claude_code,
   "host_cursor": $host_cursor,
-  "host_copilot": $host_copilot
+  "host_copilot": $host_copilot,
+  "graph_db": $graph_db,
+  "mcp_servers": $mcp_servers,
+  "ci_pipeline": $ci_pipeline
 }
 EOF
 else
@@ -116,4 +186,7 @@ else
   echo "host_claude_code=$host_claude_code"
   echo "host_cursor=$host_cursor"
   echo "host_copilot=$host_copilot"
+  echo "graph_db=$graph_db"
+  echo "mcp_servers=$mcp_servers"
+  echo "ci_pipeline=$ci_pipeline"
 fi

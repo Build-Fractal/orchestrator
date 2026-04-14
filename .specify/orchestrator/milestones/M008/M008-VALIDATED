@@ -1,0 +1,43 @@
+---
+milestone: M008
+validated_at: 2026-04-14T17:35:00Z
+validation_result: pass
+---
+
+# M008 Cross-Phase Validation
+
+## Phase Summaries Present
+
+All 7 phase summaries exist:
+- P01-SUMMARY.md (Adaptive Intensity Engine)
+- P02-SUMMARY.md (Dispatch Interface & Backend Adapters)
+- P03-SUMMARY.md (Intensity-Aware Pipeline Scaling)
+- P04-SUMMARY.md (State & Namespace Independence)
+- P05-SUMMARY.md (Runtime & Format Adapters)
+- P06-SUMMARY.md (Multi-Runtime Packaging)
+- P07-SUMMARY.md (Init, Onboarding & Spec-Kit Bridge)
+
+## Boundary Map Consistency
+
+All Produces items from each phase's boundary map verified to exist on disk via per-phase Tier 1 artifact checks (check-must-haves.sh).
+
+All Consumes references map to producing phases:
+- P03 consumes P01 (intensity-metadata, intensity-recommend.sh), P02 (dispatch-interface.sh) — producers present
+- P05 consumes P02 (dispatch-interface.sh), P04 (resolve-root.sh, namespace-aliases.sh) — producers present
+- P06 consumes P04 (resolve-root.sh, namespace-aliases.sh), P05 (runtime adapters) — producers present
+- P07 consumes P01 (detect-capabilities.sh), P05 (detect-runtime.sh, runtime adapters), P06 (installers) — producers present
+
+Note: check-boundary-map.sh reports SKIP for all phases due to a parser limitation — it doesn't recognize the M008 roadmap boundary map format. Manual review confirms all produce/consume references resolve to existing artifacts.
+
+## Integration Validated End-to-End
+
+- P02 T06 integration-e2e: registry discovers adapters, interface routes via filename, result parses
+- P03 T05 integration-e2e: gate matrix (21 combinations) distinct, override Quick→Full, mid-workflow preservation
+- P04 T06 standalone-e2e: full pipeline completes in mktemp project with no spec-kit (SC-004)
+- P05 T07 integration-e2e: detect-runtime → probe → hermetic register → native round-trip → speckit read → dispatch-interface
+- P06 T05 integration-e2e: regenerate skills → rebuild bundle → hermetic install → verify 12 skills + config placement
+- P07 T05 integration-e2e: full onboarding in 1s wall-clock / 120s budget (SC-005 validated with 2 orders of magnitude margin)
+
+## Verification Result
+
+PASS — milestone cross-phase validation complete, ready for milestone summary.

@@ -4,6 +4,68 @@ All notable changes to spec-kit-orchestrator are documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This project uses semantic versioning.
 
+## [0.8.0] — 2026-04-14
+
+M008 (008-standalone-orchestrator). Standalone multi-runtime orchestrator with adaptive intensity. 7 phases, 35 tasks. Transforms the orchestrator from a spec-kit extension into a standalone distributable with auto-calibrated process intensity and cross-runtime support.
+
+### Added
+
+- **Adaptive Intensity Engine (P01)**:
+  - `scripts/engine/intensity-analyze.sh` — scope/risk/complexity analyzer from natural-language task descriptions
+  - `scripts/engine/intensity-recommend.sh` — recommendation engine combining analysis + capability profile → Quick/Standard/Full
+  - `scripts/engine/context-pressure.sh` — token pressure evaluator with intensity-aware thresholds
+  - `templates/intensity-metadata.md` — 10-field YAML schema flowing through pipeline stages
+  - Extended `scripts/dispatch/detect-capabilities.sh` with `graph_db`, `mcp_servers`, `ci_pipeline` detection + `--profile` flag
+- **Backend-Agnostic Dispatch Interface (P02)**:
+  - `scripts/dispatch/dispatch-interface.sh` — uniform entry point with filename-based adapter routing, distinct exit codes 2-6
+  - `scripts/dispatch/backend-registry.sh` — auto-discovery of backends in `scripts/dispatch/adapters/backend/`
+  - `scripts/dispatch/adapters/backend/local-agent.sh` — Claude Code Agent tool backend (coordination-boundary adapter per MEM018)
+  - `scripts/dispatch/adapters/backend/local-codex.sh` — Codex CLI SDK backend with uniform-interface fallback
+  - `templates/dispatch-result.md`, `templates/dispatch-error.md` — structured result/error schemas
+- **Intensity-Aware Pipeline Scaling (P03)**:
+  - `scripts/engine/intensity-gate.sh` — central 7×3 stage×intensity matrix
+  - `scripts/engine/intensity-override.sh` — atomic mid-workflow override with awk+mktemp+mv, scope-limited to metadata file
+  - `scripts/knowledge/intensity-knowledge.sh` — intensity-aware wrapper over M007 knowledge scripts with `--dry-run`
+  - "Intensity Behavior" sections added additively to 5 command docs (discuss/plan-phase/dispatch/verify/auto)
+- **State & Namespace Independence (P04)**:
+  - `scripts/state/resolve-root.sh` — 5-rule root resolver (env → config → `.orchestrator/` → `.specify/orchestrator/` bridge → default)
+  - `scripts/state/detect-speckit.sh` — spec-kit presence detection with integration mode toggle
+  - `scripts/state/config-system.sh` — unified get/set/list with dot-notation nested keys
+  - `scripts/migrate/migrate-state.sh` — one-shot hard migration with `--dry-run`
+  - `scripts/state/namespace-aliases.sh` — `speckit.orchestrator.* → orchestrator:*` doc generator
+- **Runtime & Format Adapters (P05)**:
+  - `scripts/dispatch/detect-runtime.sh` — auto-detection from env + filesystem (claude-code/codex/cursor/unknown)
+  - `scripts/dispatch/adapters/runtime/{claude-code,codex,cursor}.sh` — uniform `--probe`/`--register`/`--hook-config` interface with HOME/project-dir guards
+  - `scripts/dispatch/adapters/format/{native,speckit}.sh` — round-trip native + one-directional spec-kit read
+- **Multi-Runtime Packaging (P06)**:
+  - `packaging/SKILL.md` — open-standard skill file format spec
+  - `packaging/skills/` — 12 orchestrator-*.md skills generated from `commands/*.md`
+  - `packaging/bundle/` — installable unit (manifest.yml v0.3.0-dev + skills/ + hooks/ + config/ + README.md)
+  - `packaging/install/install-{claude-code,codex,cursor}.sh` — thin installers delegating to P05 adapters
+  - `scripts/packaging/{generate-skills,build-bundle}.sh` — generator + assembler with `--check` drift detection
+  - `scripts/lifecycle/check-update.sh` — offline-safe version checker
+- **Init, Onboarding & Spec-Kit Bridge (P07)**:
+  - `commands/init.md` — `orchestrator:init` command doc
+  - `scripts/lifecycle/detect-project.sh` — scans 10 languages + 9 frameworks + 6 CI systems + 9 tools
+  - `scripts/lifecycle/init-project.sh` — top-level detect→probe→generate→verify pipeline (~1s wall-clock)
+  - `scripts/lifecycle/reinit-handler.sh` — update/reset/abort modes preserving user custom blocks
+  - `templates/project-instruction.md` — template with `<!-- BEGIN CUSTOM -->` markers for user-editable sections
+- **60+ verification scripts** under `scripts/verify/m008-p0{1,2,3,4,5,6,7}-*.sh` — hermetic tests using mktemp fixtures; static `m008-p07-hermetic-only.sh` gate prevents real-HOME leaks
+
+### Fixed
+
+- `scripts/verify/check-must-haves.sh` — `grep -q` misinterpreted patterns starting with `--` as options; added `--` separator
+- Bash 3.2 compatibility scanners across P05/P06/P07 are now comment-aware (exclude lines starting with `#`) to prevent false positives on documentation
+
+### Patterns Established
+
+- Filename-based adapter auto-discovery (shared across P02 backends, P05 runtime adapters, P05 format adapters)
+- Hermetic-first testing: `HOME=$(mktemp -d)` fixtures with static enforcement gate
+- HOME guard mandatory on runtime adapters (refuse empty/root)
+- Thin delegation pattern (init + installers delegate to existing single-responsibility scripts)
+- User-edit preservation via comment-delimited blocks + field-level awk surgery
+- Comment-aware Bash 3.2 compat scanning
+
 ## [0.6.0] — 2026-04-13
 
 M006 (006-documentation-quality). Reference docs, user guides, contributor guide, and project documentation.

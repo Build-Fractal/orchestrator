@@ -29,6 +29,15 @@
 # Exits 0 on successful derivation (outputs state to stdout).
 # Exits 1 with usage/error message to stderr on bad input.
 
+# ROOT RESOLUTION (P04/M008): Callers pass an explicit <milestone-dir>
+# positional argument. The conventional way to construct that path is:
+#   root="$(bash scripts/state/resolve-root.sh)"
+#   milestone_dir="$root/milestones/M###"
+# This script does NOT resolve the root itself — it accepts whatever
+# directory the caller provides. See scripts/state/resolve-root.sh for
+# the authoritative precedence chain (env var, config, existing dir,
+# default).
+
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -177,8 +186,8 @@ while IFS=' ' read -r pid pstatus prisk pdepends; do
 done <<< "$phases_data"
 
 if [[ "$all_phases_complete" = "true" ]]; then
-  # Check for validation marker (M###-VALIDATION.md)
-  validation_file="$MILESTONE_DIR/${MILESTONE_ID}-VALIDATION.md"
+  # Check for validation marker (M###-VALIDATED, created by mark-complete.sh)
+  validation_file="$MILESTONE_DIR/${MILESTONE_ID}-VALIDATED"
   if [[ ! -f "$validation_file" ]]; then
     echo "validating"
     exit 0

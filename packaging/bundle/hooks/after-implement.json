@@ -1,0 +1,6 @@
+{
+  "schema_version": "1.0",
+  "event": "after-implement",
+  "command": "bash scripts/lifecycle/after-implement.sh",
+  "description": "Orchestrator post-implement hook — phase transition + rollback gate."
+}

@@ -199,7 +199,7 @@ while IFS= read -r line; do
 
         # Check 3: Contains pattern
         if [[ -n "$contains_pattern" ]]; then
-          if grep -q "$contains_pattern" "$full_path" 2>/dev/null; then
+          if grep -q -- "$contains_pattern" "$full_path" 2>/dev/null; then
             echo "PASS: artifact $artifact_path contains '$contains_pattern'"
           else
             echo "FAIL: artifact $artifact_path does not contain '$contains_pattern' (pattern not found)"

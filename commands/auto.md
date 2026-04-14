@@ -6,6 +6,24 @@ description: "Use when running fully autonomous execution on a Tier C project. A
 
 Run the autonomous dispatch loop for a Tier C milestone. This command owns the full execution cycle — it acquires a lock, dispatches tasks one at a time in fresh contexts with verification between each, handles pause/stuck/budget gates, and releases the lock on any exit path.
 
+## Intensity Behavior
+
+This command is an intensity-aware stage. At entry of every loop iteration, call:
+
+```bash
+bash scripts/engine/intensity-gate.sh --stage auto --intensity-metadata <path-to-metadata>
+```
+
+Parse the `execute_substeps=` and `skip_substeps=` output and branch:
+
+| Intensity | execute_substeps                      | Behavior |
+|-----------|---------------------------------------|----------|
+| Quick     | dispatch,no-pause                     | Dispatch the next task and advance immediately after verification. No pause gates between tasks. Auto mode runs end-to-end without interruption. |
+| Standard  | dispatch,standard-pause               | Dispatch + standard pause gates (pause on verification failure; pause on budget threshold; pause on explicit `pause_requested` file). |
+| Full      | dispatch,strict-pause,human-review    | Dispatch + strict pause gates + human review gate. After each task summary, write a `pending_review` flag; auto loop waits until a human clears it before proceeding to the next task. High-risk stance for platform-level work. |
+
+Intensity can be overridden mid-run via `bash scripts/engine/intensity-override.sh --metadata-file <path> --new-intensity <level>`. The next auto iteration reads the new value and scales accordingly; completed iterations are preserved.
+
 ## Prerequisites
 
 Before entering the autonomous loop, verify all preconditions:

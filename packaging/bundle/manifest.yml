@@ -1,0 +1,35 @@
+schema_version: "1.0"
+type: bundle-manifest
+name: "spec-kit-orchestrator"
+version: "0.3.0-dev"
+description: "Autonomous multi-phase orchestration skills for Claude Code, Codex, and Cursor"
+skill_spec: "packaging/SKILL.md"
+skills:
+  - orchestrator-auto.md
+  - orchestrator-consolidate.md
+  - orchestrator-discuss.md
+  - orchestrator-dispatch.md
+  - orchestrator-doctor.md
+  - orchestrator-evaluate.md
+  - orchestrator-migrate.md
+  - orchestrator-plan-phase.md
+  - orchestrator-resume.md
+  - orchestrator-roadmap.md
+  - orchestrator-status.md
+  - orchestrator-verify.md
+hooks:
+  - event: before-tasks
+    file: hooks/before-tasks.json
+  - event: after-tasks
+    file: hooks/after-tasks.json
+  - event: before-implement
+    file: hooks/before-implement.json
+  - event: after-implement
+    file: hooks/after-implement.json
+  - event: before-commit
+    file: hooks/before-commit.json
+config_default: "config/orchestrator.default.yml"
+runtime_compatibility:
+  - claude-code
+  - codex
+  - cursor

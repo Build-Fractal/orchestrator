@@ -6,7 +6,19 @@ A spec-kit extension that adds autonomous multi-phase orchestration to spec-kit'
 
 ## Project Status
 
-**v0.2.0 in progress** (2026-04-14). 12 commands, 55 scripts, 21 templates, 14 reference docs, 4 user guides. M006 documentation milestone complete — full reference suite, user guides, contributor guide, and diagnostic coverage.
+**v0.8.0** (2026-04-14). 13 commands, 80+ scripts, 24+ templates, 14 reference docs, 4 user guides, `packaging/` layer, runtime + format + backend adapter tree. M008 standalone-orchestrator milestone complete — adaptive intensity engine, backend-agnostic dispatch interface, intensity-aware pipeline scaling, state/namespace independence, runtime/format adapters, multi-runtime packaging with installers, and onboarding init flow.
+
+## Standalone Mode (M008)
+
+The orchestrator now operates standalone without spec-kit, with three runtimes (Claude Code / Codex CLI / Cursor) and auto-calibrated process intensity (Quick / Standard / Full). Key standalone entry points:
+
+- `orchestrator:init` (commands/init.md, scripts/lifecycle/init-project.sh) — first-run setup: detects project, probes capabilities, generates config + runtime-appropriate instruction file, installs skills. Completes in ~1s.
+- `scripts/engine/intensity-recommend.sh` — given a task description + capability profile, recommends Quick/Standard/Full
+- `scripts/dispatch/dispatch-interface.sh` — uniform backend-agnostic dispatch (filename-routed to `scripts/dispatch/adapters/backend/*.sh`)
+- `scripts/state/resolve-root.sh` — 5-rule state root resolver (ORCHESTRATOR_ROOT env → config → `.orchestrator/` → `.specify/orchestrator/` bridge → default)
+- `packaging/bundle/` — installable unit consumed by `packaging/install/install-{claude-code,codex,cursor}.sh`
+
+Live state still lives at `.specify/orchestrator/` in this repo; `scripts/migrate/migrate-state.sh` is available to move to `.orchestrator/` when ready.
 
 ## Key Files
 
@@ -61,5 +73,6 @@ This project uses spec-kit's own slash commands for development:
 - File-based state machine — YAML frontmatter + markdown body files, JSONL append-only logs, JSON lock files. All state at `.specify/orchestrator/` (001-speckit-orchestrator)
 
 ## Recent Changes
+- 008-standalone-orchestrator: M008 v0.8.0 complete. 7 phases, 35 tasks. Adaptive intensity engine (P01), backend-agnostic dispatch interface with filename-based routing (P02), intensity-aware pipeline scaling with mid-workflow override (P03), state/namespace independence with 5-rule resolver + migration tool (P04), runtime + format adapters with HOME/project-dir guards (P05), multi-runtime packaging with SKILL.md spec + bundle + 3 installers + offline-safe update check (P06), orchestrator:init onboarding with reinit-handler user-edit preservation (P07). Patterns: filename-based adapter auto-discovery, hermetic-first testing, thin delegation, comment-aware Bash 3.2 compat scan.
 - 001-speckit-orchestrator: M006 documentation milestone complete. 14 reference docs, 4 user guides, scripts/AGENTS.md contributor guide, check-docs.sh diagnostic. Full progressive-disclosure reference suite covering architecture, engine internals, events, errors, hooks, recipes, routing, and constitution walkthrough.
 - 001-speckit-orchestrator: M001 v0.1.0 implementation complete. All core orchestration delivered (scope triage, phase decomposition, state machine, autonomous dispatch, verification, crash recovery, knowledge generation, consolidation).

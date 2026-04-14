@@ -6,6 +6,24 @@ description: "Use when running mechanical verification for a completed task or p
 
 Run the verification pipeline against the current phase or task to determine if must-haves are satisfied. This command orchestrates 4 verification tiers and produces a structured report.
 
+## Intensity Behavior
+
+This command is an intensity-aware stage. At entry, call:
+
+```bash
+bash scripts/engine/intensity-gate.sh --stage verify --intensity-metadata <path-to-metadata>
+```
+
+Parse the `execute_substeps=` and `skip_substeps=` output and branch:
+
+| Intensity | execute_substeps          | Behavior |
+|-----------|---------------------------|----------|
+| Quick     | tier1                     | Run Tier 1 (static checks: file existence, content patterns) only. Skip Tier 2-4. |
+| Standard  | tier1,tier2               | Run Tier 1 + Tier 2 (command execution: configured tests/lint). Skip Tier 3-4. |
+| Full      | tier1,tier2,tier3,tier4   | Run all four tiers: Tier 1 (static) + Tier 2 (commands) + Tier 3 (behavioral spec-compliance review) + Tier 4 (human UAT). |
+
+Higher tiers are strictly additive — a Tier 2 failure is reported even if Tier 1 passes. The verification report records which tiers ran and which were skipped by intensity policy.
+
 ## Prerequisites
 
 Before running verification:

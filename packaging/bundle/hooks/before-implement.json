@@ -1,0 +1,6 @@
+{
+  "schema_version": "1.0",
+  "event": "before-implement",
+  "command": "bash scripts/lifecycle/before-implement.sh",
+  "description": "Orchestrator pre-implement hook — evaluate preflight + permissions."
+}

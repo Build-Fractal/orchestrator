@@ -1,0 +1,6 @@
+{
+  "schema_version": "1.0",
+  "event": "before-tasks",
+  "command": "bash scripts/lifecycle/before-tasks.sh",
+  "description": "Orchestrator pre-task hook — budget + stuck detection."
+}

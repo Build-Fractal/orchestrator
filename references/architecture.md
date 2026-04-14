@@ -127,7 +127,7 @@ The orchestrator uses a **file-presence state machine** with 10 canonical states
 | 5 | `executing` | Active phase has task plans without matching summaries |
 | 6 | `verifying` | All tasks done, no `P##-VERIFICATION.md` |
 | 7 | `summarizing` | Verified, no `P##-SUMMARY.md` |
-| 8 | `validating` | All phases complete, no `M###-VALIDATION.md` |
+| 8 | `validating` | All phases complete, no `M###-VALIDATED` marker |
 | 9 | `completing` | Validated, no `M###-SUMMARY.md` |
 | 10 | `complete` | `M###-SUMMARY.md` exists |
 

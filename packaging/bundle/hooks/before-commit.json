@@ -1,0 +1,6 @@
+{
+  "schema_version": "1.0",
+  "event": "before-commit",
+  "command": "bash scripts/lifecycle/before-commit.sh",
+  "description": "Orchestrator pre-commit hook — verification ladder + evidence check."
+}

@@ -6,6 +6,24 @@ description: "Use when executing one task in a fresh context with constructed pa
 
 Execute one task in a fresh context by assembling a scope-filtered context payload, dispatching execution, and recording the result.
 
+## Intensity Behavior
+
+This command is an intensity-aware stage. At entry, call:
+
+```bash
+bash scripts/engine/intensity-gate.sh --stage dispatch --intensity-metadata <path-to-metadata>
+```
+
+Parse the `execute_substeps=` and `skip_substeps=` output and branch:
+
+| Intensity | execute_substeps              | Behavior |
+|-----------|-------------------------------|----------|
+| Quick     | sequential                    | Skip payload assembly (`build-context.sh`). Invoke `dispatch-interface.sh` with a minimal payload containing only the task plan. Run tasks sequentially — no parallel fan-out. |
+| Standard  | standard-payload              | Full payload assembly (task plan + upstream summaries + scope-filtered knowledge). Standard dispatch semantics. |
+| Full      | full-context,knowledge-inject | Full payload + graph-traversed knowledge (`traverse-graph.sh`) + explicit provenance chain (`check-graph-health`). Inject full context for high-risk tasks. |
+
+The `--intensity-metadata` argument is already a first-class parameter of `dispatch-interface.sh` (P02). Forward it through unchanged.
+
 ## Prerequisites
 
 Before dispatching, verify the orchestrator is in the correct state:

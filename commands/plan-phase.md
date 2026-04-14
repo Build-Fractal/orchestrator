@@ -6,6 +6,24 @@ description: "Use when planning one phase — creates task decomposition with mu
 
 Plan one phase of the roadmap by creating a detailed phase plan with must-haves and self-contained task plans. Each task plan is written so a fresh agent context with zero prior knowledge can execute it independently.
 
+## Intensity Behavior
+
+This command is an intensity-aware stage. At entry, call:
+
+```bash
+bash scripts/engine/intensity-gate.sh --stage plan-phase --intensity-metadata <path-to-metadata>
+```
+
+Parse the `execute_substeps=` and `skip_substeps=` output and branch:
+
+| Intensity | execute_substeps        | Behavior |
+|-----------|-------------------------|----------|
+| Quick     | single-task             | Create ONE task plan. No boundary map. No full decomposition. Must-haves list is minimal (one truth, one artifact). |
+| Standard  | basic-decomp,boundary-map | Create 2-4 task plans. Include a basic Boundary Map showing Produces/Consumes. Must-haves cover core behaviors. |
+| Full      | full-decomp,boundary-map  | Full decomposition (1-7 tasks per FR-005). Complete Boundary Map. Full Must-Haves section with Truths, Artifacts, Key Links. Zero-context task plans per FR-011. |
+
+The existing planning workflow below describes the Full behavior. At Quick/Standard, apply the reductions above to the same workflow; do not invent a different workflow.
+
 ## Phase Selection
 
 Determine which phase to plan:

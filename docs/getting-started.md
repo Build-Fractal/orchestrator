@@ -264,7 +264,7 @@ All orchestrator state lives under `.specify/orchestrator/`. The orchestrator ne
         ├── M001-CONTEXT.md       # Discussion context draft (Tier C)
         ├── M001-ROADMAP.md       # Phase decomposition and dependencies
         ├── M001-SUMMARY.md       # Milestone rollup (written at completion)
-        ├── M001-VALIDATION.md    # Cross-phase validation (Tier C)
+        ├── M001-VALIDATED         # Cross-phase validation marker (Tier C)
         ├── execution-log.jsonl   # Per-milestone dispatch log
         └── phases/
             └── P01/

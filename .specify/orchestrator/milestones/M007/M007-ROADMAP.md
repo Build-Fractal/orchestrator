@@ -4,95 +4,91 @@ type: roadmap
 milestone: "M007"
 feature_ref: "007-graph-enhanced-knowledge"
 feature_spec: "specs/007-graph-enhanced-knowledge/spec.md"
-vision: "Enable multi-hop graph traversal, semantic similarity search, and provenance chain queries on the knowledge base via an optional graph database backend — transforming context retrieval from conservative 1-hop grep to intelligent graph-powered discovery while maintaining graceful degradation to flat-file operations."
+vision: "Enable multi-hop graph traversal and provenance chain queries on the knowledge base via a SQLite recursive CTE backend — transforming context retrieval from conservative 1-hop grep to graph-powered discovery with zero new runtime dependencies."
 tier: "C"
-created_at: "2026-04-10T23:45:00Z"
-updated_at: "2026-04-10T23:45:00Z"
+created_at: "2026-04-14T12:00:00Z"
+updated_at: "2026-04-14T12:00:00Z"
 ---
 
 ## Phases
 
-- [ ] **P01**: Graph DB Backend — "A developer runs `rebuild-index.sh --graph` and the knowledge base is populated into a graph database with nodes for each entry and edges for relates_to, supersedes, and scope_tag co-occurrence — with automatic fallback to flat-file operations when the graph DB is unavailable."
-  - Risk: high
+- [x] **P01**: SQLite Graph Backend — "A developer runs `rebuild-index.sh` and a `knowledge.db` SQLite database is created alongside the flat index, containing entries, edges, and scope_tags tables populated from knowledge entry frontmatter — with a NULL vector column ready for future sqlite-vec integration."
+  - Risk: medium
   - Depends: none
   - Boundary Map:
     - Produces:
-      - Graph DB selection decision (Memgraph, Neo4j, SQLite recursive CTEs, or NetworkX)
-      - Graph schema definition (node labels, edge types, property mapping from frontmatter)
-      - Updated `scripts/knowledge/rebuild-index.sh` — `--graph` mode populates graph alongside flat index
-      - `scripts/knowledge/lib/graph-backend.sh` — connection management, query execution, fallback detection
-      - Graph connection config in `orchestrator-config.yml`
+      - `knowledge.db` — SQLite database file (derived artifact, rebuilt from entry files)
+      - SQL schema: `entries` table (all frontmatter fields + NULL vector column), `edges` table (relates_to + supersedes relationships), `scope_tags` table (normalized tag-to-entry mapping)
+      - `scripts/knowledge/lib/graph-db.sh` — SQLite connection library (query helper, DB path resolution, error handling)
+      - Updated `scripts/knowledge/rebuild-index.sh` — populates SQLite DB from knowledge entry file frontmatter alongside existing flat index rebuild
     - Consumes:
-      - Knowledge entry files (from M002)
+      - Knowledge entry files `knowledge/{category}/MEM###.md` (from M002)
       - Content hashes (from M005 P01)
 
-- [ ] **P02**: Multi-Hop Context Retrieval — "The context recipe declares `graph_hops: 3` and `scope-filter.sh` retrieves entries up to 3 relationship hops away, ranked by effective_confidence weighted by path distance — producing richer context payloads than the current 1-hop/5-max limit."
-  - Risk: high
-  - Depends: P01
-  - Boundary Map:
-    - Produces:
-      - Updated `scripts/knowledge/scope-filter.sh` — graph-powered mode with configurable hop depth
-      - Updated `scripts/knowledge/traverse-graph.sh` — delegates to graph DB when available, falls back to current 1-hop implementation
-      - Recipe section source type `source: graph` in context-recipe.yaml schema
-      - Path-distance ranking: `effective_confidence × (1 / hop_distance)`
-    - Consumes:
-      - Graph backend (from P01)
-      - Recipe system (from M004 P04)
-
-- [ ] **P03**: Vector Embeddings and Semantic Search — "A developer configures `filter: semantic` in a recipe section and the context builder retrieves the 5 knowledge entries most semantically similar to the current task description — without requiring explicit scope tag matching."
+- [x] **P02**: Multi-Hop Context Retrieval — "The context recipe declares `graph_hops: 3` and `traverse-graph.sh` retrieves entries up to 3 relationship hops away using a recursive CTE, ranked by effective_confidence weighted by path distance — replacing the 172-line Bash BFS with a ~10-line SQL query."
   - Risk: medium
   - Depends: P01
   - Boundary Map:
     - Produces:
-      - Embedding computation script — generates vector embeddings for knowledge entry bodies
-      - Vector index creation on graph DB
-      - `filter: semantic` support in recipe parser and scope-filter.sh
-      - Embedding API configuration in orchestrator-config.yml (provider, model, dimension)
+      - Updated `scripts/knowledge/traverse-graph.sh` — rewritten from Bash BFS to `sqlite3` recursive CTE, configurable hop depth (`--hops N`), path-distance ranking
+      - Updated `scripts/dispatch/scope-filter.sh` — SQLite query-based filtering replacing grep/sed parsing, supports `--graph` mode
+      - Recipe section source type `source: graph` integration in context-recipe.yaml schema
+      - Path-distance ranking formula: `effective_confidence * (1 / hop_distance)`
     - Consumes:
-      - Graph backend (from P01)
-      - Embedding API (OpenAI, local model, or graph DB built-in)
+      - `knowledge.db` and `scripts/knowledge/lib/graph-db.sh` (from P01)
+      - Recipe system and context-recipe.yaml schema (from M004)
 
-- [ ] **P04**: Provenance and Impact Graphs — "Running `scripts/knowledge/traverse-graph.sh --provenance MEM042` shows the full supersession chain; `scripts/diagnostics/check-impact.sh` identifies which knowledge entries correlate with successful dispatches — enabling evidence-based context optimization."
-  - Risk: medium
-  - Depends: P01, P02
-  - Boundary Map:
-    - Produces:
-      - `traverse-graph.sh --provenance` mode — follows supersession chains to origin
-      - `scripts/diagnostics/check-impact.sh` — joins knowledge hit_count + graph relationships with execution-log.jsonl outcomes
-      - Impact report: entries ranked by (hit_count × success_rate_of_dispatches_that_included_them)
-    - Consumes:
-      - Graph backend (from P01)
-      - Multi-hop traversal (from P02)
-      - execution-log.jsonl (from M001/M004)
-
-- [ ] **P05**: Graph-Aware Diagnostics — "run-doctor.sh reports graph health: disconnected components, orphaned clusters, supersession chain integrity, and graph statistics (nodes, edges, avg degree) — with Cypher query output for visual exploration in Memgraph Lab."
+- [x] **P03**: Provenance Chains — "Running `traverse-graph.sh --provenance MEM042` shows the full supersession chain from the current entry back to the original, displaying each entry ID, confidence, and creation date along the path."
   - Risk: low
-  - Depends: P01, P02, P03, P04
+  - Depends: P02
   - Boundary Map:
     - Produces:
-      - `scripts/diagnostics/check-graph-health.sh` — component analysis, orphan detection, chain integrity
-      - Updated `scripts/diagnostics/run-doctor.sh` — includes graph checks when graph DB available
-      - Cypher query output for visual exploration
-      - Graph statistics in telemetry aggregation
-    - Consumes: all prior phases
+      - `traverse-graph.sh --provenance` mode — recursive CTE following supersedes/superseded_by chains to origin entry
+      - Structured provenance output: chain path with entry metadata (id, confidence, created_at, description) at each node
+    - Consumes:
+      - `scripts/knowledge/traverse-graph.sh` (rewritten version from P02)
+      - `knowledge.db` (from P01)
+
+- [x] **P04**: Graph-Aware Diagnostics — "Running `run-doctor.sh` reports graph health: disconnected components, orphaned entries with no relationships, broken supersession chains, and graph statistics (node count, edge count, average degree) — all computed via SQL queries against knowledge.db."
+  - Risk: low
+  - Depends: P03
+  - Boundary Map:
+    - Produces:
+      - `scripts/diagnostics/check-graph-health.sh` — disconnected component detection, orphan identification, supersession chain integrity checks, graph statistics
+      - Updated `scripts/diagnostics/run-doctor.sh` — includes graph health checks in diagnostic suite
+      - Graph statistics output: node count, edge count, avg degree, largest connected component size
+    - Consumes:
+      - `knowledge.db` and `scripts/knowledge/lib/graph-db.sh` (from P01)
+      - `traverse-graph.sh --provenance` (from P03, for chain integrity validation)
+
+## Cross-Cutting Concerns
+
+- **sqlite3 CLI calling convention** — P01, P02, P03, P04. P01 establishes the pattern in `graph-db.sh` (query helper, error handling, DB path resolution); P02–P04 must use this library rather than calling `sqlite3` directly.
+- **Structured output format** — P01, P02, P03, P04. All scripts continue to emit prefixed lines (`CREATED:`, `UPDATED:`, `TRAVERSED:`, etc.) to stdout. SQL output is parsed into this format by wrapper functions in `graph-db.sh`.
+- **Bash 3.2 compatibility** — P01, P02, P03, P04. All SQL is passed to `sqlite3` via heredoc or `-cmd` flag. No associative arrays, no mapfile/readarray. P01 establishes the portable calling pattern.
+- **Atomic file operations** — P01, P02. The `knowledge.db` file is rebuilt using the existing temp-file-then-mv pattern (write to `.tmp.$$`, then `mv`). SQLite's own journaling handles mid-query safety, but the full-rebuild pattern avoids partial DB states.
 
 ## Dependency Graph
 
 ```
-P01 (Graph Backend)
- │
- ├──→ P02 (Multi-Hop Retrieval)
- │     │
- │     └──→ P04 (Provenance & Impact)
- │
- └──→ P03 (Vector Embeddings)
-                │
-P02, P03, P04 ──→ P05 (Graph Diagnostics)
+P01 (SQLite Backend)
+ └──→ P02 (Multi-Hop Retrieval)
+       └──→ P03 (Provenance Chains)
+             └──→ P04 (Graph Diagnostics)
 ```
+
+Linear chain — no concurrent execution opportunities. Each phase modifies or extends artifacts produced by the prior phase.
 
 ## Execution Order
 
-1. **P01** (Graph Backend) — high risk, foundation. Must complete first.
-2. **P02** (Multi-Hop) and **P03** (Embeddings) — can execute concurrently after P01.
-3. **P04** (Provenance) — depends on P01 + P02.
-4. **P05** (Diagnostics) — depends on all prior. Low risk, final.
+1. **P01** (SQLite Graph Backend) — foundation. Creates the database, schema, and library that all subsequent phases depend on. Medium risk due to schema design decisions.
+2. **P02** (Multi-Hop Context Retrieval) — rewrites traverse-graph.sh and scope-filter.sh. Medium risk due to recursive CTE correctness and ranking logic. Must complete before P03 adds --provenance to the rewritten script.
+3. **P03** (Provenance Chains) — adds --provenance flag to traverse-graph.sh. Low risk — single recursive CTE on supersedes column. Must complete before P04 validates chain integrity.
+4. **P04** (Graph-Aware Diagnostics) — final phase, adds health checks. Low risk — SQL queries for diagnostics, no novel algorithms.
+
+## Validation
+
+- **No conflicting producers**: PASS — P02 and P03 both modify traverse-graph.sh, but P03 depends on P02 (sequential, not conflicting). No other shared artifacts.
+- **All consumed items have producers**: PASS — all consumed items traced to upstream produces entries. External dependencies (M002 entry files, M004 recipe system, M005 content hashes) are documented.
+- **DAG is acyclic**: PASS — linear chain P01 → P02 → P03 → P04, trivially acyclic.
+- **Demo sentence coverage**: PASS — all four phases have concrete, observable demo sentences describing specific commands and their expected output.

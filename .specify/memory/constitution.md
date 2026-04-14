@@ -1,44 +1,31 @@
 <!--
   Sync Impact Report
   ==================
-  Version change: 1.0.0 → 2.0.0 (MAJOR — new principles change compliance requirements)
+  Version change: 2.0.0 → 2.1.0 (MINOR — new principles, amended guidance)
 
   Added principles:
-    - VIII. No Dead Infrastructure
-    - IX. Reproducibility Over Convenience
-    - X. Templating Over Inference
-    - XI. Single Source of Truth
-    - XII. Hook Isolation
-    - XIII. Agent Instruction Schema
+    - XIV. No Speculative Complexity
+    - XV. Surgical Precision
 
   Amended principles:
-    - II. Evidence Before Claims — added structured event emission requirement
-      for engine-managed scripts (emit_event / emit_result)
+    - II. Evidence Before Claims — added upfront success criteria requirement
+    - III. Design Before Code — added ambiguity surfacing requirement
 
   Unchanged principles:
-    - I. Context Minimization
-    - III. Design Before Code
-    - IV. Plans Assume Zero Context
-    - V. Fresh Context Per Unit
-    - VI. State On Disk Is Truth
-    - VII. Knowledge Compounds
+    - I, IV, V, VI, VII, VIII, IX, X, XI, XII, XIII
 
   Unchanged sections:
-    - Constraints (no changes)
-    - Quality Gates (no changes)
-    - Governance (no changes)
+    - Quality Gates, Governance (no changes)
+    - Constraints: updated for standalone direction (spec-kit optional)
 
   Templates requiring updates:
     ⚠️ templates/phase-plan.md — Constitution Check should reference
-       principles VIII-XIII where applicable. Low urgency: templates
+       principles XIV-XV where applicable. Low urgency: templates
        dynamically load constitution; no hardcoded principle references.
-    ✅ All other templates — no constitution-specific references to update.
 
-  Follow-up TODOs:
-    - Phase plans from M004 P02+ should reference new principles in
-      their must-haves where applicable.
-    - run-doctor.sh conformance check (P07) will verify principle
-      references in phase plans.
+  Prior version history:
+    - 2.0.0: Added VIII-XIII, amended II (event emission)
+    - 1.0.0: Original I-VII
 -->
 
 # Speckit-Orchestrator Constitution
@@ -75,6 +62,11 @@ No task is marked complete without fresh verification evidence.
   human judgment.
 - If verification cannot be performed mechanically, the task plan
   MUST specify what evidence constitutes proof.
+- Before execution begins, the task plan MUST transform the request
+  into testable completion criteria. "Fix the bug" → "write a test
+  that reproduces it, then make it pass." A task without upfront
+  success criteria is incomplete — you cannot verify what you have
+  not defined.
 - Engine-managed scripts MUST emit structured events (`emit_event`)
   and a final result (`emit_result`). A script that runs to
   completion without emitting a RESULT line is treated as a silent
@@ -94,6 +86,10 @@ matter how "simple" it seems.
   is a red flag, not a valid exemption.
 - Design artifacts are lightweight and proportional to scope, but
   they MUST exist.
+- The design step MUST surface uncertainty, not hide it. When a
+  requirement has multiple valid interpretations, enumerate them
+  and state which was chosen — do not silently pick one. Push back
+  if a simpler approach exists. Stop and ask rather than guess.
 
 ### IV. Plans Assume Zero Context
 
@@ -256,15 +252,44 @@ analysis.
   migration: new instructions conform immediately, existing
   instructions migrate as they are touched.
 
+### XIV. No Speculative Complexity
+
+Every implementation MUST deliver exactly what was requested —
+nothing more. Complexity is debt that consumes context budget
+(Principle I) and increases maintenance surface.
+
+- No features beyond what was asked.
+- No abstractions for single-use code. Three similar lines are
+  better than a premature helper.
+- No "flexibility" that was not requested. Extension points and
+  configurability are features requiring justification.
+- No error handling for impossible scenarios. Validate at system
+  boundaries only.
+- Litmus test: would a senior engineer say "this is
+  overcomplicated"? If yes, rewrite.
+
+### XV. Surgical Precision
+
+Every changed line MUST trace directly to the request. Code
+outside the request scope is not yours to modify.
+
+- Do NOT "improve" adjacent code. Refactoring is a separate task
+  with its own plan.
+- Do NOT refactor working code. Ugly but working code is still
+  working code.
+- Match the existing style even if you would do it differently.
+- If you notice unrelated issues: record them in the task summary
+  (Principle VII). Do NOT fix them in-scope.
+- Verification: `git diff` should contain no hunks that cannot be
+  justified by the task plan's stated objective.
+
 ## Constraints
 
-- This is a spec-kit extension — MUST be installable via
-  `specify extension add`.
-- MUST work with all spec-kit-supported agents: Claude Code,
-  Copilot, Cursor, Gemini CLI.
-- MUST NOT require GSD-2 or APM as runtime dependencies. Principles
-  are ported from these systems, not wrapped. No import or invocation
-  of GSD-2 or APM binaries at runtime.
+- Standalone-first: MUST work as a direct Claude Code extension
+  without requiring spec-kit. Spec-kit integration is an optional
+  mode, not a prerequisite.
+- MUST NOT require GSD-2, APM, or spec-kit as runtime dependencies.
+  Principles are ported from these systems, not wrapped.
 - MUST degrade gracefully:
   - No subagent capability → fall back to sequential in-session
     execution.
@@ -315,4 +340,4 @@ analysis.
   review MUST include an explicit constitution check section
   referencing each applicable principle by number.
 
-**Version**: 2.0.0 | **Ratified**: 2026-03-18 | **Last Amended**: 2026-04-10
+**Version**: 2.1.0 | **Ratified**: 2026-03-18 | **Last Amended**: 2026-04-14

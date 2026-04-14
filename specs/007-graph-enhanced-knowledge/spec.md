@@ -2,67 +2,74 @@
 
 ## Summary
 
-Add an optional graph database backend (Memgraph or equivalent) behind the knowledge system to enable multi-hop traversal, semantic similarity search, provenance chain queries, and cluster detection — unlocking context retrieval capabilities that flat-file grep cannot provide while maintaining graceful degradation when no graph DB is available.
+Add a SQLite graph backend to the knowledge system to enable multi-hop traversal, provenance chain queries, and graph-aware diagnostics — upgrading context retrieval from 1-hop grep to recursive CTE-powered graph queries with no additional runtime dependencies.
 
 ## Motivation
 
-The orchestrator's knowledge system (M002) stores structured entries with explicit relationships (`relates_to`, `superseded_by`, `scope_tags`, `source_unit`). The current retrieval is limited to 1-hop traversal with a 5-entry cap because recursive graph traversal in Bash is expensive and fragile. A graph database removes this ceiling, enabling:
+The orchestrator's knowledge system (M002) stores structured entries with explicit relationships (`relates_to`, `superseded_by`, `scope_tags`, `source_unit`). The current retrieval is limited to 1-hop traversal with a 5-entry cap because recursive graph traversal in Bash is expensive and fragile. A SQLite graph backend removes this ceiling using recursive CTEs, enabling:
 
-- **Multi-hop traversal** (2-3 hops): "Find all knowledge connected to this phase's decisions within 3 relationship hops" — a single Cypher query vs impossible recursive shell scripting
-- **Semantic similarity**: "Find entries similar to this task's description" via vector embeddings — not possible with grep
+- **Multi-hop traversal** (2-3 hops): "Find all knowledge connected to this phase's decisions within 3 relationship hops" — a single recursive CTE vs impossible recursive shell scripting
 - **Provenance chains**: "Where did this knowledge originate?" via directed supersession path queries
-- **Cluster detection**: "These 5 entries form a concept group" via community detection algorithms
-- **Impact analysis**: "What knowledge contributed to the most successful phases?" by joining knowledge hit_count with execution-log outcomes
+- **Graph-aware diagnostics**: Disconnected components, orphaned entries, chain integrity checks
+- **Forward-compatible schema**: Vector column (NULL) ready for future `sqlite-vec` semantic search integration
+
+### Technology Decision: SQLite
+
+Evaluated Memgraph, Neo4j, SQLite recursive CTEs, NetworkX, and DuckDB. SQLite selected because:
+
+- `sqlite3` CLI ships with macOS — zero new dependencies
+- File-based — no running process, no Docker, "just works"
+- Shell scripts call `sqlite3` directly — preserves pure-Bash architecture
+- Recursive CTEs handle multi-hop traversal efficiently for <1000 entries
+- `sqlite-vec` extension available for future vector search (schema-ready, pipeline deferred)
+
+Trade-offs accepted: no Cypher query language, no native graph algorithms (PageRank, community detection), no visual explorer. These capabilities are not needed at current scale (~150 entries, single user/project).
 
 ### Prior Art
 
-Evaluated `memgraph/ai-toolkit/unstructured2graph` (v0.1.4). It's a thin glue layer (~300 lines) using Unstructured (doc parsing) + LightRAG (LLM-powered entity extraction) + Memgraph (graph storage). The orchestrator does NOT need LLM-powered entity extraction — our entities are already explicit in frontmatter. What we'd borrow:
+Evaluated `memgraph/ai-toolkit/unstructured2graph` (v0.1.4). The orchestrator does NOT need LLM-powered entity extraction — our entities are already explicit in frontmatter. What we borrow conceptually:
 
-- **Graph schema pattern**: Nodes with properties, typed edges, Cypher queries for traversal
-- **Vector search integration**: `CREATE VECTOR INDEX` + `vector_search.search()` for semantic retrieval
-- **BFS traversal from seed nodes**: `MATCH (node)-[r*bfs]-(dst)` for multi-hop context gathering
-- **Chunk→Entity linking pattern**: Adapted as Entry→Entry and Entry→Decision relationships
-
-We would NOT use: Unstructured library (our content is already structured), LightRAG entity extraction (our entities are explicit), their generic doc→graph pipeline (we have domain-specific structure).
+- **Graph schema pattern**: Nodes with properties, typed edges, traversal queries
+- **BFS traversal from seed nodes**: Adapted as recursive CTEs
+- **Chunk-Entity linking pattern**: Adapted as Entry-Entry and Entry-Decision relationships
 
 ## Status
 
-Spec stub — full user stories and functional requirements to be written when M004-M006 are complete. This milestone depends on the M004 engine and YAML recipe system being in place (graph search becomes a recipe section source type).
+Technology decision finalized (SQLite). Scope reduced from original 5-phase plan: vector embeddings (P03) and impact analysis deferred to future milestones. No graceful degradation — SQLite is always available, making fallback architecturally unnecessary.
 
-## Planned Scope (Draft)
+## Planned Scope
 
-### P01: Graph DB Backend
-- Optional Memgraph (or Neo4j/SQLite with recursive CTEs) behind knowledge index
-- `rebuild-index.sh --graph` populates graph from knowledge entry files
-- Graph schema: nodes = entries, edges = relates_to + supersedes + same_scope_tag + same_source_unit + same_category
-- Graceful degradation: falls back to flat-file grep when graph DB unavailable (constitution constraint)
-- Connection config in orchestrator-config.yml
+### P01: SQLite Graph Backend
+- SQLite database (`knowledge.db`) as derived artifact from knowledge entry files
+- `rebuild-index.sh` populates SQLite DB from knowledge entry file frontmatter
+- Graph schema: `entries` table (all frontmatter fields + NULL vector column), `edges` table (relates_to + supersedes), `scope_tags` table
+- No graceful degradation — SQLite is the required backend (always available, ships with macOS)
+- Knowledge entry markdown files remain the source of truth; DB is rebuilt, not mutated
+- Connection/query library in `scripts/knowledge/lib/graph-db.sh`
 
 ### P02: Multi-Hop Context Retrieval
-- `scope-filter.sh` gains graph-powered mode
+- `scope-filter.sh` rewritten to use SQLite queries instead of grep/sed parsing
+- `traverse-graph.sh` rewritten: 172-line Bash BFS replaced by recursive CTE (~10 lines of SQL)
 - Configurable in context-recipe.yaml: `graph_hops: 3` (currently hardcoded at 1), `graph_max_entries: 15`
-- Cypher query: `MATCH (entry)-[*1..N]-(related) WHERE entry.scope_tags CONTAINS $tag`
-- Results ranked by `effective_confidence × (1 / path_distance)`
+- Results ranked by `effective_confidence * (1 / path_distance)`
 - Recipe section source type: `source: graph` (designed in M004, implemented here)
 
-### P03: Vector Embeddings and Semantic Search
-- Compute embeddings for knowledge entry bodies (requires embedding API — OpenAI, local model, or Memgraph built-in)
-- Enable semantic search: "find entries most relevant to this task description"
-- Vector index on entry body text, queryable via `vector_search.search()`
-- Recipe section filter: `filter: semantic` alongside existing `filter: scope`
-- Optional — system works without embeddings, just loses semantic retrieval
+### P03: Provenance Chains
+- Supersession chain queries: `WITH RECURSIVE` on the supersedes relationship
+- `traverse-graph.sh --provenance` mode — follows supersession chains to origin entry
+- Simple, high-value feature — one recursive CTE, rich output
 
-### P04: Provenance and Impact Graphs
-- Supersession chain queries: `MATCH path = (entry)-[:SUPERSEDES*]-(origin) RETURN path`
-- Impact analysis: join knowledge graph with execution-log.jsonl outcomes
-- "What knowledge was included in dispatches that succeeded vs failed?"
-- "What decision clusters are most referenced by high-confidence knowledge?"
-- Powers diagnostics doctor enhancements and engine context optimization
+### P04: Graph-Aware Diagnostics
+- `run-doctor.sh` gains graph health checks: disconnected components, orphaned entries, supersession chain integrity
+- Graph statistics: node count, edge count, avg degree, largest component
+- SQL queries for each diagnostic (no external graph algorithm library)
 
-### P05: Graph-Aware Diagnostics
-- `run-doctor.sh` gains graph health checks: disconnected components, orphaned clusters, supersession chain integrity
-- Visualization output: Cypher queries that can be pasted into Memgraph Lab for visual exploration
-- Graph statistics in telemetry: node count, edge count, avg degree, largest component
+## Deferred to Future Milestones
+
+- **Vector embeddings / semantic search**: Schema includes vector column (NULL) for forward compatibility with `sqlite-vec`. Full pipeline (embedding provider, computation script, `filter: semantic`) deferred — requires Python for embedding computation, not justified at current knowledge base size
+- **Impact analysis**: Correlating knowledge graph with execution-log.jsonl dispatch outcomes. Deferred until sufficient execution history exists for statistical significance
+- **Community detection / clustering**: Not meaningful at <1000 entries. Available via Python (NetworkX) if needed later
+- **Visual graph exploration**: No built-in explorer. Can export to DOT format if needed
 
 ## Dependencies
 
@@ -70,20 +77,10 @@ Spec stub — full user stories and functional requirements to be written when M
 - **M005** (Hardening): Content hashing must exist — graph nodes use content_hash for change detection during rebuild
 - **M006** (Documentation): Architecture docs must cover graph integration points
 
-## Technology Evaluation Notes
+## Design Constraints
 
-### Memgraph
-- In-memory graph DB, Cypher-compatible, MIT licensed
-- Built-in vector search (`CREATE VECTOR INDEX`), BFS support, community detection (MAGE library)
-- Python driver via `memgraph-toolbox`, also has bolt protocol for other languages
-- Lightweight: single binary, Docker-friendly, ~50MB memory for small graphs
-- Trade-off: requires running process (not file-based like SQLite)
-
-### Alternatives to Evaluate
-- **Neo4j Community**: More mature, larger ecosystem, but heavier (JVM-based)
-- **SQLite with recursive CTEs**: No external process, but no vector search or graph algorithms
-- **DuckDB**: Columnar analytics, has recursive CTEs, no native graph algorithms
-- **NetworkX (Python)**: In-memory graph library, no persistence, but perfect for small knowledge bases (<1000 entries)
-- **Plain file upgrade**: Extend current traverse-graph.sh to support 2-3 hops with memoization — no new dependency, but O(n²) at scale
-
-Decision deferred to M007 discuss phase. The right choice depends on: knowledge base size at that point, whether the orchestrator has gained a Python component by then (via Conversus integration), and whether the vector search capability justifies the operational overhead.
+- **Bash 3.2 compatibility**: All scripts must work on macOS default bash. No associative arrays, no mapfile/readarray.
+- **`sqlite3` CLI only**: No compiled extensions in M007. Standard SQLite features only (recursive CTEs, window functions, JSON functions if needed).
+- **Three-temperature architecture preserved**: Hot (KNOWLEDGE-INDEX.md) + warm (knowledge/{category}/MEM###.md) + cold (knowledge/archive/). SQLite DB is a parallel index, not a replacement for file-based entry storage.
+- **Knowledge entry files are source of truth**: The SQLite DB is a derived artifact. Entry CRUD still writes to markdown files. The DB is rebuilt (not mutated) by `rebuild-index.sh`.
+- **Atomic operations**: DB rebuild uses temp-file-then-mv pattern consistent with existing scripts.

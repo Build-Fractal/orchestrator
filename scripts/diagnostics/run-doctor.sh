@@ -110,6 +110,15 @@ run_check "Recipe Conformance" "$SCRIPT_DIR/check-recipe.sh" "--root $PROJECT_RO
 run_check "Task Plan Shape" "$SCRIPT_DIR/check-plans.sh" "--root $PROJECT_ROOT" "1"
 run_check "Documentation Completeness" "$SCRIPT_DIR/check-docs.sh" "--root $PROJECT_ROOT" "0"
 
+# Graph health checks (requires knowledge.db from M007)
+if [ -f "$PROJECT_ROOT/knowledge.db" ]; then
+  run_check "Graph Health" "$SCRIPT_DIR/check-graph-health.sh" "--root $PROJECT_ROOT" "0"
+else
+  echo "--- Graph Health ---"
+  echo "SKIP: knowledge.db not found (run rebuild-index.sh to create)"
+  echo ""
+fi
+
 # --- Summary ---
 if [ "$checks_passed" -eq "$checks_total" ]; then
   status_label="HEALTHY"

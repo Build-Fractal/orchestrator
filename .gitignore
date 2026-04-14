@@ -16,6 +16,11 @@ Thumbs.db
 .specify/extensions/.cache/
 .specify/extensions/.backup/
 
+# Knowledge graph database (derived artifact — rebuilt by rebuild-index.sh)
+knowledge.db
+knowledge.db-shm
+knowledge.db-wal
+
 # IDE
 .idea/
 .vscode/

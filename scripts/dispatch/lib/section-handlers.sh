@@ -233,12 +233,19 @@ handle_knowledge() {
     dep_flag="--depends $depends"
   fi
 
+  # Check if graph database is available for enhanced filtering
+  local graph_flag=""
+  local db_file="${_SH_PROJECT_ROOT}/knowledge.db"
+  if [ -f "$db_file" ]; then
+    graph_flag="--graph"
+  fi
+
   # Step 1: scope-filter
   local filtered_file matched_file
   filtered_file="$(mktemp)"
   matched_file="$(mktemp)"
   bash "$_SH_SCOPE_FILTER" "$knowledge_index" "${milestone}/${phase}" \
-    --type knowledge $dep_flag > "$filtered_file" 2>/dev/null || true
+    --type knowledge $dep_flag $graph_flag > "$filtered_file" 2>/dev/null || true
 
   if [ ! -s "$filtered_file" ]; then
     printf 'No knowledge entries in scope.\n'
@@ -267,7 +274,7 @@ handle_knowledge() {
   cat "$matched_file" > "$all_ids_file"
   while IFS= read -r eid; do
     [ -z "$eid" ] && continue
-    bash "$_SH_TRAVERSE_GRAPH" --id "$eid" --max-depth 1 --max-entries 5 \
+    bash "$_SH_TRAVERSE_GRAPH" --id "$eid" --hops 2 --max-entries 10 \
       >> "$related_file" 2>/dev/null || true
   done < "$matched_file"
   cat "$related_file" >> "$all_ids_file"

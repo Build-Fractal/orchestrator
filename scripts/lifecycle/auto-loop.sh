@@ -70,6 +70,7 @@ SYNC_ROADMAP="$PROJECT_ROOT/scripts/lifecycle/sync-roadmap.sh"
 CONTEXT_MONITOR="$PROJECT_ROOT/scripts/lifecycle/context-monitor.sh"
 CHECK_MUST_HAVES="$PROJECT_ROOT/scripts/verify/check-must-haves.sh"
 RUN_COMMANDS="$PROJECT_ROOT/scripts/verify/run-commands.sh"
+REBUILD_INDEX="$PROJECT_ROOT/scripts/knowledge/rebuild-index.sh"
 
 # --- Validate required scripts exist ---
 for required_script in "$DERIVE_PHASE" "$READ_ROADMAP" "$BUILD_CONTEXT" \
@@ -368,6 +369,11 @@ fi
 if [[ -n "$PAUSE_FILE" ]]; then
   rm -f "$PAUSE_FILE"
   exit 11
+fi
+
+# --- Ensure knowledge graph is current before dispatch ---
+if [ -f "$REBUILD_INDEX" ]; then
+  bash "$REBUILD_INDEX" --root "$PROJECT_ROOT" >/dev/null 2>&1 || true
 fi
 
 # --- Step A: Derive state and identify next task ---

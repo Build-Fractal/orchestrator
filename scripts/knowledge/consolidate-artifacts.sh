@@ -109,14 +109,21 @@ for pid in $phase_ids; do
   mkdir -p "$archive_dir"
 
   # Move task plans (T##-PLAN.md)
-  for f in "$phase_dir"/T*-PLAN.md; do
+  for f in "$phase_dir"/tasks/T*-PLAN.md; do
     if [ -f "$f" ]; then
       mv "$f" "$archive_dir/"
     fi
   done
 
   # Move task summaries (T##-SUMMARY.md)
-  for f in "$phase_dir"/T*-SUMMARY.md; do
+  for f in "$phase_dir"/tasks/T*-SUMMARY.md; do
+    if [ -f "$f" ]; then
+      mv "$f" "$archive_dir/"
+    fi
+  done
+
+  # Move task payloads (T##-PAYLOAD.md)
+  for f in "$phase_dir"/tasks/T*-PAYLOAD.md; do
     if [ -f "$f" ]; then
       mv "$f" "$archive_dir/"
     fi

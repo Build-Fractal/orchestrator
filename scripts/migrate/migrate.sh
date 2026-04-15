@@ -397,10 +397,17 @@ fi
 # =============================================================================
 log_step "Migration Pipeline — P02: Transform"
 
-# Determine target root (where orchestrator state will be written)
-# If --output was specified, use that as the target root
-# Otherwise, use current directory
-target_root="${opt_output:-$(pwd)}"
+# Resolve target root via M008 5-rule resolver (AD-13).
+# --output takes precedence (offline extraction path).
+if [ -n "$opt_output" ]; then
+    target_root="$opt_output"
+    log_info "Target root (from --output): $target_root"
+else
+    target_root="$(bash "$(dirname "${BASH_SOURCE[0]}")/../state/resolve-root.sh" --absolute)"
+    log_info "Target root (from resolve-root.sh): $target_root"
+fi
+export MIGRATE_TARGET_ROOT="$target_root"
+mkdir -p "$target_root"
 
 # Check for existing orchestrator state (idempotency)
 enforce_conflict_policy "$target_root" "$opt_conflict"

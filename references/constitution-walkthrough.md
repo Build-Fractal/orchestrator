@@ -8,7 +8,7 @@
 
 ## Overview
 
-The speckit-orchestrator constitution (`.specify/memory/constitution.md`) is the supreme governance document for the project. It defines 13 principles that every architectural decision, script, template, and phase plan must satisfy. When the constitution conflicts with any other document, the constitution wins.
+The speckit-orchestrator constitution (`.orchestrator/memory/constitution.md`) is the supreme governance document for the project. It defines 13 principles that every architectural decision, script, template, and phase plan must satisfy. When the constitution conflicts with any other document, the constitution wins.
 
 The constitution exists because orchestration is a coordination problem, and coordination fails when participants (agents, scripts, contributors) operate under different assumptions. The 13 principles encode the assumptions that every participant must share.
 
@@ -120,7 +120,7 @@ Design artifacts are lightweight and proportional to scope, but they must exist.
 
 #### Codebase Examples
 
-- **The SDD workflow** itself enforces this: `/speckit.specify` (brainstorm/spec), `/speckit.plan` (design), `/speckit.implement` (execute), then verification (review). No task is implemented without a prior `T##-PLAN.md`.
+- **The SDD workflow** itself enforces this: `orchestrator:evaluate` → `orchestrator:discuss` → `orchestrator:roadmap` → `orchestrator:plan-phase` → `orchestrator:auto` / `orchestrator:dispatch` → `orchestrator:verify`. No task is implemented without a prior `T##-PLAN.md`.
 
 - **Phase plans** (`P##-PLAN.md`) are mandatory before any phase execution begins. The `derive-phase.sh` state machine returns `planning` when a phase lacks a plan, blocking execution until the design exists.
 
@@ -129,7 +129,7 @@ Design artifacts are lightweight and proportional to scope, but they must exist.
 #### Common Violations
 
 - Implementing a "quick fix" directly without creating a task plan ("it's just one line").
-- Skipping the `/speckit.plan` step because the spec "already describes the implementation."
+- Skipping the `orchestrator:plan-phase` step because the spec "already describes the implementation."
 - Treating the design step as a formality by writing the plan after the implementation.
 
 #### How to Check Compliance
@@ -148,7 +148,7 @@ Implementation plans must be written as if the executing agent has zero codebase
 
 #### Codebase Examples
 
-- **Task plans** (e.g., `T01-PLAN.md` files throughout `.specify/orchestrator/milestones/`) include exact file paths, literal code blocks, and verification commands with expected output. Every file to be created or modified is listed explicitly.
+- **Task plans** (e.g., `T01-PLAN.md` files throughout `.orchestrator/milestones/`) include exact file paths, literal code blocks, and verification commands with expected output. Every file to be created or modified is listed explicitly.
 
 - **`scripts/dispatch/build-context.sh`** constructs a payload that bundles the task plan with all dependency artifacts, so the executing agent receives everything it needs in a single document. The agent does not need to discover context on its own.
 
@@ -225,7 +225,7 @@ No in-memory state across sessions. All state must be recoverable from files on 
 
 - Run `derive-phase.sh` on a milestone directory twice in succession: the output must be identical if no files changed between runs.
 - After a simulated crash (kill the engine mid-task), run `derive-phase.sh` again: it should return a valid state that enables recovery.
-- Verify that no script stores phase/task state in files outside `.specify/orchestrator/`.
+- Verify that no script stores phase/task state in files outside `.orchestrator/`.
 
 ---
 
@@ -256,7 +256,7 @@ Good documentation makes future tasks cheaper by reducing context consumption (r
 
 - Every completed phase directory must contain a `P##-SUMMARY.md`.
 - Every completed milestone must have an `M###-SUMMARY.md`.
-- Run `grep -c '^\- ' .specify/orchestrator/KNOWLEDGE.md` to confirm knowledge entries are being appended over time.
+- Run `grep -c '^\- ' .orchestrator/KNOWLEDGE.md` to confirm knowledge entries are being appended over time.
 - Check that `DECISIONS.md` is updated when architectural decisions are made during a phase.
 
 ---
@@ -269,7 +269,7 @@ Every file, script, template, and configuration entry must be reachable from a l
 
 #### Codebase Examples
 
-- **`extension.yml`** is the manifest of live code paths. Every command and script listed here is reachable. Scripts not listed in `extension.yml` (and not referenced by listed scripts) are candidates for removal.
+- **`commands/`** is the surface of live orchestrator commands. Every command file is registered as a skill by the runtime installer, and every script invoked by a command must exist on disk. Scripts not referenced by any command, hook, or other script are candidates for removal.
 
 - **`scripts/diagnostics/check-orphaned.sh`** detects orphaned knowledge artifacts — files that exist in the knowledge hierarchy but are not referenced by any index or cross-link. The doctor suite (`run-doctor.sh`) runs this check and reports orphans as warnings.
 
@@ -285,7 +285,7 @@ Every file, script, template, and configuration entry must be reachable from a l
 #### How to Check Compliance
 
 - Run `bash scripts/diagnostics/run-doctor.sh` and check for orphan warnings.
-- Cross-reference `extension.yml` script entries with actual files in `scripts/`: every listed script should exist, and every script should be listed (or referenced by a listed script).
+- Cross-reference command files with the scripts they invoke: every script path mentioned in `commands/*.md` should exist, and every script should be reachable from at least one command, hook, or other script.
 - For new files added in a phase, confirm the phase plan's Key Links section shows at least one reference to each new file.
 
 ---
@@ -377,7 +377,7 @@ Every piece of orchestrator state, configuration, and knowledge must have exactl
 
 #### How to Check Compliance
 
-- Search for duplicate state: `grep -rn 'status:' .specify/orchestrator/` should show status only in well-defined locations (context drafts, evaluation files), not scattered across arbitrary files.
+- Search for duplicate state: `grep -rn 'status:' .orchestrator/` should show status only in well-defined locations (context drafts, evaluation files), not scattered across arbitrary files.
 - Verify that configuration resolution follows the task > phase > milestone > default chain.
 - Check that knowledge entries in `KNOWLEDGE.md` are not duplicated verbatim in phase plans or task plans.
 
@@ -399,7 +399,7 @@ Hook scripts operate in a sandbox. They receive a read-only state snapshot and p
 
 #### Common Violations
 
-- A hook script writing directly to `.specify/orchestrator/` instead of producing output on stdout.
+- A hook script writing directly to `.orchestrator/` instead of producing output on stdout.
 - A hook modifying the snapshot file (detected mechanically by mtime comparison).
 - A hook running longer than the timeout without being designed for async execution.
 - A hook reading engine state directly from disk instead of from the provided snapshot.
@@ -447,7 +447,7 @@ New instruction formats require a recipe change, not a script change. This enabl
 
 ## Cross-References
 
-- [Constitution source](../.specify/memory/constitution.md) — the authoritative v2.0 text
+- [Constitution source](../.orchestrator/memory/constitution.md) — the authoritative v2.0 text
 - [State machine reference](state-machine.md) — detailed state derivation rules (Principle VI)
 - [Architecture reference](architecture.md) — engine pipeline and subsystem relationships
 - [Verification ladder](verification-ladder.md) — 4-tier verification framework (Principle II)

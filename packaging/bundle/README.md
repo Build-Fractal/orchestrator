@@ -30,13 +30,12 @@ runtime's conventional location via the runtime adapter's
 ## Where State Lands
 
 Orchestrator state lands under `.orchestrator/` in the project root,
-resolved by `scripts/state/resolve-root.sh` with this 5-rule precedence:
+resolved by `scripts/state/resolve-root.sh` with this 4-rule precedence:
 
 1. `ORCHESTRATOR_ROOT` environment variable.
 2. `state_root` key in `<project>/.orchestrator/config.yml`.
 3. Existing `.orchestrator/` directory.
-4. Legacy bridge: existing `.specify/orchestrator/` directory.
-5. Default: `.orchestrator/` (created on first write).
+4. Default: `.orchestrator/` (created on first write).
 
 No state is ever written outside the resolved root.
 

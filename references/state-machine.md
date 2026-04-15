@@ -5,7 +5,7 @@
 
 ## Overview
 
-The orchestrator uses a **file-presence state machine** with 10 canonical states. State is never stored as a field — it is derived deterministically by examining which files exist on disk under `.specify/orchestrator/milestones/{M###}/`. This means state survives crashes, is always consistent with reality, and requires no migration when resuming interrupted sessions.
+The orchestrator uses a **file-presence state machine** with 10 canonical states. State is never stored as a field — it is derived deterministically by examining which files exist on disk under `.orchestrator/milestones/{M###}/`. This means state survives crashes, is always consistent with reality, and requires no migration when resuming interrupted sessions.
 
 The derivation script (`scripts/state/derive-phase.sh`) evaluates conditions in priority order and returns the first matching state.
 
@@ -252,4 +252,4 @@ pre-planning → discussing → planning → [replanning] → executing →
 
 ### Tier A
 
-Tier A does **not use the orchestrator state machine**. It routes directly to standard spec-kit commands with zero overhead. No orchestrator state files are created.
+Tier A does **not use the orchestrator state machine**. It routes directly to the host runtime's native single-context workflow with zero overhead. No orchestrator state files are created.

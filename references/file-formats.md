@@ -6,7 +6,7 @@
 
 ## Overview
 
-All orchestrator state is persisted to disk under `.specify/orchestrator/`. Files use two primary formats: **YAML frontmatter + markdown body** (for human-readable documents) and **structured data** (JSON, JSONL, YAML for machine-readable state).
+All orchestrator state is persisted to disk under `.orchestrator/`. Files use two primary formats: **YAML frontmatter + markdown body** (for human-readable documents) and **structured data** (JSON, JSONL, YAML for machine-readable state).
 
 Every file write is idempotent (FR-066): writing a file that already exists is a no-op unless explicit overwrite is requested.
 
@@ -15,7 +15,7 @@ Every file write is idempotent (FR-066): writing a file that already exists is a
 ## Directory Structure
 
 ```
-.specify/orchestrator/
+.orchestrator/
 ├── DECISIONS.md                    # Global decisions register
 ├── KNOWLEDGE.md                    # Global knowledge file
 ├── execution-log.jsonl             # Global dispatch history
@@ -42,7 +42,7 @@ Every file write is idempotent (FR-066): writing a file that already exists is a
 
 ## Roadmap (`M###-ROADMAP.md`)
 
-**Location**: `.specify/orchestrator/milestones/{M###}/M###-ROADMAP.md`
+**Location**: `.orchestrator/milestones/{M###}/M###-ROADMAP.md`
 **Format**: YAML frontmatter + markdown body
 **Mutability**: Written at planning, updated at reassessment. Never modify completed phases.
 
@@ -67,11 +67,11 @@ Each phase is a markdown list item with specific formatting:
 ```markdown
 ## Phases
 
-- [x] **P01**: Extension Foundation — "Developer can install the extension"
+- [x] **P01**: Config Foundation — "Developer can install the orchestrator"
   - Risk: low
   - Depends: none
   - Boundary Map:
-    - Produces: extension.yml (validated manifest)
+    - Produces: .orchestrator/config.yml (validated config)
     - Consumes: none
 
 - [ ] **P02**: State Machine Core — "Developer can see state derivation working"
@@ -79,7 +79,7 @@ Each phase is a markdown list item with specific formatting:
   - Depends: P01
   - Boundary Map:
     - Produces: scripts/state/*.sh
-    - Consumes: P01/extension.yml
+    - Consumes: P01/config.yml
 ```
 
 ### Parsing Rules
@@ -94,7 +94,7 @@ Each phase is a markdown list item with specific formatting:
 
 ## Phase Plan (`P##-PLAN.md`)
 
-**Location**: `.specify/orchestrator/milestones/{M###}/phases/{P##}/P##-PLAN.md`
+**Location**: `.orchestrator/milestones/{M###}/phases/{P##}/P##-PLAN.md`
 **Format**: YAML frontmatter + markdown body
 **Mutability**: Written at phase planning. Immutable once tasks begin executing.
 
@@ -141,7 +141,7 @@ depends_on: [P01]                             # Phase ID dependencies
 
 ## Task Plan (`T##-PLAN.md`)
 
-**Location**: `.specify/orchestrator/milestones/{M###}/phases/{P##}/tasks/T##-PLAN.md`
+**Location**: `.orchestrator/milestones/{M###}/phases/{P##}/tasks/T##-PLAN.md`
 **Format**: YAML frontmatter + markdown body
 **Mutability**: Written at task planning. Immutable during execution.
 
@@ -183,7 +183,7 @@ milestone: M001                   # Parent milestone
 
 ## Phase Verification Report (`P##-VERIFICATION.md`)
 
-**Location**: `.specify/orchestrator/milestones/{M###}/phases/{P##}/P##-VERIFICATION.md`
+**Location**: `.orchestrator/milestones/{M###}/phases/{P##}/P##-VERIFICATION.md`
 **Format**: YAML frontmatter + markdown body
 **Mutability**: Written once at phase verification. Never edited after creation.
 
@@ -246,7 +246,7 @@ provides:                    # What this unit built (~5 items)
   - "derive-phase.sh: 9-state file-presence derivation"
 requires:                    # Upstream dependencies consumed
   - from: P01/T01
-    what: "extension.yml with command registration"
+    what: "config.yml with runtime defaults"
 affects: [P03, P04]          # Downstream phase IDs depending on this output
 key_files:                   # Important file paths
   - scripts/state/derive-phase.sh
@@ -255,7 +255,7 @@ key_decisions:               # Decisions made with brief rationale
 patterns_established:        # Patterns introduced
   - "File-presence state derivation at scripts/state/"
 drill_down_paths:            # Paths to related plan/detail files
-  - .specify/orchestrator/milestones/M001/phases/P01/tasks/T01-PLAN.md
+  - .orchestrator/milestones/M001/phases/P01/tasks/T01-PLAN.md
 duration: "25m"              # Actual duration
 verification_result: pass    # pass | fail | partial
 completed_at: "2026-03-19T14:30:00Z"  # ISO 8601
@@ -293,7 +293,7 @@ Phase summaries are compressed rollups of all task summaries. Milestone summarie
 
 ## Evaluation (`M###-EVALUATION.md`)
 
-**Location**: `.specify/orchestrator/milestones/{M###}/M###-EVALUATION.md`
+**Location**: `.orchestrator/milestones/{M###}/M###-EVALUATION.md`
 **Format**: YAML frontmatter + markdown body
 **Mutability**: Written at evaluation. Updated only on re-evaluation with `--force`.
 
@@ -345,7 +345,7 @@ The evaluation file is the **authoritative source of tier classification** for a
 
 ## Context Draft (`M###-CONTEXT.md`)
 
-**Location**: `.specify/orchestrator/milestones/{M###}/M###-CONTEXT.md`
+**Location**: `.orchestrator/milestones/{M###}/M###-CONTEXT.md`
 **Format**: YAML frontmatter + markdown body
 **Mutability**: Written at discussion start, updated during discussion, finalized once.
 **Tier**: Tier C required, Tier B optional.
@@ -386,7 +386,7 @@ finalized_at: null                # Set when status → finalized
 
 ## Continue File (`continue.md`)
 
-**Location**: `.specify/orchestrator/continue.md`
+**Location**: `.orchestrator/continue.md`
 **Format**: YAML frontmatter + markdown body
 **Mutability**: Written on pause, consumed on resume. Ephemeral — deleted after successful resume.
 
@@ -432,7 +432,7 @@ saved_at: "2026-03-19T14:00:00Z"  # When pause occurred
 
 ## Lock File (`orchestrator.lock`)
 
-**Location**: `.specify/orchestrator/orchestrator.lock`
+**Location**: `.orchestrator/orchestrator.lock`
 **Format**: JSON
 **Mutability**: Created at session start, deleted at session end. Ephemeral.
 
@@ -478,7 +478,7 @@ The `runtime` field determines the liveness check strategy:
 
 ## Execution Log (`execution-log.jsonl`)
 
-**Location**: `.specify/orchestrator/execution-log.jsonl`
+**Location**: `.orchestrator/execution-log.jsonl`
 **Format**: JSONL (one JSON object per line)
 **Mutability**: Append-only. Never edit or delete existing entries.
 
@@ -601,7 +601,7 @@ otherwise it is treated as `unknown`.
 
 ## Decisions Register (`DECISIONS.md`)
 
-**Location**: `.specify/orchestrator/DECISIONS.md`
+**Location**: `.orchestrator/DECISIONS.md`
 **Format**: Markdown table
 **Mutability**: Append-only. Never edit or remove existing rows.
 
@@ -636,7 +636,7 @@ otherwise it is treated as `unknown`.
 
 ## Knowledge File (`KNOWLEDGE.md`)
 
-**Location**: `.specify/orchestrator/KNOWLEDGE.md`
+**Location**: `.orchestrator/KNOWLEDGE.md`
 **Format**: Markdown list with scope tags
 **Mutability**: Append-only. Never edit existing entries.
 
@@ -664,7 +664,7 @@ otherwise it is treated as `unknown`.
 
 ## Configuration (`orchestrator-config.yml`)
 
-**Location**: Project root (not inside `.specify/orchestrator/`)
+**Location**: Project root (not inside `.orchestrator/`)
 **Format**: YAML
 **Mutability**: Edited by the developer or team.
 
@@ -687,7 +687,7 @@ budget_enforcement: advisory    # advisory (warn only) | enforced (stop-after)
 1. **Environment variables**: `SPECKIT_ORCHESTRATOR_{KEY}` (e.g., `SPECKIT_ORCHESTRATOR_DEFAULT_TIER=B`)
 2. **Local config**: `orchestrator-config.local.yml` (project root, gitignored)
 3. **Project config**: `orchestrator-config.yml` (project root, team-shared)
-4. **Extension defaults**: `extension.yml` defaults section (factory defaults)
+4. **Built-in defaults**: `templates/orchestrator-config-default.yml` (factory defaults shipped with the orchestrator)
 
 Each key is resolved independently — a local config can override one key while falling through to project config for others.
 
@@ -695,7 +695,7 @@ Each key is resolved independently — a local config can override one key while
 
 ## Routing Configuration (`routing.yaml`)
 
-**Location**: `.specify/orchestrator/routing.yaml` or `templates/routing.yaml` (default)
+**Location**: `.orchestrator/routing.yaml` or `templates/routing.yaml` (default)
 **Format**: YAML (max 2 levels nesting, parseable by grep/sed/awk)
 **Mutability**: Edited by the developer. Optional -- if absent, built-in defaults are used.
 
@@ -764,7 +764,7 @@ When `select-model.sh` or `classify-complexity.sh` receive a `--routing-config` 
 1. If the file exists, read configuration from it.
 2. If the file does not exist or the field is missing, fall back to built-in defaults.
 
-The orchestrator looks for `routing.yaml` at `.specify/orchestrator/routing.yaml`. If not found, `templates/routing.yaml` provides a copyable starting point.
+The orchestrator looks for `routing.yaml` at `.orchestrator/routing.yaml`. If not found, `templates/routing.yaml` provides a copyable starting point.
 
 ---
 
@@ -772,7 +772,7 @@ The orchestrator looks for `routing.yaml` at `.specify/orchestrator/routing.yaml
 
 Append-only log of diagnostic results for trend tracking. Written by `scripts/diagnostics/run-doctor.sh` after each doctor run.
 
-**Location**: `.specify/orchestrator/doctor-history.jsonl`
+**Location**: `.orchestrator/doctor-history.jsonl`
 
 **Format**: One JSON object per line (JSONL).
 
@@ -813,9 +813,9 @@ Append-only log of diagnostic results for trend tracking. Written by `scripts/di
 
 When building a dispatch payload, `scripts/dispatch/build-context.sh` resolves the recipe file by specificity (most-specific wins):
 
-1. **Task-level**: `.specify/orchestrator/milestones/{M###}/phases/{P##}/tasks/context-recipe.yaml`
-2. **Phase-level**: `.specify/orchestrator/milestones/{M###}/phases/{P##}/context-recipe.yaml`
-3. **Milestone-level**: `.specify/orchestrator/milestones/{M###}/context-recipe.yaml`
+1. **Task-level**: `.orchestrator/milestones/{M###}/phases/{P##}/tasks/context-recipe.yaml`
+2. **Phase-level**: `.orchestrator/milestones/{M###}/phases/{P##}/context-recipe.yaml`
+3. **Milestone-level**: `.orchestrator/milestones/{M###}/context-recipe.yaml`
 4. **Default**: `templates/context-recipe.yaml`
 
 Resolved by `resolve_recipe()` in `scripts/lib/recipe-parser.sh`.
@@ -1046,7 +1046,7 @@ Hooks are dispatched by `run_hooks()` in `scripts/lib/hooks.sh`:
 
 ## Engine Checkpoint (`engine-checkpoint.json`)
 
-**Location**: `.specify/orchestrator/milestones/{M###}/engine-checkpoint.json`
+**Location**: `.orchestrator/milestones/{M###}/engine-checkpoint.json`
 **Format**: JSON
 **Mutability**: Written atomically on every task completion. Cleared on full phase success.
 

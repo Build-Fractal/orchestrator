@@ -1,27 +1,27 @@
 # Getting Started
 
-> User guide for installing and using the speckit-orchestrator extension.
+> User guide for installing and using the spec-kit-orchestrator.
 > Follow this guide to run your first orchestrated milestone from scratch.
 
 > Audience: users
 
 ## Overview
 
-spec-kit-orchestrator is a spec-kit extension that adds autonomous multi-phase orchestration to spec-kit's spec-driven development (SDD) workflow. It decomposes large features into milestones, phases, and tasks, then dispatches each task to a fresh agent context with a purpose-built payload. All state lives on disk -- there is no database, no long-running process, and no in-memory state to lose.
+spec-kit-orchestrator is a standalone autonomous orchestrator that adds multi-phase coordination to coding-agent workflows. It decomposes large features into milestones, phases, and tasks, then dispatches each task to a fresh agent context with a purpose-built payload. All state lives on disk -- there is no database, no long-running process, and no in-memory state to lose.
 
 The orchestrator is useful when a feature is too large to build in a single context window. It manages the lifecycle from scope classification through execution, verification, and knowledge consolidation. You write a feature spec; the orchestrator figures out how many phases you need, plans each one, dispatches tasks with just enough context, verifies the results, and records what it learned for future milestones.
 
-**Who it is for**: developers using spec-kit who need to build features that span multiple context windows. If your feature fits in one context, the orchestrator classifies it as Tier A and steps aside -- you use standard spec-kit commands with zero overhead.
+**Who it is for**: developers using Claude Code, Codex CLI, or Cursor who need to build features that span multiple context windows. If your feature fits in one context, the orchestrator classifies it as Tier A and steps aside -- you use your host runtime's native single-context workflow with zero overhead.
 
 ---
 
 ## Prerequisites
 
-Before installing spec-kit-orchestrator, ensure you have:
+Before installing the orchestrator, ensure you have:
 
 | Requirement | Version | Notes |
 |-------------|---------|-------|
-| spec-kit | >= 0.1.0 | The host framework. The orchestrator registers as an extension. |
+| Host runtime | recent | Claude Code, Codex CLI, or Cursor. |
 | Bash | >= 3.2 | All helper scripts target Bash 3.2+ (macOS default). |
 | git | any recent | Version control. Used for worktree isolation (optional). |
 | jq | any recent | Optional. Used for JSON parsing in some scripts. Not required for core functionality. |
@@ -30,31 +30,44 @@ Before installing spec-kit-orchestrator, ensure you have:
 
 ## Installation
 
-spec-kit-orchestrator is distributed as a set of files that you copy into your project. There is no package manager or installer.
+The orchestrator is distributed as a runtime-specific skill bundle. Install it by running the installer that matches your host runtime.
 
-### 1. Copy extension files
+### 1. Run the installer
 
-From your project root, copy the required directories from the spec-kit-orchestrator repo:
-
-```bash
-cp -r /path/to/spec-kit-orchestrator/commands/ ./commands/
-cp -r /path/to/spec-kit-orchestrator/scripts/ ./scripts/
-cp -r /path/to/spec-kit-orchestrator/templates/ ./templates/
-cp -r /path/to/spec-kit-orchestrator/references/ ./references/
-cp /path/to/spec-kit-orchestrator/extension.yml ./extension.yml
-```
-
-This gives you 12 orchestrator commands, 40+ helper scripts, 14 output templates, and 7 reference documents.
-
-### 2. Create project configuration (optional)
-
-Copy the default config and customize it:
+From a clone of the spec-kit-orchestrator repo (or a prebuilt skill bundle):
 
 ```bash
-cp templates/orchestrator-config-default.yml orchestrator-config.yml
+# Claude Code (primary runtime)
+bash packaging/install/install-claude-code.sh
+
+# Codex CLI
+bash packaging/install/install-codex.sh
+
+# Cursor
+bash packaging/install/install-cursor.sh
 ```
 
-Edit `orchestrator-config.yml` to set project-specific values. Common settings:
+The installer registers the `orchestrator:*` skills/commands into the active runtime and drops the orchestrator's scripts, templates, and reference tree into the expected locations. No files to copy by hand.
+
+### 2. Initialize your project
+
+In your project directory:
+
+```
+orchestrator:init
+```
+
+`init` probes the project, detects host capabilities, generates `.orchestrator/config.yml` with sensible defaults, and writes a runtime-appropriate instruction file. Completes in ~1 second.
+
+### 3. Create project configuration (optional)
+
+`orchestrator:init` writes a default config. To customize, edit `.orchestrator/config.yml` or start from the template:
+
+```bash
+cp templates/orchestrator-config-default.yml .orchestrator/config.yml
+```
+
+Common settings:
 
 ```yaml
 # Verification commands run after each task and phase
@@ -69,23 +82,22 @@ default_tier: null    # A, B, C, or null (auto-detect)
 context_verbosity: standard   # minimal | standard | full
 ```
 
-See `extension.yml` for the full config schema with all available options.
+See `references/file-formats.md` for the full config schema, or `templates/orchestrator-config-default.yml` for a commented reference file.
 
-### 3. Create your feature spec
+### 4. Create your feature spec
 
-Before running orchestrator commands, you need a feature spec:
+Before running the orchestrator commands, you need a feature spec:
 
 ```bash
 mkdir -p specs/001-your-feature
 # Write your spec at specs/001-your-feature/spec.md
-# Or use: /speckit.specify
 ```
 
-The spec should contain user stories, acceptance criteria, and functional requirements. The orchestrator analyzes these to determine scope and plan phases.
+The spec should contain user stories, acceptance criteria, and functional requirements. The orchestrator analyzes these to determine scope and plan phases. The orchestrator reads spec-kit-shaped specs via `scripts/dispatch/adapters/format/speckit.sh`, but you do not need spec-kit installed to use it.
 
-### 4. Verify the installation
+### 5. Verify the installation
 
-Confirm the extension files are in place:
+Confirm the orchestrator scripts are in place:
 
 ```bash
 test -f scripts/lifecycle/scaffold.sh && echo "OK: scaffold.sh found"
@@ -104,23 +116,23 @@ The orchestrator commands follow a sequential workflow. Each step produces files
 ### Step 1: Evaluate
 
 ```
-/speckit.orchestrator.evaluate
+orchestrator:evaluate
 ```
 
 This is always the first orchestrator command. It reads your feature spec, counts user stories, acceptance scenarios, and functional requirements, then classifies your project into one of three tiers:
 
-- **Tier A** -- Single context. The orchestrator steps aside entirely. Use standard spec-kit commands.
+- **Tier A** -- Single context. The orchestrator steps aside entirely. Use your host runtime's native single-context workflow.
 - **Tier B** -- One SDD flow, multiple contexts. Manual dispatch with simplified state machine (5 states).
 - **Tier C** -- Multiple SDD flows. Full orchestration with autonomous dispatch, crash recovery, discussion gates, and milestone validation (10 states).
 
-The evaluate command scaffolds the orchestrator directory structure at `.specify/orchestrator/milestones/M001/` and writes an evaluation file (`M001-EVALUATION.md`) that records the tier, spec path, and scope metrics.
+The evaluate command scaffolds the orchestrator directory structure at `.orchestrator/milestones/M001/` and writes an evaluation file (`M001-EVALUATION.md`) that records the tier, spec path, and scope metrics.
 
-If the evaluation classifies your project as Tier A, you are done with the orchestrator. Proceed with standard spec-kit commands.
+If the evaluation classifies your project as Tier A, you are done with the orchestrator. Proceed with your host runtime's native workflow.
 
 ### Step 2: Discuss (Tier C only)
 
 ```
-/speckit.orchestrator.discuss
+orchestrator:discuss
 ```
 
 For Tier C projects, discussion is a required gate before roadmap generation. This command creates and manages a context draft (`M001-CONTEXT.md`) that captures architectural decisions, scope boundaries, design constraints, and open questions.
@@ -137,7 +149,7 @@ For Tier B projects, discussion is optional. You can skip directly to the roadma
 ### Step 3: Roadmap
 
 ```
-/speckit.orchestrator.roadmap
+orchestrator:roadmap
 ```
 
 This command decomposes your feature spec into an ordered sequence of phases. It reads the spec (and the finalized context draft for Tier C) and produces a roadmap file (`M001-ROADMAP.md`) that defines:
@@ -152,7 +164,7 @@ The roadmap drives all downstream orchestration. Phase ordering, dependency reso
 ### Step 4: Plan Phase
 
 ```
-/speckit.orchestrator.plan-phase
+orchestrator:plan-phase
 ```
 
 This command plans a single phase by generating a detailed phase plan (`P01-PLAN.md`) with:
@@ -172,7 +184,7 @@ Run this command once for each phase. The orchestrator identifies the next phase
 For Tier B, dispatch tasks one at a time:
 
 ```
-/speckit.orchestrator.dispatch
+orchestrator:dispatch
 ```
 
 This command picks the next incomplete task in the active phase, assembles a context payload from the task plan and relevant state files, dispatches execution, verifies the output against must-haves, and records the result in the execution log.
@@ -180,7 +192,7 @@ This command picks the next incomplete task in the active phase, assembles a con
 For Tier C, you can run tasks autonomously:
 
 ```
-/speckit.orchestrator.auto
+orchestrator:auto
 ```
 
 The auto command acquires a session lock, then loops through the full lifecycle: derive state, check budget and stuck detection, dispatch the next task, verify results, record outcomes, and advance to the next task or phase. It continues until:
@@ -250,14 +262,17 @@ For the full verification protocol, see [Verification Ladder](../references/veri
 
 ## File Structure
 
-All orchestrator state lives under `.specify/orchestrator/`. The orchestrator never stores state in memory -- everything is derived from file presence on disk. This means state survives crashes and is always consistent with reality.
+All orchestrator state lives under `.orchestrator/`. The orchestrator never stores state in memory -- everything is derived from file presence on disk. This means state survives crashes and is always consistent with reality.
 
 ```
-.specify/orchestrator/
+.orchestrator/
+├── config.yml                    # Project config (written by orchestrator:init)
 ├── KNOWLEDGE.md                  # Global knowledge entries (patterns, lessons)
 ├── DECISIONS.md                  # Architectural decision register
 ├── execution-log.jsonl           # Append-only dispatch log (JSON lines)
 ├── orchestrator.lock             # Session lock (present during auto mode)
+├── memory/
+│   └── constitution.md           # 7 governing principles (if configured)
 └── milestones/
     └── M001/
         ├── M001-EVALUATION.md    # Tier classification and scope metrics
@@ -307,7 +322,7 @@ When a session crashes (process killed, machine restart, network failure):
 ### How to resume
 
 ```
-/speckit.orchestrator.resume
+orchestrator:resume
 ```
 
 The resume command detects the type of interruption:
@@ -330,7 +345,7 @@ The orchestrator includes a diagnostics subsystem for detecting common problems.
 ### Status check
 
 ```
-/speckit.orchestrator.status
+orchestrator:status
 ```
 
 This is a read-only command that reports:
@@ -346,7 +361,7 @@ This is a read-only command that reports:
 The doctor subsystem runs a suite of diagnostic checks:
 
 ```bash
-bash scripts/diagnostics/run-doctor.sh .specify/orchestrator
+bash scripts/diagnostics/run-doctor.sh .orchestrator
 ```
 
 Checks include:
@@ -369,8 +384,14 @@ Each check emits a structured line: `DOCTOR:<CHECK> status=ok|warn|fail detail="
 You can also run the doctor through the command interface:
 
 ```
-/speckit.orchestrator.doctor
+orchestrator:doctor
 ```
+
+---
+
+## Migrating from spec-kit
+
+If you already have a spec-kit project and want to adopt the orchestrator, see [Migrating from spec-kit](migrating-from-speckit.md). The orchestrator preserves spec-kit as a migration *source* via `scripts/migrate/adapters/speckit.sh` and `scripts/dispatch/adapters/format/speckit.sh`, and is not a runtime dependency.
 
 ---
 

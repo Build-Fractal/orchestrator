@@ -11,7 +11,7 @@ The knowledge management subsystem implements Constitution Principle 7: **Knowle
 
 Knowledge lives in two layers:
 
-1. **KNOWLEDGE.md** -- an append-only markdown file at `.specify/orchestrator/KNOWLEDGE.md` with scope-tagged entries. This is the lightweight, quick-append layer used during execution.
+1. **KNOWLEDGE.md** -- an append-only markdown file at `.orchestrator/KNOWLEDGE.md` with scope-tagged entries. This is the lightweight, quick-append layer used during execution.
 2. **Knowledge detail files** -- structured markdown files with YAML frontmatter stored under `knowledge/{category}/{id}.md`. These support confidence tracking, hit counting, staleness decay, graph relationships, and overlap detection.
 
 Both layers are indexed. The detail files are tracked in `KNOWLEDGE-INDEX.md` at the project root. The append-only file is filtered directly by scope tags during dispatch.
@@ -22,7 +22,7 @@ Both layers are indexed. The detail files are tracked in `KNOWLEDGE-INDEX.md` at
 
 ### Append-Only Entries (KNOWLEDGE.md)
 
-Entries in `.specify/orchestrator/KNOWLEDGE.md` follow a simple format:
+Entries in `.orchestrator/KNOWLEDGE.md` follow a simple format:
 
 ```markdown
 - **[scope]** [date] Description of the pattern, rule, or lesson learned.
@@ -31,7 +31,7 @@ Entries in `.specify/orchestrator/KNOWLEDGE.md` follow a simple format:
 For example:
 
 ```markdown
-- **[project]** [2026-03-19] All state scripts must handle missing .specify/orchestrator/ dir
+- **[project]** [2026-03-19] All state scripts must handle missing .orchestrator/ dir
 - **[milestone:M001]** [2026-03-20] Phase verification requires all tasks to have summaries
 - **[phase:M001/P02]** [2026-03-21] Bash 3.2 does not support associative arrays
 ```
@@ -106,8 +106,8 @@ Use `append-knowledge.sh` for quick, lightweight knowledge capture during execut
 
 ```bash
 bash scripts/knowledge/append-knowledge.sh \
-  .specify/orchestrator/KNOWLEDGE.md \
-  "All state scripts must handle missing .specify/orchestrator/ dir" \
+  .orchestrator/KNOWLEDGE.md \
+  "All state scripts must handle missing .orchestrator/ dir" \
   "milestone:M001"
 ```
 
@@ -326,7 +326,7 @@ The `scope-filter.sh` script in `scripts/dispatch/` prevents unbounded knowledge
 ```bash
 # Filter KNOWLEDGE.md for phase P02 of milestone M001
 bash scripts/dispatch/scope-filter.sh \
-  .specify/orchestrator/KNOWLEDGE.md \
+  .orchestrator/KNOWLEDGE.md \
   M001/P02
 
 # Filter KNOWLEDGE-INDEX.md with dependency awareness
@@ -400,13 +400,13 @@ After a milestone completes, `consolidate-artifacts.sh` reduces the footprint of
 
 ```bash
 bash scripts/knowledge/consolidate-artifacts.sh \
-  .specify/orchestrator \
+  .orchestrator \
   M001
 ```
 
 **Arguments:**
 
-1. Path to the orchestrator root (`.specify/orchestrator`)
+1. Path to the orchestrator root (`.orchestrator`)
 2. Milestone ID (e.g., `M001`)
 
 ### Preconditions
@@ -463,4 +463,4 @@ The script scans all files in `knowledge/*/` (excluding `knowledge/archive/`), e
 - [Hook Development Guide](./hook-development.md) -- writing lifecycle hooks that interact with knowledge
 - [Architecture Reference](../references/architecture.md) -- how the knowledge subsystem fits into the orchestrator pipeline
 - [File Formats Reference](../references/file-formats.md) -- canonical format definitions for KNOWLEDGE.md, KNOWLEDGE-INDEX.md, and DECISIONS.md
-- [Constitution](../.specify/memory/constitution.md) -- Principle 7 (Knowledge Compounds) governs this subsystem
+- [Constitution](../.orchestrator/memory/constitution.md) -- Principle 7 (Knowledge Compounds) governs this subsystem

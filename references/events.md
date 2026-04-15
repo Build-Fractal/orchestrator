@@ -429,7 +429,7 @@ A non-blocking warning about unexpected or degraded conditions.
 
 **Example**:
 ```
-EVENT:SAFETY_WARNING timestamp=2026-04-10T14:01:00Z run_id=abc123 reason=phase_dir_missing phase_dir=".specify/orchestrator/milestones/M004/phases/P99"
+EVENT:SAFETY_WARNING timestamp=2026-04-10T14:01:00Z run_id=abc123 reason=phase_dir_missing phase_dir=".orchestrator/milestones/M004/phases/P99"
 EVENT:SAFETY_WARNING timestamp=2026-04-10T14:01:00Z run_id=abc123 reason=dry_run_guard_skipped guard=payload_sanity task=T02
 ```
 
@@ -558,7 +558,7 @@ A crash-recovery checkpoint was persisted to disk.
 
 **Example**:
 ```
-EVENT:CHECKPOINT_WRITE timestamp=2026-04-10T14:05:00Z run_id=abc123 milestone=M004 phase=P03 last_task=T02 outcome=success path=.specify/orchestrator/milestones/M004/engine-checkpoint.json
+EVENT:CHECKPOINT_WRITE timestamp=2026-04-10T14:05:00Z run_id=abc123 milestone=M004 phase=P03 last_task=T02 outcome=success path=.orchestrator/milestones/M004/engine-checkpoint.json
 ```
 
 ---

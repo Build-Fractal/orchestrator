@@ -5,7 +5,7 @@
 
 ## Overview
 
-The orchestrator classifies every project into one of three execution tiers (A, B, or C) based on the number of complete spec-kit process flows (specify → clarify → plan → tasks → implement) the work requires. The tier determines which orchestrator features are active, which state machine states apply, and how much overhead is introduced.
+The orchestrator classifies every project into one of three execution tiers (A, B, or C) based on the number of complete spec-driven-development process flows (specify → clarify → plan → tasks → implement) the work requires. The tier determines which orchestrator features are active, which state machine states apply, and how much overhead is introduced.
 
 Tier classification happens automatically during `speckit.orchestrator.evaluate` but can be overridden by the developer at any time (FR-002).
 
@@ -17,17 +17,17 @@ Tier classification happens automatically during `speckit.orchestrator.evaluate`
 
 ### What's Included
 
-- Standard spec-kit commands (`speckit.specify`, `speckit.clarify`, `speckit.plan`, `speckit.tasks`, `speckit.implement`)
+- The host runtime's native SDD workflow (specify → clarify → plan → tasks → implement, invoked via the runtime's own commands)
 - Zero additional files, directories, or ceremony
-- Direct routing to spec-kit with no orchestrator overhead
+- Direct routing to the host runtime's native workflow with no orchestrator overhead
 
 ### What's Excluded
 
 - Everything orchestrator — no state machine, no roadmap, no dispatch, no summaries
-- No `.specify/orchestrator/` directory created
+- No `.orchestrator/` directory created
 - No orchestrator commands available
 - No execution log, decisions register, or knowledge file
-- No verification ladder (standard spec-kit verification applies)
+- No verification ladder (standard host-runtime verification applies)
 
 ### State Machine
 
@@ -35,7 +35,7 @@ None. Tier A does not use the orchestrator state machine.
 
 ### Commands Available
 
-None — direct spec-kit commands only. The orchestrator's `evaluate` command classifies as Tier A and then steps aside entirely.
+None — direct host-runtime commands only. The orchestrator's `evaluate` command classifies as Tier A and then steps aside entirely.
 
 ### Typical Projects
 

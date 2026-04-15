@@ -52,11 +52,11 @@ RESULT:{"status":"error","error_kind":"CONFIG","detail":"missing required positi
 - The phase ends with blocked tasks, indicating incomplete execution
 - A phase transition cannot proceed because prerequisites are unmet
 
-**Example scenario**: The engine tries to run phase P03 but the directory `.specify/orchestrator/milestones/M001/phases/P03` does not exist.
+**Example scenario**: The engine tries to run phase P03 but the directory `.orchestrator/milestones/M001/phases/P03` does not exist.
 
 **Example RESULT line**:
 ```
-RESULT:{"status":"error","error_kind":"STATE","detail":"phase directory not found: .specify/orchestrator/milestones/M001/phases/P03"}
+RESULT:{"status":"error","error_kind":"STATE","detail":"phase directory not found: .orchestrator/milestones/M001/phases/P03"}
 ```
 
 ### DISPATCH
@@ -90,7 +90,7 @@ RESULT:{"status":"error","error_kind":"DISPATCH","detail":"all models in fallbac
 
 **Example RESULT line**:
 ```
-RESULT:{"status":"error","error_kind":"VERIFY","detail":"phase_complete guard blocked advance for .specify/orchestrator/milestones/M001/phases/P02"}
+RESULT:{"status":"error","error_kind":"VERIFY","detail":"phase_complete guard blocked advance for .orchestrator/milestones/M001/phases/P02"}
 ```
 
 ### BUDGET

@@ -1,12 +1,12 @@
 # spec-kit-orchestrator
 
-A [spec-kit](https://github.com/github/spec-kit) extension that adds autonomous multi-phase orchestration to spec-kit's spec-driven development (SDD) workflow.
+A standalone autonomous multi-phase orchestrator for long-horizon software development. Runs on Claude Code, Codex CLI, or Cursor. Originally built as an extension to [spec-kit](https://github.com/github/spec-kit); standalone as of v0.9.0 (M015).
 
-> **Current version**: 0.2.0 — 10 commands, 27 scripts, 14 templates, 5 reference docs, 334 test assertions
+> **Current version**: 0.9.0 — standalone-cutover complete. 13 commands, 80+ scripts, 24+ templates, 15 reference docs, 5 user guides.
 
 ## The Problem
 
-Spec-kit excels at single-context-window development: specify, clarify, plan, tasks, implement. But projects larger than one context window hit a wall — there's no coordination layer for multi-phase work spanning multiple agent sessions. Context degrades, state is lost between sessions, and knowledge doesn't compound.
+Coding agents excel at single-context-window development: specify, clarify, plan, tasks, implement. But projects larger than one context window hit a wall — there's no coordination layer for multi-phase work spanning multiple agent sessions. Context degrades, state is lost between sessions, and knowledge doesn't compound.
 
 ## The Solution
 
@@ -19,53 +19,59 @@ spec-kit-orchestrator adds a file-based orchestration layer that:
 
 ## Quick Start
 
-### 1. Install the extension
+### 1. Install
+
+From a clone of the orchestrator repo (or a prebuilt skill bundle), run the installer that matches your runtime:
 
 ```bash
-# Copy extension files into your spec-kit project
-cp -r /path/to/spec-kit-orchestrator/{commands,scripts,templates,references,extension.yml} ./
+# Claude Code
+bash packaging/install/install-claude-code.sh
 
-# Make scripts executable
-chmod +x scripts/**/*.sh
+# Codex CLI
+bash packaging/install/install-codex.sh
+
+# Cursor
+bash packaging/install/install-cursor.sh
 ```
 
-### 2. Write your spec
+The installer registers the orchestrator skills into the active runtime and drops the script/template/reference tree into place. No files to copy by hand.
 
-Use spec-kit as usual to create your feature spec:
+### 2. Initialize your project
 
 ```
-/speckit.specify
-/speckit.clarify
+orchestrator:init
 ```
+
+`init` probes the project, detects capabilities, generates a config + a runtime-appropriate instruction file, and registers skills. Completes in ~1 second.
 
 ### 3. Evaluate scope
 
 ```
-/speckit.orchestrator.evaluate
+orchestrator:evaluate
 ```
 
 This classifies your project into one of three tiers:
 
 | Tier | Scope | What Happens |
 |------|-------|-------------|
-| **A** | Single context window | Routes to standard spec-kit — zero overhead |
+| **A** | Single context window | Routes to the host runtime's native single-context workflow — zero overhead |
 | **B** | One SDD flow, multiple contexts | Adds structured handoff between steps |
 | **C** | Multiple SDD flows | Full orchestration: state machine, autonomous dispatch, crash recovery, knowledge generation |
 
 ### 4. Plan and execute (Tier C)
 
 ```
-/speckit.orchestrator.discuss       # Capture architectural decisions
-/speckit.orchestrator.roadmap       # Decompose spec into phases
-/speckit.orchestrator.plan-phase    # Plan one phase with must-haves
-/speckit.orchestrator.auto          # Run autonomous dispatch — start it and walk away
+orchestrator:discuss        # Capture architectural decisions
+orchestrator:roadmap        # Decompose spec into phases
+orchestrator:plan-phase     # Plan one phase with must-haves
+orchestrator:auto           # Run autonomous dispatch — start it and walk away
 ```
 
 ### 5. Monitor and wrap up
 
 ```
-/speckit.orchestrator.status        # Check progress anytime (read-only, always safe)
-/speckit.orchestrator.consolidate   # Compress knowledge at milestone end
+orchestrator:status         # Check progress anytime (read-only, always safe)
+orchestrator:consolidate    # Compress knowledge at milestone end
 ```
 
 That's it. For Tier A/B projects, the orchestrator stays out of the way. For Tier C, it handles the full lifecycle.
@@ -73,71 +79,78 @@ That's it. For Tier A/B projects, the orchestrator stays out of the way. For Tie
 ## Workflow
 
 ```
-/evaluate ──▶ /discuss ──▶ /roadmap ──▶ /plan-phase
- (scope)      (Tier C)    (phases)     (tasks)
-                                          │
-                                          ▼
-/consolidate ◀── /status ◀── /verify ◀── /auto
- (archive)       (check)    (checks)    (execute)
+evaluate ──▶ discuss ──▶ roadmap ──▶ plan-phase
+ (scope)     (Tier C)    (phases)    (tasks)
+                                        │
+                                        ▼
+consolidate ◀── status ◀── verify ◀── auto
+ (archive)      (check)   (checks)   (execute)
 ```
 
-The state machine advances automatically during `/auto`. Use `/status` at any point to see where things stand.
+The state machine advances automatically during `orchestrator:auto`. Use `orchestrator:status` at any point to see where things stand.
 
 ## All Commands
 
 | Command | When to Use |
 |---------|-------------|
-| `speckit.orchestrator.evaluate` | Starting a new project — classifies scope as Tier A, B, or C |
-| `speckit.orchestrator.discuss` | Before roadmap — captures architectural decisions and constraints |
-| `speckit.orchestrator.roadmap` | After discussion — decomposes spec into phases with dependency graph |
-| `speckit.orchestrator.plan-phase` | Before execution — plans one phase with task decomposition and must-haves |
-| `speckit.orchestrator.dispatch` | Manual execution — runs one task in a fresh context with constructed payload |
-| `speckit.orchestrator.auto` | Autonomous execution — loops dispatch/verify until milestone completes |
-| `speckit.orchestrator.verify` | After a phase — checks must-haves mechanically (automatic in auto mode) |
-| `speckit.orchestrator.status` | Anytime — shows progress, blockers, and next action (read-only) |
-| `speckit.orchestrator.resume` | After a crash or pause — recovers from disk state |
-| `speckit.orchestrator.consolidate` | At milestone end — compresses knowledge and archives artifacts |
+| `orchestrator:init` | First-run setup — detects project, probes capabilities, registers skills |
+| `orchestrator:evaluate` | Starting a new project — classifies scope as Tier A, B, or C |
+| `orchestrator:discuss` | Before roadmap — captures architectural decisions and constraints |
+| `orchestrator:roadmap` | After discussion — decomposes spec into phases with dependency graph |
+| `orchestrator:plan-phase` | Before execution — plans one phase with task decomposition and must-haves |
+| `orchestrator:dispatch` | Manual execution — runs one task in a fresh context with constructed payload |
+| `orchestrator:auto` | Autonomous execution — loops dispatch/verify until milestone completes |
+| `orchestrator:verify` | After a phase — checks must-haves mechanically (automatic in auto mode) |
+| `orchestrator:status` | Anytime — shows progress, blockers, and next action (read-only) |
+| `orchestrator:resume` | After a crash or pause — recovers from disk state |
+| `orchestrator:consolidate` | At milestone end — compresses knowledge and archives artifacts |
+| `orchestrator:doctor` | Health diagnostics — orphaned artifacts, stale knowledge, cost spikes |
+| `orchestrator:migrate` | Import prior state from another workflow (GSD, spec-kit) |
 
 ## Core Capabilities
 
 - **Scope triage** — Classify projects as Tier A/B/C based on complexity, with manual override and tier promotion
 - **Phase decomposition** — Roadmap generation with dependency graphs, boundary maps, and risk-ordered scheduling
-- **State machine** — 9-state lifecycle derived entirely from file presence on disk (never in-memory)
+- **State machine** — 10-state lifecycle derived entirely from file presence on disk (never in-memory)
 - **Autonomous dispatch** — Derive state → budget check → stuck detection → context assembly → dispatch → verify → record → advance
+- **Adaptive intensity** — Quick / Standard / Full pipeline scaling auto-calibrated per task and host capability profile
+- **Backend-agnostic dispatch** — Uniform interface with filename-routed adapters (Claude Code / Codex CLI / Cursor)
 - **Mechanical verification** — 4-tier ladder: static checks → command execution → behavioral validation → human review
 - **Crash recovery** — Lock-based detection, recovery briefing from surviving artifacts, graceful pause/resume
 - **Knowledge generation** — Structured summaries, append-only decisions/knowledge registers, scope-filtered context injection
 - **Consolidation** — Artifact compression (87% reduction achieved) and archival at milestone boundaries
-- **Graceful degradation** — No subagents? Sequential execution. No GitHub Agentic Workflows? Local only. No jq? Fallback parsing.
 
 ## Architecture
 
 ```
-extension.yml                ← manifest: 10 commands, 5 hooks, 27 scripts
+spec-kit-orchestrator/
 │
-├── commands/                ← agent instruction documents (what to do)
-│   └── references scripts/ and templates/ by path
+├── packaging/
+│   ├── bundle/              ← installable unit (skill + scripts + templates)
+│   └── install/             ← per-runtime installers (claude-code, codex, cursor)
 │
-├── scripts/                 ← executable helpers (how to do it)
-│   ├── state/               ← derive-phase, read-config, read-roadmap (3)
-│   ├── dispatch/            ← build-context, scope-filter, detect-capabilities (3)
-│   ├── verify/              ← check-must-haves, check-boundary-map, check-scope,
-│   │                          check-external-mods, run-commands (5)
-│   ├── knowledge/           ← write-summary, append-decision, append-knowledge,
-│   │                          consolidate-artifacts (4)
-│   ├── lifecycle/           ← scaffold, lock-manager, stuck-detector, recovery-briefing,
-│   │                          budget-checker, rollback-phase, mark-complete, record-result,
-│   │                          sync-roadmap, auto-loop, phase-transition (11)
-│   └── util/                ← json-field (1)
+├── commands/                ← agent instruction documents (13 commands)
 │
-├── templates/               ← 14 output templates + 1 config default
+├── scripts/                 ← executable helpers organized by concern
+│   ├── state/               ←   derive-phase, resolve-root, read-roadmap, ...
+│   ├── dispatch/            ←   build-context, dispatch-interface, adapters/, ...
+│   ├── engine/              ←   run.sh pipeline, intensity-analyze, checkpoint
+│   ├── verify/              ←   check-must-haves, run-commands, ...
+│   ├── knowledge/           ←   write-summary, append-decision, ...
+│   ├── lifecycle/           ←   scaffold, init-project, lock-manager, auto-loop, ...
+│   ├── migrate/             ←   source-format adapters (GSD, spec-kit, ...)
+│   └── diagnostics/         ←   run-doctor + 12 checks
 │
-├── references/              ← 5 progressive disclosure docs
+├── templates/               ← 24+ output templates + config defaults
 │
-└── tests/                   ← 7 test suites, 334 assertions
+├── references/              ← 15 progressive-disclosure reference docs
+│
+├── docs/                    ← user guides (getting-started, recipe-authoring, ...)
+│
+└── tests/                   ← 7 test suites, 334+ assertions
 ```
 
-All orchestrator state lives at `.specify/orchestrator/` — separate from spec-kit's own state. State is derived from file presence on disk, making every session crash-recoverable.
+All orchestrator runtime state lives at `.orchestrator/` in the active project. State is derived from file presence on disk, making every session crash-recoverable.
 
 ### State Flow
 
@@ -152,76 +165,53 @@ pre-planning → discussing → planning → executing → summarizing → valid
 Four layers, highest precedence first:
 
 ```
-Environment vars > .local config > project config > extension defaults
+Environment vars > orchestrator-config.local > project config > defaults
 ```
 
 ## Installation
 
-### Option 1: Copy from repo
+The canonical install flow is a single runtime-specific installer script. Each installer is idempotent and safe to re-run after an update.
 
 ```bash
-# From your project root
-cp -r /path/to/spec-kit-orchestrator/commands/ ./commands/
-cp -r /path/to/spec-kit-orchestrator/scripts/ ./scripts/
-cp -r /path/to/spec-kit-orchestrator/templates/ ./templates/
-cp -r /path/to/spec-kit-orchestrator/references/ ./references/
-cp /path/to/spec-kit-orchestrator/extension.yml ./extension.yml
-
-# Make scripts executable
-chmod +x scripts/**/*.sh
-
-# Verify installation
-bash scripts/state/derive-phase.sh .specify/orchestrator
-# Expected: "pre-planning" (no orchestrator state yet)
+bash packaging/install/install-claude-code.sh   # Claude Code
+bash packaging/install/install-codex.sh         # Codex CLI
+bash packaging/install/install-cursor.sh        # Cursor
 ```
 
-### Option 2: spec-kit CLI (when available)
-
-```bash
-specify extension add speckit-orchestrator
-```
-
-### What NOT to copy
-
-`specs/`, `.specify/`, `tests/`, `CLAUDE.md`, `CHANGELOG.md`, `.git/` — these are the extension's own development artifacts. See [`references/installation.md`](references/installation.md) for full details.
+After install, run `orchestrator:init` once per project. See [`references/installation.md`](references/installation.md) for the full reference, autonomy configuration, and update flow.
 
 ### Requirements
 
-- **spec-kit >= 0.1.0** — the extension host
 - **Bash 3.2+** — scripts use associative-array-free patterns for macOS default bash compatibility
 - **git** — version control, optional worktree isolation
 - **jq** — optional, for JSON parsing in scripts (fallback parsing available)
 
-## Hooks
+### Migrating from spec-kit
 
-The extension registers at 5 spec-kit lifecycle points:
-
-| Hook | Trigger | Effect |
-|------|---------|--------|
-| `before_tasks` | Before task generation | Injects phase-level context if orchestrator is active |
-| `after_tasks` | After task generation | Triggers roadmap generation from task phases |
-| `before_implement` | Before implementation | Injects phase scope enforcement |
-| `after_implement` | After implementation | Triggers phase summary and state advancement |
-| `before_commit` | Before git commit | Runs tier-1 static verification to block commits with unmet must-haves |
-
-All hooks are optional — the extension adds zero overhead when not actively orchestrating.
+If you already have a spec-kit project and want to adopt the orchestrator, see [`docs/migrating-from-speckit.md`](docs/migrating-from-speckit.md). The orchestrator preserves spec-kit as a migration *source* (via `scripts/migrate/` and `scripts/dispatch/adapters/format/speckit.sh`) but is not dependent on spec-kit at runtime.
 
 ## Agent Compatibility
 
-Designed and validated with **Claude Code**. The architecture avoids agent-specific code paths — all instructions are agent-neutral markdown, all scripts are POSIX-compatible — so compatibility with other agents is expected but not yet validated.
+The orchestrator formally supports three runtimes via the `packaging/install/install-*.sh` installers:
+
+- **Claude Code** — primary runtime; most thoroughly exercised.
+- **Codex CLI** — supported via the Codex adapter + installer.
+- **Cursor** — supported via the Cursor adapter + installer.
+
+All agent instructions are runtime-neutral markdown; all scripts are POSIX-compatible Bash 3.2+.
 
 ## Testing
 
-7 test suites with 334 assertions:
+7 test suites with 334+ assertions:
 
 ```bash
-bash tests/test-s01-structure.sh         # Structural validation (20 assertions)
-bash tests/test-s02-state-machine.sh     # State machine derivation (28 assertions)
-bash tests/test-s03-design-artifacts.sh  # Design artifacts (60 assertions)
-bash tests/test-s04-core-commands.sh     # Core commands (70 assertions)
-bash tests/test-s05-autonomous-mode.sh   # Autonomous mode (71 assertions)
-bash tests/test-s06-knowledge-lifecycle.sh  # Knowledge lifecycle (57 assertions)
-bash tests/test-s07-integration.sh       # Cross-slice integration (28 assertions)
+bash tests/test-s01-structure.sh            # Structural validation
+bash tests/test-s02-state-machine.sh        # State machine derivation
+bash tests/test-s03-design-artifacts.sh     # Design artifacts
+bash tests/test-s04-core-commands.sh        # Core commands
+bash tests/test-s05-autonomous-mode.sh      # Autonomous mode
+bash tests/test-s06-knowledge-lifecycle.sh  # Knowledge lifecycle
+bash tests/test-s07-integration.sh          # Cross-slice integration
 ```
 
 ## Governing Principles
@@ -238,9 +228,9 @@ bash tests/test-s07-integration.sh       # Cross-slice integration (28 assertion
 
 ### Adding a new command
 1. Create `commands/<name>.md` following the standard structure
-2. Register in `extension.yml` under `provides.commands`
+2. Ensure the command file is discovered by `packaging/install/install-<runtime>.sh` during next install, or add it to the runtime adapter's command registry
 3. Add test assertions in the appropriate test file
-4. Register any helper scripts in `provides.scripts`
+4. Register any helper scripts under `scripts/`
 
 ### Adding a new state
 1. Add derivation rule in `scripts/state/derive-phase.sh` (priority-ordered)

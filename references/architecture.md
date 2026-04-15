@@ -8,11 +8,11 @@
 
 ## Overview
 
-spec-kit-orchestrator is a spec-kit extension that adds autonomous multi-phase orchestration to spec-kit's spec-driven development workflow. It decomposes large features into milestones, phases, and tasks, then dispatches each task to a fresh agent context with a purpose-built payload. The orchestrator never holds long-running state in memory — all state is derived from file presence on disk under `.specify/orchestrator/`.
+spec-kit-orchestrator is a standalone autonomous multi-phase orchestrator. It decomposes large features into milestones, phases, and tasks, then dispatches each task to a fresh agent context with a purpose-built payload. The orchestrator never holds long-running state in memory — all state is derived from file presence on disk under `.orchestrator/`.
 
-The system is structured as markdown commands (agent instruction documents in `commands/`), Bash 3.2+ helper scripts (organized by concern in `scripts/`), output templates (`templates/`), and reference documentation (`references/`). It registers with spec-kit via `extension.yml`, which declares 12 commands, 5 lifecycle hooks, and over 40 helper scripts. The extension requires spec-kit >= 0.1.0 and uses git for version control but has no runtime dependency on GSD-2 or APM.
+The system is structured as markdown commands (agent instruction documents in `commands/`), Bash 3.2+ helper scripts (organized by concern in `scripts/`), output templates (`templates/`), and reference documentation (`references/`). It plugs into a host runtime (Claude Code agent tool / Codex CLI SDK / Cursor) via `packaging/install/install-<runtime>.sh`, which registers the orchestrator skills/commands with the active runtime and installs the script, template, and reference tree. The orchestrator uses git for version control and has no runtime dependency on any other workflow tool.
 
-The architecture follows 7 governing principles from the project constitution (`.specify/memory/constitution.md`), with Context Minimization (fresh context per task), State On Disk Is Truth (file-presence state machine), and Knowledge Compounds (persistent learning across milestones) being the most architecturally significant.
+The architecture follows 7 governing principles from the project constitution (`.orchestrator/memory/constitution.md`), with Context Minimization (fresh context per task), State On Disk Is Truth (file-presence state machine), and Knowledge Compounds (persistent learning across milestones) being the most architecturally significant.
 
 ---
 
@@ -116,7 +116,7 @@ After all tasks in the phase complete, the engine checks `guard_phase_complete` 
 
 ## State Machine
 
-The orchestrator uses a **file-presence state machine** with 10 canonical states. State is never stored as a field — it is derived deterministically by `scripts/state/derive-phase.sh`, which examines which files exist under `.specify/orchestrator/milestones/{M###}/` and returns the first matching rule in priority order.
+The orchestrator uses a **file-presence state machine** with 10 canonical states. State is never stored as a field — it is derived deterministically by `scripts/state/derive-phase.sh`, which examines which files exist under `.orchestrator/milestones/{M###}/` and returns the first matching rule in priority order.
 
 | Priority | Derived State | Triggering Condition |
 |----------|---------------|----------------------|
@@ -143,10 +143,12 @@ For the complete state transition diagram, tier-conditional behavior, and crash 
 
 ```
 spec-kit-orchestrator/
-├── extension.yml                      # Extension manifest (commands, hooks, scripts)
 ├── CLAUDE.md                          # Project instructions
 ├── CHANGELOG.md                       # Version history
-├── commands/                          # Agent instruction documents (12 commands)
+├── packaging/                         # Installable bundle + per-runtime installers
+│   ├── bundle/                        #   Skill bundle (SKILL.md + scripts + templates)
+│   └── install/                       #   install-claude-code.sh, install-codex.sh, install-cursor.sh
+├── commands/                          # Agent instruction documents (13 commands)
 │   ├── auto.md                        #   Autonomous execution loop
 │   ├── consolidate.md                 #   Knowledge consolidation
 │   ├── discuss.md                     #   Pre-planning discussion
@@ -305,12 +307,13 @@ spec-kit-orchestrator/
 ├── specs/                             # Feature specifications
 ├── knowledge/                         # Knowledge archive
 ├── docs/                              # Additional documentation
-└── .specify/                          # spec-kit project state
+└── .orchestrator/                     # Orchestrator runtime state (canonical)
     ├── memory/                        #   Constitution and memory
-    ├── orchestrator/                  #   Orchestrator runtime state
-    │   ├── KNOWLEDGE.md               #     Global knowledge file
-    │   └── milestones/                #     Per-milestone state
-    └── scripts/                       #   spec-kit scripts
+    │   └── constitution.md            #     7 governing principles
+    ├── KNOWLEDGE.md                   #   Global knowledge file
+    ├── DECISIONS.md                   #   Architectural decision register
+    ├── execution-log.jsonl            #   Append-only dispatch log
+    └── milestones/                    #   Per-milestone state
 ```
 
 ---

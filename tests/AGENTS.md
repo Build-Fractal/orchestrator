@@ -20,7 +20,7 @@ bash tests/test-s02-state-machine.sh
 ## Suites
 | File | Assertions | Covers |
 |------|-----------|--------|
-| test-s01-structure.sh | 20 | Directory tree, extension.yml manifest, config template |
+| test-s01-structure.sh | 11 | Directory tree, config template |
 | test-s02-state-machine.sh | 23 | 9 state derivations, config resolution, roadmap parsing, scaffolding |
 | test-s03-design-artifacts.sh | 60 | 13 templates + 4 reference docs structural validation |
 | test-s04-core-commands.sh | 51 | Verification scripts, dispatch scripts, 6 command files |

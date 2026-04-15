@@ -396,7 +396,7 @@ You can test a hook script directly by setting up the environment it expects:
 
 ```bash
 # Create a fake snapshot from a real phase directory
-phase_dir=".specify/orchestrator/milestones/M001/phases/P01"
+phase_dir=".orchestrator/milestones/M001/phases/P01"
 snapshot="$(mktemp)"
 (cd "$phase_dir" && tar -cf - .) > "$snapshot"
 chmod 444 "$snapshot"

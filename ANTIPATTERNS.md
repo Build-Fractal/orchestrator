@@ -19,7 +19,7 @@ it violates, and include specific file paths as evidence.
 **Evidence**:
 - `scripts/dispatch/build-context.sh:689` — `done < <(find ...)`
 - `scripts/verify/check-scope.sh:102` — `done < <(git diff ...)`
-- Discovered during M002+M003 audit (see `.specify/orchestrator/handoff-m002-m003-audit-fixes.md`, CRITICAL 1)
+- Discovered during M002+M003 audit (see `.orchestrator/handoff-m002-m003-audit-fixes.md`, CRITICAL 1)
 
 **Remedy**: Use temp-file pattern for feeding command output into while loops:
 ```
@@ -42,7 +42,7 @@ Or use a pipe: `command | while IFS= read -r line; do ...; done` (noting that th
 - `scripts/lifecycle/sync-roadmap.sh:82,91` — `sed -i.bak` calls
 - `scripts/lifecycle/lock-manager.sh:189,193,196` — `sed -i.bak` calls
 - 3 other scripts already used `sed_i` helper correctly
-- Discovered during M002+M003 audit (see `.specify/orchestrator/handoff-m002-m003-audit-fixes.md`, CRITICAL 2)
+- Discovered during M002+M003 audit (see `.orchestrator/handoff-m002-m003-audit-fixes.md`, CRITICAL 2)
 
 **Remedy**: Use a portable `sed_i` helper function in every script that needs in-place editing:
 ```
@@ -72,7 +72,7 @@ Better: extract `sed_i` into a shared utility (`scripts/util/sed-i.sh`) and sour
 - `scripts/knowledge/lib/manifest-utils.sh` — no guard
 - `scripts/knowledge/lib/telemetry-utils.sh` — no guard
 - `scripts/knowledge/lib/routing-utils.sh` — no guard
-- Discovered during M002+M003 audit (see `.specify/orchestrator/handoff-m002-m003-audit-fixes.md`, MEDIUM)
+- Discovered during M002+M003 audit (see `.orchestrator/handoff-m002-m003-audit-fixes.md`, MEDIUM)
 
 **Remedy**: Every sourced library file must include this guard at the very top (after the shebang, before any other code):
 ```

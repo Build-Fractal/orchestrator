@@ -305,9 +305,9 @@ Line numbers are absolute (relative to the start of the payload file), so agents
 
 Recipes follow a **most-specific-wins** resolution order. When assembling a payload for a given task, the engine searches for a `context-recipe.yaml` file at four locations in order:
 
-1. **Task directory** — `.specify/orchestrator/milestones/{M}/phases/{P}/tasks/context-recipe.yaml`
-2. **Phase directory** — `.specify/orchestrator/milestones/{M}/phases/{P}/context-recipe.yaml`
-3. **Milestone directory** — `.specify/orchestrator/milestones/{M}/context-recipe.yaml`
+1. **Task directory** — `.orchestrator/milestones/{M}/phases/{P}/tasks/context-recipe.yaml`
+2. **Phase directory** — `.orchestrator/milestones/{M}/phases/{P}/context-recipe.yaml`
+3. **Milestone directory** — `.orchestrator/milestones/{M}/context-recipe.yaml`
 4. **Default** — `templates/context-recipe.yaml` (shipped with the extension)
 
 The first file found wins. This means:
@@ -337,7 +337,7 @@ Copy the default recipe as your starting point:
 
 ```bash
 cp templates/context-recipe.yaml \
-   .specify/orchestrator/milestones/M002/phases/P03/context-recipe.yaml
+   .orchestrator/milestones/M002/phases/P03/context-recipe.yaml
 ```
 
 ### Step 2: Edit Sections
@@ -407,8 +407,8 @@ Run `build-context.sh` with `--recipe` to test your custom recipe before relying
 
 ```bash
 scripts/dispatch/build-context.sh \
-  .specify/orchestrator M002 P03 T01 \
-  --recipe .specify/orchestrator/milestones/M002/phases/P03/context-recipe.yaml
+  .orchestrator M002 P03 T01 \
+  --recipe .orchestrator/milestones/M002/phases/P03/context-recipe.yaml
 ```
 
 Check the output:

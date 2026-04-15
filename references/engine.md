@@ -27,7 +27,7 @@ scripts/engine/run.sh [--dry-run] [--force] <milestone> <phase>
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `<milestone>` | Yes | Milestone ID (e.g., `M004`). Must correspond to an existing directory under `.specify/orchestrator/milestones/`. |
+| `<milestone>` | Yes | Milestone ID (e.g., `M004`). Must correspond to an existing directory under `.orchestrator/milestones/`. |
 | `<phase>` | Yes | Phase ID (e.g., `P03`). Must correspond to an existing subdirectory under the milestone's `phases/` directory, containing a `tasks/` directory with one or more `T##-PLAN.md` files. |
 | `--dry-run` | No | Execute the full pipeline except actual agent dispatch. Events are emitted and guards run, but no payload is sent to a model. Pre-dispatch guards (`payload_sanity`) and verification are skipped with audit warnings. |
 | `--force` | No | Downgrade guard blocks to `GUARD_WARNING` (operator override). Allows the pipeline to continue past payload sanity, budget, output sanity, and phase-complete guards. Hook tampering detection (`HOOK_VIOLATION`) is never overridable, even with `--force`. |
@@ -83,7 +83,7 @@ Performed once per session, before the task loop begins.
 
 1. **Argument parsing** — Reads `--dry-run`, `--force`, `-h`, and positional `<milestone>` `<phase>` arguments. Unknown flags cause an immediate exit with code 2.
 2. **Run context** — Calls `init_run_context` to establish `ORCH_RUN_ID`, `ORCH_STARTED_AT`, and the mode flags.
-3. **Directory resolution** — Locates the phase directory at `.specify/orchestrator/milestones/<milestone>/phases/<phase>/` and its `tasks/` subdirectory. Missing directories cause exit code 3.
+3. **Directory resolution** — Locates the phase directory at `.orchestrator/milestones/<milestone>/phases/<phase>/` and its `tasks/` subdirectory. Missing directories cause exit code 3.
 4. **Task discovery** — Scans for `T*-PLAN.md` files without matching `T*-SUMMARY.md` siblings. Pending task IDs are written to a temp file for the loop to consume.
 5. **Model selection** — Calls `scripts/dispatch/select-model.sh standard` against `templates/routing.yaml` to resolve the model ID and context budget for the "standard" complexity tier. Falls back to `claude-sonnet-4-6` with a 150,000 token budget if selection fails.
 6. **Checkpoint detection** — Checks for a prior checkpoint via `checkpoint_detect`. If found, reads the `last_task` field and emits `CHECKPOINT_RESUME`. Tasks up to and including the checkpoint boundary are skipped during the loop (see Checkpointing and Crash Recovery below).
@@ -134,7 +134,7 @@ Verifies that the dispatch produced valid output and that the phase's must-have 
 
 Records the task outcome and writes a checkpoint for crash recovery.
 
-1. **Execution log** — Appends a structured JSON line to `.specify/orchestrator/milestones/<milestone>/execution-log.jsonl` via `scripts/lifecycle/record-result.sh`. The entry includes milestone, phase, task, outcome (success or failure based on verification), verification result, model, payload bytes, dispatch method (`engine`), and run ID.
+1. **Execution log** — Appends a structured JSON line to `.orchestrator/milestones/<milestone>/execution-log.jsonl` via `scripts/lifecycle/record-result.sh`. The entry includes milestone, phase, task, outcome (success or failure based on verification), verification result, model, payload bytes, dispatch method (`engine`), and run ID.
 2. **POST_DISPATCH hooks** — Fires `POST_DISPATCH` lifecycle hooks. Unlike `PRE_DISPATCH`, failure here is non-blocking — a `SAFETY_WARNING` is emitted but the task is not marked as blocked.
 3. **Checkpoint write** — Calls `checkpoint_write` with the milestone, phase, task ID, and outcome. This creates the crash-recovery anchor for this task boundary.
 4. **TASK_COMPLETE event** — Emits the final task outcome with model name, verification result, and estimated token count.
@@ -173,7 +173,7 @@ The engine writes a checkpoint file after each completed task so that a crashed 
 
 ### Checkpoint File
 
-Checkpoints are stored at `.specify/orchestrator/milestones/<milestone>/engine-checkpoint.json`. The file is a JSON object with 6 fields:
+Checkpoints are stored at `.orchestrator/milestones/<milestone>/engine-checkpoint.json`. The file is a JSON object with 6 fields:
 
 ```json
 {

@@ -174,4 +174,4 @@ Each tier reports: `pass`, `fail`, or `skipped`. Failed tiers include the specif
 | Tier 3 — Behavioral | ✅ When must-haves require it | ✅ When must-haves require it |
 | Tier 4 — Human/UAT | ❌ Developer-driven | ✅ At milestone boundaries |
 
-Tier A does not use the orchestrator verification ladder — standard spec-kit verification applies.
+Tier A does not use the orchestrator verification ladder — standard host-runtime verification applies.

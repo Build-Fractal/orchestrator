@@ -21,8 +21,8 @@ helper scripts. All scripts live under `scripts/` organized by concern:
 - `telemetry/` -- metrics recording and aggregation
 - `lib/` -- shared libraries sourced by other scripts
 
-Every script is registered in `extension.yml` under `provides.scripts` with
-`executable: true`. If you add a new script, register it there or it becomes
+Scripts live under `scripts/` organized by concern. New scripts must be
+referenced by a command, a hook, or another script — dangling scripts are
 dead infrastructure (Principle VIII).
 
 ---
@@ -380,7 +380,6 @@ Check:
 ### VIII. No Dead Infrastructure
 
 Every script must be reachable from a live code path. Check:
-- Is the script registered in `extension.yml`?
 - Is the script referenced by at least one command or other script?
 - If removing the script, does anything break?
 
@@ -431,8 +430,6 @@ Before merging any script change, verify:
       correct prefixes
 - [ ] **Error paths** -- invalid arguments produce stderr message + exit 1
 - [ ] **Header comment** -- includes usage, arguments, output format, exit codes
-- [ ] **Registered in extension.yml** -- new scripts listed under
-      `provides.scripts`
 - [ ] **Tests exist** -- new functionality has assertions in the appropriate
       test suite
 - [ ] **Tests pass** -- `bash tests/test-s##-<name>.sh` exits 0
@@ -511,9 +508,8 @@ need the current state. Stale cached state is the source of subtle bugs.
 
 ## Cross-References
 
-- `../extension.yml` -- extension manifest (script registration)
 - `../ANTIPATTERNS.md` -- full antipattern register with evidence
-- `../.specify/memory/constitution.md` -- constitution v2.0 (13 principles)
+- `../.orchestrator/memory/constitution.md` -- constitution v2.0 (13 principles)
 - `../references/constitution-walkthrough.md` -- principle-by-principle walkthrough with codebase examples
 - `../tests/` -- test suites and fixtures
 - `../references/architecture.md` -- system architecture, engine pipeline, subsystem map

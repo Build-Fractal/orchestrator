@@ -1,155 +1,138 @@
 # Installation Reference
 
-> How to install spec-kit-orchestrator into a consumer project.
-> Self-contained — follow this document to set up orchestration in any spec-kit project.
+> How to install spec-kit-orchestrator for use in a project.
+> Self-contained — follow this document to set up orchestration in any project.
 
 ## Overview
 
-spec-kit-orchestrator is an extension that adds multi-phase orchestration to spec-kit's SDD workflow. It is distributed as a set of files that you copy into your project. There is no package manager or installer — you copy the extension directories and configure your project.
+spec-kit-orchestrator is a standalone autonomous orchestrator. It is distributed as a runtime-specific skill bundle installed via `packaging/install/install-<runtime>.sh`. The installer is idempotent and safe to re-run for updates. There is no copy-based install path and no dependency on any other workflow tool at runtime.
 
-## What to Copy
+## Install
 
-Copy these directories from the spec-kit-orchestrator repo into your project root:
+From a clone of the orchestrator repo (or a prebuilt skill bundle), run the installer that matches your host runtime:
 
-| Directory | Purpose | Required |
-|-----------|---------|----------|
-| `commands/` | 10 orchestrator command definitions (agent instruction documents) | Yes |
-| `scripts/` | 23 helper scripts organized by concern (state, dispatch, verify, knowledge, lifecycle) | Yes |
-| `templates/` | 14 output templates + 1 config default | Yes |
-| `references/` | 5 progressive disclosure docs (state machine, verification, tiers, file formats, installation) | Yes |
-| `extension.yml` | spec-kit extension manifest | Yes |
+| Runtime | Installer |
+|---------|-----------|
+| Claude Code | `bash packaging/install/install-claude-code.sh` |
+| Codex CLI | `bash packaging/install/install-codex.sh` |
+| Cursor | `bash packaging/install/install-cursor.sh` |
 
-## What NOT to Copy
-
-These are development artifacts for the extension itself and should not be copied to consumer projects:
-
-| Path | Reason |
-|------|--------|
-| `specs/` | The extension's own feature specs — your project has its own specs |
-| `.specify/` | The extension's own orchestrator state from its development |
-| `tests/` | Extension test suites — not needed at runtime |
-| `docs/` | Extension development documentation |
-| `CLAUDE.md` | Extension-specific project instructions (create your own) |
-| `CHANGELOG.md` | Extension changelog (not relevant to your project) |
-| `.git/`, `.github/` | Extension repo metadata |
+The installer registers the `orchestrator:*` skills/commands into the active runtime, drops the orchestrator's scripts / templates / references into the expected locations, and verifies the install with a fast structural probe.
 
 ## Installation Steps
 
-### 1. Copy extension files
+### 1. Run the installer
 
-From the spec-kit-orchestrator repo, copy the required directories into your project:
-
-```bash
-# From your project root:
-cp -r /path/to/spec-kit-orchestrator/commands/ ./commands/
-cp -r /path/to/spec-kit-orchestrator/scripts/ ./scripts/
-cp -r /path/to/spec-kit-orchestrator/templates/ ./templates/
-cp -r /path/to/spec-kit-orchestrator/references/ ./references/
-cp /path/to/spec-kit-orchestrator/extension.yml ./extension.yml
-```
-
-### 2. Create project configuration (optional)
-
-Copy the default config template and customize:
+Pick the installer for your runtime (see table above). Example for Claude Code:
 
 ```bash
-cp templates/orchestrator-config-default.yml orchestrator-config.yml
+bash packaging/install/install-claude-code.sh
 ```
 
-Edit `orchestrator-config.yml` to set project-specific values (verification commands, default tier, etc.). See `extension.yml` config_schema for valid values.
+Re-running the installer is safe — it preserves user edits to the generated instruction file and only refreshes orchestrator-managed assets.
 
-### 3. Set up CLAUDE.md for your project
+### 2. Initialize your project
 
-Create a `CLAUDE.md` in your project root that references the orchestrator. At minimum, include:
+In your project directory, run:
+
+```
+orchestrator:init
+```
+
+This probes the project, detects host capabilities, generates `.orchestrator/config.yml` with sensible defaults, writes a runtime-appropriate instruction file, and confirms the skill registration. Completes in ~1 second.
+
+### 3. Create project configuration (optional)
+
+`orchestrator:init` writes a default config. To customize, edit `.orchestrator/config.yml` or start from the template:
+
+```bash
+cp templates/orchestrator-config-default.yml .orchestrator/config.yml
+```
+
+Common settings include verification commands, default tier, context verbosity, and autonomy mode. See `references/file-formats.md` for the full config schema, or `templates/orchestrator-config-default.yml` for a commented reference file.
+
+### 4. Add a CLAUDE.md (or equivalent) for your project
+
+`orchestrator:init` generates a runtime-appropriate instruction file automatically (for Claude Code, this is `CLAUDE.md`). If you want to hand-author it, include a short pointer section like:
 
 ```markdown
 ## Orchestration
 
-This project uses spec-kit-orchestrator for multi-phase orchestration.
-- Commands are in `commands/` (10 orchestrator commands)
-- Scripts are in `scripts/` (23 helper scripts)
-- Templates are in `templates/` (14 output templates)
-- Reference docs are in `references/`
+This project uses the spec-kit-orchestrator.
 
-## SDD Workflow
-
-- `/speckit.orchestrator.evaluate` — classify scope and activate orchestration
-- `/speckit.orchestrator.discuss` — pre-planning discussion (Tier C required, Tier B optional)
-- `/speckit.orchestrator.roadmap` — decompose spec into phases
-- `/speckit.orchestrator.plan-phase` — plan one phase
-- `/speckit.orchestrator.dispatch` — execute one task
-- `/speckit.orchestrator.verify` — verify phase completion
-- `/speckit.orchestrator.auto` — autonomous execution (Tier C)
-- `/speckit.orchestrator.status` — check progress
-- `/speckit.orchestrator.resume` — resume after crash/pause
-- `/speckit.orchestrator.consolidate` — compress knowledge at milestone end
+- `orchestrator:evaluate` — classify scope and activate orchestration
+- `orchestrator:discuss` — pre-planning discussion (Tier C required, Tier B optional)
+- `orchestrator:roadmap` — decompose spec into phases
+- `orchestrator:plan-phase` — plan one phase
+- `orchestrator:dispatch` — execute one task
+- `orchestrator:verify` — verify phase completion
+- `orchestrator:auto` — autonomous execution (Tier C)
+- `orchestrator:status` — check progress
+- `orchestrator:resume` — resume after crash/pause
+- `orchestrator:consolidate` — compress knowledge at milestone end
 ```
 
-### 4. Create your feature spec
+For a complete walkthrough, see `docs/getting-started.md`.
 
-Before running orchestrator commands, create a feature spec using standard spec-kit:
+### 5. Create your feature spec
+
+Before running the orchestrator commands, create a feature spec:
 
 ```bash
-# Your spec goes in specs/{NNN}-{name}/spec.md
 mkdir -p specs/001-your-feature
-# Write your spec...
+# Write your spec at specs/001-your-feature/spec.md
 ```
 
-### 5. Start orchestration
+The orchestrator reads spec-kit-shaped specs via `scripts/dispatch/adapters/format/speckit.sh`, but the spec format is just a convention — you do not need spec-kit installed. If you are migrating from an existing spec-kit project, see `docs/migrating-from-speckit.md`.
 
-```bash
-/speckit.orchestrator.evaluate
+### 6. Start orchestration
+
+```
+orchestrator:evaluate
 ```
 
-The evaluate command will discover your spec, classify the tier, scaffold the orchestrator directory structure, and tell you what to do next.
+The evaluate command discovers your spec, classifies the tier, scaffolds the orchestrator directory structure, and tells you what to do next.
 
 ## Directory Structure After Installation
 
 ```
 your-project/
-├── commands/              # Orchestrator command definitions
-├── scripts/               # Helper scripts
-│   ├── state/             # derive-phase.sh, read-roadmap.sh, read-config.sh
-│   ├── dispatch/          # build-context.sh, scope-filter.sh, detect-capabilities.sh
-│   ├── verify/            # check-must-haves.sh, check-boundary-map.sh, etc.
-│   ├── knowledge/         # write-summary.sh, append-decision.sh, etc.
-│   ├── lifecycle/         # scaffold.sh, lock-manager.sh, auto-loop.sh, etc.
-│   └── util/              # json-field.sh
-├── templates/             # Output templates
-├── references/            # Progressive disclosure docs
-├── extension.yml          # Extension manifest
-├── orchestrator-config.yml  # Project config (optional, you create this)
-├── specs/                 # Your feature specs
+├── .orchestrator/                     # Orchestrator runtime state (canonical)
+│   ├── config.yml                     # Project config (written by orchestrator:init)
+│   ├── memory/
+│   │   └── constitution.md            # 7 governing principles (if configured)
+│   ├── DECISIONS.md                   # Architectural decision register
+│   ├── KNOWLEDGE.md                   # Global knowledge entries
+│   ├── execution-log.jsonl            # Append-only dispatch log
+│   └── milestones/
+│       └── M001/
+│           ├── M001-EVALUATION.md     # Tier classification and scope metrics
+│           ├── M001-CONTEXT.md        # Discussion context draft (Tier C)
+│           ├── M001-ROADMAP.md        # Phase decomposition
+│           └── phases/
+├── specs/                             # Your feature specs
 │   └── 001-your-feature/
 │       └── spec.md
-├── .specify/              # Created by orchestrator at runtime
-│   └── orchestrator/
-│       ├── DECISIONS.md
-│       ├── KNOWLEDGE.md
-│       ├── execution-log.jsonl
-│       └── milestones/
-│           └── M001/
-│               ├── M001-EVALUATION.md
-│               ├── M001-CONTEXT.md  (Tier C)
-│               ├── M001-ROADMAP.md
-│               └── phases/
-└── CLAUDE.md              # Your project instructions
+├── orchestrator-config.yml            # Optional project override (or use .orchestrator/config.yml)
+└── CLAUDE.md                          # Runtime-specific instruction file (or equivalent)
 ```
+
+The orchestrator's own commands, scripts, templates, and references live inside the installed skill bundle — you do not copy them into every project.
 
 ## Autonomy Configuration
 
-Spec-kit-orchestrator's Tier C autonomous mode (`speckit.orchestrator.auto`)
+spec-kit-orchestrator's Tier C autonomous mode (`orchestrator:auto`)
 runs unattended — it dispatches tasks, verifies results, and advances
 phase boundaries without developer interaction. For this to work
-reliably, the agent host (Claude Code, Cursor, etc.) must have a
+reliably, the agent host (Claude Code, Codex CLI, Cursor) must have a
 sufficient allow list so tool calls execute without permission prompts.
 
 **How it works**: the orchestrator ships a generator at
 `scripts/lifecycle/generate-permissions.sh` that introspects the
 current project and emits a canonical JSON permissions object that
-covers every orchestrator script (from `extension.yml`), every
-`package.json` script key, every Makefile target, and the standard
-toolchain commands for the languages in use. The writer at
+covers every orchestrator script, every `package.json` script key,
+every Makefile target, and the standard toolchain commands for the
+languages in use. The writer at
 `scripts/lifecycle/write-permissions.sh` translates the canonical
 object to your agent host's specific settings file (today:
 `.claude/settings.json`). A drift detector at
@@ -167,18 +150,18 @@ Three modes ship in `templates/autonomy-defaults.yaml`:
 | `full` | Tier C | Comprehensive allow list for unattended auto mode. |
 
 The mode is tier-derived by default but can be overridden in
-`orchestrator-config.yml`:
+`.orchestrator/config.yml`:
 
 ```yaml
 autonomy:
   mode: full                # null (tier default) | minimal | standard | full
-  generate_on_init: true    # Run generator during speckit.orchestrator.evaluate
+  generate_on_init: true    # Run generator during orchestrator:evaluate
   deny_patterns: []         # Extra deny patterns appended to baseline_deny
   extra_allow: []           # Extra allow patterns appended to baseline_allow
 ```
 
 **Note**: `bypassPermissions` is **not** a supported mode. Per AD-7 in
-`.specify/orchestrator/milestones/M005/M005-CONTEXT.md`, safety comes
+`.orchestrator/milestones/M005/M005-CONTEXT.md`, safety comes
 from explicit allow-list enumeration, never from disabling checks.
 
 ### Running the Generator
@@ -206,7 +189,7 @@ emits a structured line consumable by diagnostics and returns:
 - `status=drift` — one or more missing patterns (regeneration needed).
 - `status=missing` — `.claude/settings.json` does not exist at all.
 
-`speckit.orchestrator.auto` runs this check as part of its pre-flight.
+`orchestrator:auto` runs this check as part of its pre-flight.
 User-authored settings files trigger an informational warning but do
 not block execution — AD-13 says user autonomy wins over orchestrator
 opinion.
@@ -228,23 +211,33 @@ commands and verification scripts must use the **single-script-file
 shape** — extract multi-step logic into a helper script under
 `scripts/verify/` and invoke the helper as a plain `bash scripts/...`
 command. The authoritative list of forbidden shapes lives in AD-19 at
-`.specify/orchestrator/milestones/M005/M005-CONTEXT.md` and in the
+`.orchestrator/milestones/M005/M005-CONTEXT.md` and in the
 authoring guidance at `commands/plan-phase.md`.
 
-If you are writing a new extension command or phase plan, follow the
+If you are writing a new command or phase plan, follow the
 shape guidance in `commands/plan-phase.md`. The advisory lint at
-`scripts/diagnostics/check-plans.sh` (M005 P06) scans task plans and
+`scripts/diagnostics/check-plans.sh` scans task plans and
 flags violations so you can fix them before running auto mode.
 
 ## Updating
 
-To update the orchestrator, re-copy the `commands/`, `scripts/`, `templates/`, and `references/` directories from a newer version of the spec-kit-orchestrator repo. Your project-specific files (`specs/`, `.specify/`, `orchestrator-config.yml`, `CLAUDE.md`) are unaffected.
+To update the orchestrator, re-run the installer for your runtime:
+
+```bash
+bash packaging/install/install-claude-code.sh
+```
+
+The installer preserves user edits to the generated instruction file and refreshes only orchestrator-managed assets. Your project-specific files (`specs/`, `.orchestrator/`, config overrides, CLAUDE.md user edits) are unaffected.
 
 Check `CHANGELOG.md` in the spec-kit-orchestrator repo for breaking changes before updating.
 
+## Migrating from spec-kit
+
+If you have an existing spec-kit project with state under `.specify/`, see `docs/migrating-from-speckit.md` for the migration path. The orchestrator preserves spec-kit as a migration *source* via `scripts/migrate/adapters/speckit.sh` and related tooling — it is not a runtime dependency.
+
 ## Verification
 
-After installation, verify the extension is working:
+After installation, verify the orchestrator is working:
 
 ```bash
 # Check that scaffold.sh is executable and has correct syntax

@@ -30,14 +30,14 @@ For a phase-level override:
 
 ```bash
 cp templates/context-recipe.yaml \
-   .specify/orchestrator/milestones/M001/phases/P02/context-recipe.yaml
+   .orchestrator/milestones/M001/phases/P02/context-recipe.yaml
 ```
 
 For a milestone-level override:
 
 ```bash
 cp templates/context-recipe.yaml \
-   .specify/orchestrator/milestones/M001/context-recipe.yaml
+   .orchestrator/milestones/M001/context-recipe.yaml
 ```
 
 **2. Edit the copy.** Remove sections you do not need, change priorities, or adjust compression. See the sections below for details on each option.
@@ -46,8 +46,8 @@ cp templates/context-recipe.yaml \
 
 ```bash
 scripts/dispatch/build-context.sh \
-  .specify/orchestrator M001 P02 T01 \
-  --recipe .specify/orchestrator/milestones/M001/phases/P02/context-recipe.yaml
+  .orchestrator M001 P02 T01 \
+  --recipe .orchestrator/milestones/M001/phases/P02/context-recipe.yaml
 ```
 
 **4. Done.** The orchestrator automatically resolves the most specific recipe at dispatch time. Once your file is in place, future dispatches for that phase (or milestone, or task) will use it.
@@ -88,7 +88,7 @@ sections:
     cache_hint: static
 ```
 
-The `source` field determines where the content comes from. For custom sections, use a `file` source (a `.md` filename). The file must exist at the milestone directory root (`.specify/orchestrator/milestones/{M}/`).
+The `source` field determines where the content comes from. For custom sections, use a `file` source (a `.md` filename). The file must exist at the milestone directory root (`.orchestrator/milestones/{M}/`).
 
 ### Removing a Section
 
@@ -257,7 +257,7 @@ Any other `.md` filename as a `source` value is read directly from the milestone
     cache_hint: static
 ```
 
-The file must exist at `.specify/orchestrator/milestones/{M}/API-REFERENCE.md`.
+The file must exist at `.orchestrator/milestones/{M}/API-REFERENCE.md`.
 
 ---
 
@@ -265,9 +265,9 @@ The file must exist at `.specify/orchestrator/milestones/{M}/API-REFERENCE.md`.
 
 Recipes follow a most-specific-wins resolution order. When the engine assembles a payload for a task, it searches for `context-recipe.yaml` at four locations:
 
-1. **Task directory** -- `.specify/orchestrator/milestones/{M}/phases/{P}/tasks/context-recipe.yaml`
-2. **Phase directory** -- `.specify/orchestrator/milestones/{M}/phases/{P}/context-recipe.yaml`
-3. **Milestone directory** -- `.specify/orchestrator/milestones/{M}/context-recipe.yaml`
+1. **Task directory** -- `.orchestrator/milestones/{M}/phases/{P}/tasks/context-recipe.yaml`
+2. **Phase directory** -- `.orchestrator/milestones/{M}/phases/{P}/context-recipe.yaml`
+3. **Milestone directory** -- `.orchestrator/milestones/{M}/context-recipe.yaml`
 4. **Default** -- `templates/context-recipe.yaml`
 
 The first file found wins. The engine does not merge recipes -- the winning recipe is used in its entirety.
@@ -282,7 +282,7 @@ The first file found wins. The engine does not merge recipes -- the winning reci
 
 ```bash
 scripts/dispatch/build-context.sh \
-  .specify/orchestrator M001 P02 T01 \
+  .orchestrator M001 P02 T01 \
   --recipe /path/to/experimental-recipe.yaml
 ```
 
@@ -543,7 +543,7 @@ manifest:
   include_compression_applied: true
 ```
 
-Place this file at `.specify/orchestrator/milestones/{M}/phases/{P}/context-recipe.yaml` and all tasks in that phase will use it.
+Place this file at `.orchestrator/milestones/{M}/phases/{P}/context-recipe.yaml` and all tasks in that phase will use it.
 
 ---
 
@@ -557,7 +557,7 @@ Place this file at `.specify/orchestrator/milestones/{M}/phases/{P}/context-reci
 ### Section appears but has no content
 
 - **Cause**: the source file does not exist at the expected location.
-- **Fix for file sources**: ensure the `.md` file exists at the milestone directory root (`.specify/orchestrator/milestones/{M}/`).
+- **Fix for file sources**: ensure the `.md` file exists at the milestone directory root (`.orchestrator/milestones/{M}/`).
 - **Fix for `phase_summaries`**: ensure upstream phases have summary files written. Summaries are generated after phase completion.
 - **Fix for `phase_plan` / `task_plan`**: ensure the phase or task has been planned (the plan file must exist).
 

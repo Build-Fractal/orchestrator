@@ -67,12 +67,12 @@ if [[ "$SKIP_PERMISSIONS" = "false" && "$TIER" != "A" ]]; then
   if [[ "$gen_on_init" = "true" ]]; then
     if [[ -x "$GENERATE" && -x "$WRITE_PERMS" ]]; then
       # Use project-local temp instead of /tmp (AD-19: avoid /tmp writes)
-      orch_tmp="$PROJECT_ROOT/.specify/orchestrator/tmp"
+      orch_tmp="$PROJECT_ROOT/.orchestrator/tmp"
       mkdir -p "$orch_tmp"
       canon_file="$orch_tmp/evaluate-canon.json"
 
-      if bash "$GENERATE" "$PROJECT_ROOT" --tier "$TIER" > "$canon_file" 2>/dev/null; then
-        if bash "$WRITE_PERMS" "$PROJECT_ROOT" < "$canon_file" 2>/dev/null; then
+      if bash "$GENERATE" --project-root "$PROJECT_ROOT" --tier "$TIER" > "$canon_file" 2>/dev/null; then
+        if bash "$WRITE_PERMS" --project-root "$PROJECT_ROOT" < "$canon_file" 2>/dev/null; then
           perm_status="generated"
         else
           perm_status="error"

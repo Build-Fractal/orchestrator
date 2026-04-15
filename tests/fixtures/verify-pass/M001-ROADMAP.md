@@ -6,16 +6,16 @@ tier: C
 
 ## Phases
 
-- [x] **P01**: Extension Foundation — "Developer can install the extension and see all commands registered"
+- [x] **P01**: Orchestrator Foundation — "Developer can read project instructions and derive state from disk"
   - Risk: low
   - Depends: none
   - Boundary Map:
-    - Produces: extension.yml, scripts/setup.sh
+    - Produces: CLAUDE.md, scripts/state/derive-phase.sh
     - Consumes: none
 
 - [ ] **P02**: State Machine Core — "Developer can scaffold and see state derivation"
   - Risk: high
   - Depends: P01
   - Boundary Map:
-    - Produces: scripts/state/derive-phase.sh, scripts/state/read-config.sh
-    - Consumes: P01/extension.yml
+    - Produces: scripts/state/read-roadmap.sh, scripts/state/read-config.sh
+    - Consumes: P01/CLAUDE.md

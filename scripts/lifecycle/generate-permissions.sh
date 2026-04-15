@@ -47,7 +47,7 @@ resolve_tier() {
     return 0
   fi
   local eval_file
-  for eval_file in "$PROJECT_ROOT"/.specify/orchestrator/milestones/*/M*-EVALUATION.md; do
+  for eval_file in "$PROJECT_ROOT"/.orchestrator/milestones/*/M*-EVALUATION.md; do
     [ -f "$eval_file" ] || continue
     local t
     t="$(sed -n 's/^tier:[[:space:]]*"\{0,1\}\([ABC]\)"\{0,1\}.*/\1/p' "$eval_file" | head -1)"
@@ -118,13 +118,6 @@ BASELINE_ALLOW="$(read_yaml_array "$DEFAULTS_FILE" "baseline_allow")"
 # Each function prints one or more allow-pattern strings to stdout (one per
 # line). Missing sources print nothing. Per AD-11, any source that errors is
 # skipped with an EVENT on stderr.
-
-introspect_extension_yml() {
-  local f="$PROJECT_ROOT/extension.yml"
-  [ -f "$f" ] || { emit_event SAFETY_WARNING source=extension.yml reason=missing >&2; return 0; }
-  # Already covered by baseline Bash(bash scripts/*) -- emit nothing new.
-  emit_event SESSION_START source=extension.yml entries=covered_by_baseline >&2
-}
 
 introspect_package_json() {
   local f="$PROJECT_ROOT/package.json"
@@ -231,7 +224,6 @@ printf '%s\n' "$BASELINE_ALLOW" > "$TMP_ALLOW"
 printf '%s\n' "$BASELINE_DENY" > "$TMP_DENY"
 
 # Introspection appends
-introspect_extension_yml >> "$TMP_ALLOW"
 introspect_package_json  >> "$TMP_ALLOW"
 introspect_makefile      >> "$TMP_ALLOW"
 introspect_toolchains    >> "$TMP_ALLOW"

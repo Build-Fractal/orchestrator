@@ -29,6 +29,9 @@ knowledge.db-wal
 
 # ── GSD baseline (auto-generated) ──
 .gsd
+# Exception: synthetic test fixtures under tests/fixtures/ must be tracked
+!tests/fixtures/**/.gsd
+!tests/fixtures/**/.gsd/**
 *~
 *.code-workspace
 .env

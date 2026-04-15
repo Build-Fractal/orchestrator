@@ -2,24 +2,32 @@
 # scripts/migrate/lib/idempotency.sh — Check for existing orchestrator state
 # =============================================================================
 #
-# Version: 1.0
+# Version: 1.1
 # Compatibility: Bash 3.2+
 #
 # Provides two functions:
-#   check_existing_state <target_root>     — returns "clean" or "has_state"
+#   check_existing_state <target_root>
+#     Returns "clean" or "has_state".
+#     Detects orchestrator state under $target_root in two layouts:
+#       (a) $target_root IS an orchestrator root (KNOWLEDGE-INDEX.md, DECISIONS.md,
+#           knowledge/, milestones/ directly under it)
+#       (b) $target_root is a project root containing .orchestrator/ or
+#           .specify/orchestrator/ subdirectories
 #   enforce_conflict_policy <target> <pol>  — abort/merge/force gating
 # =============================================================================
 
 # check_existing_state <target_root>
 # Returns: "clean" | "has_state"
+#
+# Detects orchestrator state in two layouts:
+#   (a) $target IS an orchestrator root — marker files directly under it
+#   (b) $target is a project root containing .orchestrator/ or
+#       .specify/orchestrator/ subdirectories (legacy / parent-dir mode)
 check_existing_state() {
     local target="$1"
 
-    if [ -d "$target/.specify/orchestrator" ]; then
-        echo "has_state"
-        return
-    fi
-    if [ -d "$target/knowledge" ] && [ -n "$(ls "$target/knowledge/"*.md 2>/dev/null)" ]; then
+    # Layout (a): target is an orchestrator root
+    if [ -f "$target/KNOWLEDGE-INDEX.md" ]; then
         echo "has_state"
         return
     fi
@@ -27,7 +35,26 @@ check_existing_state() {
         echo "has_state"
         return
     fi
-    if [ -f "$target/KNOWLEDGE-INDEX.md" ]; then
+    if [ -d "$target/knowledge" ]; then
+        # Any *.md directly under knowledge/ counts as state
+        for f in "$target/knowledge"/*.md "$target/knowledge"/*/*.md; do
+            if [ -f "$f" ]; then
+                echo "has_state"
+                return
+            fi
+        done
+    fi
+    if [ -d "$target/milestones" ]; then
+        echo "has_state"
+        return
+    fi
+
+    # Layout (b): target is a project root with orchestrator subdirs
+    if [ -d "$target/.orchestrator" ] && [ -n "$(ls -A "$target/.orchestrator" 2>/dev/null)" ]; then
+        echo "has_state"
+        return
+    fi
+    if [ -d "$target/.specify/orchestrator" ] && [ -n "$(ls -A "$target/.specify/orchestrator" 2>/dev/null)" ]; then
         echo "has_state"
         return
     fi

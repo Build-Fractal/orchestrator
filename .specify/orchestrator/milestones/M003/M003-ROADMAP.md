@@ -108,7 +108,7 @@ close the drift and validate end-to-end against live GSD2 data. See
       - All transform scripts (from P02, P03, P04) — `knowledge.sh`, `knowledge-index.sh`, `decisions.sh`, `requirements.sh`, `milestone-tiering.sh`, `active-milestone.sh`, `milestone-rollup.sh`, `telemetry-aggregator.sh`
       - All library scripts (from P01, P02, P03, P04, P05) — `sqlite-reader.sh`, `json-fallback.sh`, `category-mapper.sh`, `supersession-chain.sh`, `scope-tag.sh`, `decision-numbering.sh`, `category-inferrer.sh`
 
-- [ ] **P07**: State Resolver & Graph Integration (refit) — "A developer can run `bash scripts/migrate/migrate.sh --path <gsd2-project>` and find migration output written to the path returned by `scripts/state/resolve-root.sh` (not hardcoded `.specify/orchestrator/`), `KNOWLEDGE-INDEX.md` regenerated via `scripts/knowledge/rebuild-index.sh` so the M007 graph database (`knowledge.db`) is populated, and migrated knowledge entries participate in graph traversal via `scripts/knowledge/traverse-graph.sh`."
+- [x] **P07**: State Resolver & Graph Integration (refit) — "A developer can run `bash scripts/migrate/migrate.sh --path <gsd2-project>` and find migration output written to the path returned by `scripts/state/resolve-root.sh` (not hardcoded `.specify/orchestrator/`), `KNOWLEDGE-INDEX.md` regenerated via `scripts/knowledge/rebuild-index.sh` so the M007 graph database (`knowledge.db`) is populated, and migrated knowledge entries participate in graph traversal via `scripts/knowledge/traverse-graph.sh`."
   - Risk: medium
   - Depends: P01, P02, P04, P06 (refits existing code)
   - Boundary Map:

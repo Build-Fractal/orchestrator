@@ -65,7 +65,7 @@ if [ -z "$ms_title" ]; then
 fi
 
 # --- Create output directory ---
-ms_dir="${target_root}/.specify/orchestrator/milestones/M001"
+ms_dir="${target_root}/milestones/M001"
 mkdir -p "${ms_dir}/phases"
 
 # --- Write M001-EVALUATION.md ---

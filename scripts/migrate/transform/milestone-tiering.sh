@@ -55,8 +55,8 @@ if [ ! -f "$milestones_dat" ]; then
 fi
 
 # --- Create output directories ---
-mkdir -p "${target_root}/.specify/orchestrator/milestones/summaries"
-mkdir -p "${target_root}/.specify/orchestrator/milestones/rollups"
+mkdir -p "${target_root}/milestones/summaries"
+mkdir -p "${target_root}/milestones/rollups"
 
 # --- Classify milestones ---
 # Collect active and completed milestones separately

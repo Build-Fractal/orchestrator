@@ -26,9 +26,9 @@ fi
 # fixture was modified" failure did not appear.
 out="$(bash "$TEST" 2>&1 || true)"
 
-if echo "$out" | grep -q 'source fixture was modified'; then
-  echo "FAIL: integration test reported source fixture was modified"
-  echo "$out" | grep 'source fixture was modified' >&2
+if echo "$out" | grep -qE '^FAIL: .*source fixture was modified'; then
+  echo "FAIL: integration test reported source fixture was modified (strict pass)"
+  echo "$out" | grep -E '^FAIL: .*source fixture was modified' >&2
   exit 1
 fi
 

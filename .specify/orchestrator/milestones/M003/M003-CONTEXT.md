@@ -2,7 +2,7 @@
 schema_version: "1.0"
 type: context-draft
 milestone: "M003"
-status: draft
+status: final
 created_at: "2026-04-10T01:37:58Z"
 finalized_at: "2026-04-10T01:37:58Z"
 ---

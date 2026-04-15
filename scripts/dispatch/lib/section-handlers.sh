@@ -23,7 +23,7 @@ _SECTION_HANDLERS_SOURCED=1
 #   dispatch_section_handler <source> <section_name> <orch_root> <milestone> <phase> <task> [<included_ids_file>]
 #
 # Resolution rules shared by all handlers:
-#   - <orch_root> may be either .specify/orchestrator OR a fixture milestone dir
+#   - <orch_root> may be either .orchestrator OR a fixture milestone dir
 #     (the caller has already normalized this). Handlers derive the milestone
 #     directory as: "${orch_root}/milestones/${milestone}" if that exists, else
 #     they fall back to treating <orch_root> as the milestone dir.
@@ -44,7 +44,7 @@ _SH_READ_ROADMAP="${_SH_PROJECT_ROOT}/state/read-roadmap.sh"
 _SH_READ_CONFIG="${_SH_PROJECT_ROOT}/state/read-config.sh"
 
 # _sh_resolve_milestone_dir <orch_root> <milestone>
-# Prints the milestone directory path. Supports both .specify/orchestrator
+# Prints the milestone directory path. Supports both .orchestrator
 # layout and fixture layout where orch_root IS the milestone dir.
 _sh_resolve_milestone_dir() {
   local orch_root="$1"

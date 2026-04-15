@@ -126,7 +126,7 @@ Report any `WARN` lines in the verification report's scope section, but do not c
 As a pre-check before Tier 1 verification, detect files modified outside the orchestrator's scope:
 
 ```bash
-bash scripts/verify/check-external-mods.sh .specify/orchestrator/orchestrator.lock --scope "<milestone-dir>/phases/<phase-id>"
+bash scripts/verify/check-external-mods.sh .orchestrator/orchestrator.lock --scope "<milestone-dir>/phases/<phase-id>"
 ```
 
 If modifications are detected (exit code 2), include `WARN` lines in the verification report's scope section alongside check-scope.sh output. External modifications are informational warnings — they do not fail verification.

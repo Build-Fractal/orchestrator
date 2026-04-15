@@ -28,7 +28,7 @@ Types: task, phase, milestone
 Example:
   write-summary.sh task /tmp/T01-SUMMARY.md \
     --id=T01 --parent=P01 --milestone=M001 \
-    --provides="state derivation" --requires="from:P01/T01 what:extension.yml" \
+    --provides="state derivation" --requires="from:P01/T01 what:config.yml" \
     --affects=P02 --key_files=scripts/foo.sh --key_decisions=D001 \
     --patterns_established="file presence" --drill_down_paths=plans/T01.md \
     --duration=25m --verification_result=pass \

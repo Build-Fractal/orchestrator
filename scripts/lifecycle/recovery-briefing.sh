@@ -56,7 +56,7 @@ if [[ -f "$DERIVE_PHASE" ]]; then
 fi
 
 # --- Read lock file info ---
-ORCH_DIR="$MILESTONE_DIR/.specify/orchestrator"
+ORCH_DIR="$MILESTONE_DIR/.orchestrator"
 LOCK_FILE="$ORCH_DIR/orchestrator.lock"
 
 lock_status="not found"

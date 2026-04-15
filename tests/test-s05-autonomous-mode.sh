@@ -740,10 +740,10 @@ for cmd_file in "$AUTO_CMD" "$RESUME_CMD" "$DISCUSS_CMD"; do
     full_path="$PROJECT_ROOT/$ref"
     if [ ! -f "$full_path" ]; then
       all_scripts_ok=false
-      missing_scripts="$missing_scripts $cmd_name→$ref(missing)"
+      missing_scripts="$missing_scripts ${cmd_name}->${ref}(missing)"
     elif [ ! -x "$full_path" ]; then
       all_scripts_ok=false
-      missing_scripts="$missing_scripts $cmd_name→$ref(not-executable)"
+      missing_scripts="$missing_scripts ${cmd_name}->${ref}(not-executable)"
     fi
   done
 done
@@ -767,7 +767,7 @@ for cmd_file in "$AUTO_CMD" "$RESUME_CMD" "$DISCUSS_CMD"; do
     full_path="$PROJECT_ROOT/$ref"
     if [ ! -f "$full_path" ]; then
       all_templates_ok=false
-      missing_templates="$missing_templates $cmd_name→$ref"
+      missing_templates="$missing_templates ${cmd_name}->${ref}"
     fi
   done
 done
@@ -1205,7 +1205,7 @@ echo "# T01 Summary" > "$TMPDIR_COMPLETE/phases/P02/tasks/T01-SUMMARY.md"
 echo "# T02 Summary" > "$TMPDIR_COMPLETE/phases/P02/tasks/T02-SUMMARY.md"
 echo "# P02 Summary" > "$TMPDIR_COMPLETE/phases/P02/P02-SUMMARY.md"
 echo "# Verification" > "$TMPDIR_COMPLETE/phases/P02/P02-VERIFICATION.md"
-echo "# Validation" > "$TMPDIR_COMPLETE/M001-VALIDATION.md"
+echo "# Validation" > "$TMPDIR_COMPLETE/M001-VALIDATED"
 echo "# Milestone Summary" > "$TMPDIR_COMPLETE/M001-SUMMARY.md"
 # Fix roadmap to mark P02 as complete
 sed 's/- \[ \] \*\*P02\*\*/- [x] **P02**/' "$TMPDIR_COMPLETE/M001-ROADMAP.md" > "$TMPDIR_COMPLETE/M001-ROADMAP.md.tmp"

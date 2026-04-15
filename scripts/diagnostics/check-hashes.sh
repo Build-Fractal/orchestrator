@@ -23,7 +23,7 @@ done
 
 # --- Collect knowledge entry .md files ---
 FILES=""
-for dir in "$PROJECT_ROOT/.specify/orchestrator/knowledge" "$PROJECT_ROOT/.specify/knowledge"; do
+for dir in "$PROJECT_ROOT/.orchestrator/knowledge"; do
   if [ -d "$dir" ]; then
     for f in "$dir"/*.md; do
       [ -f "$f" ] || continue

@@ -14,7 +14,7 @@ trap 'rm -rf "$tmpdir"' EXIT
 # Create project structure
 mkdir -p "$tmpdir/knowledge/convention"
 mkdir -p "$tmpdir/knowledge/archive"
-mkdir -p "$tmpdir/.specify/orchestrator"
+mkdir -p "$tmpdir/.orchestrator"
 mkdir -p "$tmpdir/scripts/knowledge/lib"
 mkdir -p "$tmpdir/scripts/diagnostics"
 mkdir -p "$tmpdir/scripts/lib"
@@ -84,7 +84,7 @@ DETAILEOF
 # MEM901 has empty scope tag
 
 # --- Anomaly 4: Cost spike ---
-cat > "$tmpdir/.specify/orchestrator/execution-log.jsonl" << 'LOGEOF'
+cat > "$tmpdir/.orchestrator/execution-log.jsonl" << 'LOGEOF'
 {"unitId":"M002-P01-T01","timestamp":"2026-04-10T10:00:00Z","cost_estimated":0.05,"result":"pass"}
 {"unitId":"M002-P01-T02","timestamp":"2026-04-10T11:00:00Z","cost_estimated":0.04,"result":"pass"}
 {"unitId":"M002-P01-T03","timestamp":"2026-04-10T12:00:00Z","cost_estimated":0.06,"result":"pass"}
@@ -114,7 +114,7 @@ r=0; echo "$output" | grep -qiE 'Health Report|HEALTHY|NEEDS_ATTENTION' 2>/dev/n
 check "Health report summary produced" $r
 
 # Check 5: doctor-history.jsonl written
-history_file="$tmpdir/.specify/orchestrator/doctor-history.jsonl"
+history_file="$tmpdir/.orchestrator/doctor-history.jsonl"
 r=0; test -f "$history_file" || r=1
 check "doctor-history.jsonl file created" $r
 

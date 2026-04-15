@@ -1,7 +1,7 @@
 {
   "_generated_by": "speckit-orchestrator",
   "_generated_mode": "full",
-  "_note": "Comprehensive autonomy template for unattended auto mode. This is the MVP fallback; project-introspected generation, config schema, and doctor drift detection are planned as M005 P07 (see .specify/orchestrator/milestones/M005/M005-ROADMAP.md and M005-CONTEXT.md AD-7 through AD-21). System-temp and env-prefix patterns below trace to AD-20 and AD-21 respectively.",
+  "_note": "Comprehensive autonomy template for unattended auto mode. This is the MVP fallback; project-introspected generation, config schema, and doctor drift detection are planned as M005 P07 (see .orchestrator/milestones/M005/M005-ROADMAP.md and M005-CONTEXT.md AD-7 through AD-21). System-temp and env-prefix patterns below trace to AD-20 and AD-21 respectively.",
   "permissions": {
     "defaultMode": "acceptEdits",
     "deny": [

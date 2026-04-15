@@ -27,7 +27,7 @@ usage() {
 Usage: rollback-phase.sh <orchestrator-root> <milestone-id> <phase-id> <reason>
 
 Arguments:
-  orchestrator-root  Path to .specify/orchestrator (or equivalent state root)
+  orchestrator-root  Path to .orchestrator (or equivalent state root)
   milestone-id       Milestone ID (e.g., M001)
   phase-id           Phase to roll back (e.g., P01)
   reason             Human-readable reason for the rollback

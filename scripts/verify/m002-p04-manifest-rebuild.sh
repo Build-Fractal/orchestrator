@@ -27,7 +27,7 @@ setup_payload() {
   cp -R "$PROJECT_ROOT/scripts/state/"* "$root/scripts/state/"
   cp -R "$PROJECT_ROOT/scripts/telemetry/"* "$root/scripts/telemetry/"
   cp "$PROJECT_ROOT/templates/context-recipe.yaml" "$root/templates/" 2>/dev/null || true
-  touch "$root/extension.yml"
+  mkdir -p "$root/.orchestrator"
 
   # Generate filler text
   local filler_block="Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur."

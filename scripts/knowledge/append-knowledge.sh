@@ -23,8 +23,8 @@ Arguments:
   scope           Scope tag: project | milestone:M### | phase:M###/P##
 
 Example:
-  append-knowledge.sh .specify/orchestrator/KNOWLEDGE.md \
-    "All state scripts must handle missing .specify/orchestrator/ dir" \
+  append-knowledge.sh .orchestrator/KNOWLEDGE.md \
+    "All state scripts must handle missing .orchestrator/ dir" \
     "milestone:M001"
 EOF
   exit 1

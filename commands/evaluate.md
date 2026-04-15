@@ -99,7 +99,7 @@ Based on the classified tier:
 bash scripts/lifecycle/scaffold.sh <orchestrator-root> <milestone-id>
 ```
 
-Where `<orchestrator-root>` is `.specify/orchestrator` and `<milestone-id>` is the milestone ID (e.g., `M001`). This creates the `.specify/orchestrator/milestones/{M###}/` directory tree and global state files.
+Where `<orchestrator-root>` is `.orchestrator` and `<milestone-id>` is the milestone ID (e.g., `M001`). This creates the `.orchestrator/milestones/{M###}/` directory tree and global state files.
 
 2. **Write the evaluation file** to the milestone directory using the `templates/evaluation.md` template:
 
@@ -133,8 +133,8 @@ Report the `permissions` field value: "generated" means fresh permissions were w
 
 This step is idempotent: running `evaluate` again with an existing
 `.claude/settings.json` that has the `_generated_by` marker overwrites
-it with a fresh generation (reflecting any `extension.yml` or toolchain
-changes since the last run).
+it with a fresh generation (reflecting any orchestrator config or
+toolchain changes since the last run).
 
 4. **Report to the user**:
    - Tier classification (A, B, or C) with reasoning

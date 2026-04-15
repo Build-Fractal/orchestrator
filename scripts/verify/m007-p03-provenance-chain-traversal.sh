@@ -12,7 +12,7 @@ fixture_dir="$(mktemp -d)"
 trap 'rm -rf "$fixture_dir"' EXIT
 
 mkdir -p "$fixture_dir/knowledge/patterns"
-touch "$fixture_dir/extension.yml"
+mkdir -p "$fixture_dir/.orchestrator"
 
 # Source graph-db.sh for fixture setup
 source "$REPO_ROOT/scripts/knowledge/lib/graph-db.sh"

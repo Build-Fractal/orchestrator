@@ -8,5 +8,5 @@ grep -q "scripts/" "$f" || { echo "FAIL: missing scripts/ in layout"; exit 1; }
 grep -q "commands/" "$f" || { echo "FAIL: missing commands/ in layout"; exit 1; }
 grep -q "templates/" "$f" || { echo "FAIL: missing templates/ in layout"; exit 1; }
 grep -q "references/" "$f" || { echo "FAIL: missing references/ in layout"; exit 1; }
-grep -q ".specify/orchestrator/" "$f" || { echo "FAIL: missing .specify/orchestrator/ in layout"; exit 1; }
+grep -q ".orchestrator/" "$f" || { echo "FAIL: missing .orchestrator/ in layout"; exit 1; }
 echo "PASS: architecture.md file layout tree"

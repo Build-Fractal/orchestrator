@@ -97,7 +97,7 @@ which has two layers:
    shape matches one of the heuristic classes.
 
 **Forbidden shapes** (observed to trigger the harness heuristic — see
-AD-19 in `.specify/orchestrator/milestones/M005/M005-CONTEXT.md` for the
+AD-19 in `.orchestrator/milestones/M005/M005-CONTEXT.md` for the
 authoritative trigger list):
 
 - Inline compound `bash -c '...' && bash -c '...'` chains.

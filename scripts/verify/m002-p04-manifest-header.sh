@@ -13,7 +13,7 @@ setup_fixture() {
   local root="$TMPDIR_TEST"
 
   # Orchestrator structure
-  mkdir -p "$root/.specify/orchestrator/milestones/M001/phases/P01/tasks"
+  mkdir -p "$root/.orchestrator/milestones/M001/phases/P01/tasks"
   mkdir -p "$root/knowledge/convention"
   mkdir -p "$root/knowledge/gotcha"
   mkdir -p "$root/knowledge/archive"
@@ -31,10 +31,10 @@ setup_fixture() {
   cp -R "$PROJECT_ROOT/scripts/state/"* "$root/scripts/state/"
   cp -R "$PROJECT_ROOT/scripts/telemetry/"* "$root/scripts/telemetry/"
   cp "$PROJECT_ROOT/templates/context-recipe.yaml" "$root/templates/" 2>/dev/null || true
-  touch "$root/extension.yml"
+  mkdir -p "$root/.orchestrator"
 
   # Roadmap
-  cat > "$root/.specify/orchestrator/milestones/M001/M001-ROADMAP.md" <<'ROADMAP'
+  cat > "$root/.orchestrator/milestones/M001/M001-ROADMAP.md" <<'ROADMAP'
 ---
 schema_version: "1.0"
 type: roadmap
@@ -51,7 +51,7 @@ tier: "C"
 ROADMAP
 
   # Phase plan
-  cat > "$root/.specify/orchestrator/milestones/M001/phases/P01/P01-PLAN.md" <<'PLAN'
+  cat > "$root/.orchestrator/milestones/M001/phases/P01/P01-PLAN.md" <<'PLAN'
 ---
 schema_version: "1.0"
 type: phase-plan
@@ -72,7 +72,7 @@ depends_on: []
 PLAN
 
   # Task plan
-  cat > "$root/.specify/orchestrator/milestones/M001/phases/P01/tasks/T01-PLAN.md" <<'TASK'
+  cat > "$root/.orchestrator/milestones/M001/phases/P01/tasks/T01-PLAN.md" <<'TASK'
 ---
 schema_version: "1.0"
 type: task-plan
@@ -155,7 +155,7 @@ setup_fixture
 # --- Run build-context.sh for task dispatch ---
 export PROJECT_ROOT="$TMPDIR_TEST"
 output="$(bash "$TMPDIR_TEST/scripts/dispatch/build-context.sh" \
-  "$TMPDIR_TEST/.specify/orchestrator" M001 P01 T01 2>/dev/null)" || true
+  "$TMPDIR_TEST/.orchestrator" M001 P01 T01 2>/dev/null)" || true
 
 # --- Assertions ---
 

@@ -1,6 +1,6 @@
 # Speckit-Orchestrator Project Configuration
 # Copy to orchestrator-config.yml in your project root and customize.
-# See extension.yml config_schema for valid values.
+# Valid values are documented alongside each key below.
 
 default_tier: null              # Auto-detect. Override: A, B, or C
 verification_commands: []       # Run after each task (e.g., ["npm test", "npm run lint"])

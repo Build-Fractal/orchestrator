@@ -6,10 +6,9 @@ REPO_ROOT="$(pwd)"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
-# Create a stub project with BOTH legacy and new roots so env var must beat them.
+# Create a stub project with an existing canonical root so env var must beat it.
 mkdir -p "$TMP/.git"
 mkdir -p "$TMP/.orchestrator"
-mkdir -p "$TMP/.specify/orchestrator"
 
 cd "$TMP"
 result="$(ORCHESTRATOR_ROOT=custom/state bash "$REPO_ROOT/scripts/state/resolve-root.sh")"

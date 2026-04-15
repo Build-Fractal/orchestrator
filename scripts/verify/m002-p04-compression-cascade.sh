@@ -28,7 +28,7 @@ setup_payload() {
   cp -R "$PROJECT_ROOT/scripts/state/"* "$root/scripts/state/"
   cp -R "$PROJECT_ROOT/scripts/telemetry/"* "$root/scripts/telemetry/"
   cp "$PROJECT_ROOT/templates/context-recipe.yaml" "$root/templates/" 2>/dev/null || true
-  touch "$root/extension.yml"
+  mkdir -p "$root/.orchestrator"
 
   # Generate filler text (~100 words per block, repeat blocks)
   # We need ~5000 tokens = ~20000 chars, so use moderate filler

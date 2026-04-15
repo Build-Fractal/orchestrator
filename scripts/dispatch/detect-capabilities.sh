@@ -111,7 +111,7 @@ fi
 # graph_db: check for sqlite3 AND a knowledge graph database file
 graph_db=false
 if command -v sqlite3 >/dev/null 2>&1; then
-  if [[ -f .specify/orchestrator/knowledge.db ]] || [[ -f .orchestrator/knowledge.db ]]; then
+  if [[ -f .orchestrator/knowledge.db ]]; then
     graph_db=true
   fi
 fi

@@ -45,7 +45,7 @@ TMPDIR_SUMMARY="$(mktemp -d)"
 
 output=$(bash "$WRITE_SUMMARY" task "$TMPDIR_SUMMARY/task.md" \
   --id=T01 --parent=P01 --milestone=M001 \
-  --provides="state derivation" --requires="from:P01/T01 what:extension.yml" \
+  --provides="state derivation" --requires="from:P01/T01 what:config.yml" \
   --affects=P02 --key_files=scripts/foo.sh --key_decisions=D001 \
   --patterns_established="file presence" --drill_down_paths=plans/T01.md \
   --duration=25m --verification_result=pass \
@@ -78,7 +78,7 @@ fi
 
 output=$(bash "$WRITE_SUMMARY" phase "$TMPDIR_SUMMARY/phase.md" \
   --id=P01 --parent=M001 --milestone=M001 \
-  --provides="state derivation" --requires="from:P01/T01 what:extension.yml" \
+  --provides="state derivation" --requires="from:P01/T01 what:config.yml" \
   --affects=P02 --key_files=scripts/foo.sh --key_decisions=D001 \
   --patterns_established="file presence" --drill_down_paths=plans/P01.md \
   --duration=2h --verification_result=pass \
@@ -111,7 +111,7 @@ fi
 output=$(bash "$WRITE_SUMMARY" milestone "$TMPDIR_SUMMARY/milestone.md" \
   --id=M001 --parent=null --milestone=M001 \
   --provides="orchestrator extension" --requires="from:spec what:spec.md" \
-  --affects=M002 --key_files=extension.yml --key_decisions=D001 \
+  --affects=M002 --key_files=config.yml --key_decisions=D001 \
   --patterns_established="SDD workflow" --drill_down_paths=milestones/M001 \
   --duration=8h --verification_result=pass \
   --completed_at=2026-03-20T10:00:00Z \
@@ -650,20 +650,19 @@ for script in $LIFECYCLE_SCRIPTS; do
 done
 
 # --------------------------------------------------------------------------
-# 4.11 extension.yml declares all 6 S06 scripts
+# 4.11 All 6 S06 scripts exist on disk and are executable
 # --------------------------------------------------------------------------
 
 S06_SCRIPTS="scripts/knowledge/write-summary.sh scripts/knowledge/append-decision.sh scripts/knowledge/append-knowledge.sh scripts/knowledge/consolidate-artifacts.sh scripts/lifecycle/rollback-phase.sh scripts/lifecycle/mark-complete.sh"
-ext_yml="$PROJECT_ROOT/extension.yml"
 s06_missing=0
 for s06_script in $S06_SCRIPTS; do
-  if ! grep -q "$s06_script" "$ext_yml"; then
-    fail "extension.yml declares $s06_script"
+  if [ ! -f "$PROJECT_ROOT/$s06_script" ] || [ ! -x "$PROJECT_ROOT/$s06_script" ]; then
+    fail "$s06_script exists and is executable"
     s06_missing=$((s06_missing + 1))
   fi
 done
 if [ "$s06_missing" -eq 0 ]; then
-  pass "extension.yml declares all 6 S06 scripts"
+  pass "all 6 S06 scripts exist on disk and are executable"
 fi
 
 # --------------------------------------------------------------------------

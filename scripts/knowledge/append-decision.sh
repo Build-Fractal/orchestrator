@@ -27,7 +27,7 @@ Arguments:
   revisable       Optional. Default: "Yes". Use "No" or "Yes — <condition>"
 
 Example:
-  append-decision.sh .specify/orchestrator/DECISIONS.md \
+  append-decision.sh .orchestrator/DECISIONS.md \
     "M001/P01/T01" "arch" "State derivation mechanism?" \
     "File-presence-based" "Crash recovery derives state from what exists" "No"
 EOF

@@ -3,14 +3,18 @@
 Thumbs.db
 
 # Orchestrator runtime state (derived, not source of truth for git)
-.specify/orchestrator/STATE.md
-.specify/orchestrator/orchestrator.lock
-.specify/orchestrator/execution-log.jsonl
-.specify/orchestrator/milestones/**/continue.md
+.orchestrator/STATE.md
+.orchestrator/orchestrator.lock
+.orchestrator/execution-log.jsonl
+.orchestrator/milestones/**/continue.md
 
 # Ephemeral dispatch artifacts (rebuildable from task plan + state via build-context.sh)
-.specify/orchestrator/milestones/**/phases/*/tasks/T*-PAYLOAD.md
-.specify/orchestrator/milestones/**/phases/*/P*-PLANNING-PAYLOAD.md
+.orchestrator/milestones/**/phases/*/tasks/T*-PAYLOAD.md
+.orchestrator/milestones/**/phases/*/P*-PLANNING-PAYLOAD.md
+
+# Ephemeral auto-loop transients (per-iteration output; not state of record)
+.orchestrator/milestones/**/*-result.txt
+.orchestrator/tmp/
 
 # Spec-kit extension install cache
 .specify/extensions/.cache/

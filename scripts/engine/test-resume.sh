@@ -7,7 +7,7 @@
 # reason="resume_boundary_reached", and advances to PHASE_COMPLETE.
 #
 # The harness is self-contained: it builds a throwaway fixture milestone at
-# .specify/orchestrator/milestones/M999TESTRESUME/ with three minimal task
+# .orchestrator/milestones/M999TESTRESUME/ with three minimal task
 # plans (T01/T02/T03), runs scripts/engine/run.sh against the fixture twice,
 # asserts the expected checkpoint + event transitions, and removes every
 # fixture artifact on exit (success, failure, or signal). The real M004
@@ -59,7 +59,7 @@ INPUT_PHASE="${2:-P03}"
 # --- Fixture identifiers (fixed so the test is idempotent and isolated) ---
 FIXTURE_MILESTONE="M999TESTRESUME"
 FIXTURE_PHASE="P01"
-FIXTURE_ROOT=".specify/orchestrator/milestones/${FIXTURE_MILESTONE}"
+FIXTURE_ROOT=".orchestrator/milestones/${FIXTURE_MILESTONE}"
 FIXTURE_PHASE_DIR="${FIXTURE_ROOT}/phases/${FIXTURE_PHASE}"
 FIXTURE_TASKS_DIR="${FIXTURE_PHASE_DIR}/tasks"
 FIXTURE_ROADMAP="${FIXTURE_ROOT}/${FIXTURE_MILESTONE}-ROADMAP.md"

@@ -14,7 +14,7 @@
 # Default index path relative to project root
 DEFAULT_INDEX_PATH="KNOWLEDGE-INDEX.md"
 
-# Get the project root (walk up from script location to find extension.yml)
+# Get the project root (walk up from script location to find an orchestrator marker)
 get_project_root() {
   local dir
   if [ -n "${PROJECT_ROOT:-}" ]; then
@@ -22,10 +22,10 @@ get_project_root() {
     return
   fi
   dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-  # Walk up to find extension.yml
+  # Walk up to find .orchestrator/ or .git
   local candidate="$dir"
   while [ "$candidate" != "/" ]; do
-    if [ -f "$candidate/extension.yml" ]; then
+    if [ -d "$candidate/.orchestrator" ] || [ -d "$candidate/.git" ]; then
       echo "$candidate"
       return
     fi

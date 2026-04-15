@@ -10,7 +10,7 @@
 #   build-context.sh <orch_root> <milestone> <phase> <task> \
 #                    [--config-defaults <f>] [--recipe <f>]
 #
-#   orch_root:         .specify/orchestrator (or a fixture milestone dir)
+#   orch_root:         .orchestrator (or a fixture milestone dir)
 #   milestone:         M### (e.g., M001)
 #   phase:             P## (e.g., P02)
 #   task:              T## (e.g., T01) or PHASE_PLAN for planning payload

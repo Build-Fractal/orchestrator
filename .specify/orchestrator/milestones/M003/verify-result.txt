@@ -1,1 +1,0 @@
-AUTO:VERIFY_PASS phase=P08 task=T03 checks_passed=0

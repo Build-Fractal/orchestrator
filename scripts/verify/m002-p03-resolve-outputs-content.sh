@@ -5,7 +5,6 @@ TMPDIR="$(mktemp -d)"
 trap 'rm -rf "$TMPDIR"' EXIT
 export PROJECT_ROOT="$TMPDIR"
 mkdir -p "$TMPDIR/knowledge/convention" "$TMPDIR/knowledge/gotcha" "$TMPDIR/knowledge/archive"
-touch "$TMPDIR/extension.yml"
 cat > "$TMPDIR/KNOWLEDGE-INDEX.md" <<'HEADER'
 # Knowledge Index
 <!-- Generated artifact — rebuild with: bash scripts/knowledge/rebuild-index.sh -->

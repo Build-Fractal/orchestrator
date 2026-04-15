@@ -24,7 +24,7 @@ usage() {
 Usage: mark-complete.sh <orchestrator-root> <milestone-id>
 
 Arguments:
-  orchestrator-root  Path to .specify/orchestrator (or equivalent state root)
+  orchestrator-root  Path to .orchestrator (or equivalent state root)
   milestone-id       Milestone ID (e.g., M001)
 
 Creates M###-VALIDATED marker file when all phases are complete.

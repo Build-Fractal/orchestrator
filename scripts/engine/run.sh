@@ -105,10 +105,10 @@ init_run_context "$ENGINE_MILESTONE" "$ENGINE_PHASE"
 
 # Repo root for verify/record helpers that misbehave from nested cwd (P06 owns the fix).
 REPO_ROOT="$(cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" && pwd)"
-EXECUTION_LOG=".specify/orchestrator/milestones/${ENGINE_MILESTONE}/execution-log.jsonl"
+EXECUTION_LOG=".orchestrator/milestones/${ENGINE_MILESTONE}/execution-log.jsonl"
 
 # --- Resolve phase directory and pending-task list ---
-PHASE_DIR=".specify/orchestrator/milestones/${ENGINE_MILESTONE}/phases/${ENGINE_PHASE}"
+PHASE_DIR=".orchestrator/milestones/${ENGINE_MILESTONE}/phases/${ENGINE_PHASE}"
 if [ ! -d "$PHASE_DIR" ]; then
   emit_event SAFETY_WARNING reason="phase_dir_missing" phase_dir="$PHASE_DIR"
   emit_result error STATE "phase directory not found: $PHASE_DIR"
@@ -233,7 +233,7 @@ while IFS= read -r task_id; do
   _payload_file="$(mktemp)"
   _compressed_file="$(mktemp)"
 
-  if ! bash scripts/dispatch/build-context.sh .specify/orchestrator "$ENGINE_MILESTONE" "$ENGINE_PHASE" "$task_id" > "$_payload_file" 2>/dev/null; then
+  if ! bash scripts/dispatch/build-context.sh .orchestrator "$ENGINE_MILESTONE" "$ENGINE_PHASE" "$task_id" > "$_payload_file" 2>/dev/null; then
     emit_event SAFETY_WARNING reason="build_context_failed" task="$task_id"
     _blocked=$((_blocked + 1))
     emit_event TASK_COMPLETE task="$task_id" outcome="failed" reason="build_context"

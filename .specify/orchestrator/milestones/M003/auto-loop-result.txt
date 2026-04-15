@@ -1,1 +1,0 @@
-AUTO:READY milestone=M003 phase=P08 task=T04 payload_bytes=36781 payload_file=.specify/orchestrator/milestones/M003/phases/P08/tasks/T04-PAYLOAD.md

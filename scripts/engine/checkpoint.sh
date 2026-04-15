@@ -28,7 +28,7 @@ _checkpoint_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "${_checkpoint_dir}/../lib/run-context.sh"
 
 # --- Configuration ---
-ORCH_CHECKPOINT_ROOT="${ORCH_CHECKPOINT_ROOT:-.specify/orchestrator/milestones}"
+ORCH_CHECKPOINT_ROOT="${ORCH_CHECKPOINT_ROOT:-.orchestrator/milestones}"
 
 # _checkpoint_escape <string>
 # Minimal JSON string escaping: backslash, double-quote, control chars → space.

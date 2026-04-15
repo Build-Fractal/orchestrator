@@ -62,7 +62,7 @@ if [ -n "$MILESTONE_DIR" ]; then
   fi
 else
   # Scan all milestone directories
-  milestones_root="$PROJECT_ROOT/.specify/orchestrator/milestones"
+  milestones_root="$PROJECT_ROOT/.orchestrator/milestones"
   if [ -d "$milestones_root" ]; then
     for mdir in "$milestones_root"/*/; do
       [ -d "$mdir" ] || continue

@@ -33,7 +33,7 @@ Before entering the autonomous loop, verify all preconditions:
 Use the milestone finder to identify the auto-eligible milestone and its state in a single script call:
 
 ```bash
-bash scripts/state/find-active-milestone.sh .specify/orchestrator
+bash scripts/state/find-active-milestone.sh .orchestrator
 ```
 
 This returns one line: `M### <state> <tier>` for the first Tier C milestone in an auto-eligible state (executing, planning, summarizing, validating, completing).
@@ -41,7 +41,7 @@ This returns one line: `M### <state> <tier>` for the first Tier C milestone in a
 - If output is `NONE` (exit 1), no eligible milestone exists. Report "No Tier C milestone eligible for auto mode" and exit.
 - If a milestone is found, parse the milestone ID, state, and tier from the output.
 
-To see all milestones: `bash scripts/state/find-active-milestone.sh .specify/orchestrator --all`
+To see all milestones: `bash scripts/state/find-active-milestone.sh .orchestrator --all`
 
 **State validation:**
 - `executing`, `planning`, `summarizing`, `validating`, `completing` — valid, proceed
@@ -61,7 +61,7 @@ Auto mode is only available for **Tier C** (FR-054). Tier B → "Use `speckit.or
 ### 2. Check for Existing Lock
 
 ```bash
-bash scripts/lifecycle/lock-manager.sh status .specify/orchestrator/orchestrator.lock
+bash scripts/lifecycle/lock-manager.sh status .orchestrator/orchestrator.lock
 ```
 
 - **LOCK:ACTIVE** — Another session owns execution. Report "Lock held by PID {pid} since {started_at} on unit {unit_id}. Autonomous mode cannot start while another session is active." and exit.
@@ -149,11 +149,11 @@ Write:
 
 ```bash
 # PASSES harness heuristic (single-file invocation)
-bash scripts/verify/my-check.sh
+bash scripts/verify/check-must-haves.sh
 ```
 
 The rationale is documented in AD-19 (see
-`.specify/orchestrator/milestones/M005/M005-CONTEXT.md`). Task plans
+`.orchestrator/milestones/M005/M005-CONTEXT.md`). Task plans
 authored per `commands/plan-phase.md` follow this convention by default.
 P06's `scripts/diagnostics/check-plans.sh` (advisory lint) flags task
 plans that drift from the convention.
@@ -175,7 +175,7 @@ If it prints `false` (default), tasks execute in the current working tree.
 Acquire the execution lock before entering the loop:
 
 ```bash
-bash scripts/lifecycle/lock-manager.sh create .specify/orchestrator/orchestrator.lock "auto-dispatch" "<M###>/<active-phase>/<next-task>"
+bash scripts/lifecycle/lock-manager.sh create .orchestrator/orchestrator.lock "auto-dispatch" "<M###>/<active-phase>/<next-task>"
 ```
 
 The lock file records the current PID, operation type, current unit, timestamp, and git branch for crash recovery context.
@@ -287,12 +287,12 @@ When `auto-loop.sh` returns `AUTO:PLANNING phase=P## milestone=M###`, the active
 
 The autonomous loop checks for a pause request via `auto-loop.sh` (exit code 11) at the top of each pre-dispatch iteration.
 
-The developer can create the `.specify/orchestrator/pause-requested` file from a second terminal while auto mode runs.
+The developer can create the `.orchestrator/pause-requested` file from a second terminal while auto mode runs.
 
 When a pause is detected:
 
 1. **Write continue file** following `templates/continue-file.md` with current position, completed work (from the lock file's `completedUnits`), remaining tasks, and next action.
-2. **Release the lock**: `bash scripts/lifecycle/lock-manager.sh break .specify/orchestrator/orchestrator.lock`
+2. **Release the lock**: `bash scripts/lifecycle/lock-manager.sh break .orchestrator/orchestrator.lock`
 3. **Report**: "Autonomous execution paused at {position}. Continue file written. Run `speckit.orchestrator.resume` to resume."
 4. **Exit cleanly** with exit code 0.
 
@@ -305,7 +305,7 @@ When `auto-loop.sh` returns `AUTO:PHASE_COMPLETE` or `derive-phase.sh` returns `
 Run `phase-transition.sh` to automate the mechanical parts of phase transition — external mod check, task summary synthesis, and roadmap sync. Do NOT use command substitution — use file-based output:
 
 ```bash
-bash scripts/lifecycle/phase-transition.sh <milestone-dir> <P##> --lock-file .specify/orchestrator/orchestrator.lock --output-file=<milestone-dir>/transition-result.txt
+bash scripts/lifecycle/phase-transition.sh <milestone-dir> <P##> --lock-file .orchestrator/orchestrator.lock --output-file=<milestone-dir>/transition-result.txt
 ```
 
 Then read `<milestone-dir>/transition-result.txt` for the derived key=value pairs. The script reads all task summaries from the completed phase and outputs fields for `write-summary.sh`: `provides`, `requires`, `affects`, `key_files`, `key_decisions`, `patterns_established`, `drill_down_paths`, `duration`, `completed_at`, and `task_count`. It also runs the external modification check and roadmap sync automatically.
@@ -329,7 +329,7 @@ Parse the file to extract the derived field values, then review them before writ
    Then run the transition with `--body-file`:
 
    ```bash
-   bash scripts/lifecycle/phase-transition.sh <milestone-dir> <P##> --lock-file .specify/orchestrator/orchestrator.lock --write --body-file=<milestone-dir>/phases/<P##>/phase-body.txt --observability_surfaces=none --verification_result=pass
+   bash scripts/lifecycle/phase-transition.sh <milestone-dir> <P##> --lock-file .orchestrator/orchestrator.lock --write --body-file=<milestone-dir>/phases/<P##>/phase-body.txt --observability_surfaces=none --verification_result=pass
    ```
 
    Do NOT write phase summaries freeform or call `write-summary.sh` directly for phase transitions. The 16 frontmatter fields are required for downstream consumption by `consolidate-artifacts.sh` and knowledge compounding.
@@ -372,7 +372,7 @@ Parse the file to extract the derived field values, then review them before writ
       - **Context**: "Proactive context rotation — no errors. Session weight {weight}/{limit}, next phase estimated at {next_est} units."
       - **Next Action**: "Run `speckit.orchestrator.auto` to continue autonomous execution from the next incomplete phase."
 
-   d. Release the lock: `bash scripts/lifecycle/lock-manager.sh break .specify/orchestrator/orchestrator.lock`
+   d. Release the lock: `bash scripts/lifecycle/lock-manager.sh break .orchestrator/orchestrator.lock`
 
    e. Report to the developer with a clear, actionable message:
 
@@ -418,7 +418,7 @@ Output: `VALIDATE: PASS — N/N checks passed` or `VALIDATE: FAIL` with details.
 
 - If validation passes, write the validation marker using `mark-complete.sh`:
   ```bash
-  bash scripts/lifecycle/mark-complete.sh .specify/orchestrator <M###>
+  bash scripts/lifecycle/mark-complete.sh .orchestrator <M###>
   ```
   State transitions to `completing`.
 - If validation fails, report specific failures and exit.

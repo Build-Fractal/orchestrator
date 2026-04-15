@@ -10,7 +10,7 @@ root="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 
 # Find execution log
 exec_log=""
-for candidate in "$root/.specify/orchestrator/execution-log.jsonl" "$root/execution-log.jsonl"; do
+for candidate in "$root/.orchestrator/execution-log.jsonl" "$root/execution-log.jsonl"; do
     if [ -f "$candidate" ]; then
         exec_log="$candidate"
         break

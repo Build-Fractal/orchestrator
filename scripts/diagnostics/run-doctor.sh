@@ -134,7 +134,7 @@ echo "Advisory warnings: $advisory_warnings"
 echo "Status: $status_label"
 
 # --- History append ---
-history_file="$PROJECT_ROOT/.specify/orchestrator/doctor-history.jsonl"
+history_file="$PROJECT_ROOT/.orchestrator/doctor-history.jsonl"
 mkdir -p "$(dirname "$history_file")"
 ts="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 echo "{\"timestamp\":\"$ts\",\"checks_passed\":$checks_passed,\"checks_total\":$checks_total,\"advisory_warnings\":$advisory_warnings,\"status\":\"$status_value\"}" >> "$history_file"

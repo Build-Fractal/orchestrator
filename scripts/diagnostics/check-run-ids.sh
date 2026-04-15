@@ -8,7 +8,7 @@
 # Options:
 #   --root   Project root directory (default: two levels up from script)
 #   --jsonl  Specific JSONL file to scan. If not provided, scans all
-#            execution-log.jsonl files under .specify/orchestrator/milestones/
+#            execution-log.jsonl files under .orchestrator/milestones/
 #
 # Output: DOCTOR:RUNIDS status=<ok|warn> with_id=N without_id=N
 #
@@ -42,7 +42,7 @@ if [ -n "$JSONL_FILE" ]; then
   FILES="$JSONL_FILE"
 else
   # Find all execution-log.jsonl files under milestones
-  milestones_dir="$PROJECT_ROOT/.specify/orchestrator/milestones"
+  milestones_dir="$PROJECT_ROOT/.orchestrator/milestones"
   if [ -d "$milestones_dir" ]; then
     # Use find but capture output in a portable way
     FILES="$(find "$milestones_dir" -name 'execution-log.jsonl' -type f 2>/dev/null || true)"

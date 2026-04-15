@@ -23,7 +23,7 @@ Resume is valid in any state except:
 Check for the two key artifacts that indicate the type of interruption:
 
 - **Continue file**: `<milestone-dir>/continue.md` — written by a graceful pause (FR-047/FR-048)
-- **Lock file**: `.specify/orchestrator/orchestrator.lock` — left behind by a crash
+- **Lock file**: `.orchestrator/orchestrator.lock` — left behind by a crash
 
 ## Recovery Type Detection (FR-049)
 
@@ -43,7 +43,7 @@ Detected when:
 - A stale lock file exists (verified via the status command below returning `LOCK:STALE`):
 
 ```bash
-bash scripts/lifecycle/lock-manager.sh status .specify/orchestrator/orchestrator.lock
+bash scripts/lifecycle/lock-manager.sh status .orchestrator/orchestrator.lock
 ```
 
 - AND no continue file exists at `<milestone-dir>/continue.md`
@@ -106,13 +106,13 @@ Verify the lock is stale and break it:
 
 ```bash
 # Verify stale status
-bash scripts/lifecycle/lock-manager.sh status .specify/orchestrator/orchestrator.lock
+bash scripts/lifecycle/lock-manager.sh status .orchestrator/orchestrator.lock
 ```
 
 If the output is `LOCK:STALE`, break the lock:
 
 ```bash
-bash scripts/lifecycle/lock-manager.sh break .specify/orchestrator/orchestrator.lock
+bash scripts/lifecycle/lock-manager.sh break .orchestrator/orchestrator.lock
 ```
 
 If the output is `LOCK:ACTIVE`, the previous session is still running — do NOT break the lock. Report: "Lock is still active (PID {pid}). Cannot resume while another session is running." and exit.
@@ -168,7 +168,7 @@ Resume is designed to be safely re-callable:
   - Output of `bash scripts/state/derive-phase.sh <milestone-dir>`
   - Contents of the lock file (if readable) for manual inspection
   - Suggest running `speckit.orchestrator.status` for a full state report.
-- **Lock file cannot be broken** (lock-manager.sh break returns non-zero): Report "Failed to break stale lock at .specify/orchestrator/orchestrator.lock. Manual removal may be required." and exit 1.
+- **Lock file cannot be broken** (lock-manager.sh break returns non-zero): Report "Failed to break stale lock at .orchestrator/orchestrator.lock. Manual removal may be required." and exit 1.
 - **Both recovery paths fail**: If neither the continue file nor the recovery briefing provides actionable information, report: "Unable to determine recovery path. Run `speckit.orchestrator.status` for current state." and exit 1.
 
 ## Gotchas

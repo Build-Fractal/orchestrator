@@ -35,7 +35,7 @@ setup_fixture() {
   local root="$TMPDIR_TEST"
 
   # Orchestrator structure
-  mkdir -p "$root/.specify/orchestrator/milestones/M001/phases/P01/tasks"
+  mkdir -p "$root/.orchestrator/milestones/M001/phases/P01/tasks"
   mkdir -p "$root/knowledge/convention"
   mkdir -p "$root/knowledge/gotcha"
   mkdir -p "$root/knowledge/archive"
@@ -53,7 +53,7 @@ setup_fixture() {
   cp -R "$PROJECT_ROOT/scripts/state/"* "$root/scripts/state/"
   cp -R "$PROJECT_ROOT/scripts/telemetry/"* "$root/scripts/telemetry/"
   cp "$PROJECT_ROOT/templates/context-recipe.yaml" "$root/templates/" 2>/dev/null || true
-  touch "$root/extension.yml"
+  mkdir -p "$root/.orchestrator"
 
   # Create specs dir with a dummy spec (needed by planning branch spec resolution)
   mkdir -p "$root/specs/001-test"
@@ -69,7 +69,7 @@ This is a test feature specification for E2E integration testing.
 SPEC
 
   # Roadmap (with feature_ref and feature_spec for planning branch)
-  cat > "$root/.specify/orchestrator/milestones/M001/M001-ROADMAP.md" <<ROADMAP
+  cat > "$root/.orchestrator/milestones/M001/M001-ROADMAP.md" <<ROADMAP
 ---
 schema_version: "1.0"
 type: roadmap
@@ -87,7 +87,7 @@ tier: "C"
 ROADMAP
 
   # Phase plan
-  cat > "$root/.specify/orchestrator/milestones/M001/phases/P01/P01-PLAN.md" <<'PLAN'
+  cat > "$root/.orchestrator/milestones/M001/phases/P01/P01-PLAN.md" <<'PLAN'
 ---
 schema_version: "1.0"
 type: phase-plan
@@ -108,7 +108,7 @@ depends_on: []
 PLAN
 
   # Task plan
-  cat > "$root/.specify/orchestrator/milestones/M001/phases/P01/tasks/T01-PLAN.md" <<'TASK'
+  cat > "$root/.orchestrator/milestones/M001/phases/P01/tasks/T01-PLAN.md" <<'TASK'
 ---
 schema_version: "1.0"
 type: task-plan
@@ -281,7 +281,7 @@ echo ""
 echo "--- Part 1: Task-dispatch build-context.sh ---"
 
 task_output="$(bash "$TMPDIR_TEST/scripts/dispatch/build-context.sh" \
-  "$TMPDIR_TEST/.specify/orchestrator" M001 P01 T01 \
+  "$TMPDIR_TEST/.orchestrator" M001 P01 T01 \
   --config-defaults "$TMPDIR_TEST/config-defaults.yaml" 2>/dev/null)" || true
 
 # Save output to file for downstream grep (avoids pipe issues in set -e)
@@ -444,7 +444,7 @@ echo ""
 echo "--- Part 4: Planning branch (PHASE_PLAN) ---"
 
 planning_output="$(bash "$TMPDIR_TEST/scripts/dispatch/build-context.sh" \
-  "$TMPDIR_TEST/.specify/orchestrator" M001 P01 PHASE_PLAN \
+  "$TMPDIR_TEST/.orchestrator" M001 P01 PHASE_PLAN \
   --config-defaults "$TMPDIR_TEST/config-defaults.yaml" 2>/dev/null)" || true
 
 printf '%s\n' "$planning_output" > "$TMPDIR_TEST/planning-output.txt"

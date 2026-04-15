@@ -42,7 +42,7 @@ if [ -n "$TARGET" ]; then
   fi
 else
   # Find all *-PLAN.md files under milestones
-  milestones_dir="$PROJECT_ROOT/.specify/orchestrator/milestones"
+  milestones_dir="$PROJECT_ROOT/.orchestrator/milestones"
   if [ -d "$milestones_dir" ]; then
     for f in "$milestones_dir"/*/phases/*/tasks/*-PLAN.md; do
       [ -f "$f" ] && file_list="${file_list}${file_list:+

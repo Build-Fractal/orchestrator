@@ -3,10 +3,9 @@
 #
 # Resolution precedence (highest first):
 #   1. ORCHESTRATOR_ROOT env var (explicit override)
-#   2. state_root field in .orchestrator/config.yml or .specify/orchestrator/config.yml
+#   2. state_root field in .orchestrator/config.yml
 #   3. .orchestrator/ directory (standalone canonical)
-#   4. .specify/orchestrator/ directory (migration bridge)
-#   5. Default: .orchestrator/ (new projects)
+#   4. Default: .orchestrator/ (new projects)
 #
 # Usage:
 #   resolve-root.sh                  -> emits repo-relative root to stdout
@@ -26,7 +25,7 @@ while [[ $# -gt 0 ]]; do
     --verbose) VERBOSE=1; shift ;;
     --absolute) ABSOLUTE=1; shift ;;
     -h|--help)
-      sed -n '2,17p' "$0"
+      sed -n '2,16p' "$0"
       exit 0 ;;
     *)
       echo "ERROR: unknown argument '$1'" >&2
@@ -57,16 +56,14 @@ fi
 
 # Rule 2: config file state_root field
 if [[ -z "$resolved" ]]; then
-  for cfg in "$repo_root/.orchestrator/config.yml" "$repo_root/.specify/orchestrator/config.yml"; do
-    if [[ -f "$cfg" ]]; then
-      candidate="$(grep -E '^state_root:' "$cfg" 2>/dev/null | head -n 1 | sed -E 's/^state_root:[[:space:]]*"?([^"]*)"?[[:space:]]*$/\1/')"
-      if [[ -n "$candidate" ]]; then
-        resolved="$candidate"
-        source_rule="config:$cfg"
-        break
-      fi
+  cfg="$repo_root/.orchestrator/config.yml"
+  if [[ -f "$cfg" ]]; then
+    candidate="$(grep -E '^state_root:' "$cfg" 2>/dev/null | head -n 1 | sed -E 's/^state_root:[[:space:]]*"?([^"]*)"?[[:space:]]*$/\1/')"
+    if [[ -n "$candidate" ]]; then
+      resolved="$candidate"
+      source_rule="config:$cfg"
     fi
-  done
+  fi
 fi
 
 # Rule 3: .orchestrator/ exists
@@ -75,13 +72,7 @@ if [[ -z "$resolved" ]] && [[ -d "$repo_root/.orchestrator" ]]; then
   source_rule="existing:.orchestrator"
 fi
 
-# Rule 4: .specify/orchestrator/ exists (bridge)
-if [[ -z "$resolved" ]] && [[ -d "$repo_root/.specify/orchestrator" ]]; then
-  resolved=".specify/orchestrator"
-  source_rule="bridge:.specify/orchestrator"
-fi
-
-# Rule 5: default
+# Rule 4: default
 if [[ -z "$resolved" ]]; then
   resolved=".orchestrator"
   source_rule="default"

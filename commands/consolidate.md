@@ -78,8 +78,8 @@ Confirm that essential artifacts remain accessible after consolidation:
 
 - **Phase summaries**: `<milestone-dir>/phases/<P##>/<P##>-SUMMARY.md` for each phase
 - **Roadmap**: `<milestone-dir>/<milestone-id>-ROADMAP.md`
-- **DECISIONS.md**: at the orchestrator root (`.specify/orchestrator/DECISIONS.md`)
-- **KNOWLEDGE.md**: at the orchestrator root (`.specify/orchestrator/KNOWLEDGE.md`)
+- **DECISIONS.md**: at the orchestrator root (`.orchestrator/DECISIONS.md`)
+- **KNOWLEDGE.md**: at the orchestrator root (`.orchestrator/KNOWLEDGE.md`)
 - **Milestone summary template**: `templates/milestone-summary.md` (available for final summary generation)
 
 ### Step 5 — Confirm Milestone State

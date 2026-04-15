@@ -64,11 +64,11 @@ if [ -n "${ORCH_RUN_ID:-}" ]; then
   emit_event VERIFY_START stage=check_must_haves plan="$(basename "$PLAN_FILE")" >&2
 fi
 
-# Resolve project root: walk up from phase dir to find extension.yml or .git
+# Resolve project root: walk up from phase dir to find .git or orchestrator config
 PROJECT_ROOT=""
 candidate="$(cd "$PHASE_DIR" && pwd)"
 while [ "$candidate" != "/" ]; do
-  if [ -f "$candidate/extension.yml" ] || [ -d "$candidate/.git" ]; then
+  if [ -d "$candidate/.git" ] || [ -d "$candidate/.orchestrator" ]; then
     PROJECT_ROOT="$candidate"
     break
   fi
@@ -161,7 +161,8 @@ while IFS= read -r line; do
       # Artifact line: "- path/to/file" with optional "(min N lines)" and/or "(contains "pattern")"
       if echo "$line" | grep -qE '^- [^[:space:]]'; then
         # Extract path (everything before the first parenthesis, or the whole line minus "- ")
-        artifact_path=$(echo "$line" | sed 's/^- //' | sed 's/ *(.*$//' | sed 's/[[:space:]]*$//')
+        # Strip surrounding backticks if present (markdown code-span quoting).
+        artifact_path=$(echo "$line" | sed 's/^- //' | sed 's/ *(.*$//' | sed 's/[[:space:]]*$//' | sed 's/^`//' | sed 's/`$//')
         
         # Extract min lines if specified
         min_lines=""
@@ -212,9 +213,9 @@ while IFS= read -r line; do
     keylinks)
       # Key link line: "- from_path → to_path (description)"
       if echo "$line" | grep -qE '^- .* → '; then
-        from_path=$(echo "$line" | sed 's/^- //' | sed 's/ →.*//' | sed 's/[[:space:]]*$//')
+        from_path=$(echo "$line" | sed 's/^- //' | sed 's/ →.*//' | sed 's/[[:space:]]*$//' | sed 's/^`//' | sed 's/`$//')
         # Handle both → (UTF-8) properly
-        to_path=$(echo "$line" | sed 's/.*→ //' | sed 's/ *(.*//' | sed 's/[[:space:]]*$//')
+        to_path=$(echo "$line" | sed 's/.*→ //' | sed 's/ *(.*//' | sed 's/[[:space:]]*$//' | sed 's/^`//' | sed 's/`$//')
         
         from_full="$PROJECT_ROOT/$from_path"
         to_basename=$(basename "$to_path")

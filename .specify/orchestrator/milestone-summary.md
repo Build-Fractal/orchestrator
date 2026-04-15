@@ -1,3 +1,21 @@
+## M003 Refit Complete (2026-04-14)
+
+P07/P08 closed post-M007/M008 drift:
+- P07: `migrate.sh` now consumes `scripts/state/resolve-root.sh --absolute`; idempotency probes
+  both orchestrator-root and project-root layouts; `rebuild-index.sh` wired as P04 stage.
+- P08: `tests/integration/test-m003-e2e-migration.sh` validates the refitted pipeline
+  end-to-end against a synthetic GSD2 fixture (`tests/fixtures/m003-p08-gsd-minimal/`)
+  and the live lakeledger fixture when present.
+- Artifact added: `scripts/orchestrator/status.sh` — thin wrapper on `resolve-root.sh`
+  + `derive-phase.sh` that the roadmap demo sentence now points to literally.
+
+Validation (T04): integration test `passed=8 failed=0 skipped=0 warned=2` (warns are the live
+lakeledger fixture's concurrent mtime activity — expected, not a harness bug). All 8
+`scripts/verify/m003-p08-*.sh` PASS; all 7 `scripts/verify/m003-p07-*.sh` still PASS.
+Lakeledger full-scale validation deferred beyond the end-to-end pipeline pass.
+
+---
+
 # M001: spec-kit-orchestrator v0.1.0
 
 Completed: 2026-03-20 | 7 slices, 307 test assertions, zero failures

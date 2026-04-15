@@ -126,7 +126,7 @@ close the drift and validate end-to-end against live GSD2 data. See
       - `scripts/knowledge/detect-overlap.sh` (M007 overlap detection, only if AD-14 is "infer on migrate")
       - Existing P01–P06 migration scripts (unchanged interfaces)
 
-- [ ] **P08**: End-to-End Validation Against Live GSD2 (refit) — "A developer can run `bash scripts/migrate/migrate.sh --source gsd2 --path <lakeledger-submodule-parent> --output <tempdir> --force`, then `ORCHESTRATOR_ROOT=<tempdir>/.orchestrator bash scripts/orchestrator/status.sh` returns a structured milestone summary without error, `bash scripts/knowledge/traverse-graph.sh --id <any-migrated-id>` returns at least one related entry when overlaps exist, and `MIGRATION-REPORT.md` in the output contains non-zero counts for knowledge, decisions, requirements, milestones, and telemetry."
+- [x] **P08**: End-to-End Validation Against Live GSD2 (refit) — "A developer can run `bash scripts/migrate/migrate.sh --source gsd2 --path <lakeledger-submodule-parent> --output <tempdir> --force`, then `ORCHESTRATOR_ROOT=<tempdir>/.orchestrator bash scripts/orchestrator/status.sh` returns a structured milestone summary without error, `bash scripts/knowledge/traverse-graph.sh --id <any-migrated-id>` returns at least one related entry when overlaps exist, and `MIGRATION-REPORT.md` in the output contains non-zero counts for knowledge, decisions, requirements, milestones, and telemetry."
   - Risk: low
   - Depends: P07
   - Boundary Map:

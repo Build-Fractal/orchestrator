@@ -1,0 +1,14 @@
+P07 refits the M003 migration pipeline to align with architectural surfaces introduced by M007 (knowledge graph) and M008 (5-rule state resolver) after P01–P06 landed.
+
+**What was built** (5 tasks, 5 commits):
+- **T01** — `scripts/migrate/migrate.sh` now invokes `scripts/state/resolve-root.sh --absolute` to derive the target root and exports `MIGRATE_TARGET_ROOT`; three transform scripts (`milestone-rollup.sh`, `active-milestone.sh`, `milestone-tiering.sh`) drop the hardcoded `.specify/orchestrator/` segment and consume the resolved root directly.
+- **T02** — `scripts/migrate/lib/idempotency.sh::check_existing_state` now probes both orchestrator-root layout (direct `KNOWLEDGE-INDEX.md`/`knowledge/`/`milestones/` under target) and project-root layout (non-empty `.orchestrator/` or `.specify/orchestrator/` subdirs). Eight in-process scenarios pass, plus three end-to-end `migrate.sh` exit-4 conflict scenarios.
+- **T03** — `migrate.sh` adds a P04 stage that invokes `scripts/knowledge/rebuild-index.sh --root "$target_root"` after `report.sh`, with warn-but-continue behavior on failure. Produces `knowledge.db` graph file and populates the M007 graph database post-migration.
+- **T04** — `commands/migrate.md` documents AD-13 (resolver-driven target root), AD-14 (`relates_to: []` on migrate, post-migration `detect-overlap.sh` enriches), and AD-15 (command-naming deferral) with script cross-references.
+- **T05** — Seven AD-19-safe Tier-1 static-verification scripts under `scripts/verify/m003-p07-*.sh` wire each phase truth's `Check:` command to a passing single-file invocation. All seven emit `PASS` and exit 0 against the P07 implementation.
+
+**Key patterns established** (MEM-candidates for consolidation): (1) invoke-not-source pattern for `set -u` resolver scripts to avoid variable-shadow failures; (2) dual-layout state probe with Bash-3.2-safe glob + `[ -f ]` guard; (3) warn-but-continue post-pipeline rebuild with portable relative-path resolution via `_MIGRATE_DIR/..`; (4) progressive-disclosure ADR documentation pattern in command docs (short body + link to `M###-CONTEXT.md`); (5) Tier-1 static-grep verify-per-truth with broad regex alternation to avoid false negatives during legitimate refactors.
+
+**Verification** (Stage 1 phase-level): `check-must-haves.sh` reports 7/7 truth checks PASS. Artifact/key-link check FAILs are false positives from backtick-wrapped paths in the plan; all files exist on disk (confirmed via direct `ls`). Each of the seven `m003-p07-*.sh` verify scripts emits `PASS` and exits 0. No external-mod alerts for files outside the phase's declared produces set.
+
+**Affects downstream**: P08 (end-to-end validation against live GSD2) now has a resolver-wired, graph-populating, dual-root-aware migration pipeline to validate against. No changes invalidate M008/P04 or M007 knowledge consumers.

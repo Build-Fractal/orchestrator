@@ -1,0 +1,12 @@
+schema_version: "1.0"
+type: orchestrator-config
+state_root: ".orchestrator"
+intensity:
+  default: standard
+  auto_detect: true
+integration:
+  speckit: auto  # auto|disabled|enabled
+dispatch:
+  default_backend: local-agent
+knowledge:
+  graph_backend: sqlite

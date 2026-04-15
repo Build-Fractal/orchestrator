@@ -2,7 +2,7 @@
 schema_version: "1.0"
 type: context-draft
 milestone: "M003"
-status: draft
+status: final
 created_at: "2026-04-10T01:37:58Z"
 finalized_at: "2026-04-10T01:37:58Z"
 ---
@@ -147,3 +147,62 @@ Migration itself is a Principle VI operation (State On Disk Is Truth) -- we read
 7. **GSD2 schema discovery**: The `gsd.db` schema is not documented in the spec. The GSD2 adapter will need to discover table structures. Should this be a dedicated discovery task in phase 1, or can it be done inline during adapter development?
 8. **Spec 002 knowledge architecture availability**: Spec 002 defines the knowledge architecture that migration must target. Is spec 002 implemented, or does migration need to create the directory structure from scratch? If from scratch, migration becomes the first consumer of the knowledge format and must establish the conventions.
 9. **Testing approach for 30 acceptance scenarios**: Should each acceptance scenario get a dedicated test case, or can scenarios be grouped by user story into integration tests? Given the 334-assertion precedent from M001, grouped integration tests seem appropriate.
+
+## Addendum — 2026-04-14 Refit (post-M007/M008)
+
+After P01–P06 shipped in commit `ad3da8a`, milestones M007 (graph-enhanced
+knowledge) and M008 (standalone multi-runtime) introduced architectural
+surfaces that the migration code was not built against. Three new architectural
+decisions close the drift and govern phases P07 and P08.
+
+### AD-13: Target Root via 5-Rule Resolver (supersedes AD-11's "write to `.specify/orchestrator/`")
+
+Migration output root is the value returned by `scripts/state/resolve-root.sh`
+at the time `migrate.sh` runs, honoring the full M008 precedence chain:
+`ORCHESTRATOR_ROOT` env → config `state_root` → `.orchestrator/` →
+`.specify/orchestrator/` → default `.orchestrator/`. `migrate.sh` resolves
+once, exports the absolute path, and every transform script reads it from the
+environment or an explicit argument — no transform may concatenate
+`.specify/orchestrator/` itself.
+
+**Rationale**: AD-11 committed migration to produce valid orchestrator state.
+Post-M008, "valid orchestrator state" is defined by the resolver, not by a
+fixed path. Hardcoding `.specify/orchestrator/` would produce output that M008
+installations interpret as the bridge path rather than the canonical root, and
+would silently miss explicit user configuration. The `--output` CLI flag still
+overrides the resolver for offline extraction runs.
+
+### AD-14: Knowledge Graph Participation Policy
+
+Migrated knowledge entries emit `relates_to: []` during transform. `migrate.sh`
+invokes `scripts/knowledge/rebuild-index.sh --root <resolved>` as its final
+step, which regenerates `KNOWLEDGE-INDEX.md` and the M007 graph database
+(`knowledge.db`) via `lib/graph-db.sh`. Semantic relationships between migrated
+entries are NOT inferred during migration; users may run
+`scripts/knowledge/detect-overlap.sh` post-migration to populate `relates_to`
+based on content similarity.
+
+**Rationale**: GSD2 source data does not contain orchestrator-style
+`relates_to` edges, so any inference during migration would be synthetic.
+Doing that inference inline would (a) couple migration runtime to overlap
+detection quality, (b) bloat the migration report with arbitrary similarity
+decisions, and (c) produce edges that look authoritative but are heuristic.
+Deferring to `detect-overlap.sh` as an optional post-step preserves migration
+determinism and lets users tune overlap thresholds against their own data.
+Migration must still call `rebuild-index.sh` so the graph DB exists and
+`supersedes`/`superseded_by` edges (which ARE preserved from source) are
+indexed.
+
+### AD-15: Command Naming — Defer to Cohort
+
+`extension.yml` registers the migration command as
+`speckit.orchestrator.migrate` alongside all other orchestrator commands in
+that namespace. M008 decoupled the orchestrator from spec-kit as a runtime
+dependency but did not rename the command cohort. The migration command stays
+`speckit.orchestrator.migrate` until a coordinated rename of the entire cohort
+is scheduled (a future milestone, tracked separately).
+
+**Rationale**: Renaming one command in isolation fragments the namespace and
+breaks every reference in documentation, recipes, and downstream user scripts.
+AD-15 explicitly defers the rename so P07/P08 scope stays tight: fix drift,
+don't churn call sites.

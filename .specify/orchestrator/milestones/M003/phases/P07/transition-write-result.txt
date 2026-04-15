@@ -1,0 +1,42 @@
+external_mods=WARN: external modification: commands/migrate.md
+WARN: external modification: scripts/migrate/lib/idempotency.sh
+WARN: external modification: scripts/migrate/migrate.sh
+WARN: external modification: scripts/migrate/transform/active-milestone.sh
+WARN: external modification: scripts/migrate/transform/milestone-rollup.sh
+WARN: external modification: scripts/migrate/transform/milestone-tiering.sh
+WARN: external modification: scripts/verify/m003-p07-bash32-compat.sh
+WARN: external modification: scripts/verify/m003-p07-cli-contract.sh
+WARN: external modification: scripts/verify/m003-p07-idempotency-dual-root.sh
+WARN: external modification: scripts/verify/m003-p07-migrate-md-documents-ads.sh
+WARN: external modification: scripts/verify/m003-p07-migrate-sources-resolver.sh
+WARN: external modification: scripts/verify/m003-p07-no-hardcoded-state-paths.sh
+WARN: external modification: scripts/verify/m003-p07-rebuild-index-wired.sh
+id=P07
+parent=M003
+milestone=M003
+provides=resolver-wired migrate.sh; transform scripts that consume target_root as the absolute orchestrator state root, dual-root idempotency detection in scripts/migrate/lib/idempotency.sh::check_existing_state, rebuild-index wired into migrate.sh as P04 stage; warn-but-continue on failure, commands/migrate.md documents AD-13/AD-14/AD-15 with script cross-references, seven AD-19-safe Tier-1 verify scripts wiring all P07 truth Check: commands to passing static grep-based checks
+requires=from:M008/P04 what:scripts/state/resolve-root.sh (5-rule resolver, --absolute mode), from:P07/T01 what:resolver-derived target_root semantics in migrate.sh, from:P07/T01 what:resolved target_root + MIGRATE_TARGET_ROOT export, from:M003/P07/T01 what:resolver-wiring; from:M003/P07/T03 what:rebuild-index-wiring, from:P07/T01 what:resolver+MIGRATE_TARGET_ROOT in migrate.sh; from:P07/T02 what:dual-root idempotency probe; from:P07/T03 what:rebuild-index final step; from:P07/T04 what:AD-13/14/15 in commands/migrate.md
+affects=P07/T02,P07/T03,P07/T04,P07/T05, P07/T03,P07/T04,P07/T05, P07/T05, M003/P07/T05, P07-phase-transition
+key_files=scripts/migrate/migrate.sh,scripts/migrate/transform/milestone-rollup.sh,scripts/migrate/transform/active-milestone.sh,scripts/migrate/transform/milestone-tiering.sh, scripts/migrate/lib/idempotency.sh, scripts/migrate/migrate.sh, commands/migrate.md, scripts/verify/m003-p07-migrate-sources-resolver.sh,scripts/verify/m003-p07-no-hardcoded-state-paths.sh,scripts/verify/m003-p07-rebuild-index-wired.sh,scripts/verify/m003-p07-idempotency-dual-root.sh,scripts/verify/m003-p07-migrate-md-documents-ads.sh,scripts/verify/m003-p07-bash32-compat.sh,scripts/verify/m003-p07-cli-contract.sh
+key_decisions=AD-13, AD-13, AD-14, AD-13,AD-14,AD-15, AD-13,AD-14,AD-15,AD-19
+patterns_established=invoke-not-source for set -u resolver scripts; export resolved root via env var for downstream verify scripts, dual-layout state probe (orchestrator-root vs project-root); bash 3.2 safe glob loop with [ -f ] guard; ls -A non-empty test as single-command form, warn-but-continue post-pipeline rebuild; portable rebuild-script path via _MIGRATE_DIR/.., progressive-disclosure ADR sections in command docs (short body + link to M###-CONTEXT.md), Tier-1 static-grep verify per truth; comment-aware code-line scan via case-pattern filter; broad regex alternation (MIGRATE_TARGET_ROOT OR target_root) to avoid false negatives on legitimate refactors
+drill_down_paths=.specify/orchestrator/milestones/M003/phases/P07/tasks/T01-SUMMARY.md, .specify/orchestrator/milestones/M003/phases/P07/tasks/T02-SUMMARY.md, .specify/orchestrator/milestones/M003/phases/P07/tasks/T03-SUMMARY.md, .specify/orchestrator/milestones/M003/phases/P07/tasks/T04-SUMMARY.md, .specify/orchestrator/milestones/M003/phases/P07/tasks/T05-SUMMARY.md
+duration=70m
+completed_at=2026-04-15T03:04:48Z
+task_count=5
+TRANSITION:WRITTEN phase=P07 summary=.specify/orchestrator/milestones/M003/phases/P07/P07-SUMMARY.md
+roadmap_sync=SYNC:MISMATCH phase=P01 roadmap=complete disk=incomplete
+SYNC:FIXED phase=P01 old=complete new=incomplete
+SYNC:MISMATCH phase=P02 roadmap=complete disk=incomplete
+SYNC:FIXED phase=P02 old=complete new=incomplete
+SYNC:MISMATCH phase=P03 roadmap=complete disk=incomplete
+SYNC:FIXED phase=P03 old=complete new=incomplete
+SYNC:MISMATCH phase=P04 roadmap=complete disk=incomplete
+SYNC:FIXED phase=P04 old=complete new=incomplete
+SYNC:MISMATCH phase=P05 roadmap=complete disk=incomplete
+SYNC:FIXED phase=P05 old=complete new=incomplete
+SYNC:MISMATCH phase=P06 roadmap=complete disk=incomplete
+SYNC:FIXED phase=P06 old=complete new=incomplete
+SYNC:MISMATCH phase=P07 roadmap=incomplete disk=complete
+SYNC:FIXED phase=P07 old=incomplete new=complete
+TRANSITION:READY phase=P07 fields_derived=5

@@ -397,10 +397,17 @@ fi
 # =============================================================================
 log_step "Migration Pipeline — P02: Transform"
 
-# Determine target root (where orchestrator state will be written)
-# If --output was specified, use that as the target root
-# Otherwise, use current directory
-target_root="${opt_output:-$(pwd)}"
+# Resolve target root via M008 5-rule resolver (AD-13).
+# --output takes precedence (offline extraction path).
+if [ -n "$opt_output" ]; then
+    target_root="$opt_output"
+    log_info "Target root (from --output): $target_root"
+else
+    target_root="$(bash "$(dirname "${BASH_SOURCE[0]}")/../state/resolve-root.sh" --absolute)"
+    log_info "Target root (from resolve-root.sh): $target_root"
+fi
+export MIGRATE_TARGET_ROOT="$target_root"
+mkdir -p "$target_root"
 
 # Check for existing orchestrator state (idempotency)
 enforce_conflict_policy "$target_root" "$opt_conflict"
@@ -440,6 +447,30 @@ bash "${_MIGRATE_DIR}/transform/telemetry-aggregator.sh" "$output_dir" "$target_
 # =============================================================================
 log_step "Migration Pipeline — P03: Report"
 bash "${_MIGRATE_DIR}/transform/report.sh" "$output_dir" "$target_root" "$opt_source" 2>/dev/null || log_warn "Report generation failed"
+
+# =============================================================================
+# P04 — Knowledge Index + Graph Rebuild (AD-14)
+# =============================================================================
+# Migrated entries emit empty relates_to. Rebuild the index and the M007
+# graph DB so traverse-graph.sh works against migrated state. Semantic
+# relationship inference is deferred to detect-overlap.sh per AD-14.
+log_step "Migration Pipeline — P04: Knowledge Index + Graph Rebuild"
+rebuild_script="$(cd "${_MIGRATE_DIR}/.." && pwd)/knowledge/rebuild-index.sh"
+if [ -f "$rebuild_script" ]; then
+    if bash "$rebuild_script" --root "$target_root"; then
+        log_info "Knowledge index and graph DB rebuilt at: $target_root"
+        if [ -s "$target_root/knowledge.db" ]; then
+            log_info "Graph DB present: $target_root/knowledge.db"
+        else
+            log_warn "Graph DB missing or empty after rebuild (no entries?)"
+        fi
+    else
+        log_warn "rebuild-index.sh failed; KNOWLEDGE-INDEX.md and knowledge.db may be stale"
+        log_warn "Re-run manually: bash scripts/knowledge/rebuild-index.sh --root $target_root"
+    fi
+else
+    log_warn "rebuild-index.sh not found at $rebuild_script — skipping graph rebuild"
+fi
 
 echo ""
 log_info "Migration complete. Output at: $target_root"

@@ -11,9 +11,9 @@ set -euo pipefail
 # Usage: milestone-rollup.sh <intermediate_dir> <target_root> <milestone_id> [--tier recent|historical]
 #
 # Output for recent milestones:
-#   <target_root>/.specify/orchestrator/milestones/summaries/<milestone_id>-SUMMARY.md
+#   <target_root>/milestones/summaries/<milestone_id>-SUMMARY.md
 # Output for historical milestones:
-#   <target_root>/.specify/orchestrator/milestones/rollups/<milestone_id>-ROLLUP.md
+#   <target_root>/milestones/rollups/<milestone_id>-ROLLUP.md
 #
 # Recent milestones include more detail (full slice descriptions, task counts).
 # Historical milestones keep it compact (just what shipped, key decisions).
@@ -89,11 +89,11 @@ fi
 
 # --- Determine output path ---
 if [ "$tier" = "recent" ]; then
-    out_dir="${target_root}/.specify/orchestrator/milestones/summaries"
+    out_dir="${target_root}/milestones/summaries"
     out_file="${out_dir}/${milestone_id}-SUMMARY.md"
     doc_type="summary"
 else
-    out_dir="${target_root}/.specify/orchestrator/milestones/rollups"
+    out_dir="${target_root}/milestones/rollups"
     out_file="${out_dir}/${milestone_id}-ROLLUP.md"
     doc_type="rollup"
 fi

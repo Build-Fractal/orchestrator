@@ -1,0 +1,293 @@
+=== Doctor Report — 2026-04-15T17:49:26Z ===
+=== Orchestrator Diagnostics ===
+Project root: /Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator
+Date: 2026-04-15
+
+--- Orphaned Artifacts ---
+PASS: No orphaned artifacts found.
+
+--- Stale Knowledge ---
+PASS: No stale entries detected (threshold: 90 days).
+
+--- Scope Issues ---
+PASS: All entries have scope tags.
+
+--- Cost Spikes ---
+PASS: Not enough cost data for spike detection (need at least 2 entries, have 0)
+
+--- Instruction Conformance ---
+DOCTOR:INSTRUCTIONS status=warn files=13 missing=25
+  commands/auto.md: missing [Verification]
+  commands/consolidate.md: missing [Task
+Verification]
+  commands/discuss.md: missing [Task
+Verification]
+  commands/doctor.md: missing [Context
+Constraints
+Verification]
+  commands/evaluate.md: missing [Task
+Verification]
+  commands/init.md: missing [Task
+Verification]
+  commands/migrate.md: missing [Context
+Constraints
+Verification
+Output Format]
+  commands/plan-phase.md: missing [Verification]
+  commands/resume.md: missing [Task
+Verification]
+  commands/roadmap.md: missing [Task]
+  commands/status.md: missing [Task
+Verification
+Output Format]
+  commands/verify.md: missing [Task
+Verification]
+
+--- Provider Conformance ---
+DOCTOR:PROVIDERS status=skip files=0 issues=0 reason=no_providers_dir
+
+--- Permission Drift ---
+DOCTOR:PERMISSIONS status=ok gaps=0 stale=0
+RESULT:{"status":"ok","error_kind":"","detail":"drift check: status=ok gaps=0 stale=0"}
+
+--- Constitution Coverage ---
+DOCTOR:CONSTITUTION status=ok principles_found=13 principles_total=13
+
+--- Event Emission ---
+DOCTOR:EVENTS status=warn compliant=10 total=56
+  MISSING: scripts/state/config-system.sh
+  MISSING: scripts/state/derive-phase.sh
+  MISSING: scripts/state/detect-speckit.sh
+  MISSING: scripts/state/find-active-milestone.sh
+  MISSING: scripts/state/namespace-aliases.sh
+  MISSING: scripts/state/read-config.sh
+  MISSING: scripts/state/read-roadmap.sh
+  MISSING: scripts/state/resolve-root.sh
+  MISSING: scripts/dispatch/backend-registry.sh
+  MISSING: scripts/dispatch/detect-capabilities.sh
+  MISSING: scripts/dispatch/detect-runtime.sh
+  MISSING: scripts/dispatch/dispatch-interface.sh
+  MISSING: scripts/dispatch/scope-filter.sh
+  MISSING: scripts/lifecycle/auto-loop.sh
+  MISSING: scripts/lifecycle/budget-checker.sh
+  MISSING: scripts/lifecycle/check-settings-state.sh
+  MISSING: scripts/lifecycle/check-update.sh
+  MISSING: scripts/lifecycle/context-monitor.sh
+  MISSING: scripts/lifecycle/detect-project.sh
+  MISSING: scripts/lifecycle/evaluate-preflight.sh
+  MISSING: scripts/lifecycle/init-project.sh
+  MISSING: scripts/lifecycle/lock-manager.sh
+  MISSING: scripts/lifecycle/mark-complete.sh
+  MISSING: scripts/lifecycle/recovery-briefing.sh
+  MISSING: scripts/lifecycle/reinit-handler.sh
+  MISSING: scripts/lifecycle/rollback-phase.sh
+  MISSING: scripts/lifecycle/scaffold.sh
+  MISSING: scripts/lifecycle/stuck-detector.sh
+  MISSING: scripts/lifecycle/sync-roadmap.sh
+  MISSING: scripts/knowledge/append-decision.sh
+  MISSING: scripts/knowledge/append-knowledge.sh
+  MISSING: scripts/knowledge/archive-entry.sh
+  MISSING: scripts/knowledge/compute-staleness.sh
+  MISSING: scripts/knowledge/consolidate-artifacts.sh
+  MISSING: scripts/knowledge/create-entry.sh
+  MISSING: scripts/knowledge/detect-overlap.sh
+  MISSING: scripts/knowledge/increment-hits.sh
+  MISSING: scripts/knowledge/intensity-knowledge.sh
+  MISSING: scripts/knowledge/promote-entry.sh
+  MISSING: scripts/knowledge/rebuild-index.sh
+  MISSING: scripts/knowledge/resolve-entries.sh
+  MISSING: scripts/knowledge/supersede-entry.sh
+  MISSING: scripts/knowledge/traverse-graph.sh
+  MISSING: scripts/knowledge/update-confidence.sh
+  MISSING: scripts/knowledge/update-entry.sh
+  MISSING: scripts/knowledge/write-summary.sh
+
+--- Content Hashes ---
+DOCTOR:HASHES status=ok valid=0 missing=0
+
+--- Run ID Coverage ---
+DOCTOR:RUNIDS status=warn with_id=0 without_id=187
+  .orchestrator/milestones/M003/execution-log.jsonl: 8 entries missing run_id
+  .orchestrator/milestones/M004/execution-log.jsonl: 38 entries missing run_id
+  .orchestrator/milestones/M005/execution-log.jsonl: 28 entries missing run_id
+  .orchestrator/milestones/M002/execution-log.jsonl: 28 entries missing run_id
+  .orchestrator/milestones/M015/execution-log.jsonl: 14 entries missing run_id
+  .orchestrator/milestones/M007/execution-log.jsonl: 10 entries missing run_id
+  .orchestrator/milestones/M006/execution-log.jsonl: 22 entries missing run_id
+  .orchestrator/milestones/M008/execution-log.jsonl: 39 entries missing run_id
+
+--- Recipe Conformance ---
+DOCTOR:RECIPE status=ok sections=7 invalid=0
+
+--- Task Plan Shape ---
+DOCTOR:PLANS status=warn heuristic_risk=146 trigger=subshell-pipe
+  WARNING: .orchestrator/milestones/M002/phases/P01/tasks/T05-PLAN.md:295 [inline-loop] wc -l < scripts/dispatch/scope-filter.sh | awk '{if ($1 >= 100) print "PASS: scope-filter.sh has "$1" lines (min 100)"; else print "FAIL: only "$1" lines"}'
+  WARNING: .orchestrator/milestones/M003/phases/P01/tasks/T01-PLAN.md:283 [redirect-in-cmdsub] test "$(wc -l < scripts/migrate/adapter-interface.sh)" -ge 80
+  WARNING: .orchestrator/milestones/M003/phases/P01/tasks/T01-PLAN.md:287 [bash-c] bash -c 'source scripts/migrate/adapter-interface.sh'
+  WARNING: .orchestrator/milestones/M003/phases/P01/tasks/T02-PLAN.md:306 [redirect-in-cmdsub] test "$(wc -l < scripts/migrate/lib/sqlite-reader.sh)" -ge 60
+  WARNING: .orchestrator/milestones/M003/phases/P01/tasks/T02-PLAN.md:318 [bash-c] bash -c 'source scripts/migrate/adapter-interface.sh && source scripts/migrate/lib/sqlite-reader.sh && echo "PASS"'
+  WARNING: .orchestrator/milestones/M003/phases/P01/tasks/T02-PLAN.md:321 [bash-c] bash -c 'source scripts/migrate/adapter-interface.sh && source scripts/migrate/lib/sqlite-reader.sh && type sqlite_read_knowledge >/dev/null && type sqlite_read_decisions >/dev/null && type sqlite_read_requirements >/dev/null && type sqlite_read_milestones >/dev/null && type sqlite_read_telemetry >/dev/null && echo "PASS: all functions defined"'
+  WARNING: .orchestrator/milestones/M003/phases/P01/tasks/T03-PLAN.md:159 [redirect-in-cmdsub] test "$(wc -l < scripts/migrate/lib/json-fallback.sh)" -ge 60
+  WARNING: .orchestrator/milestones/M003/phases/P01/tasks/T03-PLAN.md:172 [bash-c] bash -c 'source scripts/migrate/adapter-interface.sh && source scripts/migrate/lib/json-fallback.sh && echo "PASS"'
+  WARNING: .orchestrator/milestones/M003/phases/P01/tasks/T03-PLAN.md:175 [bash-c] bash -c 'source scripts/migrate/adapter-interface.sh && source scripts/migrate/lib/json-fallback.sh && type json_read_knowledge >/dev/null && type json_read_decisions >/dev/null && type has_json_fallback >/dev/null && echo "PASS: functions defined"'
+  WARNING: .orchestrator/milestones/M003/phases/P01/tasks/T04-PLAN.md:247 [redirect-in-cmdsub] test "$(wc -l < scripts/migrate/adapters/gsd2.sh)" -ge 120
+  WARNING: .orchestrator/milestones/M003/phases/P01/tasks/T04-PLAN.md:264 [bash-c] bash -c 'source scripts/migrate/adapter-interface.sh && source scripts/migrate/adapters/gsd2.sh && echo "PASS"'
+  WARNING: .orchestrator/milestones/M003/phases/P01/tasks/T05-PLAN.md:464 [redirect-in-cmdsub] test "$(wc -l < scripts/migrate/lib/detect-source.sh)" -ge 30
+  WARNING: .orchestrator/milestones/M003/phases/P01/tasks/T05-PLAN.md:472 [redirect-in-cmdsub] test "$(wc -l < scripts/migrate/migrate.sh)" -ge 80
+  WARNING: .orchestrator/milestones/M003/phases/P01/tasks/T05-PLAN.md:488 [bash-c] bash -c 'source scripts/migrate/lib/detect-source.sh && echo "PASS"'
+  WARNING: .orchestrator/milestones/M004/phases/P01/tasks/T01-PLAN.md:196 [subshell-pipe] cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+  WARNING: .orchestrator/milestones/M004/phases/P01/tasks/T01-PLAN.md:203 [subshell-pipe] lines=$(wc -l < .specify/memory/constitution.md | tr -d ' ')
+  WARNING: .orchestrator/milestones/M004/phases/P01/tasks/T02-PLAN.md:168 [subshell-pipe] cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+  WARNING: .orchestrator/milestones/M004/phases/P01/tasks/T02-PLAN.md:173 [subshell-pipe] lines=$(wc -l < ANTIPATTERNS.md | tr -d ' ')
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T01-PLAN.md:206 [compound-semi]   - Check: `for k in CONFIG STATE DISPATCH VERIFY BUDGET IO; do grep -q "ORCH_ERR_${k}" scripts/lib/errors.sh || exit 1; done && echo PASS`
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T01-PLAN.md:214 [bash-c]   - Check: `bash -c '. scripts/lib/errors.sh; . scripts/lib/errors.sh; type emit_result >/dev/null'`
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T01-PLAN.md:216 [bash-c]   - Check: `bash -c '. scripts/lib/errors.sh; emit_result ok "" "t"' | grep -q '^RESULT:{"status":"ok"'`
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T01-PLAN.md:218 [bash-c]   - Check: `bash -c '. scripts/lib/errors.sh; emit_result error DISPATCH "x"' | grep -q '"error_kind":"DISPATCH"'`
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T01-PLAN.md:231 [subshell-pipe] cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T01-PLAN.md:235 [subshell-pipe] lines=$(wc -l < scripts/lib/errors.sh | tr -d ' ')
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T01-PLAN.md:240 [inline-loop] for k in CONFIG STATE DISPATCH VERIFY BUDGET IO; do
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T01-PLAN.md:250 [bash-c] bash -c '. scripts/lib/errors.sh; . scripts/lib/errors.sh; type emit_result >/dev/null' && echo "PASS: double-source idempotent" || echo "FAIL"
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T01-PLAN.md:252 [bash-c] bash -c '. scripts/lib/errors.sh; emit_result ok "" "hello"' | grep -q '^RESULT:{"status":"ok"' && echo "PASS: ok format" || echo "FAIL"
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T01-PLAN.md:253 [bash-c] bash -c '. scripts/lib/errors.sh; emit_result error DISPATCH "boom"' | grep -q '"error_kind":"DISPATCH"' && echo "PASS: error kind" || echo "FAIL"
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T01-PLAN.md:254 [bash-c] bash -c '. scripts/lib/errors.sh; emit_result error BOGUS "bad"' | grep -q '"error_kind":"CONFIG"' && echo "PASS: unknown remapped" || echo "FAIL"
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T02-PLAN.md:254 [compound-semi]   - Check: `for t in SESSION_START TASK_START TASK_COMPLETE PHASE_COMPLETE GUARD_BLOCKED HOOK_BLOCKED HOOK_VIOLATION; do grep -q "$t" scripts/lib/events.sh || exit 1; done && echo PASS`
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T02-PLAN.md:258 [bash-c]   - Check: `bash -c '. scripts/lib/events.sh; emit_event TASK_START task=T02' | grep -q '^EVENT:TASK_START'`
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T02-PLAN.md:260 [bash-c]   - Check: `bash -c 'ORCH_RUN_ID=abc ORCH_STARTED_AT=2026-04-10T00:00:00Z . scripts/lib/events.sh; emit_event TASK_START' | grep -q 'run_id=abc' && bash -c 'ORCH_RUN_ID=abc ORCH_STARTED_AT=2026-04-10T00:00:00Z . scripts/lib/events.sh; emit_event TASK_START' | grep -q 'timestamp=2026-04-10T00:00:00Z'`
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T02-PLAN.md:262 [bash-c]   - Check: `bash -c '. scripts/lib/events.sh; emit_event FOOBAR' | grep -q '^EVENT:SAFETY_WARNING'`
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T02-PLAN.md:264 [bash-c]   - Check: `bash -c '. scripts/lib/events.sh; . scripts/lib/events.sh; type emit_event >/dev/null'`
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T02-PLAN.md:278 [subshell-pipe] cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T02-PLAN.md:282 [subshell-pipe] lines=$(wc -l < scripts/lib/events.sh | tr -d ' ')
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T02-PLAN.md:287 [inline-loop] for t in SESSION_START TASK_START TASK_COMPLETE PHASE_COMPLETE GUARD_BLOCKED HOOK_BLOCKED HOOK_VIOLATION SAFETY_WARNING; do
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T02-PLAN.md:298 [bash-c] out="$(bash -c 'ORCH_RUN_ID=rid ORCH_STARTED_AT=2026-04-10T00:00:00Z . scripts/lib/events.sh; emit_event TASK_START task=T02')"
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T02-PLAN.md:303 [bash-c] out="$(bash -c '. scripts/lib/events.sh; emit_event FOOBAR')"
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T02-PLAN.md:306 [bash-c] bash -c '. scripts/lib/events.sh; . scripts/lib/events.sh; type emit_event >/dev/null' && echo "PASS: idempotent" || echo "FAIL"
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T03-PLAN.md:223 [bash-c]   - Check: `grep -q '^orch_now()' scripts/lib/run-context.sh && bash -c 'ORCH_STARTED_AT=2026-04-10T00:00:00Z . scripts/lib/run-context.sh; test "$(orch_now)" = "2026-04-10T00:00:00Z"'`
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T03-PLAN.md:227 [bash-c]   - Check: `a="$(bash -c '. scripts/lib/run-context.sh; ORCH_RUN_SEED=s1 init_run_context; printf "%s:%s" "$ORCH_RUN_ID" "$ORCH_STARTED_AT"')"; b="$(bash -c '. scripts/lib/run-context.sh; ORCH_RUN_SEED=s1 init_run_context; printf "%s:%s" "$ORCH_RUN_ID" "$ORCH_STARTED_AT"')"; test "$a" = "$b"`
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T03-PLAN.md:231 [bash-c]   - Check: `bash -c '. scripts/lib/run-context.sh; . scripts/lib/run-context.sh; type init_run_context >/dev/null'`
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T03-PLAN.md:244 [subshell-pipe] cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T03-PLAN.md:248 [subshell-pipe] lines=$(wc -l < scripts/lib/run-context.sh | tr -d ' ')
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T03-PLAN.md:253 [inline-loop] for fn in init_run_context orch_now orch_is_forced orch_is_dry_run; do
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T03-PLAN.md:257 [inline-loop] for v in ORCH_RUN_ID ORCH_STARTED_AT ORCH_FORCE ORCH_DRY_RUN; do
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T03-PLAN.md:264 [bash-c] bash -c '. scripts/lib/run-context.sh; init_run_context M004 P02; test -n "$ORCH_RUN_ID" -a -n "$ORCH_STARTED_AT"' && echo "PASS: init exports" || echo "FAIL"
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T03-PLAN.md:266 [bash-c] a="$(bash -c '. scripts/lib/run-context.sh; ORCH_RUN_SEED=det init_run_context; printf "%s:%s" "$ORCH_RUN_ID" "$ORCH_STARTED_AT"')"
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T03-PLAN.md:267 [bash-c] b="$(bash -c '. scripts/lib/run-context.sh; ORCH_RUN_SEED=det init_run_context; printf "%s:%s" "$ORCH_RUN_ID" "$ORCH_STARTED_AT"')"
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T03-PLAN.md:270 [bash-c] bash -c 'ORCH_STARTED_AT=2026-04-10T00:00:00Z . scripts/lib/run-context.sh; test "$(orch_now)" = "2026-04-10T00:00:00Z"' && echo "PASS: orch_now frozen" || echo "FAIL"
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T03-PLAN.md:272 [bash-c] bash -c 'ORCH_FORCE=1 . scripts/lib/run-context.sh; orch_is_forced' && echo "PASS: force detected" || echo "FAIL"
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T03-PLAN.md:273 [bash-c] bash -c 'ORCH_DRY_RUN=1 . scripts/lib/run-context.sh; orch_is_dry_run' && echo "PASS: dry-run detected" || echo "FAIL"
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T03-PLAN.md:275 [bash-c] bash -c '. scripts/lib/run-context.sh; . scripts/lib/run-context.sh; type init_run_context >/dev/null' && echo "PASS: idempotent" || echo "FAIL"
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T04-PLAN.md:279 [compound-semi]   - Check: `for fn in guard_payload_sanity guard_budget guard_output_sanity guard_phase_complete; do grep -q "^${fn}()" scripts/lib/guards.sh || exit 1; done && echo PASS`
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T04-PLAN.md:285 [compound-semi]   - Check: `tmp=$(mktemp); printf short > "$tmp"; bash -c ". scripts/lib/guards.sh; guard_payload_sanity $tmp" 2>&1 | grep -q GUARD_BLOCKED; rc=$?; rm -f "$tmp"; test $rc -eq 0`
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T04-PLAN.md:287 [bash-c]   - Check: `bash -c '. scripts/lib/guards.sh; guard_budget 150 100' 2>&1 | grep -q GUARD_BLOCKED`
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T04-PLAN.md:291 [bash-c]   - Check: `bash -c '. scripts/lib/guards.sh; . scripts/lib/guards.sh; type guard_payload_sanity >/dev/null'`
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T04-PLAN.md:306 [subshell-pipe] cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T04-PLAN.md:310 [subshell-pipe] lines=$(wc -l < scripts/lib/guards.sh | tr -d ' ')
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T04-PLAN.md:314 [inline-loop] for fn in guard_payload_sanity guard_budget guard_output_sanity guard_phase_complete; do
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T04-PLAN.md:334 [bash-c] bash -c '. scripts/lib/guards.sh; guard_budget 150 100' 2>&1 | grep -q GUARD_BLOCKED && echo "PASS: budget blocks" || echo "FAIL"
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T04-PLAN.md:335 [bash-c] bash -c '. scripts/lib/guards.sh; guard_budget 50 100' > /dev/null && echo "PASS: budget allows" || echo "FAIL"
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T04-PLAN.md:349 [bash-c] bash -c '. scripts/lib/guards.sh; . scripts/lib/guards.sh; type guard_payload_sanity >/dev/null' && echo "PASS: idempotent" || echo "FAIL"
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T05-PLAN.md:345 [compound-semi]   - Check: `for p in PRE_DISPATCH POST_DISPATCH POST_VERIFY PRE_ADVANCE; do grep -q "$p" scripts/lib/hooks.sh || exit 1; done && echo PASS`
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T05-PLAN.md:359 [bash-c]   - Check: `bash -c '. scripts/lib/hooks.sh; . scripts/lib/hooks.sh; type run_hooks >/dev/null'`
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T05-PLAN.md:361 [bash-c]   - Check: `bash -c '. scripts/lib/errors.sh; . scripts/lib/events.sh; . scripts/lib/run-context.sh; . scripts/lib/guards.sh; . scripts/lib/hooks.sh; type emit_result emit_event init_run_context guard_payload_sanity run_hooks >/dev/null'`
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T05-PLAN.md:377 [subshell-pipe] cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T05-PLAN.md:381 [subshell-pipe] lines=$(wc -l < scripts/lib/hooks.sh | tr -d ' ')
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T05-PLAN.md:392 [inline-loop] for p in PRE_DISPATCH POST_DISPATCH POST_VERIFY PRE_ADVANCE; do
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T05-PLAN.md:400 [bash-c] bash -c '. scripts/lib/hooks.sh; run_hooks BOGUS /tmp/x' 2>&1 | grep -q 'unknown_lifecycle_point' && echo "PASS: unknown lifecycle" || echo "FAIL"
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T05-PLAN.md:402 [bash-c] bash -c '. scripts/lib/hooks.sh; . scripts/lib/hooks.sh; type run_hooks >/dev/null' && echo "PASS: idempotent" || echo "FAIL"
+  WARNING: .orchestrator/milestones/M004/phases/P02/tasks/T05-PLAN.md:404 [bash-c] bash -c '. scripts/lib/errors.sh; . scripts/lib/events.sh; . scripts/lib/run-context.sh; . scripts/lib/guards.sh; . scripts/lib/hooks.sh; type emit_result emit_event init_run_context guard_payload_sanity run_hooks >/dev/null' && echo "PASS: all 5 libs load" || echo "FAIL"
+  WARNING: .orchestrator/milestones/M004/phases/P03/tasks/T01-PLAN.md:309 [compound-semi]   - Check: `for fn in checkpoint_path checkpoint_write checkpoint_read checkpoint_detect checkpoint_clear; do grep -q "^${fn}()" scripts/engine/checkpoint.sh || exit 1; done && echo PASS`
+  WARNING: .orchestrator/milestones/M004/phases/P03/tasks/T01-PLAN.md:311 [subshell-pipe]   - Check: `! grep -nE '(^|[^A-Za-z_])date[[:space:]]' scripts/engine/checkpoint.sh`
+  WARNING: .orchestrator/milestones/M004/phases/P03/tasks/T02-PLAN.md:305 [compound-semi]   - Check: `for lib in errors events run-context guards hooks; do grep -q "lib/${lib}.sh" scripts/engine/run.sh || exit 1; done && grep -q 'engine/checkpoint.sh' scripts/engine/run.sh`
+  WARNING: .orchestrator/milestones/M004/phases/P03/tasks/T02-PLAN.md:309 [compound-semi]   - Check: `for e in SESSION_START SESSION_END PHASE_START PHASE_COMPLETE TASK_START TASK_COMPLETE; do grep -q "emit_event ${e}" scripts/engine/run.sh || exit 1; done && echo PASS`
+  WARNING: .orchestrator/milestones/M004/phases/P03/tasks/T02-PLAN.md:319 [inline-loop]   - Check: `ORCH_RUN_SEED=t02-c2 ORCH_DRY_RUN=1 bash scripts/engine/run.sh --dry-run M004 P03 2>/dev/null | grep -c '^EVENT:' | awk '{ if ($1 >= 4) exit 0; else exit 1 }'`
+  WARNING: .orchestrator/milestones/M004/phases/P03/tasks/T02-PLAN.md:323 [subshell-pipe]   - Check: `! grep -nE '(^|[^A-Za-z_])date[[:space:]]' scripts/engine/run.sh`
+  WARNING: .orchestrator/milestones/M004/phases/P03/tasks/T03-PLAN.md:189 [compound-semi]   - Check: `for g in guard_payload_sanity guard_budget guard_output_sanity guard_phase_complete; do grep -q "$g" scripts/engine/run.sh || exit 1; done && echo PASS`
+  WARNING: .orchestrator/milestones/M004/phases/P03/tasks/T05-PLAN.md:216 [compound-semi]   - Check: `for p in PRE_DISPATCH POST_DISPATCH POST_VERIFY PRE_ADVANCE; do grep -q "run_hooks ${p}" scripts/engine/run.sh || exit 1; done && echo PASS`
+  WARNING: .orchestrator/milestones/M004/phases/P03/tasks/T05-PLAN.md:222 [chain]   - Check: `grep -q 'cd "\$REPO_ROOT" && bash scripts/verify/check-must-haves.sh' scripts/engine/run.sh && grep -q 'cd "\$REPO_ROOT" && bash scripts/lifecycle/record-result.sh' scripts/engine/run.sh`
+  WARNING: .orchestrator/milestones/M004/phases/P03/tasks/T05-PLAN.md:228 [compound-semi]   - Check: `rm -f .specify/orchestrator/milestones/M004/engine-checkpoint.json; out=$(ORCH_RUN_SEED=t05-c3 ORCH_DRY_RUN=1 bash scripts/engine/run.sh --dry-run M004 P03 2>&1); echo "$out" | grep -q '^EVENT:VERIFY_START' && echo "$out" | grep -q '^EVENT:VERIFY_COMPLETE'`
+  WARNING: .orchestrator/milestones/M004/phases/P03/tasks/T06-PLAN.md:168 [subshell-pipe]   - Check: `! grep -nE '(^|[^A-Za-z_])date[[:space:]]' scripts/engine/test-resume.sh`
+  WARNING: .orchestrator/milestones/M004/phases/P03/tasks/T06-PLAN.md:174 [chain]   - Check: `bash scripts/engine/test-resume.sh M004 P03 >/dev/null 2>&1 && bash scripts/engine/test-resume.sh M004 P03 >/dev/null 2>&1`
+  WARNING: .orchestrator/milestones/M004/phases/P04/tasks/T01-PLAN.md:222 [subshell-pipe] cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+  WARNING: .orchestrator/milestones/M004/phases/P04/tasks/T01-PLAN.md:227 [subshell-pipe] lines=$(wc -l < templates/context-recipe.yaml | tr -d ' ')
+  WARNING: .orchestrator/milestones/M004/phases/P04/tasks/T01-PLAN.md:249 [inline-loop] for p in required compressible optional; do
+  WARNING: .orchestrator/milestones/M004/phases/P04/tasks/T02-PLAN.md:168 [compound-semi]   - Check: `for p in PRE_DISPATCH POST_DISPATCH POST_VERIFY PRE_ADVANCE; do grep -q "^${p}:" templates/hooks.yaml || exit 1; done && echo PASS`
+  WARNING: .orchestrator/milestones/M004/phases/P04/tasks/T02-PLAN.md:190 [subshell-pipe] cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+  WARNING: .orchestrator/milestones/M004/phases/P04/tasks/T02-PLAN.md:195 [subshell-pipe] lines=$(wc -l < templates/hooks.yaml | tr -d ' ')
+  WARNING: .orchestrator/milestones/M004/phases/P04/tasks/T02-PLAN.md:199 [inline-loop] for p in PRE_DISPATCH POST_DISPATCH POST_VERIFY PRE_ADVANCE; do
+  WARNING: .orchestrator/milestones/M004/phases/P04/tasks/T02-PLAN.md:208 [inline-loop] for f in name script enabled block_on_fail; do
+  WARNING: .orchestrator/milestones/M004/phases/P04/tasks/T03-PLAN.md:181 [subshell-pipe] cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+  WARNING: .orchestrator/milestones/M004/phases/P04/tasks/T03-PLAN.md:186 [subshell-pipe] lines=$(wc -l < templates/routing.yaml | tr -d ' ')
+  WARNING: .orchestrator/milestones/M004/phases/P04/tasks/T04-PLAN.md:580 [subshell-pipe] cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+  WARNING: .orchestrator/milestones/M004/phases/P04/tasks/T04-PLAN.md:585 [subshell-pipe] lines=$(wc -l < scripts/lib/recipe-parser.sh | tr -d ' ')
+  WARNING: .orchestrator/milestones/M004/phases/P04/tasks/T04-PLAN.md:592 [inline-loop] for fn in read_recipe_field parse_recipe_sections parse_recipe_compression parse_recipe_hooks parse_recipe_fallback resolve_recipe; do
+  WARNING: .orchestrator/milestones/M004/phases/P04/tasks/T05-PLAN.md:299 [subshell-pipe]   - Check: `source scripts/lib/recipe-parser.sh && test "$(parse_recipe_sections templates/context-recipe.yaml | wc -l | tr -d ' ')" -ge 7`
+  WARNING: .orchestrator/milestones/M004/phases/P04/tasks/T05-PLAN.md:301 [subshell-pipe]   - Check: `source scripts/lib/recipe-parser.sh && test "$(parse_recipe_compression templates/context-recipe.yaml | wc -l | tr -d ' ')" -ge 3`
+  WARNING: .orchestrator/milestones/M004/phases/P04/tasks/T05-PLAN.md:303 [compound-semi]   - Check: `source scripts/lib/recipe-parser.sh && for p in PRE_DISPATCH POST_DISPATCH POST_VERIFY PRE_ADVANCE; do parse_recipe_hooks templates/hooks.yaml "$p" | grep -q '|' || exit 1; done && echo PASS`
+  WARNING: .orchestrator/milestones/M004/phases/P04/tasks/T05-PLAN.md:309 [bash-c]   - Check: `bash -c '. scripts/lib/recipe-parser.sh; . scripts/lib/recipe-parser.sh; echo PASS'`
+  WARNING: .orchestrator/milestones/M004/phases/P04/tasks/T05-PLAN.md:325 [subshell-pipe] cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+  WARNING: .orchestrator/milestones/M004/phases/P04/tasks/T05-PLAN.md:330 [subshell-pipe] lines=$(wc -l < scripts/verify/check-recipe-integration.sh | tr -d ' ')
+  WARNING: .orchestrator/milestones/M004/phases/P04/tasks/T05-PLAN.md:340 [bash-c] bash -c '. scripts/lib/recipe-parser.sh; . scripts/lib/recipe-parser.sh; echo "PASS: double-source"' || echo "FAIL: double-source"
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T01-PLAN.md:622 [compound-semi]   - Check: `for fn in handle_computed handle_phase_summaries handle_phase_plan handle_task_plan handle_template handle_knowledge handle_decisions handle_file dispatch_section_handler; do grep -q "^${fn}()" scripts/dispatch/lib/section-handlers.sh || exit 1; done`
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T01-PLAN.md:632 [subshell-source]   - Check: `( . scripts/dispatch/lib/section-handlers.sh && type handle_computed >/dev/null )`
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T01-PLAN.md:649 [subshell-pipe] cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T01-PLAN.md:659 [subshell-pipe] lines=$(wc -l < scripts/dispatch/lib/section-handlers.sh | tr -d ' ')
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T01-PLAN.md:667 [inline-loop] for fn in handle_computed handle_phase_summaries handle_phase_plan handle_task_plan \
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T01-PLAN.md:669 [inline-loop]           dispatch_section_handler; do
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T01-PLAN.md:678 [inline-loop] # No process substitution in while loops
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T01-PLAN.md:687 [subshell-source] ( . scripts/dispatch/lib/section-handlers.sh && type handle_computed >/dev/null 2>&1 ) \
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T01-PLAN.md:690 [inline-loop] # Behavioral: handle_computed returns state block for M004/P04/T04
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T01-PLAN.md:691 [subshell-source] ( . scripts/dispatch/lib/section-handlers.sh && \
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T02-PLAN.md:480 [compound-semi]   - Check: `bash scripts/dispatch/build-context.sh .specify/orchestrator M004 P04 T04 2>/dev/null | sed -E 's/\| ([0-9]+)-([0-9]+) \|/| LINES |/g; s/~[0-9]+/~TOKENS/g; s/\(([0-9]+) entries\)/(N entries)/g' > /tmp/t02-ref.md && sed -E 's/\| ([0-9]+)-([0-9]+) \|/| LINES |/g; s/~[0-9]+/~TOKENS/g; s/\(([0-9]+) entries\)/(N entries)/g' < .specify/orchestrator/milestones/M004/phases/P05/fixtures/golden-payload-M004-P04-T04.md > /tmp/t02-gold.md && diff -q /tmp/t02-gold.md /tmp/t02-ref.md`
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T02-PLAN.md:484 [subshell-pipe]   - Check: `( unset ORCH_RUN_ID ORCH_STARTED_AT; bash scripts/dispatch/build-context.sh .specify/orchestrator M004 P04 T04 2>/dev/null | head -1 | grep -q '^---$' )`
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T02-PLAN.md:500 [subshell-pipe] cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T02-PLAN.md:508 [subshell-pipe] lines=$(wc -l < scripts/dispatch/build-context.sh | tr -d ' ')
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T02-PLAN.md:512 [inline-loop] for lib in errors.sh events.sh run-context.sh recipe-parser.sh; do
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T02-PLAN.md:537 [compound-semi]   | sed -E 's/\| ([0-9]+)-([0-9]+) \|/| LINES |/g; s/~[0-9]+/~TOKENS/g; s/\(([0-9]+) entries\)/(N entries)/g' \
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T02-PLAN.md:539 [compound-semi] sed -E 's/\| ([0-9]+)-([0-9]+) \|/| LINES |/g; s/~[0-9]+/~TOKENS/g; s/\(([0-9]+) entries\)/(N entries)/g' \
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T03-PLAN.md:445 [compound-semi]   - Check: `bash scripts/dispatch/compress-payload.sh --budget 2000 --input /tmp/t03-input.md 2>/dev/null | sed -E 's/\| ([0-9]+)-([0-9]+) \|/| LINES |/g; s/~[0-9]+/~TOKENS/g; s/\(([0-9]+) entries\)/(N entries)/g' > /tmp/t03-ref.md && sed -E 's/\| ([0-9]+)-([0-9]+) \|/| LINES |/g; s/~[0-9]+/~TOKENS/g; s/\(([0-9]+) entries\)/(N entries)/g' < .specify/orchestrator/milestones/M004/phases/P05/fixtures/golden-compressed-budget2000.md > /tmp/t03-gold.md && diff -q /tmp/t03-gold.md /tmp/t03-ref.md`
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T03-PLAN.md:466 [subshell-pipe] cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T03-PLAN.md:471 [subshell-pipe] lines=$(wc -l < scripts/dispatch/compress-payload.sh | tr -d ' ')
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T03-PLAN.md:486 [compound-semi]   | sed -E 's/\| ([0-9]+)-([0-9]+) \|/| LINES |/g; s/~[0-9]+/~TOKENS/g; s/\(([0-9]+) entries\)/(N entries)/g' \
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T03-PLAN.md:488 [compound-semi] sed -E 's/\| ([0-9]+)-([0-9]+) \|/| LINES |/g; s/~[0-9]+/~TOKENS/g; s/\(([0-9]+) entries\)/(N entries)/g' \
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T04-PLAN.md:367 [subshell-pipe] cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T04-PLAN.md:372 [subshell-pipe] lines=$(wc -l < scripts/dispatch/select-model.sh | tr -d ' ')
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T04-PLAN.md:375 [inline-loop] for lib in errors.sh events.sh run-context.sh recipe-parser.sh; do
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T04-PLAN.md:389 [inline-loop] for tier in heavy:claude-opus-4-6:200000 standard:claude-sonnet-4-6:150000 light:claude-haiku-4-5:80000; do
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T04-PLAN.md:390 [subshell-pipe]   t=$(echo "$tier" | cut -d: -f1)
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T04-PLAN.md:391 [subshell-pipe]   m=$(echo "$tier" | cut -d: -f2)
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T04-PLAN.md:392 [subshell-pipe]   b=$(echo "$tier" | cut -d: -f3)
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T04-PLAN.md:394 [compound-semi]   if [ "$actual" = "$m $b" ]; then echo "PASS: $t → $m $b"; else echo "FAIL: $t got '$actual'"; fi
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T05-PLAN.md:338 [subshell-pipe] cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+  WARNING: .orchestrator/milestones/M004/phases/P05/tasks/T05-PLAN.md:346 [subshell-pipe] lines=$(wc -l < "$FIX/run-parity.sh" | tr -d ' ')
+  WARNING: .orchestrator/milestones/M005/phases/P05/tasks/T01-PLAN.md:368 [inline-loop]   echo "VERDICT:PASS reason=\"all good\"" | while IFS= read -r line; do
+  WARNING: .orchestrator/milestones/M005/phases/P07/tasks/T01-PLAN.md:375 [inline-loop] # script. This is a preventive check — if someone adds GSD patterns to
+  WARNING: .orchestrator/milestones/M005/phases/P07/tasks/T02-PLAN.md:523 [inline-loop] # Idempotency — two runs produce identical output except for _generated_at
+  WARNING: .orchestrator/milestones/M005/phases/P07/tasks/T02-PLAN.md:526 [procsub] diff <(grep -v _generated_at /tmp/p07-a.json) <(grep -v _generated_at /tmp/p07-b.json)
+  WARNING: .orchestrator/milestones/M005/phases/P07/tasks/T02-PLAN.md:529 [inline-loop] # Phase must-have verification for T02-scoped items
+  WARNING: .orchestrator/milestones/M005/phases/P07/tasks/T03-PLAN.md:528 [subshell-pipe] grep -qE 'status=(ok|drift|missing)' /tmp/p07-doctor.out
+  WARNING: .orchestrator/milestones/M005/phases/P07/tasks/T05-PLAN.md:98 [subshell-source]   - Check: `( . scripts/lib/errors.sh && emit_result ok "" "test" | grep -q RESULT )`
+  WARNING: .orchestrator/milestones/M005/phases/P07/tasks/T05-PLAN.md:151 [subshell-source]        - Check: `( . scripts/lib/errors.sh && fn | grep -q X )`
+  WARNING: templates/phase-plan.md:23 [subshell-source]        - Check: `( . scripts/lib/errors.sh && fn | grep -q X )`
+
+--- Documentation Completeness ---
+DOCTOR:DOCS status=ok found=19 total=19
+
+--- Graph Health ---
+GRAPH_HEALTH: knowledge.db
+  Statistics: 25 entries, 31 edges, 6 scope_tags, avg degree 2.48
+  Orphaned entries: 2 (MEM007, MEM016)
+  Connected components: 10 (largest: 4 entries)
+  Broken supersession chains: 0
+  Dangling edges: 0
+  Overall: WARNINGS
+DOCTOR:GRAPH_HEALTH status=warn entries=25 edges=31 orphans=2 components=10 broken_chains=0 dangling=0
+
+=== Health Report ===
+Checks passed: 10 / 14
+Advisory warnings: 1
+Status: NEEDS_ATTENTION
+
+Results appended to: /Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator/.orchestrator/doctor-history.jsonl
+
+doctor exit code: 0
+
+DOCTOR_CLEAN

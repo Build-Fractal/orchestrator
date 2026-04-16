@@ -1,0 +1,506 @@
+=== Test Suite Sweep — 2026-04-15T17:48:29Z ===
+
+--- tests/test-s01-structure.sh ---
+PASS: scripts/state/ directory exists
+PASS: scripts/dispatch/ directory exists
+PASS: scripts/verify/ directory exists
+PASS: scripts/knowledge/ directory exists
+PASS: scripts/lifecycle/ directory exists
+PASS: templates/ directory exists
+PASS: references/ directory exists
+PASS: docs/ directory exists
+PASS: tests/ directory exists
+PASS: tests/fixtures/ directory exists
+PASS: config template has all 7 config keys
+
+11/11 checks passed
+SUITE_PASS: tests/test-s01-structure.sh
+
+--- tests/test-s02-state-machine.sh ---
+PASS: derive-phase.sh → pre-planning
+PASS: derive-phase.sh → discussing
+PASS: derive-phase.sh → planning
+PASS: derive-phase.sh → replanning
+PASS: derive-phase.sh → executing
+PASS: derive-phase.sh → verifying
+PASS: derive-phase.sh → summarizing
+PASS: derive-phase.sh → validating
+PASS: derive-phase.sh → completing
+PASS: derive-phase.sh → complete
+PASS: read-roadmap.sh tier B fixture → B
+PASS: derive-phase.sh tier B fixture → executing
+PASS: tier B fixture has no discussing/validating/completing state files
+PASS: derive-phase.sh tier A fixture → pre-planning
+PASS: tier A fixture has no milestones/ directory
+PASS: derive-phase.sh no-args → non-zero exit + stderr
+PASS: derive-phase.sh nonexistent dir → pre-planning
+PASS: read-config.sh default_tier → null (extension default)
+PASS: read-config.sh context_verbosity with project override → full
+PASS: read-config.sh context_verbosity with local override → minimal
+PASS: read-config.sh default_tier with env override → B
+PASS: read-config.sh git_isolation with project override → true
+PASS: read-config.sh unknown key → non-zero exit + stderr
+PASS: read-roadmap.sh extracts phase IDs (P01, P02, P03)
+PASS: read-roadmap.sh phase completion (P01=complete, P02=incomplete)
+PASS: read-roadmap.sh frontmatter tier → C
+PASS: read-roadmap.sh phase count → 3
+Scaffolded M001 at /var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/tmp.5wddR3BcmN/milestones/M001
+PASS: scaffold.sh creates milestone directory tree
+Milestone M001 already scaffolded
+PASS: scaffold.sh idempotent re-run (no changes)
+
+29/29 checks passed
+SUITE_PASS: tests/test-s02-state-machine.sh
+
+--- tests/test-s03-design-artifacts.sh ---
+PASS: templates/roadmap.md exists
+PASS: templates/phase-plan.md exists
+PASS: templates/task-plan.md exists
+PASS: templates/task-summary.md exists
+PASS: templates/phase-summary.md exists
+PASS: templates/milestone-summary.md exists
+PASS: templates/dispatch-prompt.md exists
+PASS: templates/verification-report.md exists
+PASS: templates/spec-compliance-review.md exists
+PASS: templates/recovery-briefing.md exists
+PASS: templates/continue-file.md exists
+PASS: templates/context-draft.md exists
+PASS: templates/claude-code-appendix.md exists
+PASS: templates/claude-settings.json exists
+PASS: templates/claude-settings.json is valid JSON (starts with {)
+PASS: references/state-machine.md exists
+PASS: references/verification-ladder.md exists
+PASS: references/tier-definitions.md exists
+PASS: references/file-formats.md exists
+PASS: templates/roadmap.md has schema_version in frontmatter
+PASS: templates/phase-plan.md has schema_version in frontmatter
+PASS: templates/task-plan.md has schema_version in frontmatter
+PASS: templates/task-summary.md has schema_version in frontmatter
+PASS: templates/phase-summary.md has schema_version in frontmatter
+PASS: templates/milestone-summary.md has schema_version in frontmatter
+PASS: templates/dispatch-prompt.md has schema_version in frontmatter
+PASS: templates/verification-report.md has schema_version in frontmatter
+PASS: templates/spec-compliance-review.md has schema_version in frontmatter
+PASS: templates/recovery-briefing.md has schema_version in frontmatter
+PASS: templates/continue-file.md has schema_version in frontmatter
+PASS: templates/context-draft.md has schema_version in frontmatter
+PASS: templates/claude-code-appendix.md has schema_version in frontmatter
+PASS: No hardcoded IDs (M###, P##, T##) in templates
+PASS: references/state-machine.md mentions state: pre-planning
+PASS: references/state-machine.md mentions state: discussing
+PASS: references/state-machine.md mentions state: planning
+PASS: references/state-machine.md mentions state: replanning
+PASS: references/state-machine.md mentions state: executing
+PASS: references/state-machine.md mentions state: verifying
+PASS: references/state-machine.md mentions state: summarizing
+PASS: references/state-machine.md mentions state: validating
+PASS: references/state-machine.md mentions state: completing
+PASS: references/state-machine.md mentions state: complete
+PASS: references/verification-ladder.md mentions Tier 1
+PASS: references/verification-ladder.md mentions Tier 2
+PASS: references/verification-ladder.md mentions Tier 3
+PASS: references/verification-ladder.md mentions Tier 4
+PASS: references/tier-definitions.md mentions Tier A
+PASS: references/tier-definitions.md mentions Tier B
+PASS: references/tier-definitions.md mentions Tier C
+PASS: templates/task-summary.md contains frontmatter field: provides
+PASS: templates/task-summary.md contains frontmatter field: requires
+PASS: templates/task-summary.md contains frontmatter field: affects
+PASS: templates/task-summary.md contains frontmatter field: key_files
+PASS: templates/task-summary.md contains frontmatter field: verification_result
+PASS: templates/phase-summary.md contains frontmatter field: provides
+PASS: templates/phase-summary.md contains frontmatter field: requires
+PASS: templates/phase-summary.md contains frontmatter field: affects
+PASS: templates/phase-summary.md contains frontmatter field: key_files
+PASS: templates/phase-summary.md contains frontmatter field: verification_result
+PASS: templates/milestone-summary.md contains frontmatter field: provides
+PASS: templates/milestone-summary.md contains frontmatter field: requires
+PASS: templates/milestone-summary.md contains frontmatter field: affects
+PASS: templates/milestone-summary.md contains frontmatter field: key_files
+PASS: templates/milestone-summary.md contains frontmatter field: verification_result
+
+65/65 checks passed
+SUITE_PASS: tests/test-s03-design-artifacts.sh
+
+--- tests/test-s04-core-commands.sh ---
+
+--- Verification Scripts ---
+PASS: check-must-haves.sh verify-pass fixture → all PASS (exit 0)
+PASS: check-must-haves.sh verify-pass fixture → zero FAIL lines
+PASS: check-must-haves.sh verify-fail fixture → non-zero exit (1)
+PASS: check-must-haves.sh verify-fail fixture → at least one FAIL line (5 found)
+PASS: check-must-haves.sh failure output names specific missing artifact (missing-script.sh)
+PASS: check-must-haves.sh missing args → non-zero exit + stderr
+PASS: check-boundary-map.sh verify-pass fixture → all PASS (exit 0)
+PASS: check-boundary-map.sh verify-fail fixture → non-zero exit (missing produce item)
+PASS: check-boundary-map.sh verify-fail fixture → at least one FAIL line
+PASS: check-boundary-map.sh missing args → non-zero exit + stderr
+PASS: check-scope.sh in-scope files → no warnings
+PASS: check-scope.sh out-of-scope files → warnings reported (1)
+PASS: check-scope.sh out-of-scope output names specific file (unauthorized.txt)
+PASS: check-scope.sh missing args → non-zero exit + stderr
+PASS: run-commands.sh passing command → PASS (exit 0)
+PASS: run-commands.sh failing command → FAIL (exit 1)
+PASS: run-commands.sh no commands → SKIP (exit 0)
+PASS: scripts/verify/check-external-mods.sh exists and is executable
+PASS: check-external-mods.sh missing lock → SKIP (exit 0)
+PASS: check-external-mods.sh lock without tree → SKIP (exit 0)
+PASS: check-external-mods.sh no args → exit 1 + stderr
+PASS: check-external-mods.sh output uses structured prefix (PASS/WARN/SKIP)
+
+--- Dispatch Scripts ---
+PASS: scope-filter.sh knowledge → includes [project]+[milestone:M001], excludes [phase:M001/P03]
+PASS: scope-filter.sh decisions → includes P01+P02+arch, excludes P03 convention
+PASS: scope-filter.sh nonexistent file → exit 0, empty output
+PASS: scope-filter.sh missing args → non-zero exit + stderr
+PASS: detect-capabilities.sh → key=value output with shell_execution=true and runtime=
+PASS: detect-capabilities.sh SPECKIT_AGENT_TOOL=1 → agent_tool_available=true
+PASS: detect-capabilities.sh without SPECKIT_AGENT_TOOL → agent_tool_available=false
+PASS: detect-capabilities.sh JSON output contains agent_tool_available key
+PASS: build-context.sh fixture → non-empty payload with task plan content
+PASS: build-context.sh missing task plan → exit 1 + descriptive stderr
+PASS: build-context.sh → reports context budget to stderr
+PASS: build-context.sh missing args → non-zero exit + stderr
+
+--- Tier A Evaluate Content ---
+PASS: evaluate.md contains Tier A routing to standard spec-kit
+PASS: evaluate.md contains no-orchestrator language for Tier A
+
+--- Boundary Map Contract Violation ---
+PASS: check-boundary-map.sh verify-boundary-fail → exit 1 (missing produce item)
+PASS: check-boundary-map.sh verify-boundary-fail → FAIL line for missing contract
+PASS: check-boundary-map.sh verify-boundary-fail → names missing src/api.ts
+
+--- External Modification Detection ---
+PASS: check-external-mods.sh detects modification (WARN output)
+PASS: check-external-mods.sh external mods → exit 2
+
+--- Build Context Payload Ratio ---
+PASS: build-context.sh stderr reports percentage
+PASS: build-context.sh payload ratio < 100% (83%)
+
+--- Integration Tests ---
+PASS: commands/evaluate.md exists and has no Placeholder text
+PASS: commands/roadmap.md exists and has no Placeholder text
+PASS: commands/plan-phase.md exists and has no Placeholder text
+PASS: commands/dispatch.md exists and has no Placeholder text
+PASS: commands/verify.md exists and has no Placeholder text
+PASS: commands/status.md exists and has no Placeholder text
+PASS: commands/evaluate.md has YAML frontmatter
+PASS: commands/roadmap.md has YAML frontmatter
+PASS: commands/plan-phase.md has YAML frontmatter
+PASS: commands/dispatch.md has YAML frontmatter
+PASS: commands/verify.md has YAML frontmatter
+PASS: commands/status.md has YAML frontmatter
+PASS: scripts/verify/check-must-haves.sh exists and is executable
+PASS: scripts/verify/check-boundary-map.sh exists and is executable
+PASS: scripts/verify/check-scope.sh exists and is executable
+PASS: scripts/verify/run-commands.sh exists and is executable
+PASS: scripts/verify/check-external-mods.sh exists and is executable
+PASS: scripts/dispatch/scope-filter.sh exists and is executable
+PASS: scripts/dispatch/detect-capabilities.sh exists and is executable
+PASS: scripts/dispatch/build-context.sh exists and is executable
+PASS: verify.md references check-must-haves
+PASS: dispatch.md references build-context
+PASS: dispatch.md references record-result
+PASS: evaluate.md references scaffold
+PASS: roadmap.md references templates/roadmap
+PASS: plan-phase.md references templates/phase-plan
+PASS: status.md references derive-phase
+
+--- Scope Filtering Multi-Milestone ---
+PASS: scope-filter.sh multi-milestone → includes all 3 [project] entries
+PASS: scope-filter.sh multi-milestone → includes all 3 [milestone:M001] entries
+PASS: scope-filter.sh multi-milestone → excludes all 3 [milestone:M002] entries
+PASS: scope-filter.sh multi-milestone → excludes all 3 [phase:M001/P03] entries (not current phase)
+
+74/74 checks passed
+SUITE_PASS: tests/test-s04-core-commands.sh
+
+--- tests/test-s05-autonomous-mode.sh ---
+
+--- Section 1: Lifecycle Scripts ---
+PASS: lock-manager.sh create → LOCK:CREATED (exit 0)
+PASS: lock-manager.sh status → LOCK:ACTIVE (own PID)
+PASS: lock-manager.sh break → LOCK:BROKEN
+PASS: lock-manager.sh status after break → LOCK:NONE
+PASS: lock-manager.sh status on stale fixture → LOCK:STALE
+PASS: lock-manager.sh update → LOCK:UPDATED with completed unit in file
+PASS: lock-manager.sh invalid operation → exit 1
+PASS: lock-manager.sh no args → exit 1 with usage
+PASS: stuck-detector.sh fixture log → STUCK:YES
+PASS: stuck-detector.sh → reports dispatches=2
+PASS: stuck-detector.sh empty log → STUCK:NO with 'No dispatches'
+PASS: stuck-detector.sh missing args → exit 1
+PASS: recovery-briefing.sh fixture → produces output with 'Crash State'
+PASS: recovery-briefing.sh → includes Completed and Incomplete Work sections
+PASS: recovery-briefing.sh nonexistent dir → exit 1
+PASS: budget-checker.sh dispatch-budget 3 with 5 dispatches → BUDGET:EXCEEDED
+PASS: budget-checker.sh dispatch-budget 10 with 5 dispatches → BUDGET:OK
+PASS: budget-checker.sh empty log → BUDGET:OK
+PASS: budget-checker.sh no limits → BUDGET:OK (no limits configured)
+PASS: budget-checker.sh no args → exit 1 with usage
+PASS: lock-manager.sh break nonexistent → LOCK:NONE
+PASS: All 4 lifecycle scripts have #!/usr/bin/env bash shebang
+PASS: All 4 lifecycle scripts have set -euo pipefail
+PASS: No lifecycle scripts use declare -A (bash 3.2 compatible)
+PASS: scaffold.sh with GIT_ISOLATION=true → creates worktree
+PASS: scaffold.sh without GIT_ISOLATION → no worktree created
+PASS: recovery-briefing.sh runs without error on fixture (worktree detection safe)
+PASS: recovery-briefing.sh runs on empty milestone (no worktree, safe)
+
+--- Section 2: auto.md Command File ---
+PASS: auto.md exists and has YAML frontmatter
+PASS: auto.md does not contain 'Placeholder'
+PASS: auto.md has ≥100 lines (549 lines)
+PASS: auto.md has description in YAML frontmatter
+PASS: auto.md references scripts/lifecycle/lock-manager.sh
+PASS: auto.md references scripts/lifecycle/stuck-detector.sh
+PASS: auto.md references scripts/lifecycle/budget-checker.sh
+PASS: auto.md references scripts/lifecycle/recovery-briefing.sh
+PASS: auto.md references scripts/dispatch/build-context.sh
+PASS: auto.md references scripts/verify/check-must-haves.sh
+PASS: auto.md covers all key workflow sections
+PASS: auto.md references scripts/knowledge/write-summary.sh
+PASS: auto.md Phase Transition enforces write-summary.sh (not freeform)
+PASS: auto.md Stage 2b documents verification failure payload construction
+PASS: auto.md references scripts/knowledge/append-knowledge.sh
+PASS: auto.md references scripts/knowledge/append-decision.sh
+PASS: auto.md enforces no freeform knowledge appending
+PASS: auto.md enforces no freeform decision appending
+
+--- Section 3: resume.md and discuss.md Command Files ---
+PASS: resume.md exists and has YAML frontmatter
+PASS: resume.md does not contain 'Placeholder'
+PASS: resume.md has ≥80 lines (190 lines)
+PASS: resume.md has description in YAML frontmatter
+PASS: resume.md references scripts/lifecycle/lock-manager.sh
+PASS: resume.md references scripts/lifecycle/recovery-briefing.sh
+PASS: resume.md references scripts/lifecycle/stuck-detector.sh
+PASS: resume.md covers crash recovery and pause resume paths
+PASS: resume.md references templates/continue-file.md
+PASS: discuss.md exists and has YAML frontmatter
+PASS: discuss.md does not contain 'Placeholder'
+PASS: discuss.md has ≥60 lines (175 lines)
+PASS: discuss.md has description in YAML frontmatter
+PASS: discuss.md references templates/context-draft.md
+PASS: discuss.md covers create, update, and finalize operations
+
+--- Section 4: Integration & Diagnostics ---
+PASS: All commands reference only existing, executable scripts
+PASS: All commands reference only existing templates
+PASS: auto.md references speckit.orchestrator.verify (verification in loop)
+PASS: resume.md references speckit.orchestrator.dispatch or .auto (resumes execution)
+PASS: lock-manager.sh no args → exit 1 with non-empty stderr
+PASS: stuck-detector.sh no args → exit 1 with non-empty stderr
+PASS: stuck-detector.sh empty log + unknown task → exit 0 with 'No dispatches'
+PASS: recovery-briefing.sh nonexistent path → exit 1
+PASS: budget-checker.sh no args → exit 1 with non-empty stderr
+PASS: All 3 S05 commands have YAML frontmatter and no Placeholder text
+PASS: All 4 lifecycle scripts are executable (-x)
+
+--- Section 5: Pause/Resume Round-Trip ---
+PASS: resume.md references templates/continue-file.md
+PASS: continue file fixture has required frontmatter (milestone, phase, task, step, saved_at)
+PASS: continue file fixture has required body sections (Completed Work, Remaining Work, Next Action)
+PASS: resume.md documents continue file consumption (deletion) on resume
+PASS: continue file fixture has optional sections (Decisions Made, Context)
+PASS: resume.md documents crash vs pause detection with separate paths
+
+--- Section 6: record-result.sh ---
+PASS: record-result.sh no-args → non-zero exit + stderr
+PASS: record-result.sh missing fields → exit 1 with descriptive error
+PASS: record-result.sh valid input → RECORD:APPENDED
+PASS: record-result.sh output JSON has all required fields
+PASS: record-result.sh invalid outcome → exit 1
+RECORD:APPENDED /var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/tmp.XBAci81CSl/log.jsonl
+PASS: record-result.sh multiple appends produce multiple lines
+
+--- Section 7: sync-roadmap.sh ---
+PASS: sync-roadmap.sh no-args → non-zero exit + stderr
+PASS: sync-roadmap.sh matching state → SYNC:OK
+PASS: sync-roadmap.sh mismatch detection → SYNC:MISMATCH
+PASS: sync-roadmap.sh missing roadmap → exit 1
+
+--- Section 8: auto-loop.sh ---
+PASS: auto-loop.sh no args → exit 1 with usage
+PASS: auto-loop.sh pre-dispatch → exit 0 + AUTO:READY
+PASS: auto-loop.sh AUTO:READY contains milestone=M001 phase=P02 task=T01
+PASS: auto-loop.sh --step=G → AUTO:RECORDED
+PASS: auto-loop.sh --step=G does not emit AUTO:ADVANCE (deferred to pre-dispatch)
+PASS: auto-loop.sh --step=G writes to execution log
+PASS: auto-loop.sh --step=G all tasks done → AUTO:RECORDED only (no PHASE_COMPLETE)
+PASS: auto-loop.sh with pause-requested → exit 11
+PASS: auto-loop.sh complete milestone → exit 10
+PASS: auto-loop.sh --step=G missing args → exit 1
+PASS: auto-loop.sh has #!/usr/bin/env bash and set -euo pipefail
+PASS: auto-loop.sh is executable (-x)
+
+100/100 checks passed
+SUITE_PASS: tests/test-s05-autonomous-mode.sh
+
+--- tests/test-s06-knowledge-lifecycle.sh ---
+
+--- Section 1: Knowledge Scripts ---
+PASS: write-summary.sh task type → SUMMARY: task T01 written (exit 0)
+PASS: write-summary.sh task frontmatter has ≥15 fields (got 16)
+PASS: write-summary.sh phase type → SUMMARY: phase P01 written (exit 0)
+PASS: write-summary.sh phase frontmatter has ≥16 fields (got 17)
+PASS: write-summary.sh milestone type → SUMMARY: milestone M001 written (exit 0)
+PASS: write-summary.sh milestone frontmatter has ≥16 fields (got 17)
+PASS: write-summary.sh missing field → exits non-zero (exit=1)
+PASS: write-summary.sh missing field → error names the missing field
+PASS: write-summary.sh no args → exits non-zero
+PASS: append-decision.sh → D004 appended after D001-D003
+PASS: append-decision.sh → existing D001 row unchanged (append-only)
+PASS: append-decision.sh nonexistent file → exits non-zero
+PASS: append-decision.sh empty table → D001 created
+PASS: append-knowledge.sh project scope → entry appended
+PASS: append-knowledge.sh project scope → [project] tag in file
+PASS: append-knowledge.sh milestone scope → entry appended
+PASS: append-knowledge.sh phase scope → entry appended
+PASS: append-knowledge.sh nonexistent file → exits non-zero
+PASS: append-knowledge.sh → existing entries unchanged
+
+--- Section 2: Lifecycle Scripts ---
+PASS: rollback-phase.sh → P01 rolled back (exit 0)
+PASS: rollback-phase.sh → P01-SUMMARY.md moved to archive
+PASS: rollback-phase.sh → task summaries moved to archive (3 files)
+PASS: rollback-phase.sh → downstream P02 flagged for review
+PASS: rollback-phase.sh → reversal decision D003 appended to DECISIONS.md
+PASS: rollback-phase.sh no summary → exits non-zero (exit=1)
+PASS: mark-complete.sh → M001 validated (exit 0)
+PASS: mark-complete.sh → M001-VALIDATED contains phase list
+PASS: mark-complete.sh → idempotent re-run (exit 0, already validated)
+PASS: mark-complete.sh incomplete phases → exits non-zero (exit=1)
+
+--- Section 3: Consolidation ---
+PASS: consolidate-artifacts.sh → M001 consolidated (exit 0)
+PASS: consolidate-artifacts.sh → task plans/summaries archived (12 files)
+PASS: consolidate-artifacts.sh → phase summaries preserved
+PASS: consolidate-artifacts.sh → roadmap preserved
+PASS: consolidate-artifacts.sh → DECISIONS.md and KNOWLEDGE.md preserved
+PASS: consolidate-artifacts.sh → ≥60% reduction achieved (87%)
+PASS: consolidate-artifacts.sh → reports reduction to stderr
+PASS: consolidate-artifacts.sh incomplete → exits non-zero (exit=1)
+
+--- Section 4: Command File & Integration ---
+PASS: consolidate.md has YAML frontmatter (first line is ---)
+PASS: consolidate.md contains no 'Placeholder' text
+PASS: consolidate.md references consolidate-artifacts.sh
+PASS: consolidate.md references derive-phase.sh
+PASS: consolidate.md contains Idempotency section
+PASS: consolidate.md contains Error Handling section
+PASS: consolidate.md cross-ref: scripts/knowledge/consolidate-artifacts.sh exists and is executable
+PASS: consolidate.md cross-ref: scripts/state/derive-phase.sh exists and is executable
+PASS: consolidate.md cross-ref: scripts/state/read-roadmap.sh exists and is executable
+PASS: consolidate.md cross-ref: templates/milestone-summary.md exists
+PASS: scripts/knowledge/write-summary.sh exists and is executable
+PASS: scripts/knowledge/append-decision.sh exists and is executable
+PASS: scripts/knowledge/append-knowledge.sh exists and is executable
+PASS: scripts/knowledge/consolidate-artifacts.sh exists and is executable
+PASS: scripts/lifecycle/rollback-phase.sh exists and is executable
+PASS: scripts/lifecycle/mark-complete.sh exists and is executable
+PASS: all 6 S06 scripts exist on disk and are executable
+PASS: write-summary.sh usage error includes 'usage'
+PASS: rollback-phase.sh error on missing phase mentions 'summary' or 'not found'
+PASS: append-decision.sh error on nonexistent file has descriptive message
+
+57/57 checks passed
+SUITE_PASS: tests/test-s06-knowledge-lifecycle.sh
+
+--- tests/test-s07-integration.sh ---
+
+--- Section 2: Cross-Reference Validation ---
+PASS: all script paths referenced in commands exist on disk
+PASS: all template paths referenced in commands exist on disk
+PASS: no command files contain stub placeholder markers
+PASS: all command files have YAML frontmatter
+
+--- Section 3: Runtime Capability Detection ---
+PASS: detect-capabilities.sh exits 0 (text format)
+PASS: text output contains shell_execution=true
+PASS: text output contains runtime=local (not in CI)
+PASS: detect-capabilities.sh --format json exits 0
+PASS: JSON output contains all 7 expected capability keys
+PASS: JSON output has shell_execution: true
+
+--- Section 4: Failure Diagnostics ---
+PASS: all fail() messages include file paths or contract identifiers
+
+--- Section 5: Idempotency Tests ---
+PASS: roadmap.md contains overwrite protection with confirmation language (FR-066)
+PASS: verify.md contains cached result language (FR-066)
+PASS: verify.md documents --force flag for re-verification
+PASS: dispatch.md contains SUMMARY.md skip/no-op language (FR-066)
+Scaffolded M001 at /var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/tmp.rJzNThCJlF/milestones/M001
+Milestone M001 already scaffolded
+PASS: scaffold.sh idempotent re-run produces identical md5 sums (FR-066)
+PASS: resume.md documents idempotency/re-callable behavior (FR-066)
+
+17/17 checks passed
+SUITE_PASS: tests/test-s07-integration.sh
+
+--- tests/test-s08-auto-safety.sh ---
+=== Test Suite S08: Autonomous Execution Safety ===
+
+--- Section 1: No command substitution in auto.md bash blocks ---
+PASS: auto.md has no $(bash ...) command substitution in code blocks
+PASS: auto.md bash blocks are free of command substitution
+PASS: auto.md uses --output-file pattern for output capture
+
+--- Section 2: No inline loops in auto.md bash blocks ---
+PASS: auto.md bash blocks have no inline for/while loops
+PASS: auto.md bash blocks have no inline if-then blocks
+
+--- Section 3: No /tmp writes in command bash blocks ---
+PASS: auto.md bash blocks have no /tmp writes
+PASS: evaluate.md bash blocks have no /tmp writes
+
+--- Section 4: No destructive rm in command bash blocks ---
+PASS: auto.md bash blocks have no rm -rf
+PASS: evaluate.md bash blocks have no rm -rf
+PASS: dispatch.md bash blocks have no rm -rf
+
+--- Section 5: --output-file support in key scripts ---
+PASS: auto-loop.sh pre-dispatch writes to --output-file
+PASS: auto-loop.sh --step=V writes AUTO:VERIFY to --output-file
+PASS: auto-loop.sh --step=X writes CONTEXT: to --output-file
+PASS: auto-loop.sh without --output-file still writes to stdout
+
+--- Section 6: Helper scripts ---
+PASS: detect-milestone-id.sh returns M001 from fixture
+PASS: check-plan-exists.sh detects existing plan
+PASS: check-plan-exists.sh detects missing plan
+PASS: evaluate-preflight.sh exists and is executable
+
+--- Section 7: classify-command.sh classifications ---
+PASS: classify: AUTO_SAFE for 'bash scripts/lifecycle/auto-loop.sh dir'
+PASS: classify: AUTO_SAFE for 'bash scripts/lifecycle/lock-manager.sh status file.lock'
+PASS: classify: AUTO_SAFE for 'test -f scripts/lifecycle/scaffold.sh'
+PASS: classify: AUTO_SAFE for 'bash scripts/util/check-plan-exists.sh dir P01'
+PASS: classify: AUTO_SAFE for 'bash scripts/util/detect-milestone-id.sh dir'
+PASS: classify: APPROVAL_REQUIRED for 'output=$(bash script.sh)'
+PASS: classify: APPROVAL_REQUIRED for 'rm -rf /tmp/test'
+PASS: classify: APPROVAL_REQUIRED for 'cat /tmp/file.json'
+PASS: classify: FORBIDDEN_IN_AUTO for 'eval "$cmd"'
+PASS: classify: FORBIDDEN_IN_AUTO for 'bash -c 'source lib.sh''
+
+--- Section 8: AD-19 plan linter ---
+PASS: check-plans.sh reports ok for clean plan
+PASS: check-plans.sh detects risky bash -c pattern
+
+--- Section 9: phase-transition.sh --body-file and --output-file ---
+PASS: phase-transition.sh supports --body-file option
+PASS: phase-transition.sh supports --output-file option
+
+--- Section 10: auto.md compound command audit ---
+PASS: auto.md bash blocks have no complex && chains
+PASS: auto.md bash blocks have no complex pipe chains
+PASS: auto.md actionable bash blocks have no subshell expressions
+
+=== Summary ===
+35/35 checks passed
+SUITE_PASS: tests/test-s08-auto-safety.sh
+
+ALL_SUITES_PASS

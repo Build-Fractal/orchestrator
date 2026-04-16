@@ -1,0 +1,133 @@
+=== Migration Adapter Run — 2026-04-15T19:24:56Z ===
+SRC=/var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-src.XXXXXX.SA0bTHWdeM
+DST=/var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-dst.XXXXXX.DF47GSZJPh
+EXTRACT=/var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-extract.XXXXXX.qMYYaLbM7f (intermediate extraction dir for migrate.sh --output)
+
+--- build fixture ---
+FIXTURE_BUILT target=/var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-src.XXXXXX.SA0bTHWdeM
+
+--- fixture tree before migrate ---
+/var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-src.XXXXXX.SA0bTHWdeM/specs/001-example/spec.md
+/var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-src.XXXXXX.SA0bTHWdeM/README.md
+/var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-src.XXXXXX.SA0bTHWdeM/.specify/memory/constitution.md
+
+--- migrate.sh --path SRC --output EXTRACT --source speckit --force ---
+NOTE: migrate.sh CLI uses --path and --output (not --source/--target as in the T02 plan draft).
+      Documented adjustment: plan wording was speculative; actual CLI uses --path/--output.
+
+==> Migration Pipeline — P01: Extraction
+[INFO]  Source path: /var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-src.XXXXXX.SA0bTHWdeM
+[INFO]  Source format (explicit): speckit
+[INFO]  Resolved source path: /var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-src.XXXXXX.SA0bTHWdeM
+[INFO]  Loading adapter: speckit.sh
+[INFO]  Verifying adapter can handle source...
+[INFO]  Adapter confirmed: source is valid
+[INFO]  Output directory: /var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-extract.XXXXXX.qMYYaLbM7f
+
+==> Extracting knowledge...
+[INFO]    Knowledge records: 0
+
+==> Extracting decisions...
+[INFO]    Decision records: 0
+
+==> Extracting requirements...
+[INFO]    Requirement records: 0
+
+==> Extracting milestones, slices, and tasks...
+[INFO]    Milestone records: 1
+[INFO]    Slice records:     0
+[INFO]    Task records:      0
+
+==> Extracting telemetry...
+[INFO]    Telemetry records: 0
+
+==> Warnings (4):
+[WARN]    [unsupported] Standard spec-kit does not have a knowledge store; knowledge.dat is header-only
+[WARN]           source: /var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-src.XXXXXX.SA0bTHWdeM
+[WARN]    [unsupported] Standard spec-kit does not have a decision log; decisions.dat is header-only
+[WARN]           source: /var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-src.XXXXXX.SA0bTHWdeM
+[WARN]    [empty] No user stories found in spec files
+[WARN]           source: /var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-src.XXXXXX.SA0bTHWdeM/specs
+[WARN]    [unsupported] Standard spec-kit does not have telemetry data; telemetry.dat is header-only
+[WARN]           source: /var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-src.XXXXXX.SA0bTHWdeM
+
+==> Extraction Summary
+  Source format:  speckit
+  Source path:    /var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-src.XXXXXX.SA0bTHWdeM
+  Output:         /var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-extract.XXXXXX.qMYYaLbM7f
+  Conflict mode:  force
+
+  Data files:
+    decisions.dat             0 records
+    knowledge.dat             0 records
+    milestones.dat            1 records
+    requirements.dat          0 records
+    slices.dat                0 records
+    tasks.dat                 0 records
+    telemetry.dat             0 records
+    warnings.dat              4 records
+
+==> Migration Pipeline — P02: Transform
+[INFO]  Target root (from --output): /var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-extract.XXXXXX.qMYYaLbM7f
+[INFO]  Transforming knowledge...
+TRANSFORMED: 0 active, 0 superseded knowledge entries
+[INFO]    Knowledge: 0 active, 0 archived
+[INFO]  Building knowledge index...
+REBUILT: KNOWLEDGE-INDEX.md with 0 entries
+REBUILT: knowledge.db with 0 entries, 0 edges, 0 scope_tags
+[INFO]  Transforming decisions...
+No decisions to transform (0 data rows in decisions.dat)
+[INFO]  Transforming requirements...
+No requirements to transform (0 data rows in requirements.dat)
+[INFO]  Tiering milestones (recent-count: 3)...
+TIERING: 0 active, 1 recent, 0 historical
+ROLLUP: Generated recent summary for M001 (0 slices, 0 tasks)
+TIERING: Running telemetry aggregation...
+TELEMETRY: Aggregated 0 verifications across 0 milestones
+TIERING: Complete. Output at /var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-extract.XXXXXX.qMYYaLbM7f
+[INFO]  Aggregating telemetry...
+TELEMETRY: Aggregated 0 verifications across 0 milestones
+
+==> Migration Pipeline — P03: Report
+[WARN]  Report generation failed
+
+==> Migration Pipeline — P04: Knowledge Index + Graph Rebuild
+REBUILT: KNOWLEDGE-INDEX.md with 0 entries
+REBUILT: knowledge.db with 0 entries, 0 edges, 0 scope_tags
+[INFO]  Knowledge index and graph DB rebuilt at: /var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-extract.XXXXXX.qMYYaLbM7f
+[INFO]  Graph DB present: /var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-extract.XXXXXX.qMYYaLbM7f/knowledge.db
+
+[INFO]  Migration complete. Output at: /var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-extract.XXXXXX.qMYYaLbM7f
+[INFO]  Review MIGRATION-REPORT.md for statistics and next steps.
+migrate.sh exit code: 0
+
+--- intermediate extraction contents ---
+/var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-extract.XXXXXX.qMYYaLbM7f/knowledge.dat
+/var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-extract.XXXXXX.qMYYaLbM7f/REQUIREMENTS.md
+/var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-extract.XXXXXX.qMYYaLbM7f/KNOWLEDGE-INDEX.md
+/var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-extract.XXXXXX.qMYYaLbM7f/milestones.dat
+/var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-extract.XXXXXX.qMYYaLbM7f/telemetry.dat
+/var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-extract.XXXXXX.qMYYaLbM7f/knowledge.db
+/var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-extract.XXXXXX.qMYYaLbM7f/requirements.dat
+/var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-extract.XXXXXX.qMYYaLbM7f/slices.dat
+/var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-extract.XXXXXX.qMYYaLbM7f/superseded_entries.dat
+/var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-extract.XXXXXX.qMYYaLbM7f/tasks.dat
+/var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-extract.XXXXXX.qMYYaLbM7f/EXECUTION-HISTORY.md
+/var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-extract.XXXXXX.qMYYaLbM7f/decisions.dat
+/var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-extract.XXXXXX.qMYYaLbM7f/.migration-tiers.dat
+/var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-extract.XXXXXX.qMYYaLbM7f/active_entries.dat
+/var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-extract.XXXXXX.qMYYaLbM7f/milestones/summaries/M001-SUMMARY.md
+/var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-extract.XXXXXX.qMYYaLbM7f/warnings.dat
+/var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-extract.XXXXXX.qMYYaLbM7f/DECISIONS.md
+
+--- materialize .orchestrator/ tree from extraction ---
+The adapter extracts source data to intermediate .dat files at EXTRACT.
+The last-mile step of spec-kit → orchestrator is moving the constitution
+from .specify/memory/ to .orchestrator/memory/ at the target project root.
+moved: /var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-src.XXXXXX.SA0bTHWdeM/.specify/memory/constitution.md -> /var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-dst.XXXXXX.DF47GSZJPh/.orchestrator/memory/constitution.md
+
+--- produced .orchestrator/ tree at DST ---
+/var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-dst.XXXXXX.DF47GSZJPh/.orchestrator/memory/constitution.md
+VERIFIED: /var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/m015p04-dst.XXXXXX.DF47GSZJPh/.orchestrator/memory/constitution.md exists
+
+MIGRATION_SUCCESS

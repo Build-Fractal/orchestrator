@@ -443,10 +443,11 @@ bash scripts/knowledge/write-summary.sh milestone <milestone-dir>/<M###>-SUMMARY
   --drill_down_paths="<paths to phase summaries>" \
   --duration=<total milestone duration from execution log> \
   --verification_result=pass \
-  --completed_at=<ISO-8601 timestamp> \
   --observability_surfaces="<metrics or logs if applicable>" \
   --body="<synthesized summary: what was built across all phases, cross-cutting patterns, verification results>"
 ```
+
+> **Note**: `--completed_at` is optional — omit it to default to the current UTC timestamp. Do NOT use `$(date ...)` or backtick substitution to generate timestamps. This triggers the harness command-substitution safety prompt and blocks autonomous execution.
 
 Do NOT write milestone summaries freeform. After writing, compress knowledge into milestone-scoped KNOWLEDGE.md entries using `append-knowledge.sh`. For each key pattern or lesson from the milestone, run:
 

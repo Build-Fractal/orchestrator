@@ -2,14 +2,22 @@
 
 Remaining milestones, in execution order:
 
-1. **M009 — Launch & Ecosystem** *(next)* — README, examples, contributor pipeline, release infra
+1. **M016 — Autonomous Hardening** *(active)* — eliminate Claude Code safety prompts from auto mode; write-summary.sh API fix, run-suite.sh wrapper, anti-pattern linter, settings promotion
 2. **M011 — Spec Management** — ingest-a-spec; specs stored as knowledge chunks
 3. **M012 — Spec Wiki** — MkDocs + Giscus comments; stakeholder-readable site
 4. **M013 — GitHub Native Integration** — Issues/Milestones/Projects sync, UAT loop
 5. **M014 — Comment→Workflow Automation** — classify/auto-apply wiki+GH comments
-6. **M010 — Cloud Dispatch** — Managed Agents backend; pull forward if Managed Agents GAs earlier
+6. **M017 — Conversus Deliberation Gate** — opt-in multi-agent review at hook lifecycle points; intensity engine auto-detects when generation-evaluation gap warrants deliberation; constitution-grounded arbitration
+7. **M009 — Launch & Ecosystem** — README, examples, contributor pipeline, release infra
+8. **M010 — Cloud Dispatch** — Managed Agents backend; pull forward if Managed Agents GAs earlier
 
-**Why M010 moved to the tail:** Anthropic Managed Agents is not yet broadly available. Meanwhile M011–M013 unblock the team's end-to-end spec→review→work loop, which is the current bottleneck on day-to-day usability. M010's only technical prerequisite (the M008 P03 dispatch adapter) is already in place, so reordering carries no rework cost. See `DECISIONS.md` D004.
+**Why M016 first:** Autonomous mode credibility is load-bearing — zero-prompt auto runs must work before anything else ships.
+
+**Why dogfooding (M011–M014) before launch (M009):** The team needs end-to-end spec→wiki→GitHub usability before producing external-facing launch artifacts. Dogfooding will surface the rough edges M009's docs need to address. See `DECISIONS.md` D006.
+
+**Why M017 after M014 and before M009:** M017 is opt-in with no hard dep from M011–M014. Positioned after the spec management block so dogfooding lessons inform whether deliberation is valuable at spec-quality judgment points. Can float earlier or later without rework. See `DECISIONS.md` D005.
+
+**Why M010 at the tail:** Anthropic Managed Agents is not yet broadly available. See `DECISIONS.md` D004.
 
 ---
 

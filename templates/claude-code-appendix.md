@@ -38,9 +38,10 @@ bash scripts/knowledge/write-summary.sh task <output-file> \
   --drill_down_paths="plans/T##.md" \
   --duration=25m \
   --verification_result=pass \
-  --completed_at={{ISO-8601-TIMESTAMP}} \
   --body="Summary body text describing what was done and why."
 ```
+
+`--completed_at` is optional — omit it to default to the current UTC timestamp. Do NOT use `$(date ...)` or backtick substitution to generate timestamps; this triggers Claude Code's command-substitution safety prompt and blocks autonomous execution.
 
 Auto-set fields: `schema_version` (1.0), `type` (task-summary).
 
@@ -74,8 +75,10 @@ When running in autonomous mode (`speckit.orchestrator.auto`), the mechanical lo
 ### Pre-Dispatch (Stage 1)
 
 ```bash
-output=$(bash scripts/lifecycle/auto-loop.sh <milestone-dir>)
+bash scripts/lifecycle/auto-loop.sh <milestone-dir> --output-file=<milestone-dir>/auto-loop-result.txt
 ```
+
+Then read `<milestone-dir>/auto-loop-result.txt`. Do NOT use `output=$(bash ...)` — command substitution triggers the harness safety prompt.
 
 Outputs `AUTO:READY milestone=M### phase=P## task=T## payload_bytes=N payload_file=<path>` on success. The `payload_file` contains the fully assembled dispatch payload — read it and pass it directly as the Agent tool prompt. Do NOT manually assemble payloads by reading task plans, upstream summaries, knowledge, and decisions yourself.
 

@@ -184,6 +184,15 @@ handle_template() {
       printf -- '- **Duration Budget**: %s\n' "${SH_DURATION_BUDGET:-2h}"
       printf -- '- **Dispatch Budget**: %s\n' "${SH_DISPATCH_BUDGET:-3}"
       printf -- '- **Budget Enforcement**: %s\n' "${SH_BUDGET_ENFORCEMENT:-warn}"
+      printf '\n### Prohibited inline bash patterns\n\n'
+      printf 'The following patterns trigger Claude Code safety prompts and MUST NOT\n'
+      printf 'appear in Bash tool calls. See AP-004 in ANTIPATTERNS.md for details.\n\n'
+      printf -- '- **Command substitution**: Do not use $(cmd) or backtick substitution.\n'
+      printf -- '  Use --output-file flags or omit dynamic values (e.g., omit --completed_at).\n'
+      printf -- '- **Brace expansion**: Do not use {a,b} patterns.\n'
+      printf -- '  Pass explicit arguments instead.\n'
+      printf -- '- **Compound chains**: Do not chain commands with && || ; or pipes.\n'
+      printf -- '  Use wrapper scripts (e.g., bash scripts/verify/run-suite.sh).\n'
       ;;
     *)
       printf 'section-handlers: unknown template section: %s\n' "$section_name" >&2

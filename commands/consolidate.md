@@ -39,10 +39,10 @@ For each phase listed, confirm `<milestone-dir>/phases/<P##>/<P##>-SUMMARY.md` e
 Run state derivation to confirm the milestone is in `completing` or `complete` state:
 
 ```bash
-state=$(bash scripts/state/derive-phase.sh <milestone-dir>)
+bash scripts/state/derive-phase.sh <milestone-dir>
 ```
 
-If the state is not `completing` or `complete`, stop and inform the developer.
+Read the stdout output directly. If the returned state is not `completing` or `complete`, stop and inform the developer.
 
 ### Step 2 — Run Consolidation
 

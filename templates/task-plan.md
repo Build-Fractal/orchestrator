@@ -39,6 +39,7 @@ depends_on: [{{upstream_task_ids}}]
      Required form:
        bash scripts/verify/<phase>-<task>-<name>.sh
        bash scripts/verify/check-must-haves.sh <phase-dir>
+       bash scripts/verify/run-suite.sh <milestone> <phase>
 
      Forbidden forms:
        ( . scripts/lib/errors.sh && fn arg )

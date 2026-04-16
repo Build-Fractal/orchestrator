@@ -6,7 +6,8 @@
 #
 # Required fields for task: id, parent, milestone, provides, requires, affects,
 #   key_files, key_decisions, patterns_established, drill_down_paths,
-#   duration, verification_result, completed_at, body
+#   duration, verification_result, body
+# Optional fields: completed_at (defaults to current UTC; accepts "now" sentinel or ISO-8601)
 # Phase/milestone add: observability_surfaces
 #
 # Auto-set fields: schema_version (1.0), type (from arg)
@@ -32,7 +33,10 @@ Example:
     --affects=P02 --key_files=scripts/foo.sh --key_decisions=D001 \
     --patterns_established="file presence" --drill_down_paths=plans/T01.md \
     --duration=25m --verification_result=pass \
-    --completed_at=2026-03-19T14:30:00Z --body="Summary body text here"
+    --body="Summary body text here"
+
+  --completed_at is optional. Omit it to default to now, or pass --completed_at=now.
+  Explicit ISO-8601 values (e.g., --completed_at=2026-03-19T14:30:00Z) are also accepted.
 EOF
   exit 1
 }
@@ -106,9 +110,9 @@ lookup_field() {
 }
 
 # Define required fields per type
-TASK_FIELDS="id parent milestone provides requires affects key_files key_decisions patterns_established drill_down_paths duration verification_result completed_at body"
-PHASE_FIELDS="id parent milestone provides requires affects key_files key_decisions patterns_established drill_down_paths duration verification_result completed_at observability_surfaces body"
-MILESTONE_FIELDS="id parent milestone provides requires affects key_files key_decisions patterns_established drill_down_paths duration verification_result completed_at observability_surfaces body"
+TASK_FIELDS="id parent milestone provides requires affects key_files key_decisions patterns_established drill_down_paths duration verification_result body"
+PHASE_FIELDS="id parent milestone provides requires affects key_files key_decisions patterns_established drill_down_paths duration verification_result observability_surfaces body"
+MILESTONE_FIELDS="id parent milestone provides requires affects key_files key_decisions patterns_established drill_down_paths duration verification_result observability_surfaces body"
 
 case "$SUMMARY_TYPE" in
   task) REQUIRED_FIELDS="$TASK_FIELDS" ;;
@@ -126,6 +130,14 @@ for field in $REQUIRED_FIELDS; do
   fi
 done
 
+# Handle completed_at: optional, defaults to now
+f_completed_raw=$(lookup_field "completed_at") || true
+if [ -z "$f_completed_raw" ] || [ "$f_completed_raw" = "now" ]; then
+  f_completed=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+else
+  f_completed="$f_completed_raw"
+fi
+
 # Extract field values
 f_id=$(lookup_field "id") || true
 f_parent=$(lookup_field "parent") || true
@@ -139,7 +151,6 @@ f_patterns=$(lookup_field "patterns_established") || true
 f_drilldown=$(lookup_field "drill_down_paths") || true
 f_duration=$(lookup_field "duration") || true
 f_verif=$(lookup_field "verification_result") || true
-f_completed=$(lookup_field "completed_at") || true
 f_body=$(lookup_field "body") || true
 
 # Build the output

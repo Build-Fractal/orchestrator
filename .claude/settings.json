@@ -1,7 +1,7 @@
 {
   "_generated_by": "speckit-orchestrator",
-  "_generated_at": "2026-04-15T11:47:12Z",
-  "_autonomy_mode": "standard",
+  "_generated_at": "2026-04-16T00:48:21Z",
+  "_autonomy_mode": "full",
   "permissions": {
     "defaultMode": "acceptEdits",
     "deny": [
@@ -117,7 +117,41 @@
       "Bash(case *)",
       "Bash([ *)",
       "Bash([[ *)",
-      "Bash(test *)"
+      "Bash(test *)",
+      "Bash(sed *)",
+      "Bash(/usr/bin/sed *)",
+      "Bash(awk *)",
+      "Bash(grep *)",
+      "Bash(wc *)",
+      "Bash(chmod *)",
+      "Bash(mkdir *)",
+      "Bash(touch *)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(mv *)",
+      "Bash(cp *)",
+      "Bash(find *)",
+      "Bash(sort *)",
+      "Bash(uniq *)",
+      "Bash(tr *)",
+      "Bash(cut *)",
+      "Bash(diff *)",
+      "Bash(mktemp *)",
+      "Bash(mktemp)",
+      "Bash(date *)",
+      "Bash(date)",
+      "Bash(ls *)",
+      "Bash(ls)",
+      "Bash(rm *)",
+      "Bash(tee *)",
+      "Bash(xargs *)",
+      "Bash(printf *)",
+      "Bash(read *)",
+      "Bash(dirname *)",
+      "Bash(basename *)",
+      "Bash(realpath *)",
+      "Bash(stat *)"
     ]
   }
 }

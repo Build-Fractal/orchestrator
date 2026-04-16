@@ -10,7 +10,7 @@ A standalone autonomous multi-phase orchestrator. This repo holds the orchestrat
 
 ## Forward Roadmap (revised 2026-04-15)
 
-Remaining milestones execute in this order: **M015 (finishing) → M009 → M011 → M012 → M013 → M014 → M010**. M010 (Cloud Dispatch / Managed Agents) was moved from directly-after-M009 to the tail because Managed Agents is not yet broadly available, and the team needs the end-to-end spec→wiki→GitHub loop (M011–M013) first. M010 can be pulled forward if Managed Agents GAs earlier — its only technical prerequisite (M008 P03 dispatch adapter) is already in place. See `.orchestrator/DECISIONS.md` D004 and `.orchestrator/milestone-summary.md` for details.
+Remaining milestones execute in this order: **M016 (active) → M011 → M012 → M013 → M014 → M017 → M009 → M010**. Dogfooding the spec→wiki→GitHub loop (M011–M014) comes before external launch (M009) so internal usage surfaces the gaps that launch docs need to address. M017 (Conversus Deliberation Gate) floats after the spec management block. M010 (Cloud Dispatch) stays at the tail, gated on Managed Agents availability. See `.orchestrator/DECISIONS.md` D004/D005/D006 and `.orchestrator/milestone-summary.md` for details.
 
 ## Standalone Mode
 

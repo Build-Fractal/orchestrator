@@ -1,0 +1,109 @@
+# tests/fixtures/m021-prompt-corpus.txt
+# Permanent regression corpus for M021 SC-1.
+# 20 verbatim Bash tool-call strings extracted from M011/P05-P07 screenshots.
+# Each entry: ID / SCREENSHOT / INPUT / EXPECTED_OUTCOME.
+# Entries separated by '---' lines. Newlines in INPUT encoded as literal '\n'.
+# Grammar of EXPECTED_OUTCOME: allow | rewrite:<result> | reject:<pattern-class>
+# Source: .orchestrator/milestones/M021/M021-CONTEXT.md AD-5.
+# Do not reorder or renumber — replay-prompt-corpus.sh preserves ID->SCREENSHOT traceability.
+---
+ID: 01
+SCREENSHOT: M011/P05 screenshot 1 of 7 — bash probe heredoc
+INPUT: cat > /tmp/m011-p05-probe.sh <<EOF\nexit 0\nEOF\nbash /tmp/m011-p05-probe.sh
+EXPECTED_OUTCOME: rewrite:bash scripts/util/run-probe.sh /tmp/m011-p05-probe.sh
+---
+ID: 02
+SCREENSHOT: M011/P05 screenshot 2 of 7 — sed range read over spec.md
+INPUT: sed -n '10,20p' specs/011-ingest-a-spec/spec.md
+EXPECTED_OUTCOME: rewrite:bash scripts/util/read-range.sh specs/011-ingest-a-spec/spec.md 10 20
+---
+ID: 03
+SCREENSHOT: M011/P05 screenshot 3 of 7 — trailing RC echo on verify suite
+INPUT: bash scripts/verify/run-suite.sh m011 P05 ; echo "RC=$?"
+EXPECTED_OUTCOME: rewrite:bash scripts/verify/run-suite.sh m011 P05
+---
+ID: 04
+SCREENSHOT: M011/P05 screenshot 4 of 7 — cd-and-bash into phase dir
+INPUT: cd .orchestrator && bash scripts/state/derive-phase.sh
+EXPECTED_OUTCOME: rewrite:bash scripts/state/derive-phase.sh
+---
+ID: 05
+SCREENSHOT: M011/P05 screenshot 5 of 7 — VAR=val bash prefix on ingest script
+INPUT: CONVERSUS_TIER=B bash scripts/ingest/parse-spec.sh specs/011-ingest-a-spec/spec.md
+EXPECTED_OUTCOME: rewrite:bash scripts/util/with-env.sh CONVERSUS_TIER=B -- bash scripts/ingest/parse-spec.sh specs/011-ingest-a-spec/spec.md
+---
+ID: 06
+SCREENSHOT: M011/P05 screenshot 6 of 7 — redirect to command-sub mktemp
+INPUT: bash scripts/ingest/normalize.sh > "$(mktemp)"
+EXPECTED_OUTCOME: rewrite:bash scripts/util/read-range.sh
+---
+ID: 07
+SCREENSHOT: M011/P05 screenshot 7 of 7 — plain allow read of fixture
+INPUT: cat tests/fixtures/ingest-sample/spec.md
+EXPECTED_OUTCOME: allow
+---
+ID: 08
+SCREENSHOT: M011/P06 screenshot 1 of 7 — nested command substitution in diagnostic
+INPUT: echo $(date $(hostname))
+EXPECTED_OUTCOME: reject:nested-cmd-sub
+---
+ID: 09
+SCREENSHOT: M011/P06 screenshot 2 of 7 — three-stage pipe across verify scripts
+INPUT: bash scripts/verify/check-wiki.sh | bash scripts/verify/check-giscus.sh | bash scripts/verify/check-github.sh
+EXPECTED_OUTCOME: reject:compound-chain-gt2
+---
+ID: 10
+SCREENSHOT: M011/P06 screenshot 3 of 7 — heredoc with $HOME expansion
+INPUT: cat <<EOF\necho $HOME\nEOF
+EXPECTED_OUTCOME: reject:heredoc-with-expansion
+---
+ID: 11
+SCREENSHOT: M011/P06 screenshot 4 of 7 — awk with quoted brace literal
+INPUT: awk "BEGIN{print 42}" /dev/null
+EXPECTED_OUTCOME: reject:quoted-brace
+---
+ID: 12
+SCREENSHOT: M011/P06 screenshot 5 of 7 — second sed range read over plan
+INPUT: sed -n '1,50p' .orchestrator/milestones/M011/phases/P06/P06-PLAN.md
+EXPECTED_OUTCOME: rewrite:bash scripts/util/read-range.sh .orchestrator/milestones/M011/phases/P06/P06-PLAN.md 1 50
+---
+ID: 13
+SCREENSHOT: M011/P06 screenshot 6 of 7 — two KEY=VAL prefix on wiki builder
+INPUT: WIKI_OUT=/tmp/wiki DRY_RUN=1 bash scripts/wiki/build-index.sh
+EXPECTED_OUTCOME: rewrite:bash scripts/util/with-env.sh WIKI_OUT=/tmp/wiki DRY_RUN=1 -- bash scripts/wiki/build-index.sh
+---
+ID: 14
+SCREENSHOT: M011/P06 screenshot 7 of 7 — three-stage && chain across auto-loop
+INPUT: bash scripts/auto/budget-check.sh && bash scripts/auto/dispatch.sh && bash scripts/auto/verify.sh
+EXPECTED_OUTCOME: reject:compound-chain-gt2
+---
+ID: 15
+SCREENSHOT: M011/P07 screenshot 1 of 6 — conversus adapter heredoc probe
+INPUT: cat > /tmp/m011-p07-conversus.sh <<EOF\nset -e\necho ready\nEOF\nbash /tmp/m011-p07-conversus.sh
+EXPECTED_OUTCOME: rewrite:bash scripts/util/run-probe.sh /tmp/m011-p07-conversus.sh
+---
+ID: 16
+SCREENSHOT: M011/P07 screenshot 2 of 6 — cd into specs dir then bash
+INPUT: cd specs/011-ingest-a-spec && bash ../../scripts/ingest/validate.sh
+EXPECTED_OUTCOME: rewrite:bash ../../scripts/ingest/validate.sh
+---
+ID: 17
+SCREENSHOT: M011/P07 screenshot 3 of 6 — plain allow 2-stage && (under threshold)
+INPUT: bash scripts/verify/run-suite.sh m011 P07 && bash scripts/knowledge/rebuild-index.sh
+EXPECTED_OUTCOME: allow
+---
+ID: 18
+SCREENSHOT: M011/P07 screenshot 4 of 6 — plain allow ls of adapters tree
+INPUT: ls scripts/dispatch/adapters/
+EXPECTED_OUTCOME: allow
+---
+ID: 19
+SCREENSHOT: M011/P07 screenshot 5 of 6 — trailing RC echo on anti-pattern lint
+INPUT: bash scripts/verify/anti-pattern-lint.sh ; echo "RC=$?"
+EXPECTED_OUTCOME: rewrite:bash scripts/verify/anti-pattern-lint.sh
+---
+ID: 20
+SCREENSHOT: M011/P07 screenshot 6 of 6 — plain allow cat of conversus config
+INPUT: cat .orchestrator/config.yml
+EXPECTED_OUTCOME: allow
+---

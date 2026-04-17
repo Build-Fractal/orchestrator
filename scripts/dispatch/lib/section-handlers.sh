@@ -193,6 +193,18 @@ handle_template() {
       printf -- '  Pass explicit arguments instead.\n'
       printf -- '- **Compound chains**: Do not chain commands with && || ; or pipes.\n'
       printf -- '  Use wrapper scripts (e.g., bash scripts/verify/run-suite.sh).\n'
+      printf '\n### Allowed invocation shapes\n\n'
+      printf 'When an inline bash shape would otherwise trigger a safety prompt, use one\n'
+      printf 'of these canonical wrappers instead:\n\n'
+      printf -- '- `bash scripts/util/with-env.sh KEY=VALUE [KEY=VALUE ...] -- <command> [args ...]`\n'
+      printf '  -- Replaces `KEY=VALUE bash cmd` inline-assignment prefixes.\n'
+      printf -- '- `bash scripts/util/read-range.sh <file> <M> <N>`\n'
+      printf '  -- Replaces `sed -n '"'"'M,Np'"'"' <file>` line-range reads.\n'
+      printf -- '- `bash scripts/util/run-probe.sh <path-to-staged-probe.sh>`\n'
+      printf '  -- Replaces `cat > /tmp/x.sh <<EOF ... EOF ; bash /tmp/x.sh` heredoc-and-execute.\n\n'
+      printf 'A pre-Bash hook (`scripts/hooks/pre-bash-shape-guard.sh`) auto-rewrites six\n'
+      printf 'common deviations from these shapes and hard-rejects four others with a\n'
+      printf 'wrapper-pointing diagnostic. See ANTIPATTERNS.md AP-005..AP-009.\n'
       ;;
     *)
       printf 'section-handlers: unknown template section: %s\n' "$section_name" >&2

@@ -1,0 +1,39 @@
+P03 ships the **Pre-Bash Shape Guard hook** — a PreToolUse hook that deterministically rewrites six recoverable Bash shapes into wrapper invocations or hard-rejects four shapes with a wrapper-pointing diagnostic. Together with M016's Class A linter, P02's Class B linter, and the P01 wrapper catalog, P03 converts the residual 12 M011 trigger classes from "user prompts" into either transparent rewrites or stay-in-the-loop rejections.
+
+## What Was Built
+
+- `scripts/verify/lib/shape-classifier.sh` — 532-line sourceable pure-function library. Single API: `classify_command "<cmd>"` emits `allow` | `rewrite:<new-cmd>` | `reject:<class>:<AP-ID>`. Precedence: rejects dominate rewrites; default allow. Closed 10-pattern matrix per AD-2.
+- `scripts/hooks/pre-bash-shape-guard.sh` — PreToolUse hook implementing the Claude Code hook protocol. Consumes stdin JSON, extracts `.tool_input.command` via pure-Bash sed-E, dispatches to the classifier, and emits the hook's response shape: allow → exit 0 empty stdout; rewrite → exit 0 + `{"hookSpecificOutput":{"hookEventName":"PreToolUse","updatedInput":{"command":...}}}`; reject → exit 2 + stderr diagnostic `REJECT: <class> — use scripts/util/<wrapper>.sh instead. See ANTIPATTERNS.md#<AP-ID>.` (em dash U+2014) + `{"decision":"block","reason":...}` on stdout. Fail-safe passthrough on malformed input.
+- `.claude/settings.json` — additive edit: registered PreToolUse → Bash matcher → `bash scripts/hooks/pre-bash-shape-guard.sh`; added 9 widened allow entries (`Read(/var/folders/**)`, `Bash(bash /tmp/*.sh)`, `Bash(bash /var/folders/**/*.sh)`, `Bash(ls tmp/**)`, `Bash(cat tmp/**)`, `Bash(sed -n *)`, `Bash(head *)`, `Bash(tail *)`, `Bash(stat *)`). Pre-existing 75 allow + 36 deny entries byte-identical (strict-superset invariant).
+- `scripts/dispatch/lib/section-handlers.sh` — `handle_template` constraints branch extended with an "Allowed invocation shapes" subsection naming the three P01 wrappers with usage examples.
+- `tests/hook/rewrite-cases.sh` — 6 cases (trailing-rc-echo, sed-n-range, cat-heredoc-exec, cd-and-bash, var-inline-bash, redirect-cmd-sub). Pipes synthetic stdin-JSON into the hook and asserts the emitted `updatedInput.command` verbatim. Trailing `__EXIT__=<n>` marker propagates the subshell exit code past command-substitution.
+- `tests/hook/reject-cases.sh` — 4 cases (nested-cmd-sub, compound-chain-gt2, heredoc-with-expansion, quoted-brace). Asserts exit 2 + exact UTF-8 em-dash diagnostic line + JSON body.
+- `scripts/verify/m021-p03-hook-integration.sh` — phase gate with 46 PASS assertions across six groups: classifier (14), hook protocol (3), settings (11), dispatch constraints (6), harness (2), bash32-compat (10).
+
+## Key Decisions
+
+- **Hook is live** (AD-1a): as soon as `.claude/settings.json` is reloaded, every Bash tool call passes through the classifier. This is by design and provides immediate dogfood coverage — during T03 execution alone the hook rejected at least two compound-chain shapes the agent would otherwise have emitted.
+- **Rewrite #6 (`redirect-cmd-sub`) is semantically approximate**: no mechanical transform can recover the runtime-determined target, so the rewrite emits a fixed `bash scripts/util/read-range.sh` placeholder. P04 will validate against the screenshot corpus; if mismatches surface, promote to reject.
+- **Compound `&&` threshold at >2 stages**: 2-stage `cd X && Y` passes through as `allow` (it has its own dedicated rewrite pattern); 3+ stage chains reject.
+- **BSD-sed ERE in hook + tests**: stock macOS `sed` needs `-E` for alternation groups. GNU-only BRE escaped forms produce silent failures. Variable-assembled ERE used where literal single quotes or em-dashes are needed.
+- **Pure-Bash JSON extract** (AD-1a, no jq dependency): sed-E regex extracts `.tool_input.command` and unescapes `\\` and `\"` via a sentinel pass to avoid double-unescaping.
+- **Fail-safe passthrough**: malformed JSON, missing command field, non-Bash tool → exit 0 + empty stdout. Never fails closed on parse anomalies.
+- **Rejects-dominate-rewrites precedence**: a command matching both a reject and a rewrite is rejected (the reject matrix exists because those shapes have no behavior-preserving transform).
+- **Pipe-synthetic-stdin test harness with `__EXIT__=<n>` marker**: lets the test driver capture the hook's exit code past `$(...)` without assuming a specific subshell-safe pattern.
+- **Gate self-scan uses concatenation-split forbidden literals** so the gate script's own source doesn't match its own forbidden-pattern needles during self-inspection.
+
+## Patterns Established
+
+- **Hook ↔ classifier separation** keeps the classifier pure and unit-testable; the hook owns stdin/stdout IO.
+- **Active live dogfood during execution**: the hook begins enforcing the moment T03 lands. T04/T05 execute under the live hook, providing natural regression coverage.
+- **Em-dash byte sequence `\xe2\x80\x94` via `printf`/`$'...'`** where the exact UTF-8 bytes matter.
+- **Strict-superset settings edits**: never remove pre-existing allow/deny entries; only append.
+- **PAYLOAD scope filter**: the v2 linter still returns 0 because the active-task exclusion (P02 patterns) excludes T##-PAYLOAD.md once sibling SUMMARY exists — consistent with P01/P02 behavior.
+
+## Verification Results
+
+Phase suite `bash scripts/verify/run-suite.sh m021 P03` reports PASS: 1 / FAIL: 0. Integration gate `bash scripts/verify/m021-p03-hook-integration.sh` reports 46 PASS assertions + final `PASS: m021-p03-hook-integration.sh`. Full-repo lint sweep `bash scripts/verify/anti-pattern-lint.sh` exits 0. External-modification check: no external modifications. All five task summaries present.
+
+## Downstream Impact
+
+P04 (Replay Corpus + Dogfood Attestation) consumes the classifier as its shape-decision source of truth when replaying the 20 M011/P05–P07 screenshots, asserts `WOULD_PROMPT=0/20`, and produces the milestone dogfood attestation. The hook is already live from P04's perspective — P04's own execution under the hook IS the dogfood evidence.

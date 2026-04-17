@@ -232,6 +232,69 @@ Every non-zero exit is preceded by an `emit_result error` call with the correspo
 
 ---
 
+## Agent-Facing Marker Convention
+
+The anti-pattern linter (`scripts/verify/anti-pattern-lint.sh`) enforces shape
+rules against markdown files a subagent may read as authoritative. By default
+it scans:
+
+- `commands/**/*.md`
+- `templates/**/*.md`
+- `scripts/dispatch/lib/**/*.sh`
+- `.orchestrator/milestones/**/tasks/*-PAYLOAD.md`
+
+Files under `specs/`, `references/`, and `docs/` are **excluded by default** —
+they often contain illustrative bash for human readers that would trip the
+shape heuristics without cause.
+
+To opt a specific file under `specs/`, `references/`, or `docs/` into linter
+scanning, place the literal HTML comment marker anywhere before the first
+fenced code block:
+
+```
+<!-- agent-facing -->
+```
+
+Once the marker is present, the linter sweeps that file on every run. Without
+the marker, the linter skips it even if other files in the same directory are
+opted in.
+
+### When to add the marker
+
+Add the marker to a specs/references/docs file when:
+
+- The file contains a canonical bash recipe that a subagent is expected to
+  copy verbatim into a Bash tool call (e.g., a migration guide with exact
+  commands).
+- The file is referenced from a dispatch payload or task plan as
+  "follow the steps in `docs/<file>.md`".
+
+Leave the marker off when the file is human-facing documentation, conceptual
+prose, or contains bash only to illustrate what *not* to do.
+
+### Example
+
+````markdown
+# My Runbook
+
+<!-- agent-facing -->
+
+Run these steps in order:
+
+```bash
+bash scripts/verify/run-suite.sh m999 P01
+```
+````
+
+With the marker, the fenced bash above is subject to the same Class A +
+Class B detectors that guard `commands/` and `templates/`. Without it, the
+same file is invisible to the linter.
+
+See `ANTIPATTERNS.md#AP-004` (Class A) and `AP-005` through `AP-009` (Class B)
+for the full pattern catalog and remediation wrappers.
+
+---
+
 ## Cross-References
 
 - [Architecture](architecture.md) — System architecture overview including the engine pipeline in broader context

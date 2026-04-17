@@ -1,0 +1,33 @@
+P02 ships **Linter v2** — a strict superset of the M016 Class A anti-pattern detector extended with five Class B shape heuristics matching the residual M011/P05–P07 prompt triggers, widened scope to agent-facing task-PAYLOADs and the dispatch lib, and an `<!-- agent-facing -->` marker opt-in convention for specs/references/docs.
+
+## What Was Built
+
+- `scripts/verify/anti-pattern-lint.sh` v2 — five Class B detectors (simple-expansion `[AP-005]`, redirect-cmd-sub `[AP-006]`, quoted-brace `[AP-007]`, heredoc-expansion `[AP-008]`, task-plan-compound `[AP-009]`) layered on top of M016's Class A detection with no byte-level regression on unchanged inputs. Scope widened to `scripts/dispatch/lib/**/*.sh` and `.orchestrator/milestones/**/tasks/*-PAYLOAD.md` (active-milestone + active-task filtered). Marker-gated opt-in for `specs/`, `references/`, `docs/`.
+- `ANTIPATTERNS.md` AP-005..AP-009 — five new entries with M011/P05–P07 screenshot evidence citations and remediation text naming a specific P01 wrapper (`with-env.sh` / `read-range.sh` / `run-probe.sh`).
+- `scripts/verify/m021-p02-linter-v2.sh` + 10 fixtures under `tests/fixtures/m021-p02/` — gate asserts Class A + Class B detector coverage, suppression preservation, and ANTIPATTERNS.md wrapper-citation structure. 22 PASS assertions.
+- `scripts/verify/m021-p02-linter-scope.sh` + 2 scope fixtures — gate asserts specs/references/docs exclusion with/without the marker. 10 PASS assertions.
+- `references/engine.md` — "Agent-Facing Marker Convention" subsection documenting placement, scoped directories, and the always-scanned defaults.
+
+## Key Decisions
+
+- **100× perf fix (T01)** — initial implementation forked `printf | grep -qE` per line per detector, producing ~14k subprocesses per large PAYLOAD file and hanging the full-repo sweep for minutes. Rewrote every hot-path detector to Bash 3.2 built-in `[[ =~ ]]` / `case` glob matching. Per-file latency 19s → 0.17s; full repo 5.7s → 0.45s.
+- **Active-milestone + active-task filter** — PAYLOAD scope skips closed milestones (milestone summary present) and completed tasks (sibling `TNN-SUMMARY.md` present). Prevents re-litigating 7527 historical findings while enforcing the live dispatch surface. Post-summary, the task's own PAYLOAD is also excluded — this is why each task's final full-repo lint assertion runs *after* the summary write.
+- **Variable-assembled ERE for heredoc opener** — BSD/portable regex can't reliably match a literal single quote inline; the heredoc-expansion detector assembles the ERE via variable concatenation.
+- **Fixture isolation** — all fixtures live under `tests/fixtures/m021-p02/` (outside linter default scan roots) so the main repo sweep exit 0 is preserved regardless of fixture content.
+- **Gate internals use `$()` + pipes freely** — AP-004's "Scope of enforcement" note already carves this out. Enforcement applies to inline tool-call sites; verification-script internals are not agent-facing.
+- **Four-backtick outer fence in `references/engine.md`** — the marker-convention example contains a ```` ```bash ```` fence; wrapping it in a four-backtick outer fence prevents any future marker opt-in from making the docs example trip the linter.
+
+## Patterns Established
+
+- **Built-in regex in hot linter loops** — `[[ =~ ]]` / `case` glob over `printf | grep` saves an order of magnitude on large scan surfaces.
+- **Append-only antipattern register with wrapper-citation discipline** — every Class B entry names exactly one P01 wrapper in its Remedy. Citations grounded in M011 screenshots per AD-2/AD-9.
+- **Marker-opt-in scope boundary** — `<!-- agent-facing -->` HTML-comment promotes a specs/references/docs file into the linter default sweep. Scope gate uses a synthetic mktemp tree with `specs/ references/ docs/` subdirs so PROJECT_ROOT resolves to the tempdir.
+- **Per-class fixture seed + gate** — one fixture per detector under `tests/fixtures/<milestone>-<phase>/`; gate stages task-plan-compound via a tempdir with a literal `tasks/` segment so the `*/tasks/*-PAYLOAD.md` scope predicate fires.
+
+## Verification Results
+
+Phase suite `bash scripts/verify/run-suite.sh m021 P02` reports PASS: 2 / FAIL: 0 across both P02 gates. Full-repo `bash scripts/verify/anti-pattern-lint.sh` exits 0 in ~0.45s. External-modification check: no external modifications. All four task summaries present.
+
+## Downstream Impact
+
+P03 (Pre-Bash Hook) consumes AP-005..AP-009 IDs by name in its reject diagnostics and rewrites the shapes the linter detects at edit-time into wrapper invocations at tool-call time. P04 (Replay Corpus) validates that the hook + linter together eliminate the would-prompt count across the 20 M011 screenshots.

@@ -117,7 +117,26 @@
       "Bash(case *)",
       "Bash([ *)",
       "Bash([[ *)",
-      "Bash(test *)"
+      "Bash(test *)",
+      "Read(/var/folders/**)",
+      "Bash(bash /tmp/*.sh)",
+      "Bash(bash /var/folders/**/*.sh)",
+      "Bash(ls tmp/**)",
+      "Bash(cat tmp/**)",
+      "Bash(sed -n *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(stat *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "bash scripts/hooks/pre-bash-shape-guard.sh" }
+        ]
+      }
     ]
   }
 }

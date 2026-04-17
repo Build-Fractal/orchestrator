@@ -1,0 +1,35 @@
+## What was built
+
+P04 closed M021 by turning the P01–P03 mechanism into a permanent, self-validating regression system and producing the milestone's own dogfood attestation.
+
+**T01 — Prompt corpus fixture** (`tests/fixtures/m021-prompt-corpus.txt`). 20 verbatim Bash tool-call strings sourced from M011/P05–P07 screenshots, each labelled `ID` / `SCREENSHOT` / `INPUT` / `EXPECTED_OUTCOME`. Outcome grammar is keyed byte-for-byte to `scripts/verify/lib/shape-classifier.sh` output: `allow` / `rewrite:<result>` / `reject:<pattern-class>`. Coverage: 11 rewrites (spanning all 6 rewrite pattern-classes), 5 rejects (all 4 reject pattern-classes), 4 allows. A pre-commit probe validated 20/20 byte-identical classifier alignment before the fixture was committed.
+
+**T02 — Replay gate** (`scripts/verify/replay-prompt-corpus.sh`). Two-layer regression assertion: Layer 1 sources the P03 shape-classifier library and compares `classify_command(INPUT)` to `EXPECTED_OUTCOME`; Layer 2 drives `scripts/hooks/pre-bash-shape-guard.sh` via synthetic stdin JSON and asserts rc / stdout / stderr match the classifier decision. Emits the canonical headline `WOULD_PROMPT=0/20` on success; exits 0 only if all 40 per-entry assertions pass and the entry count is 20.
+
+**T03 — Dogfood attestation gate** (`scripts/verify/m021-p04-dogfood-attestation.sh`). Read-only gate asserting that M021's own auto-execution observed zero `user_prompt` / `safety_prompt` / `hook_reject_unexpected` events in `execution-log.jsonl`, that `auto-loop-result.txt` is present and non-empty, and that every closed `P*-SUMMARY.md` records `verification_result: pass`. Tolerant of `hook_reject_recovered` events (AD-6 — those are the success signal) and self-referential-safe (passes during P04/T03 by skipping the in-flight P04 summary).
+
+**T04 — DECISIONS + ANTIPATTERNS cross-refs**. Appended `D012` to `.orchestrator/DECISIONS.md` documenting the M021-before-M019 reorder (anticipated D010 slot was consumed by M018 framing and D011 by M020 trigger criteria; D012 is the next free ID). Added `Cross-Refs` blocks under AP-005..AP-009 each citing the enforcement layer (`scripts/hooks/pre-bash-shape-guard.sh`), regression corpus (`tests/fixtures/m021-prompt-corpus.txt`), and classifier implementation (`scripts/verify/lib/shape-classifier.sh`) — append-only discipline preserved for D001..D011 and AP-001..AP-004.
+
+**T05 — Phase integration gate cluster**. Five gates — `m021-p04-corpus-shape.sh` (44 structural assertions), `m021-p04-decisions-d012.sh` (18 assertions), `m021-p04-antipatterns-crossrefs.sh` (20 assertions), `m021-p04-bash32-compat.sh` (14 assertions across all 7 P04 shell files, concatenation-split forbidden literals to prevent self-match), and `m021-p04-phase-suite.sh` (orchestrator with `M021_P04_SUITE_ACTIVE` self-recursion guard).
+
+## Key decisions
+
+- **AD-5 (locked corpus size)**: 20 entries is a hard cap. Future hook triggers earn a new milestone, not a fixture append.
+- **AD-8 (dogfood attestation)**: M021 validates itself via its own auto-execution — continuing the M016 dogfood culture.
+- **D012 > D010**: originally-anticipated D010 slot was occupied by prior milestone work; used next free ID with a provenance note for audit continuity. Constitution XV surgical-precision amendment to just the newly appended row.
+- **MEM004 gate-internals carve-out**: the agent-facing invocation shape (AD-19) applies only to how commands are *invoked*; gate script INTERNALS may use `$(...)`, pipes, and awk freely.
+- **Shape-classifier as single source of truth**: the replay corpus' EXPECTED_OUTCOME is grammar-coupled to classifier output, so classifier drift is detected the moment a new cohort changes pattern emission.
+
+## Patterns established
+
+- Permanent regression fixture with verbatim screenshot provenance and breadth-inside-fixed-coverage.
+- Literal `\n` encoding for multi-line INPUT fields with `printf '%b'` round-trip at consume-time.
+- Two-layer replay gate (pure-classifier assertion + end-to-end hook assertion per entry).
+- `WOULD_PROMPT=N/M` headline metric distinguishes leaks from plain expected-mismatch failures.
+- State-on-disk dogfood attestation (landmarks: auto-loop marker, execution-log.jsonl, phase summaries) with zero mutation.
+- Self-recursion guard via env flag for scripts discovered by their own glob.
+- Concatenation-split forbidden literals to prevent linter self-match (continues P03 pattern).
+
+## Verification result
+
+`scripts/verify/m021-p04-phase-suite.sh` PASS: 6/6 gates, 20/20 replay entries (`WOULD_PROMPT=0/20`), 3/3 dogfood-attestation checks. Repo-wide `scripts/verify/anti-pattern-lint.sh` PASS. Zero user approval prompts observed across M021/P01–P04 auto execution — the M021 success criterion.

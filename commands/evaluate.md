@@ -37,10 +37,23 @@ Record the confirmed spec path — it will be written to the evaluation output a
 Analyze the feature spec to determine the scope of work:
 
 1. **Read the feature spec** at the confirmed path.
-2. **Count structural elements**:
+2. **Count structural elements**. Prefer ingested spec chunks over regex; fall back to regex if no chunks exist:
+
+   **Chunks-first path** (when a spec has been ingested via `orchestrator:ingest`):
+
+   ```bash
+   bash scripts/state/spec-metrics.sh <orch-root>
+   ```
+
+   Parse the `key=value` lines from stdout. If `spec_chunks_present=true`, use `story_count`, `requirement_count`, and `acceptance_count` directly and record `metrics_source: spec_chunks` in the evaluation output. Non-goals are counted (`non_goal_count`) but do NOT contribute to tier classification.
+
+   **Raw-spec fallback** (when `spec_chunks_present=false`):
+
    - Number of user stories (sections with "As a…" or "US-" prefixed items)
    - Number of acceptance scenarios (AC items, "Given/When/Then" blocks)
    - Number of functional requirements (FR-### items or numbered requirements)
+
+   Record `metrics_source: raw_spec` in the evaluation output.
 3. **Estimate SDD flow count**: Determine how many complete spec-kit process flows (specify → clarify → plan → tasks → implement) the work requires:
    - **1 flow inline** = everything fits in ~1 context window
    - **1 flow, multiple contexts** = each SDD step needs its own context window, tasks dispatch separately
@@ -113,6 +126,7 @@ Write to `<milestone-dir>/M###-EVALUATION.md` with:
 - Metrics section: user story count, acceptance scenario count, functional requirement count, estimated SDD flows
 - Reasoning section: narrative explanation of why this tier was chosen
 - Complexity factors: key factors that influenced the classification
+- `metrics_source`: `spec_chunks` (counts came from ingested chunks) or `raw_spec` (counts came from regex on the raw spec)
 
 This file is the authoritative source of the tier classification and spec path for all downstream commands (`discuss`, `roadmap`, `plan-phase`, etc.).
 
@@ -179,6 +193,7 @@ This satisfies R012 (idempotent commands) — running `evaluate` twice with no i
 
 - `templates/evaluation.md` — output template for the evaluation file
 - `scripts/state/read-config.sh` — resolves configuration values including `default_tier`
+- `scripts/state/spec-metrics.sh` — counts ingested spec chunks by category; used when a spec has been ingested via `orchestrator:ingest`
 - `scripts/lifecycle/scaffold.sh` — creates orchestrator directory structure
 - `references/tier-definitions.md` — detailed tier classification criteria and decision table
 - `references/installation.md` — how to install the extension in a consumer project

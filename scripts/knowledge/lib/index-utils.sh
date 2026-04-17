@@ -167,7 +167,7 @@ next_entry_id() {
 
   local max_num=0
   if [ -f "$index_path" ]; then
-    # Extract all MEM### IDs and find the highest number
+    # Extract MEM### IDs only — SPEC- prefixed lines are excluded by the regex.
     local num
     while IFS= read -r line; do
       num=$(echo "$line" | grep -oE '^MEM[0-9]+' | sed 's/MEM//')
@@ -182,12 +182,13 @@ next_entry_id() {
     done < "$index_path"
   fi
 
-  # Also scan detail files in case index is out of date
+  # Scan detail files for MEM### IDs only. SPEC- prefixed files are excluded
+  # by the MEM*.md glob — they never affect the MEM### auto-increment sequence.
   local root
   root="$(get_project_root)"
   if [ -d "$root/knowledge" ]; then
     local file num
-    for file in "$root"/knowledge/*/MEM*.md "$root"/knowledge/archive/MEM*.md; do
+    for file in "$root"/knowledge/*/MEM*.md "$root"/knowledge/*/*/MEM*.md "$root"/knowledge/archive/MEM*.md; do
       if [ -f "$file" ]; then
         num=$(basename "$file" .md | sed 's/MEM//')
         num=$(echo "$num" | sed 's/^0*//')

@@ -1,0 +1,2 @@
+shape=foreign reasons=
+PASS: detect-spec-shape classified /var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/tmp.HVyDsxCl7J/Downloads/arbitrary-prd.md as shape=foreign (matched=0)

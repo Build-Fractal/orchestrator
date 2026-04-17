@@ -1,21 +1,23 @@
-## Forward Milestone Sequence (revised 2026-04-15)
+## Forward Milestone Sequence (revised 2026-04-17)
 
 Remaining milestones, in execution order:
 
-1. **M016 — Autonomous Hardening** *(active)* — eliminate Claude Code safety prompts from auto mode; write-summary.sh API fix, run-suite.sh wrapper, anti-pattern linter, settings promotion
-2. **M011 — Spec Management** — ingest-a-spec; specs stored as knowledge chunks
-3. **M012 — Spec Wiki** — MkDocs + Giscus comments; stakeholder-readable site
-4. **M013 — GitHub Native Integration** — Issues/Milestones/Projects sync, UAT loop
-5. **M014 — Comment→Workflow Automation** — classify/auto-apply wiki+GH comments
-6. **M017 — Conversus Deliberation Gate** — opt-in multi-agent review at hook lifecycle points; intensity engine auto-detects when generation-evaluation gap warrants deliberation; constitution-grounded arbitration
+1. **M019 Tier 1 emitter** *(next — kickoff unit of M019)* — Tier 1 "just emit" lands first after M011 close so M012–M014 dogfooding produces measured data. See `DECISIONS.md` D009.
+2. **M012 — Spec Wiki** — MkDocs + Giscus comments; stakeholder-readable site
+3. **M013 — GitHub Native Integration** — Issues/Milestones/Projects sync, UAT loop; invokes the M011/P07 conversus adapter for opt-in pre-merge review gates
+4. **M014 — Comment→Workflow Automation** — classify/auto-apply wiki+GH comments; invokes the M011/P07 conversus adapter for ambiguous-comment triage
+5. **M019 Tier 2/3** — rollup + `orchestrator:cost`, then full polished surface — lands after M014 once ~3 milestones of Tier 1 data reveal what the polished surface should actually expose.
+6. **M018 — Context Compression Layer** *(sketch, see `DECISIONS.md` D008)* — caveman-style token compression as a pipeline stage. Phase outline drafted but not yet planned in detail; full planning happens closer to kickoff after M019 Tier 1 reveals which artifacts dominate token spend.
 7. **M009 — Launch & Ecosystem** — README, examples, contributor pipeline, release infra
 8. **M010 — Cloud Dispatch** — Managed Agents backend; pull forward if Managed Agents GAs earlier
 
-**Why M016 first:** Autonomous mode credibility is load-bearing — zero-prompt auto runs must work before anything else ships.
+**M011 — Spec Management** closed 2026-04-17. All 7 phases green (P07 delivered the reusable `scripts/dispatch/adapters/tool/conversus.sh` adapter and format-agnostic intake). Milestone validator: 121/121. See `milestones/M011/M011-SUMMARY.md`.
+
+**M016 — Autonomous Hardening** closed prior to M011 kickoff (commit `696fa34`). Zero-prompt auto runs validated; anti-pattern linter and run-suite wrapper in place.
+
+**M017 — Conversus Deliberation Gate** dropped as a standalone milestone (see `DECISIONS.md` D007). `/conversus gate` already provides the CI-shaped primitive orchestrator needs, so integration collapsed to M011/P07. Later milestones (M013, M014, roadmap decomposition at Full intensity) invoke the adapter from their own scope. Intensity engine owns when-to-gate defaults; users own opt-in/opt-out.
 
 **Why dogfooding (M011–M014) before launch (M009):** The team needs end-to-end spec→wiki→GitHub usability before producing external-facing launch artifacts. Dogfooding will surface the rough edges M009's docs need to address. See `DECISIONS.md` D006.
-
-**Why M017 after M014 and before M009:** M017 is opt-in with no hard dep from M011–M014. Positioned after the spec management block so dogfooding lessons inform whether deliberation is valuable at spec-quality judgment points. Can float earlier or later without rework. See `DECISIONS.md` D005.
 
 **Why M010 at the tail:** Anthropic Managed Agents is not yet broadly available. See `DECISIONS.md` D004.
 

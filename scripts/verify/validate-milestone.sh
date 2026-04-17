@@ -119,13 +119,27 @@ while IFS=' ' read -r pid pstatus prisk pdepends; do
     file=$(echo "$raw_file" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
     [[ -z "$file" ]] && continue
     total_checks=$((total_checks + 1))
-    if [[ -f "$PROJECT_ROOT/$file" ]]; then
-      passed_checks=$((passed_checks + 1))
-    else
-      echo "VALIDATE: $pid key_file MISSING: $file"
-      failed_checks=$((failed_checks + 1))
-      failed_details="${failed_details}  - $pid: key file missing: $file\n"
-    fi
+    # Entries ending in / are directory paths; others are files.
+    case "$file" in
+      */)
+        if [[ -d "$PROJECT_ROOT/$file" ]]; then
+          passed_checks=$((passed_checks + 1))
+        else
+          echo "VALIDATE: $pid key_file MISSING: $file"
+          failed_checks=$((failed_checks + 1))
+          failed_details="${failed_details}  - $pid: key file missing: $file\n"
+        fi
+        ;;
+      *)
+        if [[ -f "$PROJECT_ROOT/$file" ]]; then
+          passed_checks=$((passed_checks + 1))
+        else
+          echo "VALIDATE: $pid key_file MISSING: $file"
+          failed_checks=$((failed_checks + 1))
+          failed_details="${failed_details}  - $pid: key file missing: $file\n"
+        fi
+        ;;
+    esac
   done
   IFS="$OLD_IFS"
 done <<< "$phases_output"

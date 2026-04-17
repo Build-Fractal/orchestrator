@@ -681,32 +681,34 @@ fi
 # preserving the recipe-as-source-of-truth contract for section *selection*.
 _bc_display_order() {
   case "$1" in
-    knowledge)   echo 1 ;;  # static — rarely changes
-    decisions)   echo 2 ;;  # static — rarely changes
-    constraints) echo 3 ;;  # static — template-based, same every dispatch
-    scope)       echo 4 ;;  # semi-static — changes per phase, not per task
-    upstream)    echo 5 ;;  # dynamic — changes when phases complete
-    task_plan)   echo 6 ;;  # dynamic — changes every dispatch
-    state)       echo 7 ;;  # dynamic — changes every dispatch
-    *)           echo 99 ;;
+    knowledge)    echo 1 ;;  # static — rarely changes
+    decisions)    echo 2 ;;  # static — rarely changes
+    constraints)  echo 3 ;;  # static — template-based, same every dispatch
+    spec_context) echo 4 ;;  # semi-static — spec chunks scoped to task
+    scope)        echo 5 ;;  # semi-static — changes per phase, not per task
+    upstream)     echo 6 ;;  # dynamic — changes when phases complete
+    task_plan)    echo 7 ;;  # dynamic — changes every dispatch
+    state)        echo 8 ;;  # dynamic — changes every dispatch
+    *)            echo 99 ;;
   esac
 }
 _bc_display_name() {
   case "$1" in
-    knowledge)   echo "Knowledge" ;;
-    decisions)   echo "Decisions" ;;
-    scope)       echo "Scope" ;;
-    upstream)    echo "Upstream Context" ;;
-    task_plan)   echo "Task Plan" ;;
-    state)       echo "State Context" ;;
-    constraints) echo "Constraints" ;;
-    *)           echo "$1" ;;
+    knowledge)    echo "Knowledge" ;;
+    decisions)    echo "Decisions" ;;
+    scope)        echo "Scope" ;;
+    upstream)     echo "Upstream Context" ;;
+    task_plan)    echo "Task Plan" ;;
+    state)        echo "State Context" ;;
+    constraints)  echo "Constraints" ;;
+    spec_context) echo "Spec Context" ;;
+    *)            echo "$1" ;;
   esac
 }
 _bc_display_priority() {
   # pre-refactor manifest only ever shows "filtered" or "required"
   case "$1" in
-    knowledge|decisions) echo "filtered" ;;
+    knowledge|decisions|spec_context) echo "filtered" ;;
     *) echo "required" ;;
   esac
 }
@@ -782,24 +784,38 @@ idx=1
 
 while IFS='|' read -r disp_ord s_name s_source s_priority; do
   [ -z "$s_name" ] && continue
-  SECTION_COUNT=$((SECTION_COUNT + 1))
 
+  # Dispatch to handler (write to a staging file first, then decide whether
+  # to commit). Top-level scope — no `local` allowed; use plain assignments.
+  staging_file="$TMPDIR_BUILD/_staging_s${idx}.txt"
   if [ "$s_source" = "phase_summaries" ]; then
     _bc_handle_phase_summaries_fixed \
-      > "$TMPDIR_BUILD/s${idx}.txt" 2>/dev/null || {
+      > "$staging_file" 2>/dev/null || {
         emit_event SAFETY_WARNING reason=handler_failed section="$s_name" source="$s_source" >/dev/null 2>&1 || true
         printf 'EVENT-AUDIT:SAFETY_WARNING reason="handler_failed"\n' >/dev/null
-        : > "$TMPDIR_BUILD/s${idx}.txt"
+        : > "$staging_file"
       }
   else
     dispatch_section_handler "$s_source" "$s_name" \
       "$ORCH_ROOT" "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" "$INCLUDED_IDS_FILE" \
-      > "$TMPDIR_BUILD/s${idx}.txt" 2>/dev/null || {
+      > "$staging_file" 2>/dev/null || {
         emit_event SAFETY_WARNING reason=handler_failed section="$s_name" source="$s_source" >/dev/null 2>&1 || true
         printf 'EVENT-AUDIT:SAFETY_WARNING reason="handler_failed"\n' >/dev/null
-        : > "$TMPDIR_BUILD/s${idx}.txt"
+        : > "$staging_file"
       }
   fi
+
+  # Omit-empty: if spec_context produced empty output, skip the section
+  # entirely (no manifest row, no payload body). Other section types always
+  # commit (they emit their header even when content is empty).
+  if [ "$s_source" = "spec_context" ] && [ ! -s "$staging_file" ]; then
+    rm -f "$staging_file"
+    continue
+  fi
+
+  # Commit: move staging file to the real contiguous s<idx>.txt slot
+  mv "$staging_file" "$TMPDIR_BUILD/s${idx}.txt"
+  SECTION_COUNT=$((SECTION_COUNT + 1))
 
   disp_name="$(_bc_display_name "$s_name")"
   disp_pri="$(_bc_display_priority "$s_name")"

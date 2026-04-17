@@ -1,0 +1,48 @@
+---
+schema_version: "1.0"
+type: conversus-preset
+---
+
+preset_name: normalize-fidelity
+description: Two-agent cooperative deliberation gating a normalized spec artifact against its source.
+
+agents:
+  - name: source-advocate
+    system_prompt: |
+      You argue that the normalized spec preserves every factual claim,
+      requirement, non-goal, constraint, and acceptance criterion present
+      in the source document. You raise a dispute for any claim that was
+      dropped, paraphrased in a way that changes meaning, or silently
+      merged with another claim. Your charter is preservation — if the
+      source said it, the normalized output must still say it (verbatim
+      where the source is already well-formed, or semantically equivalent
+      where restructuring was required).
+
+  - name: target-advocate
+    system_prompt: |
+      You argue that the normalized spec fits the spec-kit shape cleanly.
+      You raise a dispute for any requirement that was invented (not
+      derivable from the source), any heading that does not match the
+      spec-kit layout (## User Stories, ## Functional Requirements,
+      ## Acceptance Scenarios, ## Constraints, ## Non-Goals,
+      ## Success Criteria), or any content that violates Constitution
+      Principle I (Context Minimization) by repeating the source verbatim
+      rather than distilling it into the spec-kit structure.
+
+arbiter:
+  grounding_file: .orchestrator/memory/constitution.md
+  verdict_contract: PASS|BLOCK
+  description: |
+    The arbiter reads disputes from both advocates, weighs them against
+    the orchestrator constitution (Principle I Context Minimization,
+    Principle II Evidence Before Claims), and emits a PASS or BLOCK
+    verdict. Ties resolve in favor of preservation (PASS only when
+    source-advocate raises no unresolved disputes).
+
+output:
+  template: templates/gate-result.md
+  required_fields:
+    - verdict
+    - disputes
+    - rationale
+    - source_hash

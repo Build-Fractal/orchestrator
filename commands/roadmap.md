@@ -22,11 +22,30 @@ Before generating a roadmap:
 
 5. **Verify the feature spec exists** at the path from the evaluation file's `feature_spec` field. If the path is missing from the evaluation, fall back to scanning `specs/` for the matching feature directory.
 
+6. **Resolve roadmap intensity behavior** by running:
+
+   ```bash
+   bash scripts/engine/intensity-gate.sh --stage roadmap --intensity-metadata <path-to-metadata>
+   ```
+
+   Parse the `execute_substeps=` output. The values are one of:
+   - `single-pass` (Quick) — directive: produce the roadmap in one pass, present it as "Here's your roadmap. Accept, refine, or override."
+   - `basic-decomp,rationale` (Standard) — semi-directive: present phase decomposition with rationale per phase, ask the developer to accept or refine specific phases.
+   - `basic-decomp,rationale,collaborative-loop` (Full) — collaborative: delegate the walk-through to the `speckit.orchestrator.discuss` Tier C pattern, iterating phase-by-phase with the developer.
+
 ## Spec Analysis
 
 Read and analyze the source materials:
 
-1. **Read the feature spec** (`specs/{NNN}-{name}/spec.md`) — identify all user stories, acceptance scenarios, functional requirements, and non-functional constraints.
+1. **Read structural elements**. Prefer ingested spec chunks over re-parsing the raw spec:
+
+   **Chunks-first path** (when `bash scripts/state/spec-metrics.sh <orch-root>` reports `spec_chunks_present=true`):
+
+   - Enumerate `spec/story` chunks via `bash scripts/dispatch/scope-filter.sh --category spec/story --graph` — one SPEC-US-NNN ID per line.
+   - Read story-to-story dependency edges via `bash scripts/knowledge/spec-story-graph.sh <orch-root>` — one `<SPEC-US-ID>|<comma-sep deps>` line per story. Each dependency pair `US-003|US-001` means "the phase containing US-003 depends on the phase containing US-001".
+   - For each story, pull its related `spec/acceptance` and `spec/constraint` chunks via `scope-filter.sh --spec-scope-tags "spec/story/SPEC-US-NNN"` (from P04) to inform phase goals and demo sentences.
+
+   **Raw-spec fallback** (when `spec_chunks_present=false`): parse the raw spec at `specs/{NNN}-{name}/spec.md` for user stories, acceptance scenarios, functional requirements, and non-functional constraints. This is the legacy behavior preserved for un-ingested specs.
 2. **Read the context draft** (if it exists and is finalized) — extract architectural decisions, scope boundaries, design constraints, and resolved questions.
 3. **Identify cross-cutting concerns** — requirements that span multiple phases (e.g., error handling patterns, logging conventions, security constraints). For each concern, note which phase IDs it touches and which phase establishes the pattern that others must follow. Record these in the roadmap's `## Cross-Cutting Concerns` section so consuming phases can reference them during `plan-phase`.
 4. **Reference tier-specific behavior** from `references/tier-definitions.md`:
@@ -37,6 +56,14 @@ Read and analyze the source materials:
 
 Decompose the feature into phases using the `templates/roadmap.md` template format:
 
+### Intensity-Aware Interaction
+
+The interaction style is gated by the resolved intensity substeps from the Prerequisites step:
+
+- **single-pass (Quick)**: produce the full roadmap in one pass without intermediate confirmation; present the final roadmap with "Accept, refine, or override." No rationale walk-through.
+- **basic-decomp,rationale (Standard)**: present phase decomposition with a one-sentence rationale per phase; ask the developer to accept, refine, or request a re-decomposition before writing the roadmap.
+- **basic-decomp,rationale,collaborative-loop (Full)**: invoke the `speckit.orchestrator.discuss` Tier C collaborative loop to walk through each candidate phase with the developer. The output of the discussion seeds the roadmap.
+
 ### Phase Decomposition
 
 Each phase must have:
@@ -46,6 +73,7 @@ Each phase must have:
 - **Demo sentence**: One sentence describing what a developer can observe when the phase is complete. Demo sentences are phase-level summaries, not acceptance scenario paraphrases — they describe what is observable when the phase is done. Acceptance scenario traceability is handled at the task level during `plan-phase`, not at the roadmap level.
 - **Risk classification**: `high`, `medium`, or `low` — high-risk phases should execute first when dependencies allow (FR-043)
 - **Dependency declarations**: `none` or a list of phase IDs that must complete before this phase begins
+- **When chunks are present**: each phase corresponds to one `spec/story` chunk (or a tightly-linked story cluster when multiple stories share a common thread). The phase `depends_on` field for each phase is populated from the `spec-story-graph.sh` output — if US-003 depends on US-001 via `relates_to`, then the phase containing US-003 has `depends_on` pointing to the phase containing US-001.
 
 ### Boundary Maps
 
@@ -131,6 +159,11 @@ This satisfies R012 (idempotent commands) — running `roadmap` twice without co
 - `scripts/state/derive-phase.sh` — derives current orchestrator state from disk
 - `scripts/state/read-config.sh` — resolves configuration values
 - `scripts/lifecycle/scaffold.sh` — creates directory structure (if not already scaffolded)
+- `scripts/dispatch/scope-filter.sh` — enumerates ingested `spec/story` chunks when chunks are present (via `--category spec/story --graph` mode added in P04)
+- `scripts/knowledge/spec-story-graph.sh` — emits story-to-story `depends_on` edges traced from `relates_to` (P05)
+- `scripts/knowledge/traverse-graph.sh` — underlying graph traversal used by `spec-story-graph.sh`
+- `scripts/engine/intensity-gate.sh` — resolves Quick/Standard/Full substeps for the `roadmap` stage (P05)
+- `scripts/state/spec-metrics.sh` — reports `spec_chunks_present` flag driving the chunks-first vs raw-spec-fallback switch (P05, T01)
 - `references/tier-definitions.md` — tier-specific behavior and decision table
 - `scripts/verify/check-boundary-map.sh` — verifies that declared produces exist on disk (invoked during `verify`, not during `roadmap` — referenced in gotchas for context)
 - `references/state-machine.md` — state transition rules and conditions

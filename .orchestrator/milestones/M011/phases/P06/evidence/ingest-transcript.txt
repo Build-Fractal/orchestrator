@@ -1,0 +1,23 @@
+CREATED: SPEC-US-001 at knowledge/spec/story/SPEC-US-001.md
+CREATED: SPEC-AC-001 at knowledge/spec/acceptance/SPEC-AC-001.md
+CREATED: SPEC-AC-002 at knowledge/spec/acceptance/SPEC-AC-002.md
+CREATED: SPEC-AC-003 at knowledge/spec/acceptance/SPEC-AC-003.md
+CREATED: SPEC-AC-004 at knowledge/spec/acceptance/SPEC-AC-004.md
+CREATED: SPEC-US-002 at knowledge/spec/story/SPEC-US-002.md
+CREATED: SPEC-AC-005 at knowledge/spec/acceptance/SPEC-AC-005.md
+CREATED: SPEC-AC-006 at knowledge/spec/acceptance/SPEC-AC-006.md
+CREATED: SPEC-AC-007 at knowledge/spec/acceptance/SPEC-AC-007.md
+CREATED: SPEC-US-003 at knowledge/spec/story/SPEC-US-003.md
+CREATED: SPEC-AC-008 at knowledge/spec/acceptance/SPEC-AC-008.md
+CREATED: SPEC-AC-009 at knowledge/spec/acceptance/SPEC-AC-009.md
+CREATED: SPEC-AC-010 at knowledge/spec/acceptance/SPEC-AC-010.md
+CREATED: SPEC-NG-001 at knowledge/spec/non-goal/SPEC-NG-001.md
+CREATED: SPEC-NG-002 at knowledge/spec/non-goal/SPEC-NG-002.md
+CREATED: SPEC-NG-003 at knowledge/spec/non-goal/SPEC-NG-003.md
+CREATED: SPEC-CON-001 at knowledge/spec/constraint/SPEC-CON-001.md
+CREATED: SPEC-CON-002 at knowledge/spec/constraint/SPEC-CON-002.md
+CREATED: SPEC-CON-003 at knowledge/spec/constraint/SPEC-CON-003.md
+CREATED: SPEC-CON-004 at knowledge/spec/constraint/SPEC-CON-004.md
+REBUILT: KNOWLEDGE-INDEX.md with 45 entries
+REBUILT: knowledge.db with 45 entries, 41 edges, 61 scope_tags
+INGEST: 016-autonomous-hardening complete. created=20 skipped=0 superseded=0 removed=0 review=0

@@ -2,8 +2,9 @@
 # scripts/knowledge/rebuild-index.sh — Regenerate KNOWLEDGE-INDEX.md from detail files
 # Usage: rebuild-index.sh [--root <project-root>]
 #
-# Scans all detail files in knowledge/*/ (excluding knowledge/archive/) and
-# regenerates KNOWLEDGE-INDEX.md atomically via write_full_index().
+# Scans all detail files in knowledge/*/ and knowledge/*/*/ (including nested
+# spec/ subdirectories, excluding knowledge/archive/) and regenerates
+# KNOWLEDGE-INDEX.md atomically via write_full_index().
 #
 # Bash 3.2 compatible.
 
@@ -62,7 +63,7 @@ db_tag_count=0
 entries=""
 entry_count=0
 
-for file in "$knowledge_dir"/*/*.md; do
+for file in "$knowledge_dir"/*/*.md "$knowledge_dir"/*/*/*.md; do
   # Skip if glob didn't match anything
   if [ ! -f "$file" ]; then
     continue
@@ -78,7 +79,7 @@ for file in "$knowledge_dir"/*/*.md; do
   # Skip .gitkeep or non-MEM files
   basename_file="$(basename "$file" .md)"
   case "$basename_file" in
-    MEM*)
+    MEM*|SPEC-*)
       ;;
     *)
       continue

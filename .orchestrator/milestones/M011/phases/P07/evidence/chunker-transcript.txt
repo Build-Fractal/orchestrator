@@ -1,0 +1,18 @@
+CREATED: SPEC-US-001 at knowledge/spec/story/SPEC-US-001.md
+CREATED: SPEC-US-002 at knowledge/spec/story/SPEC-US-002.md
+CREATED: SPEC-US-003 at knowledge/spec/story/SPEC-US-003.md
+CREATED: SPEC-US-004 at knowledge/spec/story/SPEC-US-004.md
+CREATED: SPEC-FR-001 at knowledge/spec/requirement/SPEC-FR-001.md
+CREATED: SPEC-FR-002 at knowledge/spec/requirement/SPEC-FR-002.md
+CREATED: SPEC-FR-003 at knowledge/spec/requirement/SPEC-FR-003.md
+CREATED: SPEC-FR-004 at knowledge/spec/requirement/SPEC-FR-004.md
+CREATED: SPEC-FR-005 at knowledge/spec/requirement/SPEC-FR-005.md
+CREATED: SPEC-FR-006 at knowledge/spec/requirement/SPEC-FR-006.md
+CREATED: SPEC-CON-001 at knowledge/spec/constraint/SPEC-CON-001.md
+CREATED: SPEC-CON-002 at knowledge/spec/constraint/SPEC-CON-002.md
+CREATED: SPEC-NG-001 at knowledge/spec/non-goal/SPEC-NG-001.md
+CREATED: SPEC-NG-002 at knowledge/spec/non-goal/SPEC-NG-002.md
+CREATED: SPEC-NG-003 at knowledge/spec/non-goal/SPEC-NG-003.md
+REBUILT: KNOWLEDGE-INDEX.md with 15 entries
+REBUILT: knowledge.db with 15 entries, 0 edges, 15 scope_tags
+INGEST: 019-foo complete. created=15 skipped=0 superseded=0 removed=0 review=0

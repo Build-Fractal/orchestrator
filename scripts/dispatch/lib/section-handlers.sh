@@ -390,6 +390,155 @@ handle_decisions() {
   fi
 }
 
+# handle_spec_context <orch_root> <milestone> <phase> <task>
+# Emits a "## Spec Context" block containing resolved spec chunk bodies,
+# scope-filtered by the task plan's frontmatter spec/* scope_tags. If the
+# task plan has NO spec/* scope_tags, this handler emits nothing (empty
+# output) so the caller can omit the section entirely.
+handle_spec_context() {
+  local orch_root="$1" milestone="$2" phase="$3" task="$4"
+  local ms_dir
+  ms_dir="$(_sh_resolve_milestone_dir "$orch_root" "$milestone")" || return 0
+
+  # Only meaningful for task dispatch, not phase planning
+  if [ "$task" = "PHASE_PLAN" ]; then
+    return 0
+  fi
+
+  local task_plan="${ms_dir}/phases/${phase}/tasks/${task}-PLAN.md"
+  if [ ! -f "$task_plan" ]; then
+    return 0
+  fi
+
+  # Extract the scope_tags line from the YAML frontmatter and tokenize
+  # spec/* entries. Task-plan frontmatter format (P03 convention):
+  #   scope_tags: [spec/requirement/SPEC-FR-003, project]
+  # We accept both bracket-list and comma lists.
+  local tags_line
+  tags_line="$(awk '/^---$/{c++; next} c==1 && /^scope_tags:/{print; exit}' "$task_plan" 2>/dev/null || true)"
+  if [ -z "$tags_line" ]; then
+    return 0
+  fi
+
+  # Strip 'scope_tags:' prefix, brackets, quotes; normalize separators to spaces
+  local raw_tags
+  raw_tags="$(printf '%s' "$tags_line" \
+    | sed 's/^scope_tags:[[:space:]]*//' \
+    | sed 's/^\[//; s/\]$//' \
+    | tr ',' ' ' \
+    | tr -d '"' \
+    | tr -s ' ')"
+
+  # Keep only spec/* tokens
+  local spec_tags="" tok
+  for tok in $raw_tags; do
+    case "$tok" in
+      spec/*) spec_tags="${spec_tags}${tok},";;
+    esac
+  done
+
+  # Strip trailing comma
+  spec_tags="$(printf '%s' "$spec_tags" | sed 's/,$//')"
+
+  if [ -z "$spec_tags" ]; then
+    return 0
+  fi
+
+  # Determine the knowledge root. Caller passes orch_root which is typically
+  # either `<proj>/.orchestrator` (standalone layout) or `<milestone-dir>`
+  # (fixture layout). The knowledge tree lives at `<proj>/knowledge`.
+  # Resolution strategy:
+  #   1. If orch_root is named `.orchestrator`, knowledge root is its parent.
+  #   2. Else if orch_root has a sibling `knowledge/`, use that.
+  #   3. Else fall back to PROJECT_ROOT env var or _SH_PROJECT_ROOT's parent.
+  local _root=""
+  case "$(basename "$orch_root")" in
+    .orchestrator)
+      _root="$(dirname "$orch_root")"
+      ;;
+  esac
+  if [ -z "$_root" ] || [ ! -d "$_root/knowledge" ]; then
+    if [ -d "$(dirname "$orch_root")/knowledge" ]; then
+      _root="$(dirname "$orch_root")"
+    fi
+  fi
+  if [ -z "$_root" ] || [ ! -d "$_root/knowledge" ]; then
+    if [ -n "${PROJECT_ROOT:-}" ] && [ -d "${PROJECT_ROOT}/knowledge" ]; then
+      _root="$PROJECT_ROOT"
+    else
+      _root="${_SH_PROJECT_ROOT}/.."
+    fi
+  fi
+
+  # Resolve IDs via T01's scope-filter spec-scope-tags mode. We export
+  # PROJECT_ROOT for the subprocess because build-context.sh (our typical
+  # caller) clobbers PROJECT_ROOT at startup; scope-filter's non-goal gate
+  # and liveness fallback rely on PROJECT_ROOT pointing at the correct
+  # knowledge root.
+  local ids_file
+  ids_file="$(mktemp)"
+  PROJECT_ROOT="$_root" bash "$_SH_SCOPE_FILTER" --spec-scope-tags "$spec_tags" \
+    > "$ids_file" 2>/dev/null || true
+
+  if [ ! -s "$ids_file" ]; then
+    rm -f "$ids_file"
+    return 0
+  fi
+
+  local resolved_file id_count resolved_file_any
+  resolved_file="$(mktemp)"
+  resolved_file_any=0
+  id_count=0
+  local entry_id f match_file
+  while IFS= read -r entry_id; do
+    entry_id="$(printf '%s' "$entry_id" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+    [ -z "$entry_id" ] && continue
+    match_file=""
+    # One-level scan first
+    for f in "$_root"/knowledge/*/"${entry_id}.md"; do
+      if [ -f "$f" ]; then
+        case "$f" in
+          */archive/*) continue ;;
+        esac
+        match_file="$f"
+        break
+      fi
+    done
+    # Two-level scan fallback (spec/<cat>/<id>.md)
+    if [ -z "$match_file" ]; then
+      for f in "$_root"/knowledge/*/*/"${entry_id}.md"; do
+        if [ -f "$f" ]; then
+          case "$f" in
+            */archive/*) continue ;;
+          esac
+          match_file="$f"
+          break
+        fi
+      done
+    fi
+    if [ -n "$match_file" ]; then
+      if [ "$resolved_file_any" -eq 1 ]; then
+        printf '\n' >> "$resolved_file"
+      fi
+      cat "$match_file" >> "$resolved_file"
+      resolved_file_any=1
+      id_count=$((id_count + 1))
+    fi
+  done < "$ids_file"
+  rm -f "$ids_file"
+
+  if [ "$resolved_file_any" -eq 0 ]; then
+    rm -f "$resolved_file"
+    return 0
+  fi
+
+  printf '## Spec Context\n\n'
+  printf '<!-- %s spec chunks resolved from task scope_tags -->\n\n' "$id_count"
+  cat "$resolved_file"
+  printf '\n'
+  rm -f "$resolved_file"
+}
+
 # handle_file <orch_root> <milestone> <phase> <task> <source_filename>
 # Generic filename dispatcher. Routes KNOWLEDGE.md / DECISIONS.md to their
 # dedicated handlers; falls back to a raw cat for anything else at the
@@ -445,6 +594,9 @@ dispatch_section_handler() {
       ;;
     template)
       handle_template "$orch_root" "$milestone" "$phase" "$task" "$section_name"
+      ;;
+    spec_context)
+      handle_spec_context "$orch_root" "$milestone" "$phase" "$task"
       ;;
     *.md)
       if [ "$source" = "KNOWLEDGE.md" ] || [ "$source" = "knowledge.md" ]; then

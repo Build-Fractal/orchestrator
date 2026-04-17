@@ -1,0 +1,1 @@
+NORMALIZED: specs/019-foo/spec.md (source_hash=144a7519ea1ae10c52eb801ef1161a627d7070a0b504375e04eec3460bdfed4d)

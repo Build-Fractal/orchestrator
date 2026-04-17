@@ -125,8 +125,32 @@ case "$STAGE" in
       Full)     execute="dispatch,strict-pause,human-review";   skip="no-pause" ;;
     esac
     ;;
+  roadmap)
+    # Substep vocabulary:
+    #   single-pass | basic-decomp | rationale | collaborative-loop
+    case "$INTENSITY" in
+      Quick)    execute="single-pass";                          skip="basic-decomp,rationale,collaborative-loop" ;;
+      Standard) execute="basic-decomp,rationale";               skip="collaborative-loop" ;;
+      Full)     execute="basic-decomp,rationale,collaborative-loop"; skip="single-pass" ;;
+    esac
+    ;;
+  ingest)
+    # Substep vocabulary:
+    #   normalize | fidelity-gate | force-chunker
+    # Policy: Quick skips the fidelity gate (fast path);
+    # Standard+ runs both normalize and fidelity-gate.
+    # The --review flag on orchestrator:ingest promotes fidelity-gate
+    # into execute_substeps regardless of resolved intensity; --no-review
+    # forces it into skip_substeps. Those overrides are applied by the
+    # calling command (commands/ingest.md), not by this gate.
+    case "$INTENSITY" in
+      Quick)    execute="normalize";               skip="fidelity-gate" ;;
+      Standard) execute="normalize,fidelity-gate"; skip="none" ;;
+      Full)     execute="normalize,fidelity-gate"; skip="none" ;;
+    esac
+    ;;
   *)
-    echo "ERROR: unknown stage '$STAGE' (expected discuss|research|plan-phase|dispatch|verify|knowledge|auto)" >&2
+    echo "ERROR: unknown stage '$STAGE' (expected discuss|research|plan-phase|dispatch|verify|knowledge|auto|roadmap|ingest)" >&2
     exit 2
     ;;
 esac

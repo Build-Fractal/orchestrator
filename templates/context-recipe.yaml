@@ -67,6 +67,13 @@ sections:
     filter: none
     cache_hint: static
 
+  spec_context:
+    source: spec_context
+    priority: compressible
+    order: 35
+    filter: scope
+    cache_hint: semi-static
+
 # --- Compression Configuration ---
 # Graduated steps applied in order until payload fits within token budget.
 # Token budget is derived from model selection (routing.yaml context_budget).

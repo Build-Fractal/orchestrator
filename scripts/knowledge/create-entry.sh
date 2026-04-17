@@ -6,6 +6,9 @@
 # updates KNOWLEDGE-INDEX.md. Idempotent: if the detail file already exists,
 # prints EXISTS and exits 0.
 #
+# Supports SPEC-prefixed IDs (e.g., SPEC-FR-001) for spec/ category entries.
+# SPEC-prefixed IDs are validated to require a spec/ category prefix.
+#
 # Bash 3.2 compatible.
 
 set -euo pipefail
@@ -57,6 +60,20 @@ if [ -n "$missing" ]; then
   exit 1
 fi
 
+# --- Validate SPEC- namespace: SPEC-prefixed IDs require spec/ category ---
+case "$ENTRY_ID" in
+  SPEC-*)
+    case "$CATEGORY" in
+      spec/*)
+        ;; # valid: SPEC- prefix with spec/ category
+      *)
+        echo "ERROR: SPEC-prefixed IDs require a spec/ category prefix (got --category $CATEGORY)" >&2
+        exit 1
+        ;;
+    esac
+    ;;
+esac
+
 # --- Auto-generate ID if not provided ---
 if [ -z "$ENTRY_ID" ]; then
   ENTRY_ID="$(next_entry_id)"
@@ -99,6 +116,7 @@ source_unit: "$SOURCE_UNIT"
 source_type: $SOURCE_TYPE
 supersedes: "$SUPERSEDES"
 superseded_by: ""
+content_hash: ""
 relates_to: $relates_to_yaml
 ---
 

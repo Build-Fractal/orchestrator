@@ -1,0 +1,7 @@
+spec_chunks_present=true
+story_count=3
+requirement_count=0
+acceptance_count=10
+constraint_count=4
+nfr_count=0
+non_goal_count=3

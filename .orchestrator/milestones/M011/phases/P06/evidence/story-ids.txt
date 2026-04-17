@@ -1,0 +1,6 @@
+# Knowledge Index
+<!-- Generated via --graph mode from knowledge.db -->
+<!-- Format: id | scope_tags | category | confidence | created_at | verified:date | hits:N | description -->
+SPEC-US-001 | [project] | spec/story | 0.9 | 2026-04-17 | verified:2026-04-17 | hits:0 | Full Phase Runs To Completion Without Prompts
+SPEC-US-002 | [project] | spec/story | 0.9 | 2026-04-17 | verified:2026-04-17 | hits:0 | Anti-Pattern Guardrails Prevent Regression
+SPEC-US-003 | [project] | spec/story | 0.9 | 2026-04-17 | verified:2026-04-17 | hits:0 | Verify Suites Run Via A Single Wrapper

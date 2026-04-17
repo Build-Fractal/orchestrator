@@ -1,0 +1,38 @@
+T01 extended scripts/dispatch/scope-filter.sh with a new --spec-scope-tags
+mode that resolves spec/<cat>/<SPEC-XX-NNN> tags to SPEC- entry IDs and
+emits one ID per line, followed by their 1-hop relates_to graph neighbors
+(via traverse-graph.sh). The mode is self-sufficient: the positional
+<file-path> <scope-context> validation is skipped when --spec-scope-tags
+is present, so callers do not need to supply dummy values. Superseded
+tips (non-empty superseded_by) are skipped with a WARN: on stderr, and
+spec/non-goal entries are excluded by default per AD-7 (P01), honoring
+the existing --include-non-goals flag.
+
+The filter_spec_scope_tags function lazy-sources scripts/knowledge/lib/
+graph-db.sh (guarded by _GRAPH_DB_SOURCED) and uses a SQL lookup against
+knowledge.db when present, falling back to direct frontmatter reads of
+knowledge/spec/<cat>/<id>.md when the DB is absent. Neighbor collection
+shells out to traverse-graph.sh --id <id> --hops 1 --max-entries 10. The
+emitter writes initial IDs in input order first, then sorted-unique
+neighbors not already in the initial set, using mktemp files for
+concurrent safety.
+
+Six verify scripts were created under scripts/verify/m011-p04-*.sh:
+bash32-compat (T01 variant — scans only scope-filter.sh per the T03
+expansion plan), spec-scope-tag-resolve, spec-scope-tag-graph-neighbors,
+requirement-pulls-neighbors (3 requirements + 2 acceptances + 1
+constraint with selective relates_to wiring), spec-scope-excludes-non-
+goals, and spec-scope-skips-superseded. Every script builds a mktemp
+sandbox, writes valid frontmatter fixtures, invokes rebuild-index.sh
+under PROJECT_ROOT, then asserts scope-filter.sh stdout/stderr with
+grep. All six print PASS: and exit 0.
+
+Key Bash 3.2 discipline: no declare -A, no mapfile, no readarray, no
+process substitution. Temp files + while-read-from-real-file loops
+throughout. The dispatch check was placed at the bottom of scope-
+filter.sh (alongside the --graph dispatch) rather than immediately
+after arg parsing so that the function is defined before it is called;
+skipping positional-arg validation is achieved by wrapping the
+existing validation block in if [[ -z "$SPEC_SCOPE_TAGS" ]]. This
+preserves the plan intent (mode bypasses positional validation) while
+respecting bash's function-definition ordering.

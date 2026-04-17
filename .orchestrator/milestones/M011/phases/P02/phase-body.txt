@@ -1,0 +1,9 @@
+P02 delivered the core ingest pipeline: scripts/knowledge/ingest-spec.sh parses markdown specs into structured knowledge chunks. Three tasks:
+
+T01 created the script skeleton with H2-heading section splitter and dispatch_section router. Tested against specs/016-autonomous-hardening/spec.md to validate section routing.
+
+T02 replaced stub classifiers with full implementations. classify_stories_section splits on User Story headings, extracts acceptance scenarios as separate chunks with relates_to edges to parent stories. classify_requirements_section parses FR-NNN items. classify_constraints_section and classify_nongoals_section handle bullet lists. AC numbering is global (not per-story). Real-world test on 016-autonomous-hardening produced 20 correct entries (3 stories, 10 ACs, 3 non-goals, 4 constraints). Fixed a variable name collision in nested while-read loops.
+
+T03 wired content hash computation via hash.sh compute_content_hash(). normalize_for_hash strips trailing whitespace and blank lines for stable hashing. Post-creation sed_i patching writes SHA-256 hash to the content_hash frontmatter field. First-ingest idempotency confirmed: re-running on unchanged spec produces only SKIPPED lines with zero CREATED.
+
+All 11 verification scripts pass across classification accuracy, content hashing, idempotency, and Bash 3.2 compatibility.

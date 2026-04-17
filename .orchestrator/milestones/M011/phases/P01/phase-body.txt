@@ -1,0 +1,11 @@
+P01 bootstrapped the knowledge infrastructure for spec chunk storage. Four tasks across four scripts:
+
+T01 created the knowledge/spec/ directory tree (6 subdirectories with .gitkeep) and extended create-entry.sh to accept SPEC-prefixed natural IDs (SPEC-FR-001, SPEC-US-002, etc.) with case/esac namespace validation ensuring SPEC- IDs require spec/ category prefixes.
+
+T02 extended rebuild-index.sh with a two-pass glob (knowledge/*/*.md + knowledge/*/*/*.md) to scan nested spec directories, and updated the basename filter to accept both MEM* and SPEC-* prefixed entries. Also fixed a latent gap: create-entry.sh was not emitting the content_hash field in frontmatter, causing rebuild-index.sh to fail under set -euo pipefail when fm_field() returned empty.
+
+T03 updated next_entry_id() in index-utils.sh to include the nested directory glob for robustness, with clarifying comments documenting that SPEC- files are inherently excluded by the MEM*.md glob pattern.
+
+T04 added category-based non-goal exclusion to scope-filter.sh (AD-7): spec/non-goal entries are excluded by default in both index and graph modes, with --include-non-goals flag override for verification contexts. Also extended the data line regex to recognize SPEC-prefixed entries.
+
+All 9 verification scripts pass. The foundation is ready for P02 (ingest pipeline) and P04 (dispatch integration).

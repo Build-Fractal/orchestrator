@@ -19,12 +19,21 @@ sed_i() {
 }
 
 # --- Find detail file by scanning knowledge/*/ID.md (category-agnostic) ---
+# Scans one- and two-level category trees (e.g. knowledge/patterns/MEM001.md
+# and knowledge/spec/requirement/SPEC-FR-001.md). The two-level scan is
+# required for the M011 spec-ingest namespace.
 find_detail_file() {
   local entry_id="$1"
   local root
   root="$(get_project_root)"
   local file
   for file in "$root"/knowledge/*/"${entry_id}.md"; do
+    if [ -f "$file" ]; then
+      echo "$file"
+      return 0
+    fi
+  done
+  for file in "$root"/knowledge/*/*/"${entry_id}.md"; do
     if [ -f "$file" ]; then
       echo "$file"
       return 0

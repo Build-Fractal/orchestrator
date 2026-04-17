@@ -1,0 +1,61 @@
+T02 wired `build-context.sh` to emit a `## Spec Context` section when a task
+plan's YAML frontmatter `scope_tags:` list contains one or more `spec/*`
+entries. Three coordinated edits landed:
+
+1. `scripts/dispatch/lib/section-handlers.sh` — new `handle_spec_context`
+   function (~95 lines) that reads the task-plan frontmatter, extracts
+   `spec/*` tokens, calls T01's `scope-filter.sh --spec-scope-tags` to
+   resolve SPEC- IDs (plus 1-hop relates_to neighbors), then walks both
+   one-level and two-level knowledge directory layouts to concatenate the
+   resolved chunk bodies. Also registered a `spec_context` arm in
+   `dispatch_section_handler`. Handler emits zero bytes when no spec/* tags
+   are present so the dispatcher can omit the section entirely.
+
+   Key gotcha discovered: `build-context.sh` overwrites `PROJECT_ROOT` at
+   startup (`PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"`), so any
+   PROJECT_ROOT env var set by the caller is clobbered inside the handler's
+   subprocess calls. The handler now derives the knowledge root from the
+   passed-in `orch_root` (basename `.orchestrator` → parent dir; else sibling
+   `knowledge/` probe; else PROJECT_ROOT env; else `_SH_PROJECT_ROOT`) and
+   exports `PROJECT_ROOT=<derived>` when invoking scope-filter.
+
+   Also: `resolve-entries.sh` only scans one-level `knowledge/*/ID.md` and
+   cannot find nested `knowledge/spec/<cat>/<id>.md` entries. Because T02 is
+   forbidden from modifying `resolve-entries.sh`, the handler resolves IDs
+   to bodies directly by walking both one-level and two-level layouts.
+
+2. `templates/context-recipe.yaml` — new `spec_context` section entry
+   (source: spec_context, priority: compressible, order: 35, filter: scope,
+   cache_hint: semi-static), placed between constraints (order 30) and
+   scope (order 40).
+
+3. `scripts/dispatch/build-context.sh` — updated `_bc_display_order`,
+   `_bc_display_name`, `_bc_display_priority` to include `spec_context`
+   (display order 4, between constraints and scope; shifted scope/upstream/
+   task_plan/state down by one; priority "filtered" alongside knowledge/
+   decisions). Rewrote the section-dispatch loop to write to a staging file
+   first, then commit via `mv` only if output is non-empty. For `spec_context`
+   specifically, empty staging skips the section entirely (no manifest row,
+   no payload body, contiguous `s<idx>.txt` sequence preserved). Other
+   handlers always commit as before. Uses plain top-level assignments (no
+   `local`) to comply with set -euo pipefail.
+
+Verification: four new/tightened verify scripts created/updated:
+
+- `scripts/verify/m011-p04-dispatch-includes-spec-context.sh` — fixture with
+  `scope_tags: [spec/requirement/SPEC-FR-003]`; asserts stdout contains
+  `## Spec Context` header + SPEC-FR-003 body + manifest row
+- `scripts/verify/m011-p04-dispatch-omits-spec-context-when-unused.sh` —
+  fixture with `scope_tags: [project]`; asserts no `## Spec Context` header
+  and no manifest row
+- `scripts/verify/m011-p04-dispatch-excludes-out-of-scope.sh` — fixture
+  with SPEC-FR-001/002/003 on disk; task scoped to SPEC-FR-003; asserts
+  payload contains SPEC-FR-003 body marker but not SPEC-FR-001 or
+  SPEC-FR-002 body markers
+- `scripts/verify/m011-p04-bash32-compat.sh` — tightened to scan
+  build-context.sh and section-handlers.sh in addition to scope-filter.sh,
+  including a process-substitution `<(...)` check
+
+All four new/updated verify scripts print `PASS:` and exit 0. All six T01
+verify scripts continue to pass after the T02 changes (9/9 P04 verify
+scripts passing; `tests/test-s04-core-commands.sh` 74/74 passing).

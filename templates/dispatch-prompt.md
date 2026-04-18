@@ -101,4 +101,4 @@ When assembling payloads, include sections in this priority order. If the payloa
 When over budget:
 - Drop knowledge and decision entries first (they inform but don't constrain)
 - Reduce upstream summaries to just their `provides` YAML field values
-- Never truncate the task plan or must-haves
+- Always include the task plan and must-haves in full; truncate lower-priority sections instead.

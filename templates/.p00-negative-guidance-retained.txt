@@ -1,0 +1,8 @@
+# P00/L5 Retained-Negative Guidance Whitelist
+# Each entry: <relative-path>:<line_number> <rationale>
+# Retained negatives must be either (a) Constitution XV anti-pattern
+# prohibitions or (b) safety-rail text where a positive rewrite would be
+# semantically incorrect. Payload-shape gate Gate 5 consults this file.
+#
+# (No entries required for P00 — dispatch-prompt.md contains no
+# constitutional-anti-pattern section as of 2026-04-17.)

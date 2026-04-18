@@ -62,6 +62,14 @@ case "$INTENSITY" in
     exit 2 ;;
 esac
 
+# --- P00/L3 Adaptive Thinking Contract (Opus 4.7) ---
+# The intensity gate does NOT set a fixed reasoning allotment. Opus 4.7 uses
+# adaptive thinking — the model decides per step how much reasoning to apply.
+# Prompt-level nudges are the only lever: "think carefully; this is harder
+# than it looks" for hard-effort tasks vs. "prioritize responding quickly"
+# for easy-effort tasks. Intensity level (Quick/Standard/Full) affects which
+# substeps execute, not how much reasoning is allocated per substep.
+
 # --- Hardcoded stage x intensity matrix ---
 # Substep vocabulary (stage-scoped; meaning documented in command docs):
 #   discuss:    all | none | optional | required

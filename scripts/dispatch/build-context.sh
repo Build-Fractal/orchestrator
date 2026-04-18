@@ -997,5 +997,95 @@ type: dispatch-prompt
 
 TITLE="# Dispatch Context -- $TASK_ID (Phase $PHASE_ID, Milestone $MILESTONE_ID)"
 
-_bc_assemble_manifest_and_emit "$SECTION_COUNT" "$SECTION_NAMES_PIPE" "$SECTION_PRIORITIES_PIPE" "$FRONTMATTER" "$TITLE"
+# ============================================================================
+# M019/P01/T02: payload_breakdown emitter
+# ----------------------------------------------------------------------------
+# Emits exactly one `payload_breakdown` JSONL record per build-context.sh
+# invocation. The emission is OUTSIDE the payload stdout stream: the
+# assembled payload is captured to $PAYLOAD_CAPTURE, `cat`ed to stdout
+# byte-identical to the pre-instrumentation path, then measured and logged.
+#
+# SC-6 byte-identical stdout contract — never add bytes to the payload.
+# MEM004 carve-out applies: pipes/$()/awk permitted (emitter is
+# dispatch-internal, not agent-facing).
+# ============================================================================
+_bc_emit_payload_breakdown() {
+  # Arg: path to the captured payload file.
+  local capture_file="$1"
+
+  # Source pricing helpers lazily so zero-overhead when the file is absent.
+  if ! type chars_to_tokens_quartile >/dev/null 2>&1; then
+    if [ -r "$PROJECT_ROOT/scripts/lib/pricing.sh" ]; then
+      . "$PROJECT_ROOT/scripts/lib/pricing.sh" || return 0
+    else
+      return 0
+    fi
+  fi
+
+  local payload_chars payload_tokens
+  payload_chars="$(wc -c < "$capture_file" | tr -d ' ')"
+  payload_tokens="$(chars_to_tokens_quartile "$payload_chars")"
+
+  # Build section_tokens JSON object. Parse SECTION_NAMES_PIPE into an array
+  # (bash 3.2: IFS + read -ra); measure each $TMPDIR_BUILD/s<i>.txt file.
+  local _BC_PB_NAMES _idx=0 _i=1 section_tokens_json="" _pair
+  local sec_bytes sec_tokens sec_name sec_name_esc sec_file
+  IFS='|' read -ra _BC_PB_NAMES <<EOF_PB_NAMES
+$SECTION_NAMES_PIPE
+EOF_PB_NAMES
+  while [ "$_i" -le "$SECTION_COUNT" ]; do
+    sec_file="$TMPDIR_BUILD/s${_i}.txt"
+    if [ -f "$sec_file" ]; then
+      sec_bytes="$(wc -c < "$sec_file" | tr -d ' ')"
+    else
+      sec_bytes=0
+    fi
+    sec_tokens="$(chars_to_tokens_quartile "$sec_bytes")"
+    sec_name="${_BC_PB_NAMES[$_idx]:-section_${_i}}"
+    # JSON-escape double quotes and backslashes in the display name.
+    sec_name_esc="$(printf '%s' "$sec_name" | sed 's/\\/\\\\/g; s/"/\\"/g')"
+    _pair="\"${sec_name_esc}\":${sec_tokens}"
+    if [ -z "$section_tokens_json" ]; then
+      section_tokens_json="$_pair"
+    else
+      section_tokens_json="${section_tokens_json},${_pair}"
+    fi
+    _idx=$(( _idx + 1 ))
+    _i=$(( _i + 1 ))
+  done
+
+  local log_dir log_file ts model
+  log_dir="$ORCH_ROOT/milestones/$MILESTONE_ID"
+  # Fixture mode: if ORCH_ROOT already IS the milestone dir, log directly there.
+  if [ ! -d "$log_dir" ] && [ -d "$ORCH_ROOT/phases" ]; then
+    log_dir="$ORCH_ROOT"
+  fi
+  log_file="$log_dir/execution-log.jsonl"
+  ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  model="${ORCH_MODEL:-}"
+
+  mkdir -p "$log_dir" 2>/dev/null || {
+    printf 'build-context.sh: payload_breakdown emit skipped (mkdir failed on %s)\n' "$log_dir" >&2
+    return 0
+  }
+
+  printf '{"record_type":"payload_breakdown","unitId":"%s/%s/%s","milestone":"%s","phase":"%s","task":"%s","payload_chars":%d,"payload_tokens_estimate":%d,"token_estimate_method":"char-quartile","section_tokens":{%s},"model":"%s","source":"estimate","timestamp":"%s"}\n' \
+    "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" \
+    "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" \
+    "$payload_chars" "$payload_tokens" \
+    "$section_tokens_json" "$model" "$ts" \
+    >> "$log_file" 2>/dev/null || {
+    printf 'build-context.sh: payload_breakdown append failed on %s\n' "$log_file" >&2
+    return 0
+  }
+  return 0
+}
+
+# Capture the assembled payload into a temp file so we can measure its byte
+# size AND still emit it to stdout byte-identically (SC-6). Zero-token: no new
+# content is added to the payload; only a post-emit observation is made.
+PAYLOAD_CAPTURE="$TMPDIR_BUILD/_payload_capture.txt"
+_bc_assemble_manifest_and_emit "$SECTION_COUNT" "$SECTION_NAMES_PIPE" "$SECTION_PRIORITIES_PIPE" "$FRONTMATTER" "$TITLE" > "$PAYLOAD_CAPTURE"
+cat "$PAYLOAD_CAPTURE"
+_bc_emit_payload_breakdown "$PAYLOAD_CAPTURE" || true
 exit 0

@@ -1,0 +1,43 @@
+# .orchestrator/config/pricing.yml
+# ---------------------------------------------------------------------------
+# Pricing table for the M019 observability emitter. Hand-maintained (AD-2).
+#
+# Resolver contract: scripts/lib/pricing.sh (ships in P01) reads this file by
+# default. The ORCH_PRICING_FILE environment variable overrides the path when
+# callers need to point at an alternate pricing file (tests, vendor overrides).
+#
+# Stale threshold: 90 days since last_updated -> emitter writes
+#   estimated_cost_usd: null with a pricing_warning (C4, SC-5).
+# Operator is expected to refresh rates against the Anthropic public pricing
+# page (and the equivalent pages for any future non-Anthropic providers).
+#
+# Rates are USD per million tokens. Input and output rates are tracked
+# separately per the Anthropic public pricing convention.
+# ---------------------------------------------------------------------------
+
+schema_version: "1.0"
+last_updated: "2026-04-17"
+
+# One model block per rate entry. The `provider` field is reserved for Tier 3
+# multi-backend support (Codex / Cursor / OpenAI). P00 ships Anthropic-only.
+models:
+  claude-opus-4-7:
+    provider: anthropic
+    input_per_million_usd: 15.00
+    output_per_million_usd: 75.00
+  claude-sonnet-4-6:
+    provider: anthropic
+    input_per_million_usd: 3.00
+    output_per_million_usd: 15.00
+  claude-haiku-4-5:
+    provider: anthropic
+    input_per_million_usd: 0.80
+    output_per_million_usd: 4.00
+
+# Aliases map orchestrator-internal model handles to concrete model keys.
+# The intensity gate writes the canonical handle; the P01 resolver prefers
+# aliases[<handle>] then models[<handle>].
+aliases:
+  opus-latest: claude-opus-4-7
+  sonnet-latest: claude-sonnet-4-6
+  haiku-latest: claude-haiku-4-5

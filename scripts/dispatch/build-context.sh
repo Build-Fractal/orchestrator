@@ -581,12 +581,43 @@ $title
 $manifest_table
 "
 
-  for i in $(seq 1 "$section_count"); do
-    sec_file="$TMPDIR_BUILD/s${i}.txt"
-    payload="$payload
+  # M019/P00/L2: If classification env vars are set (task branch), emit
+  # stable sections first, then <dispatch-volatile> marker, then volatile
+  # sections, then </dispatch-volatile> closing marker. When unset (planning
+  # branch or legacy callers), fall back to linear sN order — preserves
+  # byte-identical planning-branch behavior.
+  if [ -n "${BC_STABLE_IDXS:-}" ] || [ -n "${BC_VOLATILE_ALL_IDXS:-}" ]; then
+    local _idx
+    for _idx in $BC_STABLE_IDXS; do
+      sec_file="$TMPDIR_BUILD/s${_idx}.txt"
+      [ -f "$sec_file" ] || continue
+      payload="$payload
 $(cat "$sec_file")
 "
-  done
+    done
+    if [ -n "${BC_VOLATILE_ALL_IDXS:-}" ]; then
+      payload="$payload
+<dispatch-volatile>
+"
+      for _idx in $BC_VOLATILE_ALL_IDXS; do
+        sec_file="$TMPDIR_BUILD/s${_idx}.txt"
+        [ -f "$sec_file" ] || continue
+        payload="$payload
+$(cat "$sec_file")
+"
+      done
+      payload="$payload
+</dispatch-volatile>
+"
+    fi
+  else
+    for i in $(seq 1 "$section_count"); do
+      sec_file="$TMPDIR_BUILD/s${i}.txt"
+      payload="$payload
+$(cat "$sec_file")
+"
+    done
+  fi
 
   # Emit payload to stdout
   echo "$payload"
@@ -776,6 +807,85 @@ _bc_handle_phase_summaries_fixed() {
   fi
 }
 
+# ============================================================================
+# M019/P00/L1: First-Turn Completeness block
+# ----------------------------------------------------------------------------
+# Derives a 4-subsection block from the already-included task plan + phase
+# plan content. Structural re-surfacing only — the content is already in the
+# payload via the task_plan and scope sections. Groups intent + constraints
+# + acceptance + files-to-touch so the model sees all four in turn 1
+# (per Opus 4.7 adaptation A1: senior-engineer delegation).
+# ============================================================================
+_bc_build_first_turn_completeness() {
+  local task_plan_path="$1"
+  local phase_plan_path="$2"
+  local out intent_body constraints_body acceptance_body files_body
+  # Intent: task plan's Description section (first paragraph after "## Description")
+  intent_body="$(sed -n '/^## Description$/,/^## /p' "$task_plan_path" 2>/dev/null | sed '1d;/^## /d' | sed '/^$/q' | head -30)"
+  # Constraints: task plan's ## Constraints section
+  constraints_body="$(sed -n '/^## Constraints$/,/^## /p' "$task_plan_path" 2>/dev/null | sed '1d;/^## /d' | head -40)"
+  # Acceptance: task plan's ## Must-Haves section (truths the task must satisfy)
+  acceptance_body="$(sed -n '/^## Must-Haves$/,/^## /p' "$task_plan_path" 2>/dev/null | sed '1d;/^## /d' | head -40)"
+  # Files: phase plan's ## Files Likely Touched section
+  files_body="$(sed -n '/^## Files Likely Touched$/,/^## /p' "$phase_plan_path" 2>/dev/null | sed '1d;/^## /d' | head -60)"
+  out="## First-Turn Completeness"$'\n\n'
+  out="${out}### Intent"$'\n'
+  out="${out}${intent_body}"$'\n\n'
+  out="${out}### Constraints"$'\n'
+  out="${out}${constraints_body}"$'\n\n'
+  out="${out}### Acceptance Criteria"$'\n'
+  out="${out}${acceptance_body}"$'\n\n'
+  out="${out}### Files To Touch"$'\n'
+  out="${out}${files_body}"$'\n'
+  printf '%s' "$out"
+}
+
+# ============================================================================
+# M019/P00/L4: Parallel Fan-Out directive
+# ----------------------------------------------------------------------------
+# Emits the known-literal fan-out directive when the recipe or task plan
+# declares parallelizable work. Otherwise emits nothing (caller omits section).
+# ============================================================================
+_bc_should_emit_parallel_fanout() {
+  local recipe_file="$1"
+  local task_plan_path="$2"
+  # (a) recipe-level or section-level parallel_fan_out: true
+  if [ -f "$recipe_file" ]; then
+    if grep -qE '^[[:space:]]*parallel_fan_out:[[:space:]]*true' "$recipe_file" 2>/dev/null; then
+      echo "yes"
+      return 0
+    fi
+  fi
+  # (b) task plan YAML frontmatter parallelizable: true
+  if [ -f "$task_plan_path" ]; then
+    if sed -n '1,/^---$/p' "$task_plan_path" 2>/dev/null | grep -qE '^parallelizable:[[:space:]]*true'; then
+      echo "yes"
+      return 0
+    fi
+  fi
+  echo "no"
+}
+
+_bc_build_parallel_fanout_block() {
+  printf '## Parallel Fan-Out\n\n'
+  printf 'When this task requires reading multiple files or fanning out across items, spawn multiple subagents in the same turn rather than issuing serial tool calls.\n'
+}
+
+# ============================================================================
+# M019/P00/L2: Section classifier for stable-before-volatile ordering
+# ----------------------------------------------------------------------------
+# Returns "stable" or "volatile" for a given display-name. Volatile = content
+# that changes per-task or per-turn (A3 cache boundary). Stable = content that
+# stays constant across a phase or milestone.
+# ============================================================================
+_bc_section_volatility_by_name() {
+  case "$1" in
+    Knowledge|Knowledge\ *|Decisions|Constraints|Scope|"Spec Context") echo "stable" ;;
+    "State Context"|"Task Plan"|"Upstream Context"|"First-Turn Completeness"|"Parallel Fan-Out") echo "volatile" ;;
+    *) echo "stable" ;;
+  esac
+}
+
 # --- Dispatch each section to its handler, building display metadata ---
 SECTION_COUNT=0
 SECTION_NAMES_PIPE=""
@@ -831,6 +941,54 @@ while IFS='|' read -r disp_ord s_name s_source s_priority; do
   idx=$((idx + 1))
 done < "$SORTED_SECTIONS_FINAL"
 rm -f "$SORTED_SECTIONS_FINAL"
+
+# ============================================================================
+# M019/P00/L1: Append First-Turn Completeness volatile section
+# ============================================================================
+SECTION_COUNT=$((SECTION_COUNT + 1))
+_bc_build_first_turn_completeness "$TASK_PLAN" "$PHASE_PLAN" \
+  > "$TMPDIR_BUILD/s${SECTION_COUNT}.txt"
+if [ -z "$SECTION_NAMES_PIPE" ]; then
+  SECTION_NAMES_PIPE="First-Turn Completeness"
+  SECTION_PRIORITIES_PIPE="required"
+else
+  SECTION_NAMES_PIPE="${SECTION_NAMES_PIPE}|First-Turn Completeness"
+  SECTION_PRIORITIES_PIPE="${SECTION_PRIORITIES_PIPE}|required"
+fi
+
+# ============================================================================
+# M019/P00/L4: Append Parallel Fan-Out volatile section (conditional)
+# ============================================================================
+_BC_FANOUT_DECISION="$(_bc_should_emit_parallel_fanout "$RECIPE_FILE" "$TASK_PLAN")"
+if [ "$_BC_FANOUT_DECISION" = "yes" ]; then
+  SECTION_COUNT=$((SECTION_COUNT + 1))
+  _bc_build_parallel_fanout_block > "$TMPDIR_BUILD/s${SECTION_COUNT}.txt"
+  SECTION_NAMES_PIPE="${SECTION_NAMES_PIPE}|Parallel Fan-Out"
+  SECTION_PRIORITIES_PIPE="${SECTION_PRIORITIES_PIPE}|required"
+fi
+
+# ============================================================================
+# M019/P00/L2: Classify each emitted section as stable or volatile so the
+# final emit loop can insert <dispatch-volatile> markers. Uses display-name
+# classification via _bc_section_volatility_by_name. Result is two
+# space-separated index lists consumed by _bc_assemble_manifest_and_emit.
+# ============================================================================
+BC_STABLE_IDXS=""
+BC_VOLATILE_ALL_IDXS=""
+_bc_classify_i=1
+IFS='|' read -ra _BC_CLASSIFY_NAMES <<EOF_CLASSIFY
+$SECTION_NAMES_PIPE
+EOF_CLASSIFY
+for _bc_nm in "${_BC_CLASSIFY_NAMES[@]}"; do
+  _bc_vol="$(_bc_section_volatility_by_name "$_bc_nm")"
+  if [ "$_bc_vol" = "volatile" ]; then
+    BC_VOLATILE_ALL_IDXS="${BC_VOLATILE_ALL_IDXS}${_bc_classify_i} "
+  else
+    BC_STABLE_IDXS="${BC_STABLE_IDXS}${_bc_classify_i} "
+  fi
+  _bc_classify_i=$((_bc_classify_i + 1))
+done
+export BC_STABLE_IDXS BC_VOLATILE_ALL_IDXS
 
 FRONTMATTER='---
 schema_version: "1.0"

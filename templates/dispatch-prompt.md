@@ -3,6 +3,15 @@ schema_version: "1.0"
 type: dispatch-prompt
 ---
 
+## First-Turn Completeness
+
+<!-- Emitted by scripts/dispatch/build-context.sh (M019/P00/L1). Derived block
+     surfacing intent + constraints + acceptance criteria + files-to-touch
+     from the already-included task plan and phase plan. First volatile
+     section (appears after the dispatch-volatile opening marker line). -->
+
+{{first_turn_completeness}}
+
 ## State Context
 
 - **Current State**: {{current_state}}
@@ -51,6 +60,26 @@ type: dispatch-prompt
 ## Verification
 
 - **Verification Criteria**: {{verification_criteria}}
+
+<!-- M019/P00/L2 Cache Boundary Contract:
+     Dispatch payloads assembled by scripts/dispatch/build-context.sh emit
+     stable sections (Knowledge, Decisions, Constraints, Scope) first, then
+     a standalone dispatch-volatile opening marker line, then volatile
+     sections (First-Turn Completeness, State Context, Task Plan, Upstream
+     Context, Parallel Fan-Out when applicable), then a standalone
+     dispatch-volatile closing marker line. This aligns with Opus 4.7
+     cache-boundary guidance. Markers are standalone lines, not XML
+     elements inside sections. -->
+
+## Parallel Fan-Out
+
+<!-- Emitted by scripts/dispatch/build-context.sh (M019/P00/L4) ONLY when the
+     recipe or task plan declares parallelizable work. Content is the known
+     literal directive: spawn multiple subagents in the same turn rather
+     than issuing serial tool calls when a task requires reading multiple
+     files or fanning out across items. -->
+
+{{parallel_fanout_directive}}
 
 ## Payload Size Guidance
 

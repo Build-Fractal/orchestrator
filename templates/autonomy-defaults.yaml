@@ -158,6 +158,16 @@ baseline_allow:
   - "Bash([ *)"
   - "Bash([[ *)"
   - "Bash(test *)"
+  # --- M021: widened tmp + probe + broad read patterns (autonomous-hardening v2) ---
+  - "Read(/var/folders/**)"
+  - "Bash(bash /tmp/*.sh)"
+  - "Bash(bash /var/folders/**/*.sh)"
+  - "Bash(ls tmp/**)"
+  - "Bash(cat tmp/**)"
+  - "Bash(sed -n *)"
+  - "Bash(head *)"
+  - "Bash(tail *)"
+  - "Bash(stat *)"
 
 # Introspection source -> allow-pattern rules (FR-2)
 # Generator reads each source at runtime and emits the corresponding patterns.

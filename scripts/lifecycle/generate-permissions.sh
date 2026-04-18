@@ -267,6 +267,7 @@ printf '{\n'
 printf '  "_generated_by": "speckit-orchestrator",\n'
 printf '  "_generated_at": "%s",\n' "$GENERATED_AT"
 printf '  "_autonomy_mode": "%s",\n' "$AUTONOMY_MODE"
+printf '  "_generated_start": "# BEGIN_ORCHESTRATOR_GENERATED v1",\n'
 printf '  "permissions": {\n'
 printf '    "defaultMode": "%s",\n' "$DEFAULT_MODE"
 printf '    "deny": [\n'
@@ -275,7 +276,8 @@ printf '\n    ],\n'
 printf '    "allow": [\n'
 emit_json_array "$ALLOW_SORTED" "      "
 printf '\n    ]\n'
-printf '  }\n'
+printf '  },\n'
+printf '  "_generated_end": "# END_ORCHESTRATOR_GENERATED v1"\n'
 printf '}\n'
 
 emit_result ok "" "generated permissions for tier=$TIER_RESOLVED mode=$AUTONOMY_MODE" >&2

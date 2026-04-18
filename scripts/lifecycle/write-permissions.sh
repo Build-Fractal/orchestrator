@@ -190,11 +190,32 @@ if [ "$MODE" = "merge" ]; then
 fi
 
 case "$MODE" in
-  fresh|overwrite)
+  fresh)
     # Claude Code's shape IS the canonical shape — passthrough (AD-16).
     cp "$INPUT_FILE" "$TARGET"
-    emit_event HOOK_COMPLETE script=write-permissions.sh mode="$MODE" host="$HOST" target="$TARGET"
-    emit_result ok "" "wrote $TARGET in mode=$MODE"
+    emit_event HOOK_COMPLETE script=write-permissions.sh mode=fresh host="$HOST" target="$TARGET"
+    emit_result ok "" "wrote $TARGET in mode=fresh"
+    ;;
+  overwrite)
+    # AD-7: sentinel-scoped overwrite. Replace ONLY the span between
+    # _generated_start and _generated_end in TARGET with the span between
+    # the same sentinels in INPUT_FILE. Preserve everything outside the
+    # span byte-identical so user-added top-level keys (hooks, mcpServers,
+    # statusLine) and any manual allow-list additions made outside the
+    # generated block survive re-runs.
+    if ! grep -q '_generated_start' "$TARGET" || ! grep -q '_generated_end' "$TARGET"; then
+      # Legacy file — no sentinels. Fall back to passthrough (pre-AD-7 behavior)
+      # but emit a SAFETY_WARNING so operators know this file will get
+      # sentinels on next regeneration.
+      cp "$INPUT_FILE" "$TARGET"
+      emit_event SAFETY_WARNING reason=no_sentinels target="$TARGET" action=passthrough
+      emit_result ok "" "wrote $TARGET in mode=overwrite (legacy: no sentinels)"
+    else
+      bash "$PROJECT_ROOT/scripts/lifecycle/apply-sentinel-overwrite.sh" \
+        --target "$TARGET" --input "$INPUT_FILE"
+      emit_event HOOK_COMPLETE script=write-permissions.sh mode=overwrite-sentinel host="$HOST" target="$TARGET"
+      emit_result ok "" "sentinel-scoped overwrite of $TARGET (AD-7)"
+    fi
     ;;
   merge)
     # AD-13: additive merge. Must preserve every entry already in $TARGET.

@@ -2,6 +2,7 @@
   "_generated_by": "speckit-orchestrator",
   "_generated_at": "2026-04-16T04:20:19Z",
   "_autonomy_mode": "full",
+  "_generated_start": "# BEGIN_ORCHESTRATOR_GENERATED v1",
   "permissions": {
     "defaultMode": "acceptEdits",
     "deny": [
@@ -129,6 +130,7 @@
       "Bash(stat *)"
     ]
   },
+  "_generated_end": "# END_ORCHESTRATOR_GENERATED v1",
   "hooks": {
     "PreToolUse": [
       {

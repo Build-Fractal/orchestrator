@@ -1,0 +1,46 @@
+## What Was Built
+
+P01 ships the Tier 1 emitter for observability and efficiency metrics: a zero-token-growth JSONL record stream covering payload composition, dispatch usage, and unit close across task / phase / milestone granularities, with Goodhart-paired cost + quality blocks on every close record. No Tier 2/3 surface — no `orchestrator:cost` command, no rollup script, no efficiency footer, no anomaly checks, no UI.
+
+Six tasks landed in strict linear order:
+
+- **T01** (`773fea7`) — `scripts/lib/pricing.sh` (sourceable bash 3.2 lib: `pricing_file_path`, `pricing_last_updated`, `pricing_stale_days`, `pricing_is_stale`, `pricing_resolve_alias`, `pricing_lookup_rates`, `pricing_estimate_cost_usd`, `pricing_warning_reason`, `chars_to_tokens_quartile`; honors `ORCH_PRICING_FILE`; never aborts caller — returns empty + module-scoped `_PRICING_WARNING_REASON` on missing / stale / no-rate). `scripts/verify/m019-schema.sh` (pure-bash JSONL validator: enforces `record_type` / `source` / `granularity` enums, `unit_close` cost + quality pairing, pre-M019 additivity). Pitfall captured for downstream tasks: BSD awk treats `in` as a keyword, so awk vars starting with `in_` silently zero; use `ival` / `oval`.
+
+- **T02** (`9e4c0e5`) — `scripts/dispatch/build-context.sh` emits one `payload_breakdown` JSONL record per invocation to `.orchestrator/milestones/<Mxxx>/execution-log.jsonl` (fields: record_type, unitId, milestone, phase, task, payload_chars, payload_tokens_estimate via `chars_to_tokens_quartile`, section_tokens per context-recipe section, token_estimate_method: "char-quartile", model, source: "estimate", timestamp). SC-6 byte-identical stdout preserved via a `PAYLOAD_CAPTURE` tempfile + `cat` pattern — the emitter runs after stdout and never contributes bytes to the payload.
+
+- **T03** (`eab79f3`) — `scripts/dispatch/dispatch-interface.sh` emits one `dispatch_usage` JSONL record per invocation after BACKEND is resolved, on both happy and error paths (backend_crashed exit 5; backend_malformed schema / type exit 6). Fields: input_tokens_estimate, output_tokens_estimate placeholder, estimated_cost_usd via pricing lib, pricing_version from pricing.yml `last_updated`, source: "estimate". C4 degradation: when pricing.yml is missing or stale >90 days, `estimated_cost_usd: null` + `pricing_warning`, exit 0. Resolved T01's subshell pitfall — estimator stdout captured via tmp-file so the module-scoped `_PRICING_WARNING_REASON` survives for the warning read.
+
+- **T04** (`aa9d383`) — `scripts/knowledge/write-summary.sh` emits one `unit_close` JSONL record per `task | phase | milestone` invocation, carrying BOTH a cost block (summed from the unit's `payload_breakdown` + `dispatch_usage` records; null propagates up the aggregation chain — Tier 1 degradation signal preserved across rollup) AND a quality block (verification_pass_rate, deviation_count, retry_count derived per AD-3 from existing `attempt` / `outcome` / `verification_result` fields — no new event surface). `m019-schema.sh` source enum extended to `estimate | runtime | aggregate`. Summary file stdout unchanged byte-for-byte (C3 / SC-10).
+
+- **T05** (`4edf615`) — fixtures + 5 per-gate scripts: `m019-p01-emitter-presence.sh`, `m019-p01-pricing-degradation.sh` (trap-safe rename/restore with backup sentinel), `m019-p01-source-enum.sh`, `m019-p01-zero-token-growth.sh`, `m019-p01-additive-compat.sh`. Fixture tree under `tests/fixtures/m019-p01/`: pre-M019 log, post-M019 rollup demo, 4 bad-record fixtures, minimal M999 fixture milestone. Hermetic `scripts/dispatch/adapters/backend/stub.sh` (filename-routed, no change to dispatch-interface). `ORCH_M019_EMIT=0` early-return seam added to all three emitters for SC-6 verification; default-on production behavior unchanged.
+
+- **T06** (`532f8d7`) — `m019-p01-bash32-compat.sh` (split-needle self-match avoidance, M021/P04 pattern), `m019-p01-no-pre-p00-emission.sh` (SC-12 ordering guard; lexical ISO-8601 compare against the P00 epoch `2026-04-18T02:21:28Z`; M011 and earlier exempted per D009), `m019-p01-fixture-rollup.sh` (SC-7 greppability demo — VERIFICATION ASSET, no command shipped), `m019-p01-phase-suite.sh` (8-gate orchestrator). Directory-path artifact check added to `scripts/verify/check-must-haves.sh` (root-cause fix for silently-failing directory-artifact lines).
+
+## Key Decisions
+
+- **Zero-token instrumentation (SC-6).** Emitters write to JSONL log files, never into the payload. `PAYLOAD_CAPTURE` tempfile + `cat` pattern in `build-context.sh` is the load-bearing trick: stdout is produced by `cat`, the emitter runs after and contributes zero bytes. `zero-token-growth` gate normalizes `hit_count: N` lines before `cmp` (knowledge shared-state drift is orthogonal to payload-bytes).
+- **Goodhart pairing (C2 / SC-3).** Every `unit_close` carries both cost and quality; schema validator rejects records missing either. Pairing happens at emission time, not at rollup, so Tier 2 cannot accidentally optimize cost in isolation.
+- **Schema additivity for Tier 2/3 forward compat (SC-4).** `source: estimate | runtime | aggregate` and `granularity: task | phase | milestone` enums reserved at Tier 1. `record_type` is a discriminator. Tier 3 backend-actuals adapters land additively — no Tier 1 record-writer needs modification.
+- **Pre-M019 consumer additivity (C3 / SC-10).** New fields are additive only; `duration_s`, `outcome`, `verification_result`, `attempt`, `unitId` keep current semantics + positions. `scripts/state/derive-phase.sh` unchanged. Pre-M019 records still validate.
+- **Never-abort degradation (C4).** Pricing lib returns empty on missing / stale / no-rate, sets module-scoped warning; emitter records `estimated_cost_usd: null` + `pricing_warning`, exits 0. Dispatch continues.
+- **Test seam (ORCH_M019_EMIT).** Env-var early-return on all three emitters so SC-6 byte-identity can be measured in-place; production defaults on.
+- **SC-12 epoch ordering (D009).** `2026-04-18T02:21:28Z` (P00-SUMMARY `completed_at`) is the first instant any emitter record may appear in a post-M011 milestone's log. Enforced by lexical ISO-8601 compare. Live scan on M015 / M016 / M019 / M021 is clean.
+
+## Verification Results
+
+`scripts/verify/m019-p01-phase-suite.sh` — PASS 8 / FAIL 0:
+
+- `m019-p01-emitter-presence.sh` — payload_breakdown, dispatch_usage, and unit_close each emitted exactly once per corresponding boundary
+- `m019-p01-pricing-degradation.sh` — pricing.yml renamed mid-run; dispatch writes `estimated_cost_usd: null` + `pricing_warning`, exit 0; trap restores pricing.yml on exit
+- `m019-p01-source-enum.sh` — `estimate | runtime | aggregate` accepted, others rejected
+- `m019-p01-zero-token-growth.sh` — 23971 bytes pre / 23971 bytes post with emitters on; delta = 0 modulo hit_count normalization
+- `m019-p01-fixture-rollup.sh` — granularity-keyed totals print from ~10 fixture records (SC-7 greppability)
+- `m019-p01-additive-compat.sh` — pre-M019 log fixture still validates
+- `m019-p01-no-pre-p00-emission.sh` — no emitter record predates the P00 epoch in any post-M011 milestone
+- `m019-p01-bash32-compat.sh` — all 15 P01-touched/created `.sh` files clean
+
+Plus: `m019-p00-phase-suite.sh` still PASS 4 / FAIL 0 — P00 regression gate preserved. `tests/test-s05.sh` 100/100, `tests/test-s06.sh` 57/57. `scripts/verify/anti-pattern-lint.sh` clean.
+
+## What M019 Delivers to M012–M014
+
+M012–M014 dogfooding now runs on top of a measured baseline: every task / phase / milestone close produces a JSONL record with paired cost + quality, greppable by `record_type` and `granularity`. Tier 2 rollups and Tier 3 backend-actuals land additively — no Tier 1 rewrite.

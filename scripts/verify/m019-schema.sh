@@ -7,7 +7,9 @@
 #   - Valid JSONL (one JSON object per non-empty line).
 #   - If a line has "record_type", its value must be one of:
 #       payload_breakdown | dispatch_usage | unit_close
-#   - If a line has "source", value must be: estimate | runtime (SC-4).
+#   - If a line has "source", value must be: estimate | runtime | aggregate
+#     (SC-4; `aggregate` added in P01/T04 per AS-2 — the rollup slot for
+#     phase/milestone unit_close records that sum child-record costs).
 #   - unit_close records: "granularity" must be task|phase|milestone,
 #     AND the record must contain both a cost block (estimated_cost_usd AND
 #     pricing_version keys present, even if null) AND a quality block
@@ -25,7 +27,7 @@
 set -u
 
 RECORD_TYPES="payload_breakdown dispatch_usage unit_close"
-SOURCES="estimate runtime"
+SOURCES="estimate runtime aggregate"
 GRANULARITIES="task phase milestone"
 UNIT_CLOSE_REQUIRED="estimated_cost_usd pricing_version verification_pass_rate deviation_count retry_count"
 

@@ -176,8 +176,28 @@ while IFS= read -r line; do
           contains_pattern=$(echo "$line" | sed 's/.*contains "\([^"]*\)".*/\1/')
         fi
 
-        # Check 1: File exists
+        # Check 1: File or directory exists
+        # Paths ending in "/" (or resolving to a directory) are treated as
+        # directory-existence checks; min-lines/contains are skipped for
+        # directories (they make no sense there).
         full_path="$PROJECT_ROOT/$artifact_path"
+        is_dir_check=false
+        case "$artifact_path" in
+          */) is_dir_check=true ;;
+        esac
+        if [[ -d "$full_path" ]]; then
+          is_dir_check=true
+        fi
+        if $is_dir_check; then
+          if [[ -d "$full_path" ]]; then
+            echo "PASS: artifact $artifact_path exists (directory)"
+          else
+            echo "FAIL: artifact $artifact_path not found (expected directory at $full_path)"
+            FAILURES=$((FAILURES + 1))
+          fi
+          # Directories skip min-lines/contains checks.
+          continue
+        fi
         if [[ -f "$full_path" ]]; then
           echo "PASS: artifact $artifact_path exists"
         else

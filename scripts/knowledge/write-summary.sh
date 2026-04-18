@@ -254,6 +254,11 @@ _ws_emit_unit_close() {
   local outcome="$6"
   local completed_at_arg="$7"
 
+  # M019/P01/T05: test seam — ORCH_M019_EMIT=0 disables the unit_close append.
+  if [ "${ORCH_M019_EMIT:-1}" = "0" ]; then
+    return 0
+  fi
+
   # Resolve orchestrator root and milestone log path.
   local orch_root log_dir log_file
   orch_root="${ORCHESTRATOR_ROOT:-.orchestrator}"

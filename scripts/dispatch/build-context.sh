@@ -1013,6 +1013,13 @@ _bc_emit_payload_breakdown() {
   # Arg: path to the captured payload file.
   local capture_file="$1"
 
+  # M019/P01/T05: test seam — ORCH_M019_EMIT=0 short-circuits the emitter so
+  # the zero-token-growth gate can diff the stdout bytes with emitter on/off.
+  # Production always runs with the default 1.
+  if [ "${ORCH_M019_EMIT:-1}" = "0" ]; then
+    return 0
+  fi
+
   # Source pricing helpers lazily so zero-overhead when the file is absent.
   if ! type chars_to_tokens_quartile >/dev/null 2>&1; then
     if [ -r "$PROJECT_ROOT/scripts/lib/pricing.sh" ]; then

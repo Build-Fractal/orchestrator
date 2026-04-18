@@ -1,0 +1,5 @@
+{"timestamp":"2026-04-14T10:00:00Z","unitId":"M001/P01/T01","milestone":"M001","phase":"P01","task":"T01","tier":"C","outcome":"success","dispatch_method":"subagent","attempt":1,"verification_result":"pass","duration_s":120}
+{"timestamp":"2026-04-14T10:04:12Z","unitId":"M001/P01/T02","milestone":"M001","phase":"P01","task":"T02","tier":"C","outcome":"success","dispatch_method":"subagent","attempt":1,"verification_result":"pass","duration_s":240}
+{"timestamp":"2026-04-14T10:09:30Z","unitId":"M001/P01/T03","milestone":"M001","phase":"P01","task":"T03","tier":"C","outcome":"failure","dispatch_method":"subagent","attempt":1,"verification_result":"fail","duration_s":60}
+{"timestamp":"2026-04-14T10:11:05Z","unitId":"M001/P01/T03","milestone":"M001","phase":"P01","task":"T03","tier":"C","outcome":"success","dispatch_method":"subagent","attempt":2,"verification_result":"pass","duration_s":90}
+{"timestamp":"2026-04-14T10:15:45Z","unitId":"M001/P02/T01","milestone":"M001","phase":"P02","task":"T01","tier":"C","outcome":"success","dispatch_method":"subagent","attempt":1,"verification_result":"pass","duration_s":180}

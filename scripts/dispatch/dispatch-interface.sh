@@ -127,6 +127,12 @@ _di_emit_dispatch_usage() {
   # use the pricing-lib resolution (happy path or missing/stale/no-rate).
   local warning_override="${1:-}"
 
+  # M019/P01/T05: test seam — ORCH_M019_EMIT=0 disables emission so the
+  # zero-token-growth gate can assert no bytes are appended to any log.
+  if [ "${ORCH_M019_EMIT:-1}" = "0" ]; then
+    return 0
+  fi
+
   # Skip silently if pricing lib was not loadable (no helpers present).
   if ! type chars_to_tokens_quartile >/dev/null 2>&1; then
     return 0

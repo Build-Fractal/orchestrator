@@ -1,0 +1,1 @@
+{"record_type":"dispatch_usage","unitId":"M999/P01/T01","milestone":"M999","phase":"P01","task":"T01","backend":"stub","input_tokens_estimate":512,"output_tokens_estimate":0,"estimated_cost_usd":0.001,"pricing_version":"2026-04-17","model":"claude-opus-4-7","source":"fabricated","timestamp":"2026-04-18T00:00:00Z"}

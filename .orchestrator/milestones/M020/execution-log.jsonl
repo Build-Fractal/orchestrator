@@ -1,0 +1,5 @@
+{"ts":"2026-04-16T18:00:00Z","event":"milestone_created","milestone":"M020","tier":"C","feature_ref":"020-cutover-content-sweep","source":"conversus-deliberation","deliberation_path":"conversus-oss/deliberations/spec-kit-orc-audit/","arbiter_rulings":5,"p0_mitigations":4,"p1_mitigations":6}
+{"ts":"2026-04-16T18:00:00Z","event":"artifact_written","path":".orchestrator/milestones/M020/M020-CONTEXT.md","status":"draft"}
+{"ts":"2026-04-16T18:00:00Z","event":"artifact_written","path":".orchestrator/milestones/M020/M020-EVALUATION.md","tier":"C","tier_source":"auto"}
+{"ts":"2026-04-16T18:00:00Z","event":"artifact_written","path":".orchestrator/milestones/M020/M020-ROADMAP.md","phases":4,"dag":"P01->P02->P03->P04"}
+{"ts":"2026-04-16T18:00:00Z","event":"artifact_written","path":"specs/020-cutover-content-sweep/spec.md","status":"Draft","user_stories":7,"acceptance_scenarios":18,"success_criteria":8}

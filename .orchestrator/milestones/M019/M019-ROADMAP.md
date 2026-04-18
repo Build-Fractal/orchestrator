@@ -12,7 +12,7 @@ updated_at: "2026-04-17T23:35:00Z"
 
 ## Phases
 
-- [ ] **P00**: Opus 4.7 Baseline Adaptation — "A developer builds a dispatch payload via `scripts/dispatch/build-context.sh` on a fixture task, and the rendered payload contains an explicit first-turn completeness block (intent + constraints + acceptance criteria + file paths), stable sections appearing before volatile sections wrapped in a `<dispatch-volatile>` marker, no `thinking_budget:` references anywhere in `templates/` or `scripts/engine/intensity-gate.sh`, an explicit parallel-fan-out directive for any task recipe declaring parallelizable subtasks, and `bash scripts/verify/m019-p00-payload-shape.sh` exits 0; additionally `bash scripts/lifecycle/evaluate-preflight.sh .` against a fixture `.claude/settings.json` containing the M021 hook + widened allow-list preserves both byte-identically."
+- [x] **P00**: Opus 4.7 Baseline Adaptation — "A developer builds a dispatch payload via `scripts/dispatch/build-context.sh` on a fixture task, and the rendered payload contains an explicit first-turn completeness block (intent + constraints + acceptance criteria + file paths), stable sections appearing before volatile sections wrapped in a `<dispatch-volatile>` marker, no `thinking_budget:` references anywhere in `templates/` or `scripts/engine/intensity-gate.sh`, an explicit parallel-fan-out directive for any task recipe declaring parallelizable subtasks, and `bash scripts/verify/m019-p00-payload-shape.sh` exits 0; additionally `bash scripts/lifecycle/evaluate-preflight.sh .` against a fixture `.claude/settings.json` containing the M021 hook + widened allow-list preserves both byte-identically."
   - Risk: high
   - Depends: none
   - Boundary Map:

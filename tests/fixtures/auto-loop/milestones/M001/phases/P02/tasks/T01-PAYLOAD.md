@@ -28,7 +28,7 @@ category: patterns
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 225
+hit_count: 229
 source_unit: "M001/P01"
 source_type: consolidation
 supersedes: ""
@@ -56,7 +56,7 @@ category: patterns
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 225
+hit_count: 229
 source_unit: "M001/P01"
 source_type: consolidation
 supersedes: ""
@@ -84,7 +84,7 @@ category: patterns
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 225
+hit_count: 229
 source_unit: "M001/P01"
 source_type: consolidation
 supersedes: ""
@@ -110,7 +110,7 @@ category: patterns
 confidence: 0.90
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 225
+hit_count: 229
 source_unit: "M005/P03"
 source_type: consolidation
 supersedes: ""
@@ -130,7 +130,7 @@ category: patterns
 confidence: 0.90
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 196
+hit_count: 200
 source_unit: "M005/P01"
 source_type: consolidation
 supersedes: ""
@@ -150,7 +150,7 @@ category: patterns
 confidence: 0.90
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 196
+hit_count: 200
 source_unit: "M005/P04"
 source_type: consolidation
 supersedes: ""
@@ -170,7 +170,7 @@ category: patterns
 confidence: 0.90
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 196
+hit_count: 200
 source_unit: "M005/P07"
 source_type: consolidation
 supersedes: ""
@@ -192,7 +192,7 @@ category: patterns
 confidence: 0.85
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 225
+hit_count: 229
 source_unit: "M001/P01"
 source_type: consolidation
 supersedes: ""
@@ -218,7 +218,7 @@ category: patterns
 confidence: 0.90
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 196
+hit_count: 200
 source_unit: "M006/P01"
 source_type: consolidation
 supersedes: ""
@@ -238,7 +238,7 @@ category: patterns
 confidence: 0.90
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 196
+hit_count: 200
 source_unit: "M006/P01"
 source_type: consolidation
 supersedes: ""
@@ -258,7 +258,7 @@ category: patterns
 confidence: 0.90
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 196
+hit_count: 200
 source_unit: "M002/P04"
 source_type: consolidation
 supersedes: ""
@@ -278,7 +278,7 @@ category: conventions
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 225
+hit_count: 229
 source_unit: "M001/P01"
 source_type: consolidation
 supersedes: ""
@@ -311,7 +311,7 @@ category: conventions
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 225
+hit_count: 229
 source_unit: "M001/P01"
 source_type: consolidation
 supersedes: ""
@@ -333,7 +333,7 @@ category: conventions
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 225
+hit_count: 229
 source_unit: "M001/P01"
 source_type: consolidation
 supersedes: ""
@@ -361,7 +361,7 @@ category: conventions
 confidence: 0.90
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 196
+hit_count: 200
 source_unit: "M005/P04"
 source_type: consolidation
 supersedes: ""
@@ -387,7 +387,7 @@ category: conventions
 confidence: 0.85
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 196
+hit_count: 200
 source_unit: "M005/P02"
 source_type: consolidation
 supersedes: ""
@@ -407,7 +407,7 @@ category: conventions
 confidence: 0.90
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 196
+hit_count: 200
 source_unit: "M005/P05"
 source_type: consolidation
 supersedes: ""
@@ -427,7 +427,7 @@ category: conventions
 confidence: 0.90
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 225
+hit_count: 229
 source_unit: "M001/P01"
 source_type: consolidation
 supersedes: ""
@@ -453,7 +453,7 @@ category: conventions
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 196
+hit_count: 200
 source_unit: "M002/P01"
 source_type: consolidation
 supersedes: ""
@@ -475,7 +475,7 @@ category: conventions
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 196
+hit_count: 200
 source_unit: "M002/P01"
 source_type: consolidation
 supersedes: ""
@@ -495,7 +495,7 @@ category: lessons
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 225
+hit_count: 229
 source_unit: "M001/P01"
 source_type: consolidation
 supersedes: ""
@@ -515,7 +515,7 @@ category: lessons
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 225
+hit_count: 229
 source_unit: "M001/P01"
 source_type: consolidation
 supersedes: ""
@@ -535,7 +535,7 @@ category: lessons
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 196
+hit_count: 200
 source_unit: "M004/P06"
 source_type: consolidation
 supersedes: ""
@@ -555,7 +555,7 @@ category: lessons
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 196
+hit_count: 200
 source_unit: "M004/P06"
 source_type: consolidation
 supersedes: ""
@@ -575,7 +575,7 @@ category: lessons
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 196
+hit_count: 200
 source_unit: "M004/P06"
 source_type: consolidation
 supersedes: ""

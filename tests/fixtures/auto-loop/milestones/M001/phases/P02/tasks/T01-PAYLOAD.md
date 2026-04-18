@@ -7,14 +7,15 @@ type: dispatch-prompt
 ## Manifest
 | Section | Lines | Est. Tokens | Priority |
 |---------|-------|-------------|----------|
-| Knowledge (25 entries) | 19-588 | ~4900 | filtered |
-| Decisions | 590-594 | ~100 | filtered |
-| Constraints | 596-601 | ~100 | required |
-| Scope | 603-617 | ~100 | required |
-| Upstream Context | 619-631 | ~100 | required |
-| Task Plan | 633-650 | ~100 | required |
-| State Context | 652-658 | ~100 | required |
-| **Total** | | **~5500** | |
+| Knowledge (25 entries) | 20-589 | ~4900 | filtered |
+| Decisions | 591-595 | ~100 | filtered |
+| Constraints | 597-630 | ~400 | required |
+| Scope | 632-646 | ~100 | required |
+| Upstream Context | 648-660 | ~100 | required |
+| Task Plan | 662-679 | ~100 | required |
+| State Context | 681-687 | ~100 | required |
+| First-Turn Completeness | 689-703 | ~100 | required |
+| **Total** | | **~5900** | |
 
 ## Knowledge
 
@@ -27,7 +28,7 @@ category: patterns
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 84
+hit_count: 225
 source_unit: "M001/P01"
 source_type: consolidation
 supersedes: ""
@@ -55,7 +56,7 @@ category: patterns
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 84
+hit_count: 225
 source_unit: "M001/P01"
 source_type: consolidation
 supersedes: ""
@@ -83,7 +84,7 @@ category: patterns
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 84
+hit_count: 225
 source_unit: "M001/P01"
 source_type: consolidation
 supersedes: ""
@@ -109,7 +110,7 @@ category: patterns
 confidence: 0.90
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 84
+hit_count: 225
 source_unit: "M005/P03"
 source_type: consolidation
 supersedes: ""
@@ -129,7 +130,7 @@ category: patterns
 confidence: 0.90
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 72
+hit_count: 196
 source_unit: "M005/P01"
 source_type: consolidation
 supersedes: ""
@@ -149,7 +150,7 @@ category: patterns
 confidence: 0.90
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 72
+hit_count: 196
 source_unit: "M005/P04"
 source_type: consolidation
 supersedes: ""
@@ -169,7 +170,7 @@ category: patterns
 confidence: 0.90
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 72
+hit_count: 196
 source_unit: "M005/P07"
 source_type: consolidation
 supersedes: ""
@@ -191,7 +192,7 @@ category: patterns
 confidence: 0.85
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 84
+hit_count: 225
 source_unit: "M001/P01"
 source_type: consolidation
 supersedes: ""
@@ -217,7 +218,7 @@ category: patterns
 confidence: 0.90
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 72
+hit_count: 196
 source_unit: "M006/P01"
 source_type: consolidation
 supersedes: ""
@@ -237,7 +238,7 @@ category: patterns
 confidence: 0.90
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 72
+hit_count: 196
 source_unit: "M006/P01"
 source_type: consolidation
 supersedes: ""
@@ -257,7 +258,7 @@ category: patterns
 confidence: 0.90
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 72
+hit_count: 196
 source_unit: "M002/P04"
 source_type: consolidation
 supersedes: ""
@@ -277,7 +278,7 @@ category: conventions
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 84
+hit_count: 225
 source_unit: "M001/P01"
 source_type: consolidation
 supersedes: ""
@@ -310,7 +311,7 @@ category: conventions
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 84
+hit_count: 225
 source_unit: "M001/P01"
 source_type: consolidation
 supersedes: ""
@@ -332,7 +333,7 @@ category: conventions
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 84
+hit_count: 225
 source_unit: "M001/P01"
 source_type: consolidation
 supersedes: ""
@@ -360,7 +361,7 @@ category: conventions
 confidence: 0.90
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 72
+hit_count: 196
 source_unit: "M005/P04"
 source_type: consolidation
 supersedes: ""
@@ -386,7 +387,7 @@ category: conventions
 confidence: 0.85
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 72
+hit_count: 196
 source_unit: "M005/P02"
 source_type: consolidation
 supersedes: ""
@@ -406,7 +407,7 @@ category: conventions
 confidence: 0.90
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 72
+hit_count: 196
 source_unit: "M005/P05"
 source_type: consolidation
 supersedes: ""
@@ -426,7 +427,7 @@ category: conventions
 confidence: 0.90
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 84
+hit_count: 225
 source_unit: "M001/P01"
 source_type: consolidation
 supersedes: ""
@@ -452,7 +453,7 @@ category: conventions
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 72
+hit_count: 196
 source_unit: "M002/P01"
 source_type: consolidation
 supersedes: ""
@@ -474,7 +475,7 @@ category: conventions
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 72
+hit_count: 196
 source_unit: "M002/P01"
 source_type: consolidation
 supersedes: ""
@@ -494,7 +495,7 @@ category: lessons
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 84
+hit_count: 225
 source_unit: "M001/P01"
 source_type: consolidation
 supersedes: ""
@@ -514,7 +515,7 @@ category: lessons
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 84
+hit_count: 225
 source_unit: "M001/P01"
 source_type: consolidation
 supersedes: ""
@@ -534,7 +535,7 @@ category: lessons
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 72
+hit_count: 196
 source_unit: "M004/P06"
 source_type: consolidation
 supersedes: ""
@@ -554,7 +555,7 @@ category: lessons
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 72
+hit_count: 196
 source_unit: "M004/P06"
 source_type: consolidation
 supersedes: ""
@@ -574,7 +575,7 @@ category: lessons
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 72
+hit_count: 196
 source_unit: "M004/P06"
 source_type: consolidation
 supersedes: ""
@@ -600,6 +601,34 @@ No entries yet.
 - **Dispatch Budget**: 3
 - **Budget Enforcement**: warn
 
+### Prohibited inline bash patterns
+
+The following patterns trigger Claude Code safety prompts and MUST NOT
+appear in Bash tool calls. See AP-004 in ANTIPATTERNS.md for details.
+
+- **Command substitution**: Do not use $(cmd) or backtick substitution.
+  Use --output-file flags or omit dynamic values (e.g., omit --completed_at).
+- **Brace expansion**: Do not use {a,b} patterns.
+  Pass explicit arguments instead.
+- **Compound chains**: Do not chain commands with && || ; or pipes.
+  Use wrapper scripts (e.g., bash scripts/verify/run-suite.sh).
+
+### Allowed invocation shapes
+
+When an inline bash shape would otherwise trigger a safety prompt, use one
+of these canonical wrappers instead:
+
+- `bash scripts/util/with-env.sh KEY=VALUE [KEY=VALUE ...] -- <command> [args ...]`
+  -- Replaces `KEY=VALUE bash cmd` inline-assignment prefixes.
+- `bash scripts/util/read-range.sh <file> <M> <N>`
+  -- Replaces `sed -n 'M,Np' <file>` line-range reads.
+- `bash scripts/util/run-probe.sh <path-to-staged-probe.sh>`
+  -- Replaces `cat > /tmp/x.sh <<EOF ... EOF ; bash /tmp/x.sh` heredoc-and-execute.
+
+A pre-Bash hook (`scripts/hooks/pre-bash-shape-guard.sh`) auto-rewrites six
+common deviations from these shapes and hard-rejects four others with a
+wrapper-pointing diagnostic. See ANTIPATTERNS.md AP-005..AP-009.
+
 ## Scope
 
 ### Goal
@@ -615,6 +644,8 @@ Core features working end-to-end.
 
 - [ ] T01: Implement feature A
 - [ ] T02: Implement feature B
+
+<dispatch-volatile>
 
 ## Upstream Context
 
@@ -655,6 +686,23 @@ Implement feature A.
 - **Phase**: P02
 - **Task**: T01
 - **Tier**: C
+
+## First-Turn Completeness
+
+### Intent
+
+
+### Constraints
+
+
+### Acceptance Criteria
+
+- [ ] Feature A script exists
+- [ ] Feature A passes tests
+
+### Files To Touch
+
+</dispatch-volatile>
 
 UPDATED: MEM001 (hit_count)
 UPDATED: MEM002 (hit_count)

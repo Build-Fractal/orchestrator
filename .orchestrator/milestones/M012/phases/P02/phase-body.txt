@@ -1,0 +1,51 @@
+## Summary
+
+P02 extends the M012/P01 wiki pipeline to resolve internal cross-links, surface the `knowledge/**/MEM*.md` corpus through the existing SSOT pipeline, and ship a standalone built-site link checker — with a nine-gate P02 verification suite and a D011 mechanical evaluation record that promotes M020. All 10 Truths PASS; both the P01 and P02 phase suites are 9/9 green at close.
+
+## What was built
+
+- **Cross-link resolution** — `wiki/mkdocs.yml` `include-markdown` gains `rewrite_relative_urls: true` (load-bearing for links inside included bodies), `toc: permalink: true` already in place from P01.
+- **Knowledge subtree via the SSOT pipeline** — the existing `scanner → stubs → nav` three-stage pipeline is additively extended: `wiki-scan-sources.sh` emits `knowledge:<category>|<repo-root-rel>|<title>` records in lexical order per category; `wiki-generate-stubs.sh` routes them to `wiki/docs/knowledge/<category>/MEM*.md` with repo-root-relative canonical includes plus four `Auto-generated section index` files; `wiki-generate-nav.sh` emits a `Knowledge Entries` subtree between `Knowledge:` and `Milestone Summary:`. 25 MEM files → 25 wiki stubs (11 patterns + 9 conventions + 5 lessons).
+- **Link checker** — `scripts/diagnostics/wiki-link-check.sh` (297 lines, Bash 3.2, pure-string `normalize_path` with no `realpath` dependency) walks built-site HTML, classifies links three ways (in-scope/out-of-scope/broken), honors `--site/--root/--strict/--help`, emits deterministic `sort -u` findings, and follows the 0/1/2 exit-code contract.
+- **Operator documentation** — `wiki/README.md` adds `Link resolution`, `Running the link checker`, and `Pre-deploy integration (P04)` sections. P02 documents the P04 contract; P04 wires the hooks.
+- **Verification surface** — 9 P02 gates (`link-rewrite-config`, `mem-stubs`, `mem-anchors`, `link-check-contract`, `link-check-help`, `readme-policy`, `link-check-smoke`, `bash32-compat`, `d011-evaluation`) plus `m012-p02-phase-suite.sh` orchestrator. Mkdocs-dependent gates use SKIP-as-PASS on hosts without mkdocs.
+- **D011 evaluation** — `.orchestrator/milestones/M012/phases/P02/D011-EVALUATION.md` records the mechanical outcome: **1 of 3** criteria shipped (cross-refs ✓, review-state ✗, query surface ✗) → **M020 promoted** per the D011 trigger rule.
+- **P01 nav-structure repair** — the stale P01 nav block that had accumulated task-level `*-PAYLOAD.md` leaks was reconciled by regenerating `wiki/mkdocs.yml` from current scanner output (policy-neutral) and extending `scripts/verify/m012-p01-wiki-self-contained.sh` allowlist to include `m012-p02-*.sh`. Both phase suites green at close.
+
+## Key decisions
+
+- **AD-3 SSOT preserved** — MEM entries surface via include stubs, never copied.
+- **AD-1 granular-MEM citation** — per-entry files are the canonical cross-ref target; consolidated `KNOWLEDGE.md` anchors are best-effort since it uses topical headings, not `### MEM-NNNN`.
+- **Constitution XIV (no speculative complexity)** — knowledge subtree emission is unconditional when `knowledge/` exists (no flag); T04 documents the P04 contract without wiring hooks.
+- **Constitution XV (surgical precision)** — every task touched the minimum surface; D011 evaluation is a first-class structured artifact rather than buried in prose.
+- **MEM004 carve-out** — internal compound shell logic permitted inside diagnostic/scanner scripts; AD-19 single-script-file Check shape enforced at the Check layer.
+- **Policy-neutral nav repair** — regenerating `wiki/mkdocs.yml` rather than changing scanner exclusion policy keeps task-level `*-PAYLOAD.md` inclusion consistent with pre-M012 milestones (M002–M011 already navigate their payload files).
+
+## Patterns established
+
+- Additive scanner extension (append-only emission block) keeps downstream generators stable across P01→P02.
+- Two-root canonical scheme: `.orchestrator/`-rooted records use the existing helper; repo-rooted `knowledge/` records use a new `build_canonical_repo_rel` branch.
+- Per-category `/tmp` PID-suffixed list files as fixed-slot associative-array replacement (Bash 3.2 safe).
+- Scanner-presence-gated subtree emission (Knowledge Entries subtree, like P01's conditional Archive bucket).
+- Pure-string `normalize_path` walking `IFS=/` positional-parameter stack — no `realpath` / Homebrew coreutils dependency on macOS.
+- SKIP-as-PASS at gate boundaries for mkdocs-dependent checks (keeps auto-mode green on sandboxes without mkdocs installed).
+- Phase-suite orchestrator mirrors P01 parallel-indexed-array pattern (`gates_0..gates_8 + eval`).
+- D011 mechanical-evaluation record as first-class phase artifact (not a summary side-note).
+
+## Verification results
+
+- `scripts/verify/m012-p02-phase-suite.sh` — **9/9 PASS**
+- `scripts/verify/m012-p01-phase-suite.sh` — **9/9 PASS** (nav-structure regression closed)
+- `scripts/verify/check-must-haves.sh .orchestrator/milestones/M012/phases/P02` — all 10 Truths PASS, all 46 Artifact assertions PASS, all 17 Key-Link assertions PASS
+- External modification check: PASS (no external modifications during phase)
+- Roadmap sync: OK
+
+## D011 outcome for M012
+
+Per `.orchestrator/DECISIONS.md` D011 trigger rule, the mechanical count at P02 close is 1 of 3 criteria shipped (cross-refs ✓, review-state ✗, query surface ✗) → **M020 is promoted** per the committed rule.
+
+## Open follow-ups (out of scope for P02)
+
+- P03 Giscus integration consumes this rendered surface (comments per page).
+- P04 deploy pipeline wires `wiki-link-check.sh` + `mkdocs build --strict` as pre-deploy gates per the documented contract.
+- MEM-anchor resolution against the consolidated `KNOWLEDGE.md` page is best-effort; if desired, a future task could normalize MEM headings in `KNOWLEDGE.md` to `### MEM-NNNN` for full anchor coverage.

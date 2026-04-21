@@ -1,0 +1,45 @@
+{#
+  M012/P03/T01 — Giscus comments partial (Material theme override).
+
+  MkDocs Material discovers this file at `partials/comments.html` under the
+  directory named by `theme.custom_dir` (see wiki/mkdocs.yml). Anything
+  rendered here is emitted at the bottom of every page, below the main
+  content and above the footer. This is the AD-3-compliant injection point:
+  canonical `.orchestrator/**.md` bodies are read unchanged via the
+  include-markdown plugin; the comment surface is appended by the theme at
+  render time — no body-copy, no per-page authoring, no duplication.
+
+  Config values arrive from `config.extra.giscus.*` (wiki/mkdocs.yml), which
+  are `!ENV`-interpolated so production IDs live in the operator's env, not
+  in git. A missing env var defaults to "" and is caught loudly by the
+  pre-build gate landed in T02 (scripts/diagnostics/wiki-giscus-config-check.sh).
+#}
+{% if page and page.meta and page.meta.comments == false %}
+  {# Per-page opt-out: set `comments: false` in a page's YAML frontmatter
+     to suppress Giscus on that page. Used nowhere in P03; reserved for
+     future (e.g., an archive index that shouldn't collect comments). #}
+{% else %}
+  <h2 id="__comments">Comments</h2>
+  <script
+    src="https://giscus.app/client.js"
+    data-repo="{{ config.extra.giscus.repo }}"
+    data-repo-id="{{ config.extra.giscus.repo_id }}"
+    data-category="{{ config.extra.giscus.category }}"
+    data-category-id="{{ config.extra.giscus.category_id }}"
+    data-mapping="{{ config.extra.giscus.mapping }}"
+    data-strict="1"
+    data-reactions-enabled="1"
+    data-emit-metadata="0"
+    data-input-position="top"
+    data-theme="preferred_color_scheme"
+    data-lang="en"
+    data-loading="lazy"
+    crossorigin="anonymous"
+    async
+  ></script>
+  <noscript>
+    Please enable JavaScript to view the
+    <a href="https://github.com/{{ config.extra.giscus.repo }}/discussions"
+       rel="external nofollow noopener">comments powered by Giscus</a>.
+  </noscript>
+{% endif %}

@@ -98,6 +98,7 @@ while IFS= read -r hit; do
     .orchestrator/milestone-summary.md) continue ;;
     KNOWLEDGE-INDEX.md) continue ;;
     CHANGELOG.md) continue ;;
+    CLAUDE.md) continue ;;
     tests/fixtures/*) continue ;;
   esac
   fail "stray reference to scripts/wiki/ in: $hit"

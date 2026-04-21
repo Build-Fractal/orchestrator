@@ -68,6 +68,7 @@ while IFS= read -r f; do
     .orchestrator/milestone-summary.md) continue ;;
     KNOWLEDGE-INDEX.md) continue ;;
     CHANGELOG.md) continue ;;
+    CLAUDE.md) continue ;;
     tests/fixtures/*) continue ;;
   esac
   printf 'FAIL: unexpected reference to wiki-deploy.sh in %s\n' "$f" >&2

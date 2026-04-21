@@ -1,15 +1,20 @@
-## Forward Milestone Sequence (revised 2026-04-17)
+## Forward Milestone Sequence (revised 2026-04-21)
 
 Remaining milestones, in execution order:
 
-1. **M019 Tier 1 emitter** *(next — kickoff unit of M019)* — Tier 1 "just emit" lands first after M011 close so M012–M014 dogfooding produces measured data. See `DECISIONS.md` D009.
-2. **M012 — Spec Wiki** — MkDocs + Giscus comments; stakeholder-readable site
-3. **M013 — GitHub Native Integration** — Issues/Milestones/Projects sync, UAT loop; invokes the M011/P07 conversus adapter for opt-in pre-merge review gates
-4. **M014 — Comment→Workflow Automation** — classify/auto-apply wiki+GH comments; invokes the M011/P07 conversus adapter for ambiguous-comment triage
-5. **M019 Tier 2/3** — rollup + `orchestrator:cost`, then full polished surface — lands after M014 once ~3 milestones of Tier 1 data reveal what the polished surface should actually expose.
-6. **M018 — Context Compression Layer** *(sketch, see `DECISIONS.md` D008)* — caveman-style token compression as a pipeline stage. Phase outline drafted but not yet planned in detail; full planning happens closer to kickoff after M019 Tier 1 reveals which artifacts dominate token spend.
-7. **M009 — Launch & Ecosystem** — README, examples, contributor pipeline, release infra
-8. **M010 — Cloud Dispatch** — Managed Agents backend; pull forward if Managed Agents GAs earlier
+1. **M013 — GitHub Native Integration** *(next)* — Issues/Milestones/Projects sync, UAT loop; invokes the M011/P07 conversus adapter for opt-in pre-merge review gates
+2. **M014 — Comment→Workflow Automation** — classify/auto-apply wiki+GH comments; invokes the M011/P07 conversus adapter for ambiguous-comment triage
+3. **M020 — Knowledge Layer Maturation** *(promoted 2026-04-21 per `DECISIONS.md` D013)* — review-state model, query/search surface for dispatch-callable knowledge, A6 Jaccard clustering in consolidate, full A1/A2/A3 workflow. Positioned before M019 Tier 2+3 so A5 on_failure flagging can draw on its data.
+4. **M019 Tier 2/3** — rollup + `orchestrator:cost`, then full polished surface — lands after M020 once ~3 milestones of Tier 1 data reveal what the polished surface should actually expose.
+5. **M018 — Context Compression Layer** *(sketch, see `DECISIONS.md` D008 + D010 four-tier reframing)* — caveman-style token compression as a pipeline stage. Phase outline drafted but not yet planned in detail; full planning happens closer to kickoff after M019 Tier 1 reveals which artifacts dominate token spend.
+6. **M009 — Launch & Ecosystem** — README, examples, contributor pipeline, release infra
+7. **M010 — Cloud Dispatch** — Managed Agents backend; pull forward if Managed Agents GAs earlier
+
+**M012 — Spec Wiki** closed 2026-04-21. All 4 phases green (P01 scaffold + SSOT pipeline, P02 cross-link + knowledge subtree + link-check, P03 Giscus overlay + diagnostics, P04 deploy wrapper + home page + first-deploy record). 37 verification gates total. D011 evaluation shipped 1 of 3 criteria → M020 promoted (D013). Milestone validator: 87/87. See `milestones/M012/M012-SUMMARY.md`. **Carry-over for human operator**: live first deploy to `gh-pages` via `scripts/wiki/wiki-deploy.sh`, fill `DEPLOY-RECORD.md` pending sentinels, author P04-SUMMARY US1..US5 + SC-1..SC-11 walkthrough.
+
+**M019 Tier 1 emitter** closed 2026-04-18. P00 Opus 4.7 baseline adaptation + P01 Tier 1 emitter shipped. `payload_breakdown` / `dispatch_usage` / `unit_close` JSONL records in `execution-log.jsonl` with Goodhart-paired cost+quality blocks. See `milestones/M019/M019-SUMMARY.md`.
+
+**M021 — Autonomous Hardening v2** closed 2026-04-17. Three-wrapper catalog under `scripts/util/`, linter v2 (AP-005..AP-009), and PreToolUse shape-guard hook enforcing a closed 10-pattern rewrite/reject matrix. See `milestones/M021/M021-SUMMARY.md`.
 
 **M011 — Spec Management** closed 2026-04-17. All 7 phases green (P07 delivered the reusable `scripts/dispatch/adapters/tool/conversus.sh` adapter and format-agnostic intake). Milestone validator: 121/121. See `milestones/M011/M011-SUMMARY.md`.
 

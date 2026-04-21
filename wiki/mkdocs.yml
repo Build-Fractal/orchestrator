@@ -939,62 +939,85 @@ nav:
       - Context: milestones/M012/M012-CONTEXT.md
       - Evaluation: milestones/M012/M012-EVALUATION.md
       - Roadmap: milestones/M012/M012-ROADMAP.md
+      - Summary: milestones/M012/M012-SUMMARY.md
       - P01:
         - Overview: milestones/M012/phases/P01/index.md
-        - Plan: milestones/M012/phases/P01/P01-PLAN.md
         - Summary: milestones/M012/phases/P01/P01-SUMMARY.md
-        - T01 Payload: milestones/M012/phases/P01/tasks/T01-PAYLOAD.md
-        - T01 Plan: milestones/M012/phases/P01/tasks/T01-PLAN.md
-        - T01 Summary: milestones/M012/phases/P01/tasks/T01-SUMMARY.md
-        - T02 Payload: milestones/M012/phases/P01/tasks/T02-PAYLOAD.md
-        - T02 Plan: milestones/M012/phases/P01/tasks/T02-PLAN.md
-        - T02 Summary: milestones/M012/phases/P01/tasks/T02-SUMMARY.md
-        - T03 Payload: milestones/M012/phases/P01/tasks/T03-PAYLOAD.md
-        - T03 Plan: milestones/M012/phases/P01/tasks/T03-PLAN.md
-        - T03 Summary: milestones/M012/phases/P01/tasks/T03-SUMMARY.md
-        - T04 Payload: milestones/M012/phases/P01/tasks/T04-PAYLOAD.md
-        - T04 Plan: milestones/M012/phases/P01/tasks/T04-PLAN.md
-        - T04 Summary: milestones/M012/phases/P01/tasks/T04-SUMMARY.md
-        - T05 Payload: milestones/M012/phases/P01/tasks/T05-PAYLOAD.md
-        - T05 Plan: milestones/M012/phases/P01/tasks/T05-PLAN.md
-        - T05 Summary: milestones/M012/phases/P01/tasks/T05-SUMMARY.md
       - P02:
         - Overview: milestones/M012/phases/P02/index.md
         - D011-EVALUATION: milestones/M012/phases/P02/D011-EVALUATION.md
-        - Plan: milestones/M012/phases/P02/P02-PLAN.md
         - Summary: milestones/M012/phases/P02/P02-SUMMARY.md
-        - T01 Payload: milestones/M012/phases/P02/tasks/T01-PAYLOAD.md
-        - T01 Plan: milestones/M012/phases/P02/tasks/T01-PLAN.md
-        - T01 Summary: milestones/M012/phases/P02/tasks/T01-SUMMARY.md
-        - T02 Payload: milestones/M012/phases/P02/tasks/T02-PAYLOAD.md
-        - T02 Plan: milestones/M012/phases/P02/tasks/T02-PLAN.md
-        - T02 Summary: milestones/M012/phases/P02/tasks/T02-SUMMARY.md
-        - T03 Payload: milestones/M012/phases/P02/tasks/T03-PAYLOAD.md
-        - T03 Plan: milestones/M012/phases/P02/tasks/T03-PLAN.md
-        - T03 Summary: milestones/M012/phases/P02/tasks/T03-SUMMARY.md
-        - T04 Payload: milestones/M012/phases/P02/tasks/T04-PAYLOAD.md
-        - T04 Plan: milestones/M012/phases/P02/tasks/T04-PLAN.md
-        - T04 Summary: milestones/M012/phases/P02/tasks/T04-SUMMARY.md
-        - T05 Payload: milestones/M012/phases/P02/tasks/T05-PAYLOAD.md
-        - T05 Plan: milestones/M012/phases/P02/tasks/T05-PLAN.md
-        - T05 Summary: milestones/M012/phases/P02/tasks/T05-SUMMARY.md
       - P03:
         - Overview: milestones/M012/phases/P03/index.md
-        - Plan: milestones/M012/phases/P03/P03-PLAN.md
-        - T01 Payload: milestones/M012/phases/P03/tasks/T01-PAYLOAD.md
-        - T01 Plan: milestones/M012/phases/P03/tasks/T01-PLAN.md
-        - T01 Summary: milestones/M012/phases/P03/tasks/T01-SUMMARY.md
-        - T02 Payload: milestones/M012/phases/P03/tasks/T02-PAYLOAD.md
-        - T02 Plan: milestones/M012/phases/P03/tasks/T02-PLAN.md
-        - T02 Summary: milestones/M012/phases/P03/tasks/T02-SUMMARY.md
-        - T03 Payload: milestones/M012/phases/P03/tasks/T03-PAYLOAD.md
-        - T03 Plan: milestones/M012/phases/P03/tasks/T03-PLAN.md
-        - T03 Summary: milestones/M012/phases/P03/tasks/T03-SUMMARY.md
-        - T04 Payload: milestones/M012/phases/P03/tasks/T04-PAYLOAD.md
-        - T04 Plan: milestones/M012/phases/P03/tasks/T04-PLAN.md
-        - T04 Summary: milestones/M012/phases/P03/tasks/T04-SUMMARY.md
-        - T05 Payload: milestones/M012/phases/P03/tasks/T05-PAYLOAD.md
-        - T05 Plan: milestones/M012/phases/P03/tasks/T05-PLAN.md
+        - Summary: milestones/M012/phases/P03/P03-SUMMARY.md
+      - P04:
+        - Overview: milestones/M012/phases/P04/index.md
+        - DEPLOY-RECORD: milestones/M012/phases/P04/DEPLOY-RECORD.md
+        - Summary: milestones/M012/phases/P04/P04-SUMMARY.md
+      - archive / P01 / P01-PLAN: milestones/M012/archive/P01/P01-PLAN.md
+      - archive / P01 / T01-PAYLOAD: milestones/M012/archive/P01/T01-PAYLOAD.md
+      - archive / P01 / T01-PLAN: milestones/M012/archive/P01/T01-PLAN.md
+      - archive / P01 / T01-SUMMARY: milestones/M012/archive/P01/T01-SUMMARY.md
+      - archive / P01 / T02-PAYLOAD: milestones/M012/archive/P01/T02-PAYLOAD.md
+      - archive / P01 / T02-PLAN: milestones/M012/archive/P01/T02-PLAN.md
+      - archive / P01 / T02-SUMMARY: milestones/M012/archive/P01/T02-SUMMARY.md
+      - archive / P01 / T03-PAYLOAD: milestones/M012/archive/P01/T03-PAYLOAD.md
+      - archive / P01 / T03-PLAN: milestones/M012/archive/P01/T03-PLAN.md
+      - archive / P01 / T03-SUMMARY: milestones/M012/archive/P01/T03-SUMMARY.md
+      - archive / P01 / T04-PAYLOAD: milestones/M012/archive/P01/T04-PAYLOAD.md
+      - archive / P01 / T04-PLAN: milestones/M012/archive/P01/T04-PLAN.md
+      - archive / P01 / T04-SUMMARY: milestones/M012/archive/P01/T04-SUMMARY.md
+      - archive / P01 / T05-PAYLOAD: milestones/M012/archive/P01/T05-PAYLOAD.md
+      - archive / P01 / T05-PLAN: milestones/M012/archive/P01/T05-PLAN.md
+      - archive / P01 / T05-SUMMARY: milestones/M012/archive/P01/T05-SUMMARY.md
+      - archive / P02 / P02-PLAN: milestones/M012/archive/P02/P02-PLAN.md
+      - archive / P02 / T01-PAYLOAD: milestones/M012/archive/P02/T01-PAYLOAD.md
+      - archive / P02 / T01-PLAN: milestones/M012/archive/P02/T01-PLAN.md
+      - archive / P02 / T01-SUMMARY: milestones/M012/archive/P02/T01-SUMMARY.md
+      - archive / P02 / T02-PAYLOAD: milestones/M012/archive/P02/T02-PAYLOAD.md
+      - archive / P02 / T02-PLAN: milestones/M012/archive/P02/T02-PLAN.md
+      - archive / P02 / T02-SUMMARY: milestones/M012/archive/P02/T02-SUMMARY.md
+      - archive / P02 / T03-PAYLOAD: milestones/M012/archive/P02/T03-PAYLOAD.md
+      - archive / P02 / T03-PLAN: milestones/M012/archive/P02/T03-PLAN.md
+      - archive / P02 / T03-SUMMARY: milestones/M012/archive/P02/T03-SUMMARY.md
+      - archive / P02 / T04-PAYLOAD: milestones/M012/archive/P02/T04-PAYLOAD.md
+      - archive / P02 / T04-PLAN: milestones/M012/archive/P02/T04-PLAN.md
+      - archive / P02 / T04-SUMMARY: milestones/M012/archive/P02/T04-SUMMARY.md
+      - archive / P02 / T05-PAYLOAD: milestones/M012/archive/P02/T05-PAYLOAD.md
+      - archive / P02 / T05-PLAN: milestones/M012/archive/P02/T05-PLAN.md
+      - archive / P02 / T05-SUMMARY: milestones/M012/archive/P02/T05-SUMMARY.md
+      - archive / P03 / P03-PLAN: milestones/M012/archive/P03/P03-PLAN.md
+      - archive / P03 / T01-PAYLOAD: milestones/M012/archive/P03/T01-PAYLOAD.md
+      - archive / P03 / T01-PLAN: milestones/M012/archive/P03/T01-PLAN.md
+      - archive / P03 / T01-SUMMARY: milestones/M012/archive/P03/T01-SUMMARY.md
+      - archive / P03 / T02-PAYLOAD: milestones/M012/archive/P03/T02-PAYLOAD.md
+      - archive / P03 / T02-PLAN: milestones/M012/archive/P03/T02-PLAN.md
+      - archive / P03 / T02-SUMMARY: milestones/M012/archive/P03/T02-SUMMARY.md
+      - archive / P03 / T03-PAYLOAD: milestones/M012/archive/P03/T03-PAYLOAD.md
+      - archive / P03 / T03-PLAN: milestones/M012/archive/P03/T03-PLAN.md
+      - archive / P03 / T03-SUMMARY: milestones/M012/archive/P03/T03-SUMMARY.md
+      - archive / P03 / T04-PAYLOAD: milestones/M012/archive/P03/T04-PAYLOAD.md
+      - archive / P03 / T04-PLAN: milestones/M012/archive/P03/T04-PLAN.md
+      - archive / P03 / T04-SUMMARY: milestones/M012/archive/P03/T04-SUMMARY.md
+      - archive / P03 / T05-PAYLOAD: milestones/M012/archive/P03/T05-PAYLOAD.md
+      - archive / P03 / T05-PLAN: milestones/M012/archive/P03/T05-PLAN.md
+      - archive / P03 / T05-SUMMARY: milestones/M012/archive/P03/T05-SUMMARY.md
+      - archive / P04 / P04-PLAN: milestones/M012/archive/P04/P04-PLAN.md
+      - archive / P04 / T01-PAYLOAD: milestones/M012/archive/P04/T01-PAYLOAD.md
+      - archive / P04 / T01-PLAN: milestones/M012/archive/P04/T01-PLAN.md
+      - archive / P04 / T01-SUMMARY: milestones/M012/archive/P04/T01-SUMMARY.md
+      - archive / P04 / T02-PAYLOAD: milestones/M012/archive/P04/T02-PAYLOAD.md
+      - archive / P04 / T02-PLAN: milestones/M012/archive/P04/T02-PLAN.md
+      - archive / P04 / T02-SUMMARY: milestones/M012/archive/P04/T02-SUMMARY.md
+      - archive / P04 / T03-PAYLOAD: milestones/M012/archive/P04/T03-PAYLOAD.md
+      - archive / P04 / T03-PLAN: milestones/M012/archive/P04/T03-PLAN.md
+      - archive / P04 / T03-SUMMARY: milestones/M012/archive/P04/T03-SUMMARY.md
+      - archive / P04 / T04-PAYLOAD: milestones/M012/archive/P04/T04-PAYLOAD.md
+      - archive / P04 / T04-PLAN: milestones/M012/archive/P04/T04-PLAN.md
+      - archive / P04 / T04-SUMMARY: milestones/M012/archive/P04/T04-SUMMARY.md
+      - archive / P04 / T05-PAYLOAD: milestones/M012/archive/P04/T05-PAYLOAD.md
+      - archive / P04 / T05-PLAN: milestones/M012/archive/P04/T05-PLAN.md
+      - archive / P04 / T05-SUMMARY: milestones/M012/archive/P04/T05-SUMMARY.md
     - M015:
       - Overview: milestones/M015/index.md
       - Evaluation: milestones/M015/M015-EVALUATION.md

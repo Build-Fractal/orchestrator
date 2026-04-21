@@ -1,10 +1,17 @@
 #!/usr/bin/env bash
-# scripts/verify/m012-p01-phase-suite.sh — orchestrates all nine M012/P01 gates.
+# scripts/verify/m012-p01-phase-suite.sh — orchestrates the M012/P01 gates.
 #
 # Runs each gate script as a subprocess and aggregates results.
 # Emits one `GATE: <name> PASS|FAIL` line per gate to stdout.
 # Prints `SUMMARY: <passed>/<total> gates passed` at end (stderr).
-# Exit 0 iff all nine gates exit 0.
+# Exit 0 iff all gates exit 0.
+#
+# m012-p01-index-placeholder.sh was retired at M012 close: T01 (P04)
+# finalized wiki/docs/index.md as a 65-line home page, inverting the
+# gate's original assertion ("contains 'placeholder' and <= 30 lines").
+# Its intent ("P01 ships a placeholder stub") was satisfied at P01
+# close; the long-term home-page surface is now covered by
+# scripts/verify/m012-p04-index-finalized.sh and m012-p04-index-ssot.sh.
 #
 # Bash 3.2 compatible. Single-script-file shape (no compound bash).
 
@@ -23,9 +30,8 @@ gates_3="m012-p01-ssot.sh"
 gates_4="m012-p01-exclusion-policy.sh"
 gates_5="m012-p01-nav-structure.sh"
 gates_6="m012-p01-serve-smoke.sh"
-gates_7="m012-p01-index-placeholder.sh"
-gates_8="m012-p01-bash32-compat.sh"
-TOTAL=9
+gates_7="m012-p01-bash32-compat.sh"
+TOTAL=8
 
 PASSED=0
 i=0

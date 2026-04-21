@@ -428,6 +428,104 @@ fi
 
 rm -rf "$TMPDIR_COMPLETE" "$TMPDIR_INCOMPLETE"
 
+# --------------------------------------------------------------------------
+# 2.11–2.16 preflight-clean-root.sh — clean-root preflight before
+# milestone-marker write (gsd-2 v2.77-inspired, advisory-only per
+# Constitution VI; no auto-stash).
+# --------------------------------------------------------------------------
+
+PREFLIGHT_CLEAN_ROOT="$PROJECT_ROOT/scripts/lifecycle/preflight-clean-root.sh"
+
+# Helper: build a tmpdir as a git repo with the consolidate-state fixture
+# moved under .orchestrator/ and committed clean. Caller cleans up.
+mk_preflight_fixture() {
+  local tmp
+  tmp="$(mktemp -d)"
+  cp -r "$PROJECT_ROOT/tests/fixtures/consolidate-state/milestones" "$tmp/"
+  (
+    cd "$tmp"
+    mkdir -p .orchestrator
+    mv milestones .orchestrator/
+    git init -q
+    git config user.email "test@example.com"
+    git config user.name "test"
+    git add -A
+    git commit -q -m "init fixture"
+  ) >/dev/null 2>&1
+  echo "$tmp"
+}
+
+# 2.11 clean tree → mark-complete succeeds, marker written
+TMPDIR_PF_CLEAN="$(mk_preflight_fixture)"
+output=$(bash "$MARK_COMPLETE" "$TMPDIR_PF_CLEAN/.orchestrator" M001 2>&1) && exit_code=0 || exit_code=$?
+if [ "$exit_code" -eq 0 ] && [ -f "$TMPDIR_PF_CLEAN/.orchestrator/milestones/M001/M001-VALIDATED" ]; then
+  pass "preflight clean tree → mark-complete succeeds (exit 0, marker written)"
+else
+  fail "preflight clean tree → expected success (exit=$exit_code, output: $output)"
+fi
+rm -rf "$TMPDIR_PF_CLEAN"
+
+# 2.12 dirty tracked file → mark-complete exits 2, marker NOT written
+TMPDIR_PF_DIRTY="$(mk_preflight_fixture)"
+echo "modified" >> "$TMPDIR_PF_DIRTY/.orchestrator/milestones/M001/M001-ROADMAP.md"
+output=$(bash "$MARK_COMPLETE" "$TMPDIR_PF_DIRTY/.orchestrator" M001 2>&1) && exit_code=0 || exit_code=$?
+if [ "$exit_code" -eq 2 ] && \
+   echo "$output" | grep -q "PREFLIGHT: dirty" && \
+   [ ! -f "$TMPDIR_PF_DIRTY/.orchestrator/milestones/M001/M001-VALIDATED" ]; then
+  pass "preflight dirty tracked file → exit 2, marker not written"
+else
+  fail "preflight dirty tracked file → expected exit 2 + no marker (exit=$exit_code, output: $output)"
+fi
+rm -rf "$TMPDIR_PF_DIRTY"
+
+# 2.13 untracked file under .orchestrator/scratch/ only → mark-complete succeeds
+TMPDIR_PF_SCRATCH="$(mk_preflight_fixture)"
+mkdir -p "$TMPDIR_PF_SCRATCH/.orchestrator/scratch"
+echo "scratch" > "$TMPDIR_PF_SCRATCH/.orchestrator/scratch/notes.md"
+output=$(bash "$MARK_COMPLETE" "$TMPDIR_PF_SCRATCH/.orchestrator" M001 2>&1) && exit_code=0 || exit_code=$?
+if [ "$exit_code" -eq 0 ] && [ -f "$TMPDIR_PF_SCRATCH/.orchestrator/milestones/M001/M001-VALIDATED" ]; then
+  pass "preflight scratch-only untracked → mark-complete succeeds (allowlist)"
+else
+  fail "preflight scratch-only untracked → expected success (exit=$exit_code, output: $output)"
+fi
+rm -rf "$TMPDIR_PF_SCRATCH"
+
+# 2.14 untracked file at repo root → mark-complete exits 2
+TMPDIR_PF_ROOT="$(mk_preflight_fixture)"
+echo "stray" > "$TMPDIR_PF_ROOT/stray-file.md"
+output=$(bash "$MARK_COMPLETE" "$TMPDIR_PF_ROOT/.orchestrator" M001 2>&1) && exit_code=0 || exit_code=$?
+if [ "$exit_code" -eq 2 ] && echo "$output" | grep -q "PREFLIGHT: dirty"; then
+  pass "preflight repo-root untracked → exit 2"
+else
+  fail "preflight repo-root untracked → expected exit 2 (exit=$exit_code, output: $output)"
+fi
+rm -rf "$TMPDIR_PF_ROOT"
+
+# 2.15 ORCHESTRATOR_ALLOW_DIRTY_MARK=1 + dirty → mark-complete succeeds
+TMPDIR_PF_ENV="$(mk_preflight_fixture)"
+echo "modified" >> "$TMPDIR_PF_ENV/.orchestrator/milestones/M001/M001-ROADMAP.md"
+output=$(ORCHESTRATOR_ALLOW_DIRTY_MARK=1 bash "$MARK_COMPLETE" "$TMPDIR_PF_ENV/.orchestrator" M001 2>&1) && exit_code=0 || exit_code=$?
+if [ "$exit_code" -eq 0 ] && \
+   echo "$output" | grep -q "skipped (env override)" && \
+   [ -f "$TMPDIR_PF_ENV/.orchestrator/milestones/M001/M001-VALIDATED" ]; then
+  pass "preflight env override → bypasses dirty check, marker written"
+else
+  fail "preflight env override → expected success with override notice (exit=$exit_code, output: $output)"
+fi
+rm -rf "$TMPDIR_PF_ENV"
+
+# 2.16 idempotent re-run on already-validated milestone with dirty tree → exit 0
+TMPDIR_PF_IDEM="$(mk_preflight_fixture)"
+bash "$MARK_COMPLETE" "$TMPDIR_PF_IDEM/.orchestrator" M001 >/dev/null 2>&1
+echo "modified" >> "$TMPDIR_PF_IDEM/.orchestrator/milestones/M001/M001-ROADMAP.md"
+output=$(bash "$MARK_COMPLETE" "$TMPDIR_PF_IDEM/.orchestrator" M001 2>&1) && exit_code=0 || exit_code=$?
+if [ "$exit_code" -eq 0 ] && echo "$output" | grep -q "already validated"; then
+  pass "preflight idempotent re-run with dirty tree → exit 0 (preflight skipped)"
+else
+  fail "preflight idempotent re-run with dirty tree → expected already-validated short-circuit (exit=$exit_code, output: $output)"
+fi
+rm -rf "$TMPDIR_PF_IDEM"
+
 # ==========================================================================
 # Section 3: Consolidation Tests
 # ==========================================================================
@@ -637,7 +735,7 @@ done
 # 4.10 Both S06 lifecycle scripts exist and are executable
 # --------------------------------------------------------------------------
 
-LIFECYCLE_SCRIPTS="rollback-phase.sh mark-complete.sh"
+LIFECYCLE_SCRIPTS="rollback-phase.sh mark-complete.sh preflight-clean-root.sh"
 for script in $LIFECYCLE_SCRIPTS; do
   script_path="$PROJECT_ROOT/scripts/lifecycle/$script"
   if [ -f "$script_path" ] && [ -x "$script_path" ]; then

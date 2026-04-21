@@ -18,6 +18,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 READ_ROADMAP="$PROJECT_ROOT/scripts/state/read-roadmap.sh"
+PREFLIGHT_CLEAN_ROOT="$PROJECT_ROOT/scripts/lifecycle/preflight-clean-root.sh"
 
 usage() {
   cat <<'EOF'
@@ -95,6 +96,18 @@ done <<< "$phases_output"
 if [ -n "$incomplete_phases" ]; then
   echo "ERROR: Incomplete phases:${incomplete_phases}" >&2
   exit 1
+fi
+
+# Preflight: refuse to mark complete with a dirty working tree.
+# Allowlists orchestrator scratch/tmp/result-file paths; honors
+# ORCHESTRATOR_ALLOW_DIRTY_MARK=1 for emergency unblock and CI fixtures.
+# Skipped on the idempotent already-validated short-circuit above.
+if [ -x "$PREFLIGHT_CLEAN_ROOT" ]; then
+  preflight_exit=0
+  bash "$PREFLIGHT_CLEAN_ROOT" "$ORCH_ROOT" || preflight_exit=$?
+  if [ "$preflight_exit" -ne 0 ]; then
+    exit "$preflight_exit"
+  fi
 fi
 
 # Create validation marker

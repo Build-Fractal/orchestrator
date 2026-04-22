@@ -2,7 +2,8 @@
 
 **Feature Branch**: `024-spec-management-extended`
 **Created**: 2026-04-22
-**Status**: Draft
+**Last Revised**: 2026-04-22 (post-conversus cooperative deliberation; 14 MITs applied pre-discuss per `conversus/summary/final.md`)
+**Status**: Ready-for-discuss
 **Milestone**: M014 (see `.orchestrator/milestone-summary.md`, roadmap entry "Spec Management + Comment→Workflow Automation", scope extended 2026-04-22 per `.orchestrator/DECISIONS.md` D016)
 **Input**: User description: "M014 Spec Management Extended (bundled): ship native `orchestrator:specify` as a portable, CC-first replacement for the spec-kit `/speckit.specify` command (removed by M015 cutover), treating the existing spec-kit `spec-template.md` shape as an I/O contract rather than a verbatim port; add conversus-suggestion logic so complex or controversial draft specs auto-propose red-blue pressure-test (with optional spec-decomposition-before-conversus for very large specs), opt-in per proposal; add `AGENTS.md` dual-write alongside every `CLAUDE.md` write (init, knowledge updates, recent-changes appends) so Codex-runtime subagents stay fed without a separate milestone; finish M014's original mission — wiki Giscus comments and GitHub Issue/PR comments classified into workflow actions (file UAT bug / append decision / amend spec chunk / route to human triage) with ambiguous comments invoking the M011/P07 conversus adapter. Consumes M012's wiki-giscus-remap thread mapping and M013's UAT ingestion path. Dogfood resolves a bootstrapping irony: M015 ripped spec-kit out, M014 ships the native equivalent, and future milestones' specs are authored by the orchestrator instead of by hand."
 
@@ -33,6 +34,17 @@ The dogfood loop closes on a minimum subset of US-2 and US-4:
 This slice is what Phase 1 of M014 execution is expected to ship. The full surface — conversus-suggestion (US-3), comment→workflow classifier (US-1), and dual-write applied to all `CLAUDE.md` write-sites (full US-4) — rides in Phases 2–N, defended on two downstream consumers: (1) every subsequent orchestrator-authored spec in M013→M024→M020 dogfoods Phase 1 before Phase 2+ lands; (2) M012/M013 comment backlog is the input signal that sizes the US-1 classifier scope, not up-front speculation (Constitution XIV).
 
 The bootstrapping irony resolves when M014/P01 closes: the next milestone's spec (M020 or M024) is authored by running `orchestrator:specify` rather than by hand-copying this file or the M013 file.
+
+### Phase Sequencing
+
+The bundle's four clusters ship across four phases with mechanically-enforceable exit criteria. This table lands spec-layer (pre-discuss) as the minimum-viable defense of the bundle against Constitution XIV's speculative-complexity test. Planning extends it with additional columns (execution notes, external dependency fanout) but may not contract it.
+
+| Phase | User-story slices | Exit criteria | Dogfood consumer | External milestone dependencies |
+|---|---|---|---|---|
+| P1 | Full US-2 (`orchestrator:specify` create-path) + minimal US-4 (dual-write at `orchestrator:specify`'s Recent Changes write-site only) | `orchestrator:specify --description ... --slug ...` scaffolds a `specs/<NNN>-<slug>/spec.md` passing `scripts/verify/spec-shape-lint.sh`; `AGENTS.md` Recent Changes region matches `CLAUDE.md`; fixture test `tests/test-specify-shape.sh` green; SC-1, SC-2, SC-6, SC-7, SC-9, SC-14 met | Every subsequent orchestrator-authored spec (M013→M024→M020) replaces hand-authoring with `orchestrator:specify` invocation; SC-13 is the close gate | None |
+| P2 | Full US-4 (dual-write extended to `orchestrator:init` and `orchestrator:consolidate` write-sites) + FR-13 drift detector | `scripts/verify/check-docs.sh` drift pass green across all documented write-sites; SC-6, SC-6a met; `orchestrator:doctor` surfaces `runtime_instruction_drift` | Codex-runtime operators running M014-generated specs; M009 runtime-parity audit consumes `RUNTIME-ASSUMPTIONS.md` entries | None |
+| P3 | Full US-1 (wiki + GitHub comment fetch + classify + review queue) + US-5 (spec-amendment apply path) | `orchestrator:comments classify` end-to-end on seeded inbox; auto-apply path for `uat-bug` + `decision-append`; review queue for `spec-amendment`; SC-4, SC-5, SC-8, SC-16 met | M012/M013 comment backlog; SC-16 dogfood-data table sizes FR-9 classifier shape decision | **M013/P04** — FR-8 GitHub Issue comment fetch consumes M013's sync cycle + post-verify hook + UAT comment surface; P3 cannot start before M013/P04 closes |
+| P4 | US-3 conversus auto-propose + FR-5 complexity probe + FR-6 conversus preset + SC close-outs | `templates/conversus-presets/spec-pressure-test.yml` shipped; probe emits structured fields; three-way prompt (y/n/d) exercised end-to-end; SC-3, SC-15 met; all remaining SCs green | Next milestone's spec whose complexity exceeds threshold auto-proposes pressure-test | M011/P07 conversus adapter (shipped) |
 
 ---
 
@@ -98,6 +110,25 @@ A maintainer runs `orchestrator:specify` and the draft lands. The draft is large
 
 ---
 
+### User Story 5 — Spec Amendment Classifier Routes Approved Queue Items Into Atomic Spec Edits (Priority: P2)
+
+A maintainer reviews the review queue produced by US-1 (spec-amendment-shaped comments pending human sign-off). They open a queued item, inspect the proposed diff against the source spec chunk, and approve it via `orchestrator:comments apply <queue-id>`. The orchestrator applies the amendment to the spec's source markdown (at the chunk's source line range — traced via M011 chunk metadata), re-ingests the affected chunk through `orchestrator:ingest`, marks the comment as actioned, and (if configured) posts a reply on the source comment thread linking to the commit SHA.
+
+**Scope boundary**: US-5 is the only path that edits `specs/<NNN>-<slug>/spec.md` from a comment. All other classification outcomes (UAT bug, decision-append, ambiguous, human triage) write to knowledge / decision / queue surfaces — never to spec markdown. This boundary is the Constitution-III + XIV guard on spec mutation: every byte change to a shipped spec passes through the human-approved `apply` gate.
+
+**Why this priority**: P2 because it layers on US-1 (classification) and requires spec-mutation discipline (chunk-ID preservation, `scripts/knowledge/rebuild-index.sh` triggering, git-commit atomicity) that is subtler than trivial-action auto-apply. Without US-5, approved spec amendments fall back to hand-editing, which reintroduces the exact drift M014 exists to eliminate.
+
+**Independent Test**: Seed the review queue with a spec-amendment item whose proposed diff touches one FR in a shipped spec. Run `orchestrator:comments apply <queue-id>`. Confirm: (a) the target spec's source markdown is edited at the correct line range (M011 chunk-source line metadata preserved); (b) `scripts/knowledge/rebuild-index.sh` runs automatically to reflect the amended chunk; (c) a git commit lands with a message citing the queue-id and the source comment URL (using the `docs(specs): amend M###/FR-N ...` commit-message convention); (d) the comment is marked actioned in `.orchestrator/comments/actioned.jsonl`; (e) if reply-on-apply is enabled, the source comment thread receives a reply linking to the commit SHA.
+
+**Acceptance Scenarios**:
+
+1. **Given** an approved queue item exists, **When** `apply` runs, **Then** the amendment is applied atomically (one commit per amendment; pre-commit hooks not bypassed; Bash 3.2 compatible per Constitution IX).
+2. **Given** the queue item's proposed diff no longer applies cleanly (source spec has been edited since the comment was classified), **When** `apply` runs, **Then** the amendment is rejected with a three-way diff surfaced to the operator and a `status: stale` label applied to the queue entry; no partial edit is committed.
+3. **Given** the operator rejects a queue item (`orchestrator:comments reject <queue-id> --reason "<prose>"`), **When** reject runs, **Then** the queue entry is marked actioned with `applied: false`, the rejection reason is recorded, and (if reply-on-apply is enabled) the source comment thread receives a reply with the reason.
+4. **Given** the amendment touches a chunk that is also being pressure-tested via US-3 conversus (e.g., the spec is still in Draft status with an in-flight deliberation), **When** `apply` is invoked, **Then** the command refuses with a clear diagnostic ("deliberation in progress at `specs/<NNN>-<slug>/conversus/`; complete or abort before applying amendments") — a Constitution-III + XIV guard against interleaving spec authorship and spec amendment.
+
+---
+
 ### User Story 4 — `AGENTS.md` Dual-Writes Alongside `CLAUDE.md` On Every Orchestrator Write-Site (Priority: P2)
 
 A maintainer runs `orchestrator:init` on a fresh project; later they run `orchestrator:consolidate` which appends a Recent Changes entry; later still they run `orchestrator:specify` (via US-2) which also appends a Recent Changes entry. At each of these three orchestrator write-sites, the orchestrator writes to `CLAUDE.md` (the Claude Code runtime-instruction file) *and* to `AGENTS.md` (the Codex CLI runtime-instruction file) via a marker-bounded block. An operator working from Codex CLI opens `AGENTS.md` and sees the same runtime guidance their Claude Code colleague sees from `CLAUDE.md`, including Recent Changes with both the project's shipped milestones and any new specs scaffolded by US-2.
@@ -114,23 +145,6 @@ A maintainer runs `orchestrator:init` on a fresh project; later they run `orches
 4. **Given** the operator has intentionally customized `AGENTS.md` outside the orchestrator markers, **When** the dual-write fires, **Then** the write replaces only the bytes between the markers; content outside the markers is preserved byte-identically (`shasum` invariant per M012 pattern). This is the "marker-bounded atomic writes" idiom from M012/P04 lifted into this milestone's dual-write implementation.
 5. **Given** `AGENTS.md` dual-write is disabled via `.orchestrator/config.yml` (`dual_write_agents: false`), **When** any orchestrator write-site runs, **Then** only `CLAUDE.md` is written; no `AGENTS.md` is created or modified. Operators on pure-Claude-Code projects opt out cleanly; default is enabled.
 6. **Given** a future knowledge-update write-site is added to the orchestrator (e.g., M020 adds a new consolidate path), **When** the new write-site is implemented, **Then** it consumes the shared dual-write helper at `scripts/util/dual-write-runtime-md.sh` (authored by this milestone per FR-9) rather than implementing dual-write from scratch — enforcing that the dual-write discipline is a reusable utility, not a copy-paste pattern.
-
----
-
-### User Story 5 — Spec Amendment Classifier Routes Approved Queue Items Into Atomic Spec Edits (Priority: P2)
-
-A maintainer reviews the review queue produced by US-1 (spec-amendment-shaped comments pending human sign-off). They open a queued item, inspect the proposed diff against the source spec chunk, and approve it via `orchestrator:comments apply <queue-id>`. The orchestrator applies the amendment to the spec's source markdown (at the chunk's source line range — traced via M011 chunk metadata), re-ingests the affected chunk through `orchestrator:ingest`, marks the comment as actioned, and (if configured) posts a reply on the source comment thread linking to the commit SHA.
-
-**Why this priority**: P2 because it layers on US-1 (classification) and requires spec-mutation discipline (chunk-ID preservation, `scripts/knowledge/rebuild-index.sh` triggering, git-commit atomicity) that is subtler than trivial-action auto-apply. Without US-5, approved spec amendments fall back to hand-editing, which reintroduces the exact drift M014 exists to eliminate.
-
-**Independent Test**: Seed the review queue with a spec-amendment item whose proposed diff touches one FR in a shipped spec. Run `orchestrator:comments apply <queue-id>`. Confirm: (a) the target spec's source markdown is edited at the correct line range (M011 chunk-source line metadata preserved); (b) `scripts/knowledge/rebuild-index.sh` runs automatically to reflect the amended chunk; (c) a git commit lands with a message citing the queue-id and the source comment URL (using the `docs(specs): amend M###/FR-N ...` commit-message convention); (d) the comment is marked actioned in `.orchestrator/comments/actioned.jsonl`; (e) if reply-on-apply is enabled, the source comment thread receives a reply linking to the commit SHA.
-
-**Acceptance Scenarios**:
-
-1. **Given** an approved queue item exists, **When** `apply` runs, **Then** the amendment is applied atomically (one commit per amendment; pre-commit hooks not bypassed; Bash 3.2 compatible per Constitution IX).
-2. **Given** the queue item's proposed diff no longer applies cleanly (source spec has been edited since the comment was classified), **When** `apply` runs, **Then** the amendment is rejected with a three-way diff surfaced to the operator and a `status: stale` label applied to the queue entry; no partial edit is committed.
-3. **Given** the operator rejects a queue item (`orchestrator:comments reject <queue-id> --reason "<prose>"`), **When** reject runs, **Then** the queue entry is marked actioned with `applied: false`, the rejection reason is recorded, and (if reply-on-apply is enabled) the source comment thread receives a reply with the reason.
-4. **Given** the amendment touches a chunk that is also being pressure-tested via US-3 conversus (e.g., the spec is still in Draft status with an in-flight deliberation), **When** `apply` is invoked, **Then** the command refuses with a clear diagnostic ("deliberation in progress at `specs/<NNN>-<slug>/conversus/`; complete or abort before applying amendments") — a Constitution-XV guard against interleaving spec authorship and spec amendment.
 
 ---
 
@@ -173,6 +187,8 @@ A maintainer reviews the review queue produced by US-1 (spec-amendment-shaped co
 
   The contract is a superset of the spec-kit `spec-template.md` section vocabulary (which `scripts/knowledge/detect-spec-shape.sh` probes for) so ingested output passes as `shape=speckit` without renormalization. Placeholder syntax is `<TODO: ...>` inside sections; authored content replaces placeholders as-is. Any section the scaffolder cannot populate from the description prose is left as a bracketed placeholder rather than silently dropped.
 
+- **FR-2b (Template SSOT)**: A `templates/spec-template.md` file ships with this milestone as the Section Contract SSOT with bracketed `<TODO: ...>` placeholders in every required section. `orchestrator:specify` loads this template as the authoritative scaffold source; `scripts/verify/spec-shape-lint.sh` (FR-4) reads it to derive the list of required sections rather than hardcoding them. The inline FR-2 prose above becomes informational — when the template and the FR-2 prose disagree, the template wins (declaration-over-inference, Principle X). Template ships before fixture test; FR-18 consumes it.
+
 - **FR-3 (Scaffold-fill depth — runtime-dependent)**: Under Claude Code runtime, the scaffolder invokes an LLM round-trip (dispatched through `scripts/dispatch/dispatch-interface.sh` using a new `templates/spec-scaffolder-prompt.md`) to populate first-pass prose for Problem Statement and at least one User Story stub from descriptions longer than a threshold (default 80 words; configurable in `.orchestrator/config.yml`). Under Codex CLI or Cursor runtime in v1, the scaffolder writes skeleton-only (all sections present, all content placeholder). The LLM-fill is additive — every section the LLM cannot confidently populate remains a placeholder. CC-first posture inherits from M013/FR-12 discipline; Codex-parity scaffolding is explicitly deferred to a future milestone (see Non-Goal #N).
 
 - **FR-4 (Spec shape linter)**: A new verifier at `scripts/verify/spec-shape-lint.sh` checks a spec markdown file against the FR-2 Section Contract. Detects: missing required sections, sections out of order, unresolved `<TODO: ...>` placeholders (count is the signal; zero = authored, >0 = skeleton), missing frontmatter fields, missing subsections (Minimal Slice, Knowledge-Layer Boundary). Emits structured output (`checks=N passed=M failed=K`) and exits non-zero on failure. Integrates into `orchestrator:discuss` as a preflight — discuss cannot run on a spec that fails shape lint.
@@ -182,6 +198,8 @@ A maintainer reviews the review queue produced by US-1 (spec-amendment-shaped co
 - **FR-6 (Conversus preset for spec pressure-test)**: A new preset file at `templates/conversus-presets/spec-pressure-test.yml` authored by this milestone and discoverable by the M011/P07 adapter. Preset shape follows M013 precedent (see `specs/023-github-native-integration/conversus/` scaffolding). Per D007 reuse discipline, the preset drops in without adapter modification — `scripts/dispatch/adapters/tool/conversus.sh` is the single invocation surface for all milestones' presets. Invocation at US-3's `y` path uses `--strict` (per M013/FR-13); the adapter's `gate-result.md` lands at `specs/<NNN>-<slug>/conversus/summary/final.md` following the M013 layout precedent.
 
 - **FR-7 (Decomposition flow for US-3 `d` path)**: `orchestrator:specify split <path>` reads a large draft and invokes the LLM-assisted splitter (CC only in v1) to propose 2–N coherent sub-specs. The splitter writes a manifest to `.orchestrator/intake/<source-id>/decomposition.md` (note: this path is declared by M024's Universal Intake milestone per D016 — M014's split flow is a consumer of that path convention; until M024 lands, the manifest is written to `.orchestrator/specify/decomposition/<source-id>/manifest.md` and moved to the M024 path on its arrival). Manifest shape names each proposed spec's slug, the slice of the source description it owns, inherited user stories with priority preservation, and a one-line rationale per slice. Operator approval triggers N parallel scaffolder invocations (each runs FR-1 US-2 path); rejection preserves the source spec unmodified.
+
+  **Interim → M024 migration handshake**: When M024 lands, M024 owns the consumer-side migration via `scripts/migrate/specify-to-intake.sh`. M014's interim-path manifests are write-forward-compatible — the manifest schema written at `.orchestrator/specify/decomposition/<source-id>/manifest.md` is byte-identical to what M024 writes at `.orchestrator/intake/<id>/decomposition.md`, so migration is a filesystem move (and a `<source-id>` → `<id>` rename), not a schema transform. M014 commits to not extending the manifest schema after this spec without a forward-compatibility check against M024's Universal Intake spec.
 
 - **FR-8 (Comment fetching)**: A script at `scripts/comments/fetch.sh` enumerates unactioned comments from two surfaces: (a) Giscus Discussions on the wiki (via `gh api` against the Discussions category shipped by M012), and (b) GitHub Issue/PR comments bearing orchestrator-id markers from M013's projection (phase Issues, task Issues, UAT Bug Issues). Each fetched comment is identified by a canonical URL + a content shasum used as the idempotency key (mirror of M013/FR-4 marker discipline). Fetched comments are cached to `.orchestrator/comments/inbox/<comment-id>.json`. The `actioned.jsonl` log records every comment that has been classified-and-applied or classified-and-rejected — subsequent fetches skip already-actioned URLs.
 
@@ -195,7 +213,12 @@ A maintainer reviews the review queue produced by US-1 (spec-amendment-shaped co
 
 - **FR-13 (Dual-write drift detector)**: `scripts/verify/check-docs.sh` (existing from M006 docs hardening) extends with a drift-detection pass that compares the marker-bounded regions of `CLAUDE.md` and `AGENTS.md`. Detects: missing region in one file, byte-divergence within matching regions, markers present in one file only. Reports drift as a warning (not a failure) in v1; escalates to failure in a future milestone once the pattern stabilizes. Integrates into `orchestrator:doctor` output under a new `runtime_instruction_drift` section.
 
-- **FR-14 (`--amend` flow for US-2)**: `orchestrator:specify --amend <path>` re-scaffolds against an existing draft without overwriting authored content. The re-scaffold logic: (1) parse the existing spec into section blocks; (2) for each section, if content is placeholder-only (`<TODO>` without authored prose) re-run FR-3 LLM-fill (CC only); (3) preserve authored content byte-identically; (4) re-run FR-5 complexity probe and re-offer US-3 only on changed regions (quieting re-prompts for already-deliberated sections). Preserves the "post-deliberation edits are preserved" invariant from M013's D014 precedent.
+- **FR-14 (`--amend` flow for US-2)**: `orchestrator:specify --amend <path>` re-scaffolds against an existing draft without overwriting authored content. The re-scaffold logic operates per section with three defined cases:
+  - **(a) All-placeholder section** (only `<TODO>` markers, zero authored prose bytes): re-run FR-3 LLM-fill (CC only); under Codex/Cursor runtime, leave unchanged.
+  - **(b) Partial-placeholder section** (`<TODO>` markers *and* authored prose both present): leave both unchanged; operator resolves manually. The scaffolder logs a one-line diagnostic naming the section and the case.
+  - **(c) Fully-authored section** (zero `<TODO>` markers): leave unchanged byte-identically.
+
+  "Changed section" for downstream re-probe detection (US-3 AS-7 — re-offer conversus only on changed regions) is defined as: the `<TODO>` count changed, *or* the shasum of authored (non-placeholder) prose bytes changed. FR-5 re-probe fires on changed sections only; quiet on unchanged sections. Preserves the "post-deliberation edits are preserved" invariant from M013's D014 precedent.
 
 - **FR-15 (Dry-run and auto-mode posture)**: Every new command introduced by this milestone supports `--dry-run` that prints what would be written / classified / applied without side effects. Auto-mode invocations (under `orchestrator:auto`) produce zero Claude Code approval prompts (inherits M016/M021 zero-prompt baseline). Interactive prompts (US-2 slug-accept, US-3 three-way) are auto-resolved under `--yes` with documented defaults.
 
@@ -203,19 +226,27 @@ A maintainer reviews the review queue produced by US-1 (spec-amendment-shaped co
 
 - **FR-17 (Config surface)**: `.orchestrator/config.yml` gains a `specify:` section with `complexity_thresholds:`, `scaffolder_description_min_words:`, `scaffolder_llm_on_codex: false`; a `comments:` section with `auto_apply_threshold:` (per class), `reply_on_apply:` boolean, `fetch_schedule:` (planning decision — Open Question #C-2); and a top-level `dual_write_agents:` boolean (default `true`). All new config keys carry planning-set defaults; operator overrides take precedence (existing `.orchestrator/config.yml` specificity rules).
 
+- **FR-18 (Template byte-compatibility fixture test)**: A fixture test at `tests/test-specify-shape.sh` asserts that `orchestrator:specify --description "<fixture-prose>" --slug <fixture-slug>` produces a `spec.md` whose section headings, section order, and placeholder positions byte-match the derivation from `templates/spec-template.md` (FR-2b). The test consumes the template as its ground truth — drift between scaffolder output and template fails the test. Fixture prose is short enough that skeleton-only scaffold is exercised (avoiding LLM round-trip flake in CI); LLM-fill paths get separate coverage if planning decides they need it. Sequence: FR-2b template ships first, FR-18 test consumes it.
+
+- **FR-19 (`--dry-run` manifest format — M014-local)**: Every M014 command's `--dry-run` output is structured JSONL to stdout, one record per proposed action. Record shape: `{command, action_type, target_path, source_ref, description}` (additional fields permitted but not removable). Example `action_type` values: `scaffold-spec`, `dual-write-region`, `classify-comment`, `apply-amendment`, `append-decision`. Pinned in `references/spec-management.md` so downstream consumers (CI gates, operator tooling) can parse dry-run manifests without prose drift. M013's `--dry-run` format is *not* retrofitted by this spec — the cross-milestone format pinning is a separate governance concern and belongs to M020 or a future D-row, not this milestone's pre-discuss scope.
+
 ## Success Criteria
 
 - **SC-1**: On a clean orchestrator project, `orchestrator:specify --description "<50-word prose>" --slug sc1-test` completes in under 10 seconds under Claude Code runtime and under 2 seconds under Codex/Cursor runtime; the resulting `specs/<NNN>-sc1-test/spec.md` passes `scripts/verify/spec-shape-lint.sh` with all structural checks green (FR-2 Section Contract verified; `<TODO>` count > 0 since this is a skeleton).
 
-- **SC-2**: On a spec scaffolded by US-2 with all sections authored to completion (zero unresolved `<TODO>`), `scripts/knowledge/detect-spec-shape.sh --spec-path <path>` emits `shape=speckit` and `orchestrator:ingest --spec-path <path> --slug <slug>` ingests the spec on the fast path with zero chunker normalization warnings. This is the I/O-contract assertion.
+- **SC-2**: On an authored (zero-`<TODO>`) spec scaffolded by US-2, `scripts/knowledge/detect-spec-shape.sh --spec-path <path>` exits 0 with stdout matching exactly `shape=speckit\n`; `scripts/knowledge/ingest-spec.sh --spec-path <path> --slug <slug>` exits 0 with stderr matching `grep -E '^(WARN|normalize|fallback)'` returning zero lines; the resulting `KNOWLEDGE-INDEX.md` contains the new slug within 2 seconds of ingest completion. This is the I/O-contract assertion.
 
 - **SC-3**: On a spec draft crossing the FR-5 complexity threshold, `orchestrator:specify` prints the three-way prompt; answering `y` triggers a conversus-adapter invocation that produces `specs/<NNN>-<slug>/conversus/summary/final.md` with a documented verdict; answering `d` produces a decomposition manifest naming 2–N sub-specs; answering `n` exits zero without further side effects. All three paths are exercised by the milestone's test suite.
 
-- **SC-4**: `scripts/comments/classify.sh` on a seeded inbox of ≥20 comments (mix of 4 classes) produces a labeled manifest where manual review of the manifest against the seeded ground-truth labels shows ≥80% precision on the two trivial-auto-apply classes (`uat-bug`, `decision-append`) at the configured threshold. Classifier precision is dogfood-measured, not guaranteed at launch — SC-4 is the floor below which planning re-tunes thresholds or classifier shape.
+- **SC-4 (default branch — measurement + re-planning trigger)**: Classifier precision on the `uat-bug` and `decision-append` classes is *measured and logged* per FR-16 across a seeded inbox of ≥20 comments (mix of 4 classes) plus the M012/M013 dogfood inbox data sized by SC-16. Planning re-tunes thresholds and/or classifier shape (per Open Question #C-1) if measured precision falls below 80% after ≥20 seeded comments. At spec-ship time — before planning pins the classifier shape — SC-4 is a diagnostic gate, not an auto-apply gate: the spec cannot ship a mechanical enforcement clause against an artifact whose shape is deferred to planning (Principle II).
 
-- **SC-5**: Zero spec amendments are auto-applied without human sign-off. On the test suite's seeded `spec-amendment`-labeled comments, every one lands in the review queue; `grep -r "applied: true" .orchestrator/comments/actioned.jsonl` on entries where `class=spec-amendment` returns zero matches unless preceded by an `orchestrator:comments apply <id>` invocation. Constitution XV compliance gate.
+- **SC-4 (upgrade branch — pinned-shape gate)**: If and only if planning pins a mechanically-measurable classifier shape per Open Question #C-1 (e.g., regex/heuristic with enumerable rules, or embedding-distance with a pinned prototype corpus), SC-4 is upgraded to include the failure-posture clause: below 80% precision at milestone close, auto-apply is disabled in shipped defaults for the affected class (`.orchestrator/config.yml` default sets `comments.auto_apply_threshold.<class>: 1.0`), and the milestone does NOT hold on below-floor precision. The upgrade branch activates at plan-phase time (planning captures the shape-pinning decision in writing); otherwise the default branch governs milestone close.
+
+- **SC-5**: Zero spec amendments are auto-applied without human sign-off. On the test suite's seeded `spec-amendment`-labeled comments, every one lands in the review queue; `grep -r "applied: true" .orchestrator/comments/actioned.jsonl` on entries where `class=spec-amendment` returns zero matches unless preceded by an `orchestrator:comments apply <id>` invocation. Constitution III (Design Before Code — spec mutation is a design act, not a runtime act) primary; Constitution XIV (No Speculative Complexity — no confidence-threshold back-door) supporting.
 
 - **SC-6**: After a full US-2 + minimal US-4 scaffold, the drift detector `scripts/verify/check-docs.sh` reports zero drift between `CLAUDE.md` and `AGENTS.md` in the `recent-changes` region; the two files' marker-bounded regions have identical bytes (or semantically-equivalent bytes under a documented transform pinned by planning).
+
+- **SC-6a (outside-markers byte-preservation)**: After any dual-write invocation, `shasum` of content outside the `# >>> orchestrator:<region> >>>` / `# <<< orchestrator:<region> <<<` markers on both `CLAUDE.md` and `AGENTS.md` is byte-identical pre-write and post-write. Verified by `tests/test-dual-write-outside-invariant.sh` (new, shipped by this milestone). This is the mechanical expression of the FR-12 `shasum`-invariant promise — outside-markers bytes cannot drift regardless of the write being made.
 
 - **SC-7**: A fresh `orchestrator:auto` run that dispatches `orchestrator:specify` with `--yes` produces zero Claude Code approval prompts (inheriting the M016/M021 zero-prompt baseline). Verified against the M021 prompt-corpus fixture.
 
@@ -230,6 +261,14 @@ A maintainer reviews the review queue produced by US-1 (spec-amendment-shaped co
 - **SC-12**: Total new shell-script count outside `scripts/comments/`, `scripts/util/dual-write-runtime-md.sh`, and `scripts/knowledge/spec-complexity-probe.sh` does not exceed a ceiling set at Phase 1 planning (scope-cap, not scope-count, per Constitution XII + XIV).
 
 - **SC-13**: The next milestone's spec authored after M014 closes is produced by invoking `orchestrator:specify` rather than by hand-copying an existing `specs/*/spec.md` file. This is the dogfood gate — until it is exercised, M014 has not closed its own bootstrapping loop.
+
+- **SC-14 (`--amend` byte-preservation invariant)**: On `orchestrator:specify --amend <path>` against a spec with a mix of all-placeholder (case a), partial-placeholder (case b), and fully-authored (case c) sections per FR-14: `shasum` of non-placeholder section bytes (cases b and c) is unchanged pre- and post-amend; `git diff` on the amended file shows hunks only inside placeholder-bearing sections (case a). Verified by a fixture test shipped with this milestone.
+
+- **SC-15 (`RUNTIME-ASSUMPTIONS.md` close-out deliverable)**: At milestone close, `RUNTIME-ASSUMPTIONS.md` (the registry established by D016) contains entries for FR-3 (LLM scaffolder), FR-5 (contradiction-signal probe), and FR-7 (splitter) unconditionally. FR-9 (classifier) is included conditionally — only if planning pins an LLM-based classifier shape per Open Question #C-1. Each entry names the CC-specific assumption (the shape that only works under Claude Code runtime), the Codex/Cursor fallback shipped in v1, and the M009 parity-audit obligation for future runtime-parity work.
+
+- **SC-16 (dogfood-data sizing for FR-9 classifier-shape decision)**: Before `orchestrator:plan-phase` pins the FR-9 classifier shape, a dogfood-data table covering ≥1 week of M012/M013 inbox volume is captured at `specs/024-spec-management-extended/planning-inputs/inbox-dogfood.md` with per-class counts and representative sample comments. The FR-9 shape decision cites this file as its evidence base; SC-4's upgrade-branch activation cites it as the basis for "mechanically-measurable shape." Planning cannot pin FR-9 shape against a zero-data prior.
+
+- **SC-17 (Template / scaffolder byte-compatibility)**: `tests/test-specify-shape.sh` (FR-18) passes in CI — scaffolder output against a fixture description byte-matches the contract derived from `templates/spec-template.md` (FR-2b). Any drift between the shipped template and the scaffolder's output fails the suite; any drift between the FR-2 inline prose and the template is resolved in favor of the template.
 
 ## Constraints
 
@@ -337,7 +376,18 @@ Compliance with `.orchestrator/memory/constitution.md` (v2.1.0) for each princip
 
 - **Principle XIV (No Speculative Complexity)**: CON-2 narrows LLM-assisted paths to CC-first for v1 — Codex parity is back-loaded to M009's parity audit with a concrete current-demonstrable-need gate. CON-10 narrows comment surfaces to GitHub only (Giscus + Issues/PRs) — no Slack/Discord/email speculation. CON-5 narrows auto-apply to two trivial classes; spec-amendment is human-gated with no "confidence threshold that bypasses review" back-door. CON-8 narrows dual-write targets to two files (`CLAUDE.md` + `AGENTS.md`) — no `.cursorrules` / `.vscode/` speculation. FR-4 shape-lint is a preflight consumed by `orchestrator:discuss`, not a standalone `orchestrator:lint-spec` command surface.
 
-- **Principle XV (Surgical Precision)**: FR-12 dual-write is marker-bounded with `shasum` byte-preservation of content outside markers — the M012/P04 pattern lifted verbatim. FR-14 `--amend` preserves authored prose byte-identically and re-scaffolds only placeholder regions. FR-13 drift-detector reports drift but does not silently reconcile — human edits are never overwritten. CON-5 spec-amendment human-gate is the XV-boundary on this milestone's comment surface. CON-7 no-scope-insertion is reiterated: four-cluster bundle is the scope.
+- **Principle XV (Surgical Precision)**:
+
+  **XV applies to** (byte-preservation / changed-lines-trace invariants):
+  - FR-12 dual-write is marker-bounded with `shasum` byte-preservation of content outside markers — the M012/P04 pattern lifted verbatim (SC-6a enforces).
+  - FR-14 `--amend` preserves authored prose byte-identically and re-scaffolds only placeholder regions; SC-14 expresses the byte-preservation invariant mechanically.
+  - FR-13 drift-detector reports drift but does not silently reconcile — human edits are never overwritten.
+
+  **XV does NOT apply to** (human-gate / scope-boundary disciplines — governed by Principle III + XIV instead):
+  - CON-5 spec-amendment human-gate is a Design-Before-Code (III) discipline with a no-speculative-complexity (XIV) guard against confidence-threshold back-doors; SC-5 is cited under III + XIV per this retrofit.
+  - CON-7 no-scope-insertion is a Principle XIV (No Speculative Complexity) + Principle XII (Hook Isolation) discipline — the four-cluster bundle defense lives there. XV's "changed-lines trace back to the original request" test is not the governing principle for scope boundaries.
+
+  This split corrects a prior over-reach where XV was cited thematically ("surgical precision sounds like it should govern careful policies") rather than per its literal scope in `.orchestrator/memory/constitution.md` L271–L284 (XV = each changed line traces to an explicit request; a changed-lines-trace test, not an authorization-gate discipline).
 
 ## Open Questions (defer to planning)
 
@@ -362,6 +412,8 @@ These are **not** decisions the spec makes. They are captured so planning starts
 - **#C-9 `decision-append` block shape.** What is the exact templated block appended to `.orchestrator/DECISIONS.md` from a `decision-append`-class comment? Decision-register rows are a well-known shape; planning extends or reuses.
 
 - **#C-10 Codex fast-follow sequencing.** D016 defers LLM-assisted Codex paths to the M009 runtime-parity audit. If Codex demand materializes mid-M014, does the LLM-path work pull into a late M014 phase, or stay in M009? Planning pins the answer and documents the condition that would re-open the question.
+
+- **#C-11 Exhaustive `CLAUDE.md` write-site enumeration.** At `orchestrator:plan-phase` time (before P2 dual-write extension ships), planning runs `grep -rn 'CLAUDE.md' scripts/ commands/` to produce the full list of current write-sites; the phase plan commits the enumerated list as a must-have checklist. Any write-site discovered post-plan during execution triggers a phase-plan amendment (new task) rather than silent extension of the dual-write helper to an uncatalogued surface. Guards against "dual-write discipline" becoming an implicit policy that new write-sites quietly inherit without an explicit gate.
 
 ## Dependencies
 

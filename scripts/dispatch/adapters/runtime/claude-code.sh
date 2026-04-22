@@ -126,21 +126,24 @@ fi
 if [[ "$MODE" = "hook-config" ]]; then
   # Emit a JSON-shaped settings.json fragment describing the hook
   # registrations for Claude Code lifecycle events. No jq dependency.
-  # hook_count reflects spec-kit orchestrator lifecycle hooks (5 points
-  # per CLAUDE.md: before_tasks, after_tasks, before_implement,
-  # after_implement, before_commit).
+  # hook_count reflects spec-kit orchestrator lifecycle hooks (6 points:
+  # before_tasks, after_tasks, before_implement, after_implement,
+  # before_commit, post_verify). The sixth entry (post_verify) was
+  # added at M013/P04 per FR-12 Claude-Code-only v1 — wires
+  # packaging/bundle/hooks/post-verify.json into the runtime.
   target_file="${HOME:-}/.claude/settings.json"
   cat <<EOF
 {
   "runtime": "claude-code",
-  "hook_count": 5,
+  "hook_count": 6,
   "target_file": "${target_file}",
   "hooks": [
     { "event": "before_tasks", "command": "orchestrator-before-tasks" },
     { "event": "after_tasks", "command": "orchestrator-after-tasks" },
     { "event": "before_implement", "command": "orchestrator-before-implement" },
     { "event": "after_implement", "command": "orchestrator-after-implement" },
-    { "event": "before_commit", "command": "orchestrator-before-commit" }
+    { "event": "before_commit", "command": "orchestrator-before-commit" },
+    { "event": "post_verify", "command": "orchestrator-post-verify" }
   ]
 }
 EOF

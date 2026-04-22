@@ -1,0 +1,6 @@
+{
+  "schema_version": "1.0",
+  "event": "post-verify",
+  "command": "bash scripts/lifecycle/after-verify-sync.sh",
+  "description": "M013 post-verify hook — invokes github-sync when sync_mode=on-transition (fail-as-warning)."
+}

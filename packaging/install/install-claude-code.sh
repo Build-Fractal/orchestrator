@@ -127,6 +127,9 @@ else
 fi
 
 # --- 3. Wire hooks: capture hook-config JSON, write to settings.json ---
+# M013/P04: hook-config emits 6 entries (post_verify added at P04 per FR-12
+# Claude-Code-only v1 — sixth entry descriptor lives at
+# packaging/bundle/hooks/post-verify.json, registered via settings.json).
 log "capturing hook-config"
 hook_json="$(bash "$ADAPTER" --hook-config 2>/dev/null)"
 hook_target="$HOME/.claude/settings.json"

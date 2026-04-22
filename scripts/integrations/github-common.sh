@@ -620,8 +620,18 @@ manifest_upsert_line() {
 }
 
 manifest_footer() {
-  # $1=upserts $2=skipped $3=errors (printed on both dry-run and live)
-  printf 'upserts=%s skipped=%s errors=%s\n' "$1" "$2" "$3"
+  # $1=upserts $2=skipped $3=errors [ $4=adopted ]
+  # When $4 is omitted (P02 shape), prints the 3-field footer byte-identical
+  # with P02's fixture. When $4 is set (P03 re-init adoption), appends
+  # ` adopted=<A>` as an additive suffix — extension preserves fixture
+  # compatibility because P02's byte-identity gate and T07 lint consume only
+  # the three-number prefix via `grep -E 'upserts=[0-9]+'`.
+  local up="${1:-0}" sk="${2:-0}" er="${3:-0}" ad="${4:-}"
+  if [ -z "$ad" ]; then
+    printf 'upserts=%s skipped=%s errors=%s\n' "$up" "$sk" "$er"
+  else
+    printf 'upserts=%s skipped=%s errors=%s adopted=%s\n' "$up" "$sk" "$er" "$ad"
+  fi
 }
 
 # --- Re-init marker search (P03/T01) ----------------------------------------

@@ -4,6 +4,7 @@ type: phase-plan
 phase: "P02"
 milestone: "M013"
 name: "Re-init adoption fixture phase"
+state: ready
 ---
 
 ## Tasks

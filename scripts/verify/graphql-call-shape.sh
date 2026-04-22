@@ -16,7 +16,8 @@
 # in the repo (e.g., scripts/diagnostics/wiki-giscus-remap.sh) is out of
 # scope for M013's FR-5 whitelist.
 #
-# Bash 3.2 compatible. No declare -A, no mapfile, no process substitution.
+# Bash 3.2 compatible. No assoc-arrays, no array-from-stdin builtins, no
+# process substitution.
 # Invoked by CI via scripts/verify/m013-p03-phase-suite.sh and directly by
 # scripts/verify/m013-p03-graphql-call-shape-selftest.sh with a fixture
 # override passed as $1.

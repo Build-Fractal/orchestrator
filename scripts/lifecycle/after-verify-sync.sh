@@ -13,7 +13,7 @@
 # to pending-operator-complete without a live gh call. This wrapper
 # issues no interactive prompts itself.
 #
-# Bash 3.2 compatible. No associative arrays, no mapfile, no jq.
+# Bash 3.2 compatible. No assoc-arrays, no array-from-stdin builtins, no jq.
 
 set -u
 

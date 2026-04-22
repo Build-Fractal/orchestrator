@@ -74,14 +74,33 @@ else
   pass "'### TODO P03:' headings relabeled"
 fi
 
-# (3b) Exactly three `### TODO P04:` headings.
-p04_count=$(grep -cE '^### TODO P04:' "$DOC" 2>/dev/null || echo 0)
-# strip any whitespace (macOS grep -c can emit leading spaces on empty case)
-p04_count=$(printf '%s' "$p04_count" | tr -d ' \n')
-if [ "${p04_count:-0}" = "3" ]; then
-  pass "3 '### TODO P04:' headings present"
+# (3b) Either three `### TODO P04:` headings (pre-T06 shape) OR the three
+# P04 subsections filled in place (post-T06 shape). Gate-evolution-on-
+# legitimate-advancement pattern: when T06 legitimately completes what P03
+# scaffolded as "deferred", this assertion accepts both shapes rather than
+# fracturing the P03 suite. Byte-identity on content NOT being advanced
+# remains pinned via the P02 gate SSOT (assertion 6/7 below).
+if grep -qE '^### TODO P04:' "$DOC"; then
+  p04_count=$(grep -cE '^### TODO P04:' "$DOC" | tr -d ' \n')
+  if [ "${p04_count:-0}" = "3" ]; then
+    pass "3 '### TODO P04:' headings present (pre-T06 shape)"
+  else
+    fail "Expected 3 '### TODO P04:' headings (pre-T06 shape), got ${p04_count:-0}"
+  fi
 else
-  fail "Expected 3 '### TODO P04:' headings, got ${p04_count:-0}"
+  # Post-T06: zero TODO P04 stubs AND the three replacement subsections are
+  # present. Matches the P03/T04 precedent of relaxing the P02 assertion-3.
+  filled_sync=0
+  filled_gate=0
+  filled_cost=0
+  grep -q '^### Sync Workflow (FR-15)' "$DOC" && filled_sync=1
+  grep -q '^### Conversus Pre-Merge Gate (FR-13)' "$DOC" && filled_gate=1
+  grep -q '^### FR-17 Cost Emission' "$DOC" && filled_cost=1
+  if [ "$filled_sync" -eq 1 ] && [ "$filled_gate" -eq 1 ] && [ "$filled_cost" -eq 1 ]; then
+    pass "3 TODO P04 stubs filled by T06 (post-T06 shape: Sync Workflow + Conversus Pre-Merge Gate + FR-17 Cost Emission)"
+  else
+    fail "Expected 3 filled P04 subsections (post-T06 shape), got sync=${filled_sync} gate=${filled_gate} cost=${filled_cost}"
+  fi
 fi
 
 # (4) Re-init Adoption Contract subsection present with anchors.

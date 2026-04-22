@@ -27,7 +27,7 @@
 #     orchestrator hook registrations for Claude Code lifecycle events.
 #     No jq dependency.
 #
-# Bash 3.2 compatible. No associative arrays, no mapfile/readarray.
+# Bash 3.2 compatible. No assoc-arrays, no array-from-stdin builtins.
 
 set -u
 

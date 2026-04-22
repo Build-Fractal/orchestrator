@@ -143,24 +143,26 @@ Per `.orchestrator/DECISIONS.md` D013 (M020 promotion) and D014 (M013 conversus 
 
 Full rationale: `.orchestrator/DECISIONS.md` D013 (M020 scope and sequencing) and D014 (13 spec edits + 3 arbitrated rulings applied pre-discuss).
 
-## Scope Boundary (P01 vs. P02 vs. P03)
+## Scope Boundary (P01 vs. P02 vs. P03 vs. P04)
 
-This table pins what each phase writes into this document. P01 populates only the P01 column; rows marked "TODO P02" / "TODO P03" are reserved stubs that later phases will fill in place.
+This table pins what each phase writes into this document. P01 populates only the P01 column; later phases fill their columns in place.
 
-| Section | P01 | P02 | P03 |
-|---------|-----|-----|-----|
-| Sidecar schema | shipped (this doc) | `items.<id>` population + `sub_issue_mode` field added | — (per-item status tracking is P04) |
-| Pending sentinel | shipped | reversed on successful init | — |
-| `sync_mode` enum | shipped (enum described) | operator-set at init (still `manual` default) | — (runtime wiring is P04) |
-| Marker format | shipped (format described) | REST search-by-marker + emit + shasum byte-identity verify shipped | `gh_marker_search_remote` helper + byte-identity-on-adopt ship |
-| UAT ingestion | shipped (offline fixture flow) | — | — (live `gh issue list` pull not taken in P03) |
-| Auth modes | — | shipped (this doc) | — |
-| Full mapping table | — | partial (phase/task/milestone rows; chunk/AC/status deferred) | **shipped** (deferred rows filled in place) |
-| `init` workflow | — | shipped (this doc + script T02/T03) | **shipped** re-init adoption (FR-14 full) |
-| `sync` workflow | — | — | — (TODO P04) |
-| Conversus pre-merge gate | — | — | — (TODO P04) |
-| FR-17 cost emission | — | — | — (TODO P04) |
-| FR-5 GraphQL call-shape lint | — | — | **shipped** (`scripts/verify/graphql-call-shape.sh`) |
+| Section | P01 | P02 | P03 | P04 |
+|---------|-----|-----|-----|-----|
+| Sidecar schema | shipped (this doc) | `items.<id>` population + `sub_issue_mode` field added | — (per-item status tracking is P04) | per-item `last_attempt_at` / `last_error` / `status_field_synced` / `project_v2_attached` write paths shipped |
+| Pending sentinel | shipped | reversed on successful init | — | `--verify-cache` no-ops on pending (FR-18) |
+| `sync_mode` enum | shipped (enum described) | operator-set at init (still `manual` default) | — (runtime wiring is P04) | runtime wiring: `manual` / `on-transition` (Claude Code post-verify hook) / `cron` (advisory) shipped |
+| Marker format | shipped (format described) | REST search-by-marker + emit + shasum byte-identity verify shipped | `gh_marker_search_remote` helper + byte-identity-on-adopt ship | `--verify-cache` uses marker-search to detect `missing-remote` divergences |
+| UAT ingestion | shipped (offline fixture flow) | — | — (live `gh issue list` pull not taken in P03) | — |
+| Auth modes | — | shipped (this doc) | — | FR-16 auth-expiry rc=4 wired in sync + init |
+| Full mapping table | — | partial (phase/task/milestone rows; chunk/AC/status deferred) | **shipped** (deferred rows filled in place) | sync rows added (close / status-sync / skip-nochange) |
+| `init` workflow | — | shipped (this doc + script T02/T03) | **shipped** re-init adoption (FR-14 full) | — |
+| `sync` workflow | — | — | — (TODO P04) | **shipped** (reconcile pass + `--dry-run` + FR-5 third-shape mutation) |
+| Conversus pre-merge gate | — | — | — (TODO P04) | **shipped** (strict mode + 30s timeout + verdict-as-comment + D007 adapter invocation) |
+| FR-17 cost emission | — | — | — (TODO P04) | **shipped** (`unit_close` + `conversus_gate_invocation` Tier 1 records with `source: "runtime"`) |
+| FR-5 GraphQL call-shape lint | — | — | **shipped** (`scripts/verify/graphql-call-shape.sh`) | `updateProjectV2ItemFieldValue` third-shape used by sync; lint pre-whitelisted in P03 |
+| FR-16 rate-limit | — | — | — | rc=3 exit + `RATE-LIMIT: retry-after=<ISO>` diagnostic + pre-flight `gh api rate_limit` on >50 mutations |
+| FR-18 `--verify-cache` | — | — | — | `orchestrator:github status --verify-cache` flag + `DIVERGENCE:` classes + rc=0/5 contract |
 
 ### Auth Modes
 
@@ -221,6 +223,19 @@ Orchestrator state → GitHub resource projection. P02 populates phase/task/mile
 | **Verification status** | **Project v2 Status field** | `init` sets initial value `Todo` via `addProjectV2ItemById` then `updateProjectV2ItemFieldValue` (P04) | Project v2 item node id (from sidecar) | `sync` transitions Todo → In Progress → Done via `updateProjectV2ItemFieldValue` (P04) |
 
 The table is now complete. Lifecycle columns referencing P04 capture sync-time transitions not shipped in P03 (status transitions, AC checkbox toggling); P03 only wires the `init`-time creator cells.
+
+#### Sync Action Mapping (P04)
+
+`orchestrator:github sync` emits one UPSERT row per cached `items.<oid>` entry. The `reason` column takes one of three values mapped to an orchestrator state transition:
+
+| Sync action | GitHub effect | Orchestrator trigger | Cache side-effect |
+|-------------|---------------|----------------------|-------------------|
+| `close` (phase) | `gh issue close <num>` on the phase Issue | `P##-SUMMARY.md` lands (phase-done state) | `items.<M###-P##>.last_attempt_at` updated |
+| `close` (task) | `gh issue close <num>` on the task sub-Issue | `T##-SUMMARY.md` lands (task-done state) | `items.<M###-P##-T##>.last_attempt_at` updated |
+| `status-sync` | `updateProjectV2ItemFieldValue` flips Project v2 Status field (Todo → In Progress → Done) | Phase enters `ready` / `executing` / `done` | `items.<oid>.status_field_synced` set true |
+| `skip-nochange` | no-op | desired state already matches remote projection | `items.<oid>.last_attempt_at` updated |
+
+Under a stable-state fixture (no orchestrator-side changes since the last sync), every row resolves to `skip-nochange` and the footer reports `upserts=0 errors=0` — the steady-state idempotency contract for sync.
 
 #### FR-14 Label Collision
 
@@ -285,17 +300,135 @@ This format is load-bearing: P03 re-init adoption and P04 sync `--dry-run` consu
 
 **FR-4 marker invariant on adoption**: every adopted Issue's remote body is fetched via `gh issue view <num> --json body --jq .body` and fed to `shasum_marker_byte_identity`. On mismatch, adoption fails with `integration-marker-mismatch on adopt: <oid>`. This closes the FR-4 invariant across the full projection → read-back round trip.
 
-### TODO P04: `sync` Workflow
+### Sync Workflow (FR-15)
 
-*Reserved for P04. Will cover `orchestrator:github sync`: marker-based idempotent upsert, `sync_mode` dispatch paths (manual / on-transition / cron advisory), `--dry-run` generalization (FR-15), `--strict` provenance enforcement (FR-13).*
+`orchestrator:github sync` is a reconcile pass — it diffs cached sidecar state against desired orchestrator state and pushes deltas. It never creates new Milestones/Project v2/Issues; that is exclusively the `init` path. Sync closes sub-Issues when their associated task `T##-SUMMARY.md` lands, closes phase Issues when `P##-SUMMARY.md` lands, and flips Project v2 Status fields (Todo → In Progress → Done) via the single whitelisted `updateProjectV2ItemFieldValue` GraphQL mutation (FR-5 third-shape).
 
-### TODO P04: Conversus Pre-Merge Gate
+1. **Flag parse** — `--dry-run`, `--i-am-operator`, `--conversus-gate`, `--timeout <sec>`, `--root <project-root>`.
+2. **Lock acquisition (FR-7)** — `scripts/lifecycle/lock-manager.sh acquire sync` at entry. Exit rc=6 on lock-held.
+3. **Preflight: auth** — `gh_auth_preflight` (same helper as `init`). Exit rc=4 on auth-expired with `AUTH-EXPIRED:` diagnostic.
+4. **Preflight: rate-limit (FR-16)** — `gh api rate_limit` probe when projected GraphQL volume > 50 mutations (see Rate-Limit & Auth-Expiry Semantics). Exit rc=3 on window-exceeded with `RATE-LIMIT: retry-after=<ISO>` diagnostic.
+5. **Cache walk** — parse `.orchestrator/integrations/github.json` `items.<oid>`; for each, derive desired state by consulting on-disk summary files; emit UPSERT rows with reason ∈ `{close, status-sync, skip-nochange}`.
+6. **Dry-run contract** — with `--dry-run`, emit the full manifest (header + body + footer `upserts=<N> skipped=<M> errors=<E>`) and exit 0. Manifest shape is byte-identical to `init --dry-run` (FR-15 generalization).
+7. **Live-mode dispatch** — execute `gh issue close <num>` for close rows and the FR-5 whitelisted `updateProjectV2ItemFieldValue` GraphQL mutation for status-sync rows. Per-item sidecar cache is updated under the `items.<oid>` object (fields: `last_attempt_at`, `last_error`, `status_field_synced`, `project_v2_attached`).
+8. **Conversus pre-merge gate (opt-in)** — with `--conversus-gate` flag, UAT-defect-closing sub-Issues route through `scripts/integrations/github-conversus-gate.sh` (see § Conversus Pre-Merge Gate).
+9. **Observability (FR-17)** — one `unit_close` JSONL record per phase-close / task-close / sub-Issue close; one `conversus_gate_invocation` record per gate invocation (see § Observability Record Schema).
+10. **Lock release** — on every exit path.
+11. **Exit summary** — `upserts=<N> skipped=<M> errors=<E>` on final stdout line.
 
-*Reserved for P04. Will cover the conversus adapter invocation at the UAT PR-ready checkpoint per D007 + D014 adapter-reuse pattern.*
+### Conversus Pre-Merge Gate (FR-13)
 
-### TODO P04: FR-17 Cost Emission
+When `--conversus-gate` is passed, sync interposes a conversus deliberation at the UAT-defect close point per D007 (projection-not-peer) and D014 adapter-reuse: the M011/P07 conversus adapter (`scripts/dispatch/adapters/tool/conversus.sh`) is invoked as a tool adapter, not re-implemented.
 
-*Reserved for P04. Will cover M019 Tier 1 shape cost emission from the sync dispatch path.*
+**Invocation contract**:
+
+- **Strict mode** — the gate runs conversus in `strict` presets; a blocking verdict halts the sync and exits rc=1. Operator must rerun without the gate or resolve the verdict (comment on the defect Issue) before retry.
+- **30-second timeout** — the gate enforces a hard 30s wall-clock timeout on the conversus call. On timeout, the gate emits `CONVERSUS-TIMEOUT: oid=<id> wall-clock=30s` to stderr and exits rc=1.
+- **Verdict-as-comment** — the conversus verdict is posted as a GitHub Issue comment on the UAT defect Issue before the close fires. On block, no close; on pass, close proceeds.
+- **Exit-code-gates-merge** — a non-zero rc from the conversus adapter blocks the close. This is the spec's merge-gate contract (FR-13).
+- **Adapter-absence semantics** — when `scripts/dispatch/adapters/tool/conversus.sh` is not installed (fresh install without the M011/P07 adapter), the gate emits `CONVERSUS-UNAVAILABLE:` warning on stderr and treats the UAT-defect close as operator-deferred (no close fires; rc=1). This preserves D014's "conversus integration stays at the M011/P07 reusable adapter" boundary — M013 invokes but does not reimplement.
+
+Full adapter semantics (mode selection, preset wiring, timing) are in `scripts/dispatch/adapters/tool/conversus.sh` and `references/routing.md`.
+
+### FR-17 Cost Emission
+
+Sync emits observability records to `.orchestrator/execution-log.jsonl` in the M019 Tier 1 shape. M019 is the schema-evolution authority for this JSONL stream; M013 writes records that conform to M019 Tier 1 but does not extend the schema.
+
+Two record types fire from the sync path:
+
+- **`unit_close`** — one per Done-phase closure, task-close, or sub-Issue close. Mirrors the orchestrator-native `unit_close` record emitted at phase-transition time, with `source: "runtime"` to distinguish the sync-path emission from orchestrator-native emissions.
+- **`conversus_gate_invocation`** — one per gate call (whether verdict is pass, block, or timeout). Captures `verdict`, `wall_clock_ms`, `oid`, and adapter-invocation identifiers so the gate's effect on sync latency is visible downstream.
+
+See § Observability Record Schema for field-by-field details. Both record types follow the M019 Tier 1 contract: JSONL append-only, UTF-8, one record per line, no newlines inside field values.
+
+### Sync Modes
+
+The `sync_mode` field in the sidecar (see § `sync_mode` Enum for the P01 enum definition) governs when sync fires. P04 wires the three modes:
+
+- **`manual`** (default) — sync runs only when the operator explicitly invokes `orchestrator:github sync`. No hook, no scheduler. This is the safest posture and the only mode where the operator retains full control of GitHub API spend.
+- **`on-transition`** — sync fires as a post-verify hook after every task verification pass. The Claude Code runtime adapter (`scripts/dispatch/adapters/runtime/claude-code.sh`) registers a `post_verify` hook at install time (see `packaging/bundle/hooks/post-verify.json`) that invokes `scripts/lifecycle/after-verify-sync.sh`, which in turn invokes `scripts/integrations/github-sync.sh` when `sync_mode == "on-transition"`. Per FR-12, on-transition wiring is Claude-Code-only for v1 — Codex CLI and Cursor fall back to `manual` silently (no dual code-path; absence of the hook is the fallback).
+- **`cron`** — operator installs an external cron line. The advisory cron expression surfaced at init time (`recommended_cron` field, default `*/15 * * * *`) is a hint only — orchestrator never writes to the operator's crontab. Registration guidance: operator adds `*/15 * * * * cd /path/to/repo && bash scripts/integrations/github-sync.sh >> /var/log/orchestrator-sync.log 2>&1` (or equivalent) to their own crontab.
+
+The mode does not change silently — it is operator-set at init time (or via a re-init) and persists in the sidecar.
+
+### Rate-Limit & Auth-Expiry Semantics
+
+FR-16 defines two exit-code boundaries that both `init` and `sync` share:
+
+- **`rc=3` — rate-limit**. Before any run with projected GraphQL volume > 50 mutations, `gh api rate_limit` is pre-flighted. When the remaining quota is below the projected volume, the script exits 3 with a `RATE-LIMIT: retry-after=<ISO-8601>` diagnostic on stderr. No auto-retry inside the rate-limit window — operator waits, then retries. The `<ISO-8601>` timestamp is the GitHub-reported reset time.
+- **`rc=4` — auth-expired**. `gh_auth_preflight` calls `gh auth status` and inspects `X-Oauth-Scopes` from `gh api user -i`. On missing scope or expired token, exit 4 with `AUTH-EXPIRED: run gh auth refresh` (or `gh auth refresh -s <scope>` when a specific scope is missing). No auto-refresh.
+
+Both rates are operator-owned remediation paths. The orchestrator does not mutate the operator's `~/.config/gh/hosts.yml` or token state.
+
+### Observability Record Schema
+
+Both record types emit to `.orchestrator/execution-log.jsonl` in M019 Tier 1 shape. Field schemas:
+
+**`unit_close`**:
+
+| Field | Type | Semantics |
+|-------|------|-----------|
+| `schema_version` | integer | M019 Tier 1 schema version pinned at time of emit. |
+| `record_type` | string | Literal `"unit_close"`. |
+| `source` | string | `"runtime"` when emitted from the sync path; `"orchestrator"` when emitted from the phase-transition path. |
+| `emitted_at` | ISO-8601 | UTC timestamp of record emission. |
+| `milestone` | string | `M###` id. |
+| `phase` | string \| null | `P##` id (null for milestone-close records). |
+| `task` | string \| null | `T##` id (null for phase-close records). |
+| `oid` | string | `M###-P##[-T##]` orchestrator-id. |
+| `github_issue_number` | integer \| null | Cached issue number if a projection existed; null if no projection. |
+| `action` | string | `"close"` (sub-Issue close) or `"status-sync"` (Project v2 Status flip). |
+| `cost_usd` | number | Cost in USD; zero for non-LLM-gated actions. |
+| `cost_source` | string | M019 cost-source closed enum (MEM016). |
+
+**`conversus_gate_invocation`**:
+
+| Field | Type | Semantics |
+|-------|------|-----------|
+| `schema_version` | integer | M019 Tier 1 schema version. |
+| `record_type` | string | Literal `"conversus_gate_invocation"`. |
+| `source` | string | `"runtime"`. |
+| `emitted_at` | ISO-8601 | UTC emission timestamp. |
+| `oid` | string | Orchestrator-id of the UAT defect that triggered the gate. |
+| `verdict` | string | `"pass"` \| `"block"` \| `"timeout"` \| `"adapter-unavailable"`. |
+| `wall_clock_ms` | integer | Total wall-clock duration of the conversus call in milliseconds. |
+| `cost_usd` | number | Cost in USD (aggregated across adapter agent invocations). |
+| `cost_source` | string | M019 cost-source closed enum. |
+
+Byte-level JSONL discipline: UTF-8, one record per line, no newlines inside field values, append-only. Schema evolution is M019's authority — M013 writes records that validate against M019 Tier 1 but does not extend the schema.
+
+### `--verify-cache` Semantics
+
+`orchestrator:github status --verify-cache` (FR-18) walks each cached `items.<oid>` and probes the remote via `gh_marker_search_remote`, emitting one `DIVERGENCE:` line per class. Three classes are defined:
+
+- **`missing-remote`** — cache has the entry; remote Issue has no marker-matching result (or `gh` returns empty). Cached issue number listed for operator context. Most common after a manual issue deletion on GitHub.
+- **`missing-cache`** — remote has a marker-bearing Issue for an orchestrator-id; cache has no entry. Requires a repo-wide marker-grep sweep; P04 ships the per-item probe path only, with the repo-wide scope flagged as operator-owned (commentary in the script). Detection of this class is operator-driven pending a future extension.
+- **`status-mismatch`** — cache carries `status_field_synced: true` but the remote Project v2 Status field value does not match the orchestrator's derived state. Detection requires a GraphQL read; not wired in P04's probe body — reserved for future extension.
+
+**Exit-code contract**:
+
+- `rc=0` — zero divergences. `SUMMARY: --verify-cache divergences=0` on final stdout line.
+- `rc=5` — ≥1 divergence. `SUMMARY: --verify-cache divergences=<N>`.
+- `rc=0` with `STATUS: pending-operator-complete` on absent / pending sidecar (FR-11 reversibility — not an error, just a no-op).
+
+**Non-repair contract**: `--verify-cache` **never writes** — not to the sidecar, not to GitHub. It is a read-only divergence reporter. Byte-identity of the sidecar file is preserved across every invocation. Operator decides the remediation path (re-init, manual issue create on GitHub, etc.) after inspecting the divergence report.
+
+### Conversus Gate Invocation Contract
+
+The contract below supplements § Conversus Pre-Merge Gate with the precise invocation shape:
+
+| Property | Value |
+|----------|-------|
+| Mode | `strict` (block-on-disagreement) |
+| Timeout | 30s hard wall-clock |
+| Verdict surface | GitHub Issue comment on the UAT defect Issue, posted before close |
+| Exit-code on block | `rc=1` from sync; close does NOT fire |
+| Exit-code on timeout | `rc=1` from sync; close does NOT fire; `CONVERSUS-TIMEOUT:` on stderr |
+| Exit-code on adapter-unavailable | `rc=1` from sync; close does NOT fire; `CONVERSUS-UNAVAILABLE:` on stderr |
+| Adapter path | `scripts/dispatch/adapters/tool/conversus.sh` (M011/P07 surface) |
+| D007 boundary | conversus is a tool adapter invoked by M013; not reimplemented inside M013. |
+
+The adapter is the single source of truth for conversus mode semantics. M013 is a caller, not an owner of the conversus surface.
 
 ## Referenced Artifacts (P01 + P02)
 

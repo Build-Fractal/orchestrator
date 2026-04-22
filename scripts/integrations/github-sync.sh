@@ -220,6 +220,23 @@ task_of() {
 }
 
 # ----------------------------------------------------------------------------
+# uat_defect_p <oid>
+#
+# T05 stub: emits "1" when <oid> maps to a UAT defect, "0" otherwise. The
+# full implementation inspects knowledge/spec/defect/SPEC-DEFECT-*.md
+# frontmatter for the orchestrator-id (post-M013 scope — tracked as
+# TODO in references/github-integration.md). T05 ships the stub so the
+# --conversus-gate invocation site is wired end-to-end; live UAT-defect
+# mapping lands in a follow-on milestone. Always returns 0 exit status so
+# callers can use command-substitution without tripping set -e.
+# ----------------------------------------------------------------------------
+uat_defect_p() {
+  # Stub: no oid currently maps to a UAT defect. Callers guard on "=1".
+  echo "0"
+  return 0
+}
+
+# ----------------------------------------------------------------------------
 # Milestone discovery. Same strategy as github-init.sh: pick the first
 # directory under .orchestrator/milestones/ that has an <id>-ROADMAP.md.
 # M###[-suffix] pattern is accepted to allow fixture roots such as M013-FIX.
@@ -773,6 +790,22 @@ while [ "$i" -lt "$item_count" ]; do
         "task=${uc_task}" \
         "issue_number=${issue}" \
         "outcome=${outcome}" >/dev/null 2>&1 || true
+
+      # T05: conversus UAT PR gate — fire per UAT-defect-closing transition when
+      # --conversus-gate is set. uat_defect_p is a T05 stub (returns 0 = not
+      # UAT-defect) until the SPEC-DEFECT mapping ships post-M013. BLOCK (rc=2)
+      # is treated as a sync-level error for this transition.
+      if [ "$CONVERSUS_GATE" -eq 1 ] && [ "$reason" = "close" ] && \
+         [ "$(uat_defect_p "$oid")" = "1" ]; then
+        gate_artifact="${PROJECT_ROOT}/.orchestrator/integrations/uat-artifacts/${oid}.md"
+        if ! bash "${REPO_ROOT}/scripts/integrations/github-conversus-gate.sh" \
+               --issue-ref "${REPO_SLUG}#${issue}" \
+               --artifact "$gate_artifact" \
+               --timeout "$TIMEOUT" \
+               --i-am-operator >/dev/null 2>&1; then
+          errors=$((errors + 1))
+        fi
+      fi
     else
       errors=$((errors + 1))
       sidecar_update_item_cache "$oid" "$ts" "upsert-failed" "false" "true" "$PROJECT_ROOT" >/dev/null 2>&1 || true
@@ -789,11 +822,12 @@ done
 manifest_footer "$upserts" "$skipped" "$errors"
 
 # ----------------------------------------------------------------------------
-# Conversus UAT gate (T05 wiring point).
-# When --conversus-gate is present AND at least one close was performed,
-# T05 will invoke scripts/integrations/github-conversus-gate.sh here. T02
-# leaves the flag parsed and the CONVERSUS_GATE variable set so the T05
-# extension lands as a surgical addition.
+# Conversus UAT gate (T05 wiring).
+# Per-row gate invocation is performed inline in the reconcile loop above for
+# each UAT-defect-closing transition (guarded on --conversus-gate flag +
+# uat_defect_p predicate). The stub uat_defect_p always returns 0, so this
+# path is currently inert at the sync-cycle level; it activates the day a
+# UAT defect is wired through knowledge/spec/defect/SPEC-DEFECT-*.md.
 # ----------------------------------------------------------------------------
 # if [ "$CONVERSUS_GATE" -eq 1 ] && [ "$upserts" -gt 0 ] && [ "$DRY_RUN" -eq 0 ]; then
 #   bash "${REPO_ROOT}/scripts/integrations/github-conversus-gate.sh" \

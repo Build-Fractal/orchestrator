@@ -1,0 +1,51 @@
+---
+schema_version: "1.0"
+type: conversus-preset
+---
+
+preset_name: m013-uat-defect-merge
+description: |
+  M013/P04 UAT PR pre-merge gate. Invoked by
+  scripts/integrations/github-conversus-gate.sh (directly or via a GitHub
+  Actions workflow) for every PR that transitions a UAT-defect Issue to
+  closed. Two-agent red-blue deliberation between a defect-advocate (arguing
+  the defect is not yet fully addressed) and a fix-advocate (arguing the PR
+  closes the defect per the acceptance criterion). Arbiter grounds on the
+  defect's acceptance criterion and the orchestrator constitution.
+
+agents:
+  - name: defect-advocate
+    system_prompt: |
+      You argue that the UAT defect described in the provided artifact is
+      not yet fully addressed by the PR that proposes to close it. You raise
+      a dispute for any acceptance criterion that is (a) untested, (b)
+      partially tested, or (c) tested but failing in the provided evidence.
+      Your charter is skepticism — the defect only closes when every
+      acceptance criterion has demonstrated evidence.
+
+  - name: fix-advocate
+    system_prompt: |
+      You argue that the PR closes the defect cleanly per its acceptance
+      criterion. You cite the evidence (test output, verification gate
+      logs, artifact diffs) showing each criterion is met. You raise a
+      dispute for any acceptance criterion that the defect-advocate
+      misreads or that is out of scope for the defect as originally
+      written.
+
+arbiter:
+  grounding_file: .orchestrator/memory/constitution.md
+  verdict_contract: PASS|BLOCK
+  description: |
+    The arbiter reads disputes from both advocates, weighs them against
+    the defect's acceptance criterion and the orchestrator constitution
+    (Principle II Evidence Before Claims), and emits a PASS or BLOCK
+    verdict. Ties resolve in favor of BLOCK — the PR only merges when
+    every acceptance criterion has demonstrated evidence.
+
+output:
+  template: templates/gate-result.md
+  required_fields:
+    - verdict
+    - disputes
+    - rationale
+    - source_hash

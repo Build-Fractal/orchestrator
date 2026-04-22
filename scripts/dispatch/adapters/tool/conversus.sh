@@ -9,7 +9,8 @@
 #
 # Subcommands:
 #   check                                   Probe for the conversus binary.
-#   gate <preset> <artifact> <output>       Run the fidelity gate, write
+#   gate [--strict] <preset> <artifact> <output>
+#                                           Run the fidelity gate, write
 #                                           gate-result.md to <output>.
 #   parse-verdict <gate-result-path>        Emit `verdict=PASS|BLOCK` from a
 #                                           gate-result.md frontmatter.
@@ -25,10 +26,17 @@
 # proceed without a gate. Conversus is an optional external dependency,
 # not a hard blocker.
 #
+# Strict mode (`--strict` flag or CONVERSUS_STRICT=1): callers that require
+# the adapter to be present (e.g., M013 pre-merge gate, US-6 AS-4) can
+# flip graceful degradation off. In strict mode, a missing binary emits
+# `FAIL: conversus binary not available` on stderr and exits 1 instead of
+# SKIPPED+exit-0. PASS/BLOCK verdict behavior is unchanged.
+#
 # Exit-code contract for `gate`:
-#   0  PASS  (or SKIPPED when binary missing — both are "proceed")
+#   0  PASS  (or SKIPPED when binary missing in non-strict mode — both are "proceed")
 #   2  BLOCK (distinct from 1 so callers can distinguish verdict from error)
-#   1  adapter error (missing preset, missing artifact, malformed output)
+#   1  adapter error (missing preset, missing artifact, malformed output,
+#      or missing binary in strict mode)
 #
 # Bash 3.2 compatible (MEM001): no declare -A, no mapfile/readarray, no
 # process substitution.
@@ -115,9 +123,14 @@ case "$SUBCMD" in
     ;;
 
   gate)
-    # gate <preset-name> <artifact-path> <output-path>
+    # gate [--strict] <preset-name> <artifact-path> <output-path>
+    _strict="${CONVERSUS_STRICT:-0}"
+    if [ "${1:-}" = "--strict" ]; then
+      _strict=1
+      shift
+    fi
     if [ $# -lt 3 ]; then
-      _emit_fail "usage: gate <preset-name> <artifact-path> <output-path>"
+      _emit_fail "usage: gate [--strict] <preset-name> <artifact-path> <output-path>"
       exit 1
     fi
     _preset_name="$1"
@@ -167,11 +180,16 @@ case "$SUBCMD" in
       esac
     fi
 
-    # Real mode: resolve binary. On missing, graceful degradation.
+    # Real mode: resolve binary. On missing, graceful degradation (or
+    # strict fail if --strict / CONVERSUS_STRICT=1).
     _probe="$(_resolve_binary)"
     echo "$_probe"
     case "$_probe" in
       *available=false*)
+        if [ "$_strict" = "1" ]; then
+          _emit_fail "conversus binary not available — strict mode requires present adapter"
+          exit 1
+        fi
         echo "SKIPPED: conversus binary not available — fidelity gate bypassed"
         exit 0
         ;;
@@ -217,9 +235,13 @@ case "$SUBCMD" in
 conversus.sh — Conversus cooperative-deliberation tool adapter
 
 Subcommands:
-  check                                 Probe for the conversus binary.
-  gate <preset> <artifact> <output>     Run the fidelity gate.
-  parse-verdict <gate-result-path>      Emit verdict=PASS|BLOCK.
+  check                                          Probe for the conversus binary.
+  gate [--strict] <preset> <artifact> <output>   Run the fidelity gate.
+  parse-verdict <gate-result-path>               Emit verdict=PASS|BLOCK.
+
+Flags:
+  --strict        Treat missing binary as FAIL (exit 1) instead of SKIPPED+exit-0.
+                  Also enabled via CONVERSUS_STRICT=1.
 
 Resolver order: CONVERSUS_STUB, PATH, CONVERSUS_HOME, ~/Sites/conversus.
 USAGE

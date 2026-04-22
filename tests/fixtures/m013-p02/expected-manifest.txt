@@ -1,0 +1,14 @@
+MANIFEST: 12 0 0
+UPSERT: milestone M013 - create
+UPSERT: project-v2 - - create
+UPSERT: label - phase create
+UPSERT: label - task create
+UPSERT: label - uat-bug create
+UPSERT: label - spec-gap create
+UPSERT: phase-issue M013-P02 - create
+UPSERT: task-subissue M013-P02-T01 - create
+UPSERT: task-subissue M013-P02-T02 - create
+UPSERT: project-v2-item M013-P02 - create
+UPSERT: project-v2-item M013-P02-T01 - create
+UPSERT: project-v2-item M013-P02-T02 - create
+upserts=12 skipped=0 errors=0

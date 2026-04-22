@@ -110,11 +110,11 @@ while IFS=' ' read -r pid pstatus prisk pdepends; do
     continue
   fi
 
-  # Parse comma-separated file list from the first item
+  # Parse comma/semicolon-separated file list from the first item
   files_str=$(echo "$key_files_line" | sed 's/^  - "//' | sed 's/"$//')
-  # Split on comma+space
+  # Split on comma or semicolon (both conventions accepted — M012 used ',', M013 used ';')
   OLD_IFS="$IFS"
-  IFS=','
+  IFS=',;'
   for raw_file in $files_str; do
     file=$(echo "$raw_file" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
     [[ -z "$file" ]] && continue

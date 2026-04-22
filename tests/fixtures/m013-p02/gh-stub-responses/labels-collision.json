@@ -1,0 +1,9 @@
+[
+  {
+    "id": 1234567890,
+    "name": "phase",
+    "color": "ff0000",
+    "description": "Pre-existing label with non-matching color (orchestrator uses '0e8a16').",
+    "default": false
+  }
+]

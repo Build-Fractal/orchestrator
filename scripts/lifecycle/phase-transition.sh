@@ -206,18 +206,21 @@ if [[ -d "$TASKS_DIR" ]]; then
     # Accumulate drill_down_paths
     drill_down_list="${drill_down_list:+$drill_down_list, }$TASKS_DIR/${task_id}-SUMMARY.md"
 
-    # Extract duration (best-effort numeric parsing)
-    dur=$(extract_field "$summary_file" "duration")
+    # Extract duration (best-effort numeric parsing — tolerates non-numeric
+    # values like "unreported" by contributing zero)
+    dur=$(extract_field "$summary_file" "duration") || true
     if [[ -n "$dur" ]]; then
       # Try to extract minutes from formats like "25m", "1h30m", "90"
-      mins=$(echo "$dur" | grep -oE '[0-9]+' | head -1)
+      mins=$(printf '%s' "$dur" | grep -oE '[0-9]+' | head -1 || true)
       if [[ -n "$mins" ]]; then
         duration_total=$((duration_total + mins))
       fi
     fi
 
-    # Accumulate body for synthesis
-    body_text=$(sed -n '/^---$/,/^---$/d; /^$/,$p' "$summary_file" | head -5)
+    # Accumulate body for synthesis. `sed | head` risks SIGPIPE under
+    # `set -o pipefail`; tolerate with `|| true` so non-fatal head-close
+    # doesn't abort the loop.
+    body_text=$(sed -n '/^---$/,/^---$/d; /^$/,$p' "$summary_file" 2>/dev/null | head -5 || true)
     if [[ -n "$body_text" ]]; then
       body_parts="${body_parts:+$body_parts\n}[$task_id]: $body_text"
     fi

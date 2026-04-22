@@ -75,6 +75,22 @@ get_field_value() { eval "echo \"\$field_v_$1\""; }
 
 for arg in "$@"; do
   case "$arg" in
+    --*-file=*)
+      # --<field>-file=<path> reads field value from a file. Avoids
+      # multiline quoted CLI args for long bodies (AD-19 shape safety).
+      name="${arg%%=*}"
+      name="${name#--}"
+      name="${name%-file}"
+      path="${arg#*=}"
+      if [ ! -f "$path" ]; then
+        echo "ERROR: --${name}-file path not found: $path" >&2
+        exit 1
+      fi
+      value=$(cat "$path")
+      declare_field_name "$idx" "$name"
+      declare_field_value "$idx" "$value"
+      idx=$((idx + 1))
+      ;;
     --*=*)
       name="${arg%%=*}"
       name="${name#--}"
@@ -84,7 +100,7 @@ for arg in "$@"; do
       idx=$((idx + 1))
       ;;
     *)
-      echo "ERROR: Unrecognized argument '$arg'. Use --field=value format." >&2
+      echo "ERROR: Unrecognized argument '$arg'. Use --field=value or --field-file=<path> format." >&2
       exit 1
       ;;
   esac

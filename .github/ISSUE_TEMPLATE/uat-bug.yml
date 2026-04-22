@@ -1,0 +1,65 @@
+name: UAT Bug
+description: Report a defect found during User Acceptance Testing against a specific spec chunk.
+title: "[UAT] "
+labels:
+  - uat-bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a UAT bug. This template captures the link back to the spec chunk whose acceptance criterion failed, so the orchestrator can route the defect into execution-error / spec-gap / spec-error triage buckets.
+
+        **How to find your Spec Chunk ID**: open [KNOWLEDGE-INDEX.md](../../KNOWLEDGE-INDEX.md) at the repo root and scroll to the `## Spec Chunks` section. Chunk IDs look like `SPEC-US-001`, `SPEC-AC-007`, `SPEC-CON-003`. Copy the exact ID (no surrounding whitespace) into the field below.
+
+  - type: input
+    id: spec_chunk_id
+    attributes:
+      label: Spec Chunk ID
+      description: "The ID of the spec chunk whose acceptance criterion failed (e.g. SPEC-US-001, SPEC-AC-007). Required — the ingestion step uses this to link the defect back to the owning phase and tests."
+      placeholder: "SPEC-US-001"
+    validations:
+      required: true
+
+  - type: textarea
+    id: defect_description
+    attributes:
+      label: Defect description
+      description: What went wrong? One or two sentences.
+      placeholder: "Expected X, observed Y."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps_to_reproduce
+    attributes:
+      label: Steps to reproduce
+      description: The minimum steps a maintainer can follow to observe the defect.
+      placeholder: |
+        1. Run `orchestrator:...`
+        2. Observe that ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_vs_actual
+    attributes:
+      label: Expected vs. actual behavior
+      description: Describe what the spec chunk's acceptance criterion expected and what actually happened.
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: "OS, runtime (Claude Code / Codex CLI / Cursor), orchestrator version."
+      placeholder: "macOS 14.5, Claude Code, orchestrator v0.9.0"
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+
+        _This issue will be ingested by `scripts/integrations/uat-ingest.sh` into `knowledge/spec/defect/SPEC-DEFECT-NNN.md` with graph edges to chunk → phase → tests. Unknown chunk IDs are flagged `chunk-lookup-failed` — never silently dropped._

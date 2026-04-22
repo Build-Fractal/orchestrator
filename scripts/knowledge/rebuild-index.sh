@@ -181,6 +181,11 @@ fi
 # --- Write the full index ---
 write_full_index "$entries"
 
+# --- Additive emit: append flat `## Spec Chunks` section (FR-9, D014).
+# Runs after write_full_index so the existing pipe-table body remains
+# byte-identical for downstream consumers. No-op when knowledge/spec/ is absent.
+emit_spec_chunks_section "$knowledge_dir" "$(get_index_path)"
+
 # --- Finalize SQLite database (atomic move) ---
 mv "$tmp_db" "$db_path"
 

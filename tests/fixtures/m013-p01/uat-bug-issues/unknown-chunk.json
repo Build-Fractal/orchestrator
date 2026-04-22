@@ -1,0 +1,7 @@
+{
+  "issue_number": 102,
+  "title": "[UAT] Invented chunk reference",
+  "spec_chunk_id": "SPEC-NOEXIST-999",
+  "body": "This fixture references a chunk that does not exist; the ingester should flag it rather than drop it.",
+  "created_at": "2026-04-25T14:23:00Z"
+}

@@ -1,0 +1,20 @@
+{
+  "_schema_docs": {
+    "schema_version": "integer — current cache schema version (FR-6). v1 shipped in M013/P01. Increment on any breaking per-item shape change.",
+    "repo_slug": "string — 'owner/repo' for the target GitHub repo. 'pending' until operator completes init.",
+    "project_v2_id": "string — GitHub Projects v2 node ID. 'pending' until init (P02) creates or attaches.",
+    "sync_mode": "enum: manual|on-transition|cron — how sync is invoked.",
+    "sub_issue_mode": "enum: native|labeled-fallback|pending — GitHub sub-issue REST availability mode recorded by P02 init preflight. 'pending' until init probes /repos/:slug/issues/1/sub_issues. 'native' = GitHub sub-issue REST used. 'labeled-fallback' = parent:<phase-id> / child:<task-id> labels + reciprocal body links used. See references/github-integration.md § Sub-Issue Representation Modes.",
+    "recommended_cron": "string — cron expression surfaced to the operator when sync_mode=cron. Advisory only; orchestrator does not install cron.",
+    "custom_field_mappings": "array — optional operator-declared Project v2 custom-field name→orchestrator-source mappings.",
+    "items": "object — per-item cache keyed by orchestrator-id (e.g. 'M013-P01', 'M013-P01-T01'). Per-item shape: {issue_number: int, project_v2_attached: bool, status_field_synced: bool, last_attempt_at: iso8601-string, last_error: string|null, schema_version: int}. Populated by P02 on first init; empty {} at P01 scaffold."
+  },
+  "schema_version": 1,
+  "repo_slug": "pending",
+  "project_v2_id": "pending",
+  "sync_mode": "manual",
+  "sub_issue_mode": "pending",
+  "recommended_cron": "*/15 * * * *",
+  "custom_field_mappings": [],
+  "items": {}
+}

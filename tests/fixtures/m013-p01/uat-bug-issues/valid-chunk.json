@@ -1,0 +1,7 @@
+{
+  "issue_number": 101,
+  "title": "[UAT] Autonomous mode surfaces approval prompt",
+  "spec_chunk_id": "SPEC-US-001",
+  "body": "Running `orchestrator:auto` on a phase with git operations surfaces a Claude Code approval prompt.\n\nSteps: ...\nExpected: zero prompts.\nObserved: one prompt on git stage.",
+  "created_at": "2026-04-25T14:22:10Z"
+}

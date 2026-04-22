@@ -881,6 +881,66 @@ emit_tier1_record() {
   return 0
 }
 
+# --- FR-16 rc classifier (P04/T03) -------------------------------------------
+
+# classify_gh_rc <rc> <stderr-snapshot-path>
+# ----------------------------------------------------------------------------
+# Maps a `gh` subprocess rc + stderr content into an FR-16 class string plus a
+# return code. Callers invoke via command-substitution of the echoed string and
+# also inspect the function's return status:
+#
+#   rc=0                                                  -> echo "ok";             return 0
+#   HTTP 403 + X-RateLimit-Remaining:0 | "rate limit"
+#     | GraphQL "RATE_LIMITED"                            -> echo "rate-limit <reset>"; return 3
+#   HTTP 401 | authentication required/failed | "gh auth" -> echo "auth-expired";   return 4
+#   else                                                  -> echo "other";          return 1
+#
+# Bash 3.2 + grep/awk/sed only. jq-optional.
+classify_gh_rc() {
+  local rc="${1:-1}"
+  local errfile="${2:-}"
+  if [ "$rc" -eq 0 ]; then
+    echo "ok"
+    return 0
+  fi
+  if [ -n "$errfile" ] && [ -f "$errfile" ]; then
+    if grep -qE '(HTTP 403|403 rate limit|RATE_LIMITED|API rate limit exceeded)' "$errfile"; then
+      local reset
+      reset="$(grep -E 'X-RateLimit-Reset:' "$errfile" | awk '{print $2}' | tr -d '\r' | head -n 1)"
+      echo "rate-limit ${reset:-unknown}"
+      return 3
+    fi
+    if grep -qE '(HTTP 401|authentication (required|failed)|gh auth)' "$errfile"; then
+      echo "auth-expired"
+      return 4
+    fi
+  fi
+  echo "other"
+  return 1
+}
+
+# --- FR-17 conversus gate record emitter (P04/T03) ---------------------------
+
+# emit_conversus_gate_record <issue-ref> <timeout-sec> <verdict> <rc> <duration-ms>
+# ----------------------------------------------------------------------------
+# Thin wrapper around emit_tier1_record for the conversus gate call site.
+# Shared between github-sync.sh (if the gate is invoked inline) and the
+# standalone github-conversus-gate.sh (T05). Honors source:"runtime" via
+# emit_tier1_record and respects ORCHESTRATOR_ROOT for state root resolution.
+emit_conversus_gate_record() {
+  local ref="${1:-}"
+  local to="${2:-}"
+  local verdict="${3:-}"
+  local rc="${4:-}"
+  local dur="${5:-}"
+  emit_tier1_record conversus_gate_invocation \
+    "issue_ref=${ref}" \
+    "timeout_sec=${to}" \
+    "verdict=${verdict}" \
+    "rc=${rc}" \
+    "duration_ms=${dur}"
+}
+
 # --- Self-check when run directly ---------------------------------------------
 
 # If executed directly (not sourced), print a friendly usage hint and exit 0.
@@ -892,6 +952,7 @@ if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
   echo "                  gh_auth_preflight, gh_subissue_rest_preflight, gh_label_collision_preflight,"
   echo "                  manifest_header, manifest_upsert_line, manifest_footer,"
   echo "                  gh_marker_search_remote,"
-  echo "                  http_probe, sidecar_update_item_cache, emit_tier1_record."
+  echo "                  http_probe, sidecar_update_item_cache, emit_tier1_record,"
+  echo "                  classify_gh_rc, emit_conversus_gate_record."
   exit 0
 fi

@@ -174,6 +174,52 @@ trap 'release_lock' EXIT INT TERM HUP
 acquire_lock
 
 # ----------------------------------------------------------------------------
+# oid → kind / phase / task extraction helpers (P04/T03).
+#
+# Oid shape: M###[-suffix][-P##[-suffix]][-T##]
+#   - milestone:      M013           or M013-FIX
+#   - phase-issue:    M013-P01       or M013-FIX-P01-FIX
+#   - task-subissue:  M013-P01-T01   or M013-FIX-P01-FIX-T01
+#
+# Pure string-op helpers (awk/sed, no network). Bash 3.2 safe.
+# ----------------------------------------------------------------------------
+kind_of() {
+  local oid="${1:-}"
+  case "$oid" in
+    *-T[0-9][0-9]) echo "task-subissue" ;;
+    *-P[0-9][0-9]|*-P[0-9][0-9]-*) echo "phase-issue" ;;
+    *) echo "milestone" ;;
+  esac
+}
+
+phase_of() {
+  local oid="${1:-}"
+  local core="$oid"
+  case "$core" in
+    *-T[0-9][0-9]) core="${core%-T[0-9][0-9]}" ;;
+  esac
+  local ph
+  ph="$(printf '%s\n' "$core" | awk 'match($0, /-P[0-9][0-9](-[A-Za-z0-9_]+)?$/) { print substr($0, RSTART+1) }')"
+  if [ -z "$ph" ]; then
+    echo "null"
+    return 0
+  fi
+  echo "$ph"
+}
+
+task_of() {
+  local oid="${1:-}"
+  case "$oid" in
+    *-T[0-9][0-9])
+      printf '%s\n' "$oid" | awk 'match($0, /T[0-9][0-9]$/) { print substr($0, RSTART, RLENGTH) }'
+      ;;
+    *)
+      echo "null"
+      ;;
+  esac
+}
+
+# ----------------------------------------------------------------------------
 # Milestone discovery. Same strategy as github-init.sh: pick the first
 # directory under .orchestrator/milestones/ that has an <id>-ROADMAP.md.
 # M###[-suffix] pattern is accepted to allow fixture roots such as M013-FIX.
@@ -397,6 +443,89 @@ parse_cached_items() {
 }
 parse_cached_items
 
+# lookup_desired <oid> — emit the desired state for a walker item keyed by
+# oid, or empty if not found. Used by count_projected_graphql_mutations below.
+lookup_desired() {
+  local q="${1:-}" i=0 oid desired
+  while [ "$i" -lt "$item_count" ]; do
+    eval "oid=\"\${item_oid_${i}}\""
+    if [ "$oid" = "$q" ]; then
+      eval "desired=\"\${item_desired_${i}}\""
+      printf '%s\n' "$desired"
+      return 0
+    fi
+    i=$((i + 1))
+  done
+  printf '\n'
+  return 1
+}
+
+# ----------------------------------------------------------------------------
+# FR-16 pre-flight rate-limit probe (P04/T03).
+#
+# Fires only when projected GraphQL mutation volume > 50. The reconcile loop
+# issues at most one mutation per projected phase-issue whose desired=done
+# AND cached status_field_synced=false. We sum those from the sidecar + the
+# walker-derived desired state.
+#
+# On rate-limit (rc=3) or auth-expired (rc=4) the probe short-circuits with
+# the FR-16 exit-code contract (rc=3 / rc=4) + diagnostic to stderr. Under
+# --dry-run the probe is skipped (dry-run is read-only).
+#
+# The probe itself is a REST call (`gh api /rate_limit`) — outside FR-5's
+# mutation-whitelist scope. http_probe lives in github-common.sh and honors
+# M013_GH_STUB_DIR for fixture-driven testing.
+# ----------------------------------------------------------------------------
+count_projected_graphql_mutations() {
+  local n=0 i=0 oid synced desired k
+  while [ "$i" -lt "$cached_count" ]; do
+    eval "oid=\"\${cached_oid_${i}}\""
+    eval "synced=\"\${cached_synced_${i}}\""
+    desired="$(lookup_desired "$oid")"
+    k="$(kind_of "$oid")"
+    if [ "$desired" = "done" ] && [ "$synced" = "false" ] && [ "$k" = "phase-issue" ]; then
+      n=$((n + 1))
+    fi
+    i=$((i + 1))
+  done
+  echo "$n"
+}
+
+if [ "$DRY_RUN" -eq 0 ]; then
+  projected_mutations="$(count_projected_graphql_mutations)"
+  if [ "${projected_mutations:-0}" -gt 50 ]; then
+    probe_out="$(http_probe "/rate_limit" 2>/dev/null)"
+    probe_rc=$?
+    case "$probe_rc" in
+      3)
+        reset_ts="$(printf '%s\n' "$probe_out" | awk -F= '/^RATE_LIMIT_RESET=/ { print $2; exit }')"
+        echo "RATE-LIMIT: retry-after=${reset_ts}" >&2
+        release_lock
+        exit 3
+        ;;
+      4)
+        echo "AUTH-EXPIRED: run gh auth refresh" >&2
+        release_lock
+        exit 4
+        ;;
+    esac
+    remaining="$(printf '%s\n' "$probe_out" | awk -F= '/^RATE_LIMIT_REMAINING=/ { print $2; exit }')"
+    if [ -n "${remaining:-}" ]; then
+      case "$remaining" in
+        ''|*[!0-9]*) : ;;
+        *)
+          if [ "$remaining" -lt "$projected_mutations" ]; then
+            reset_ts="$(printf '%s\n' "$probe_out" | awk -F= '/^RATE_LIMIT_RESET=/ { print $2; exit }')"
+            echo "RATE-LIMIT: retry-after=${reset_ts} budget ${remaining} < projected ${projected_mutations}" >&2
+            release_lock
+            exit 3
+          fi
+          ;;
+      esac
+    fi
+  fi
+fi
+
 # lookup_cached <oid> → prints "<issue> <synced> <attached>" or empty line.
 lookup_cached() {
   local q="$1" i=0 oid issue synced attached
@@ -487,13 +616,32 @@ lookup_done_option_id() {
 perform_upsert() {
   local oid="$1" issue="$2" reason="$3"
   local pid iid fid val
+  local errfile rc class reset
   case "$reason" in
     close)
       if [ -n "${M013_GH_STUB_DIR:-}" ]; then
         return 0
       fi
-      gh issue close "$issue" -R "$REPO_SLUG" --reason completed >/dev/null 2>&1
-      return $?
+      errfile="$(mktemp -t m013-sync-err.XXXXXX)"
+      gh issue close "$issue" -R "$REPO_SLUG" --reason completed >/dev/null 2>"$errfile"
+      rc=$?
+      class="$(classify_gh_rc "$rc" "$errfile")"
+      rm -f "$errfile"
+      case "$class" in
+        ok) return 0 ;;
+        "rate-limit "*)
+          reset="${class#rate-limit }"
+          echo "RATE-LIMIT: retry-after=${reset}" >&2
+          release_lock
+          exit 3
+          ;;
+        auth-expired)
+          echo "AUTH-EXPIRED: run gh auth refresh" >&2
+          release_lock
+          exit 4
+          ;;
+        *) return 1 ;;
+      esac
       ;;
     status-sync)
       pid="$PROJECT_V2_ID"
@@ -506,11 +654,29 @@ perform_upsert() {
         fi
         return 0
       fi
+      errfile="$(mktemp -t m013-sync-err.XXXXXX)"
       gh api graphql \
         -F pid="$pid" -F iid="$iid" -F fid="$fid" -F val="$val" \
         --field query='mutation($pid:ID!,$iid:ID!,$fid:ID!,$val:String!){updateProjectV2ItemFieldValue(input:{projectId:$pid,itemId:$iid,fieldId:$fid,value:{singleSelectOptionId:$val}}){projectV2Item{id}}}' \
-        >/dev/null 2>&1
-      return $?
+        >/dev/null 2>"$errfile"
+      rc=$?
+      class="$(classify_gh_rc "$rc" "$errfile")"
+      rm -f "$errfile"
+      case "$class" in
+        ok) return 0 ;;
+        "rate-limit "*)
+          reset="${class#rate-limit }"
+          echo "RATE-LIMIT: retry-after=${reset}" >&2
+          release_lock
+          exit 3
+          ;;
+        auth-expired)
+          echo "AUTH-EXPIRED: run gh auth refresh" >&2
+          release_lock
+          exit 4
+          ;;
+        *) return 1 ;;
+      esac
       ;;
   esac
   return 1
@@ -587,15 +753,26 @@ while [ "$i" -lt "$item_count" ]; do
     close|status-sync) upserts=$((upserts + 1)) ;;
   esac
 
-  # Live mode: issue the mutation + update sidecar cache.
+  # Live mode: issue the mutation + update sidecar cache + emit Tier 1 JSONL.
   if [ "$DRY_RUN" -eq 0 ] && [ "$reason" != "skip-nochange" ]; then
     ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     if perform_upsert "$oid" "$issue" "$reason"; then
-      # T03 scaffold: emit_tier1_record "unit_close" milestone="$MILESTONE_ID" \
-      #                                  phase="<pid>" task="<tid>|null" \
-      #                                  oid="$oid" issue_number="$issue" \
-      #                                  outcome="closed|status-synced"
       sidecar_update_item_cache "$oid" "$ts" "null" "true" "true" "$PROJECT_ROOT" >/dev/null 2>&1 || true
+      # FR-17 observability: one unit_close record per successful upsert.
+      # outcome = closed (task-subissue reason=close) | status-synced (phase-issue reason=status-sync).
+      outcome="status-synced"
+      if [ "$reason" = "close" ]; then
+        outcome="closed"
+      fi
+      uc_phase="$(phase_of "$oid")"
+      uc_task="$(task_of "$oid")"
+      emit_tier1_record unit_close \
+        "milestone=${MILESTONE_ID}" \
+        "oid=${oid}" \
+        "phase=${uc_phase}" \
+        "task=${uc_task}" \
+        "issue_number=${issue}" \
+        "outcome=${outcome}" >/dev/null 2>&1 || true
     else
       errors=$((errors + 1))
       sidecar_update_item_cache "$oid" "$ts" "upsert-failed" "false" "true" "$PROJECT_ROOT" >/dev/null 2>&1 || true

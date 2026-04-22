@@ -2,7 +2,7 @@
 description: "Use when running project health diagnostics — detects orphaned artifacts, stale knowledge, scope mismatches, and cost spikes."
 ---
 
-# speckit.orchestrator.doctor
+# orchestrator:doctor
 
 Run diagnostic checks across all orchestrator subsystems to detect anomalies and maintain project health.
 

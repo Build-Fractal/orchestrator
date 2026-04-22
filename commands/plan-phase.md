@@ -2,7 +2,7 @@
 description: "Use when planning one phase — creates task decomposition with must-haves. Produces a phase plan file with truths, artifacts, key links, and zero-context task plans."
 ---
 
-# speckit.orchestrator.plan-phase
+# orchestrator:plan-phase
 
 Plan one phase of the roadmap by creating a detailed phase plan with must-haves and self-contained task plans. Each task plan is written so a fresh agent context with zero prior knowledge can execute it independently.
 

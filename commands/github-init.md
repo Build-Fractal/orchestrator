@@ -2,7 +2,7 @@
 description: "Use when initializing the M013 GitHub integration for a project — projects the current orchestrator state (milestone / phases / tasks) onto GitHub Issues / Milestones / Projects v2 with marker-bearing bodies. Opt-in and reversible (FR-11): deleting `.orchestrator/integrations/github.json` returns the orchestrator to pre-integration behavior."
 ---
 
-# speckit.orchestrator.github-init
+# orchestrator:github-init
 
 Project the current orchestrator milestone onto GitHub — creating a Milestone, a Project v2, the required labels (`phase`, `task`, `uat-bug`, `spec-gap`), one Issue per in-flight phase with a `label:phase`, and one sub-issue per task under its parent phase Issue. Every Issue body carries an `<!-- orchestrator-id: <id> -->` marker for idempotent re-sync. Writes back into the sidecar at `.orchestrator/integrations/github.json` so subsequent `status` and `sync` (P04) invocations can skip-before-create via marker search.
 

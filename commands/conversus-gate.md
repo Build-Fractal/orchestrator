@@ -2,7 +2,7 @@
 description: "Use when gating an artifact through a two-agent Conversus cooperative deliberation. The source-advocate vs target-advocate pattern produces a structured PASS|BLOCK verdict that callers use to gate downstream work. Reusable across any orchestrator stage that needs fidelity or quality gating (M011 normalize, M013 issue-sync, M014 comment-apply)."
 ---
 
-# speckit.orchestrator.conversus-gate
+# orchestrator:conversus-gate
 
 A thin, reusable command wrapping the Conversus cooperative-deliberation
 tool adapter. Given a preset name and an artifact, it runs the two-agent

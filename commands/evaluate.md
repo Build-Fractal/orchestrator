@@ -2,7 +2,7 @@
 description: "Use when starting a new project to classify scope as Tier A, B, or C. Analyzes the feature spec to determine how many SDD flows are needed and activates the corresponding workflow."
 ---
 
-# speckit.orchestrator.evaluate
+# orchestrator:evaluate
 
 Classify a feature's scope into Tier A, B, or C and activate the corresponding orchestrator workflow. This is typically the first orchestrator command run for a new feature.
 

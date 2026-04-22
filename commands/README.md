@@ -1,6 +1,6 @@
 # commands/
 
-Agent instruction documents for spec-kit orchestrator commands. Each file defines one `speckit.orchestrator.*` command.
+Agent instruction documents for spec-kit orchestrator commands. Each file defines one `orchestrator:*` command (invoked at runtime as `/orchestrator-<name>`).
 
 ## Structure
 Every command file follows: YAML frontmatter → Title → Prerequisites → Core Workflow → Output → Idempotency → Error Handling → Referenced Scripts/Templates.
@@ -12,15 +12,15 @@ Every command file follows: YAML frontmatter → Title → Prerequisites → Cor
 - Integration tests validate that all cross-references from commands → scripts/templates resolve
 
 ## Files
-| Command | Registered As | Lines |
-|---------|--------------|-------|
-| evaluate.md | speckit.orchestrator.evaluate | Scope triage |
-| discuss.md | speckit.orchestrator.discuss | Pre-planning capture |
-| roadmap.md | speckit.orchestrator.roadmap | Phase decomposition |
-| plan-phase.md | speckit.orchestrator.plan-phase | Task breakdown |
-| dispatch.md | speckit.orchestrator.dispatch | Fresh context execution |
-| auto.md | speckit.orchestrator.auto | Autonomous loop (~359 lines) |
-| verify.md | speckit.orchestrator.verify | Must-haves checking |
-| status.md | speckit.orchestrator.status | Progress dashboard |
-| resume.md | speckit.orchestrator.resume | Crash/pause recovery |
-| consolidate.md | speckit.orchestrator.consolidate | Knowledge compression |
+| Command | Invoked As | Lines |
+|---------|-----------|-------|
+| evaluate.md | /orchestrator-evaluate | Scope triage |
+| discuss.md | /orchestrator-discuss | Pre-planning capture |
+| roadmap.md | /orchestrator-roadmap | Phase decomposition |
+| plan-phase.md | /orchestrator-plan-phase | Task breakdown |
+| dispatch.md | /orchestrator-dispatch | Fresh context execution |
+| auto.md | /orchestrator-auto | Autonomous loop (~359 lines) |
+| verify.md | /orchestrator-verify | Must-haves checking |
+| status.md | /orchestrator-status | Progress dashboard |
+| resume.md | /orchestrator-resume | Crash/pause recovery |
+| consolidate.md | /orchestrator-consolidate | Knowledge compression |

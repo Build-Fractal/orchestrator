@@ -2,7 +2,7 @@
 description: "Use when conducting a pre-planning discussion to capture architectural decisions, scope boundaries, and design constraints before roadmap generation. Creates, updates, or finalizes a context draft that gates the transition from discussing to planning state."
 ---
 
-# speckit.orchestrator.discuss
+# orchestrator:discuss
 
 Facilitate a pre-planning discussion to capture architectural context before roadmap generation. This command manages the context draft lifecycle — create, update, and finalize — which controls the `discussing` → `planning` state transition (FR-056).
 

@@ -2,7 +2,7 @@
 description: "Use when resuming after a crash or pause. Detects whether the interruption was a graceful pause (continue file present) or a crash (stale lock), then follows the appropriate recovery path — consuming the continue file for pauses, or breaking the lock and synthesizing a recovery briefing for crashes."
 ---
 
-# speckit.orchestrator.resume
+# orchestrator:resume
 
 Resume orchestrator execution after an interruption. This command detects whether the session was paused gracefully (FR-048) or crashed unexpectedly (FR-021/FR-023), then follows the appropriate recovery path to restore execution.
 

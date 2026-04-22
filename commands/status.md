@@ -2,7 +2,7 @@
 description: "Use when checking progress — milestone/phase/task completion, blockers, next action. Read-only command that reports state from disk without modifying anything."
 ---
 
-# speckit.orchestrator.status
+# orchestrator:status
 
 Report the current progress of a milestone — state, phase/task completion, blockers, execution history, and recommended next action. This is a read-only command that never modifies state files.
 

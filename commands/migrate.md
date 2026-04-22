@@ -2,7 +2,7 @@
 description: "Use when migrating project data from GSD2, GSD v1, or standard spec-kit into orchestrator format."
 ---
 
-# speckit.orchestrator.migrate
+# orchestrator:migrate
 
 Import project knowledge, decisions, requirements, and milestone history from external tools into the orchestrator's format.
 

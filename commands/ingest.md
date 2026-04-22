@@ -2,7 +2,7 @@
 description: "Use when ingesting a markdown spec into the orchestrator's knowledge system. Chunks the spec into spec/story, spec/requirement, spec/acceptance, spec/constraint, spec/nfr, and spec/non-goal entries, then rebuilds the knowledge index so downstream commands (evaluate, roadmap, plan-phase, dispatch) can read spec-chunk metrics and graph edges instead of re-parsing the raw spec."
 ---
 
-# speckit.orchestrator.ingest
+# orchestrator:ingest
 
 Chunk a markdown feature spec into typed knowledge entries so downstream orchestrator commands (`evaluate`, `roadmap`, `plan-phase`, `dispatch`) can drive milestone decomposition from spec-chunk metrics and graph edges rather than re-parsing the raw spec on every invocation. This command is a thin user-facing wrapper around `scripts/knowledge/ingest-spec.sh` that additionally records the spec-slug → milestone mapping into the evaluation file.
 

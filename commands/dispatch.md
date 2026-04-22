@@ -2,7 +2,7 @@
 description: "Use when executing one task in a fresh context with constructed payload. Builds a minimal context from state, dispatches to a fresh agent context (or runs sequentially if subagent dispatch unavailable), and records the dispatch in the execution log."
 ---
 
-# speckit.orchestrator.dispatch
+# orchestrator:dispatch
 
 Execute one task in a fresh context by assembling a scope-filtered context payload, dispatching execution, and recording the result.
 

@@ -2,7 +2,7 @@
 description: "Use when compressing knowledge and archiving verbose artifacts after milestone completion."
 ---
 
-# Consolidate Knowledge
+# orchestrator:consolidate
 
 Compress and archive verbose artifacts from a completed milestone, reducing the footprint while preserving essential summaries, decisions, and knowledge. This is a post-completion optimization — the milestone must already be validated before consolidation.
 

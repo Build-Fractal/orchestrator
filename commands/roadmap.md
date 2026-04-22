@@ -2,7 +2,7 @@
 description: "Use when breaking a spec into phases with dependency graph and boundary maps. Produces a structured roadmap file that drives all downstream orchestration."
 ---
 
-# speckit.orchestrator.roadmap
+# orchestrator:roadmap
 
 Decompose a feature spec into an ordered sequence of phases with dependency declarations and boundary maps. The resulting roadmap file drives all downstream orchestration — phase planning, dispatch, and verification.
 

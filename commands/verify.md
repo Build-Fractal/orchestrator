@@ -2,7 +2,7 @@
 description: "Use when running mechanical verification for a completed task or phase. Executes 4-tier verification: static checks (file existence, content patterns), command execution (configured tests/lint), behavioral review (spec compliance), and human review (UAT). Produces a structured verification report."
 ---
 
-# speckit.orchestrator.verify
+# orchestrator:verify
 
 Run the verification pipeline against the current phase or task to determine if must-haves are satisfied. This command orchestrates 4 verification tiers and produces a structured report.
 

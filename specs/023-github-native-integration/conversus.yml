@@ -1,0 +1,102 @@
+# Pre-discuss adversarial review of the M013 spec.
+#
+# Purpose: surface edits to land BEFORE orchestrator:discuss runs.
+# Two failure modes this run is designed to pressure-test:
+#
+#   (1) Scope-discipline leaks — the 10 "Open Questions (defer to planning)"
+#       plus FR-3/FR-9/assumption hedges ("planning decision", "candidates:
+#       a/b/c") may hide decisions that are actually spec-level.
+#   (2) Self-reference risk — US-6 / FR-13 have M013 specifying its own
+#       conversus pre-merge gate. Does that invocation point belong in M013
+#       at all, or defer to M014 / M020?
+#
+# Output is a risk register (red-blue mode's natural artifact), not a
+# selection. Each surviving item becomes a candidate spec edit.
+#
+# Run from repo root:
+#   cd /Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator
+#   /conversus run specs/023-github-native-integration/conversus.yml
+
+mode: red-blue
+target: specs/023-github-native-integration/spec.md
+output: specs/023-github-native-integration/conversus/
+iterations: 1
+rounds: 1
+stagnation: detect
+
+# Shared background every agent reads before the review phase.
+# Keeps the blue team's grounding honest and gives red team the constitution
+# principles (XIV, XV) that sharpen their scope attacks.
+prior:
+  - .orchestrator/memory/constitution.md
+  - .orchestrator/DECISIONS.md
+  - .orchestrator/milestone-summary.md
+
+agents:
+  # ── Red team (attackers) ────────────────────────────────────────────────
+
+  - name: devils-advocate
+    role: red
+    preset: role/devils-advocate
+    docs:
+      - specs/023-github-native-integration/spec.md
+
+  - name: status-quo
+    role: red
+    preset: role/status-quo-guardian
+    docs:
+      - .orchestrator/milestone-summary.md
+      - .orchestrator/DECISIONS.md
+
+  - name: cost
+    role: red
+    preset: domain/cost
+    docs:
+      - specs/022-spec-wiki/spec.md
+
+  # ── Blue team (defenders) ───────────────────────────────────────────────
+  # No preset matches "spec author" or "dogfood defender", so these are
+  # inline-prompted. Keep prompts tight — identity, not instructions.
+
+  - name: spec-author
+    role: blue
+    prompt: |
+      You are the author of the M013 GitHub Native Integration spec. Defend
+      the current scope as necessary and sufficient for the dogfood loop
+      (spec → wiki → GitHub issues → UAT defect → triage). Anchor your
+      defense in Constitution VI (State On Disk Is Truth) when attackers
+      argue for bi-directional sync, in D013 (M020 promotion) when attackers
+      argue UAT ingestion should slip downstream, and in the M012 patterns
+      (marker-bounded atomic writes, pending-sentinel) that this spec
+      explicitly inherits. Make attackers earn every concession.
+    docs:
+      - specs/023-github-native-integration/spec.md
+      - .orchestrator/memory/constitution.md
+      - .orchestrator/DECISIONS.md
+
+  - name: dogfood-defender
+    role: blue
+    prompt: |
+      You represent the dogfooding goal: the stakeholder-visible work
+      surface, the UAT defect loop, and the three triage buckets
+      (execution-error / spec-gap / spec-error) must ship together or the
+      loop is broken. When red team proposes splitting M013 into smaller
+      milestones, defend by naming what stops working if any P1 story
+      (US-1, US-2, US-3) slips. Concede more readily on P2 stories
+      (US-4, US-5, US-6) — those are ergonomic wins, not loop-critical.
+    docs:
+      - specs/023-github-native-integration/spec.md
+      - .orchestrator/milestone-summary.md
+
+# ── Subject arbitration: binding rulings on surviving disputes ──────────────
+# Arbiter is grounded in the constitution and rules on whether each
+# surviving dispute should land as a spec edit (before discuss), a discuss
+# agenda item, or left as-is for planning.
+arbiter:
+  name: constitution-arbiter
+  preset: role/balanced-arbiter
+  docs:
+    - .orchestrator/memory/constitution.md
+    - .orchestrator/DECISIONS.md
+  grounding: .orchestrator/memory/constitution.md
+  trigger: disputes_remain

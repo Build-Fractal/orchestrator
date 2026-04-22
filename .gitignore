@@ -12,9 +12,15 @@ Thumbs.db
 .orchestrator/milestones/**/phases/*/tasks/T*-PAYLOAD.md
 .orchestrator/milestones/**/phases/*/P*-PLANNING-PAYLOAD.md
 
+# M013 GitHub integration sidecar — operator-owned, never committed
+.orchestrator/integrations/github.json
+
 # Ephemeral auto-loop transients (per-iteration output; not state of record)
 .orchestrator/milestones/**/*-result.txt
 .orchestrator/tmp/
+
+# Ephemeral conversus deliberation output (config committed; output directory is derived)
+specs/**/conversus/
 
 # Spec-kit extension install cache
 .specify/extensions/.cache/

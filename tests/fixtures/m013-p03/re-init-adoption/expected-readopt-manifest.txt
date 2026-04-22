@@ -1,0 +1,11 @@
+MANIFEST: 0 0 0
+UPSERT: milestone M013 101 adopt
+UPSERT: project-v2 M013 PVT_kwDOABCD12345 adopt
+UPSERT: label - phase adopt
+UPSERT: label - task adopt
+UPSERT: label - uat-bug adopt
+UPSERT: label - spec-gap adopt
+UPSERT: phase-issue M013-P02 201 adopt
+UPSERT: task-subissue M013-P02-T01 202 adopt
+UPSERT: task-subissue M013-P02-T02 203 adopt
+upserts=0 skipped=0 errors=0 adopted=9

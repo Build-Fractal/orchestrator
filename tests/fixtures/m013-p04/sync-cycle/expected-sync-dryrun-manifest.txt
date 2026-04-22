@@ -1,0 +1,8 @@
+DRY-RUN: sync manifest for M013-FIX (repo=test/sync-fixture)
+UPSERT: phase-issue M013-FIX-P01-FIX 302 status-sync
+UPSERT: task-subissue M013-FIX-P01-FIX-T01 303 close
+UPSERT: task-subissue M013-FIX-P01-FIX-T02 304 close
+UPSERT: phase-issue M013-FIX-P02-FIX 305 skip-nochange
+UPSERT: task-subissue M013-FIX-P02-FIX-T01 306 skip-nochange
+UPSERT: milestone M013-FIX 301 skip-nochange
+upserts=3 skipped=3 errors=0

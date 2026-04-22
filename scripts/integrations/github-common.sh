@@ -714,6 +714,173 @@ gh_marker_search_remote() {
   return 0
 }
 
+# --- HTTP probe (P04/T01) ----------------------------------------------------
+
+# http_probe <rest-path>
+# ----------------------------------------------------------------------------
+# Wraps `gh api --include <path>`, parses HTTP status line + X-RateLimit-Remaining
+# header, emits STATUS=<int>, RATE_LIMIT_REMAINING=<int>, RATE_LIMIT_RESET=<int>
+# lines to stdout. Returns 0 on 2xx, 3 on 403 with rate-limited body, 4 on 401,
+# 1 on other error / empty response.
+#
+# Fixture-driven: when M013_GH_STUB_DIR is set and
+# `${M013_GH_STUB_DIR}/http-probe-<slug>.txt` exists, reads that file instead
+# of invoking `gh`. <slug> is <rest-path> with leading slash stripped and
+# remaining slashes replaced by underscores.
+#
+# Bash 3.2 compatible. jq-optional (awk+sed only).
+http_probe() {
+  local path="${1:-}"
+  if [ -z "$path" ]; then
+    echo "http_probe: missing arg (rest-path)" >&2
+    return 1
+  fi
+  local stub="${M013_GH_STUB_DIR:-}"
+  local slug
+  slug="$(printf '%s' "$path" | sed 's#^/##; s#/#_#g')"
+  local raw=""
+  if [ -n "$stub" ] && [ -f "${stub}/http-probe-${slug}.txt" ]; then
+    raw="$(cat "${stub}/http-probe-${slug}.txt")"
+  else
+    raw="$(gh api --include "$path" 2>/dev/null || true)"
+  fi
+  if [ -z "$raw" ]; then
+    return 1
+  fi
+  local status rem reset
+  status="$(printf '%s\n' "$raw" | awk '/^HTTP\// { for (i=1;i<=NF;i++) if ($i ~ /^[0-9][0-9][0-9]$/) { print $i; exit } }')"
+  rem="$(printf '%s\n' "$raw" | awk '/^X-RateLimit-Remaining:/ { print $2; exit }' | tr -d '\r')"
+  reset="$(printf '%s\n' "$raw" | awk '/^X-RateLimit-Reset:/ { print $2; exit }' | tr -d '\r')"
+  echo "STATUS=${status:-0}"
+  echo "RATE_LIMIT_REMAINING=${rem:-}"
+  echo "RATE_LIMIT_RESET=${reset:-}"
+  case "${status:-}" in
+    2??) return 0 ;;
+    401) return 4 ;;
+    403)
+      if printf '%s\n' "$raw" | grep -q "rate limit"; then
+        return 3
+      fi
+      return 1
+      ;;
+    *) return 1 ;;
+  esac
+}
+
+# --- Sidecar per-item cache update (P04/T01) ---------------------------------
+
+# sidecar_update_item_cache <oid> <last-attempt-iso> <last-error-or-null>
+#                          <status-field-synced-bool> <project-v2-attached-bool>
+#                          [<root>]
+# ----------------------------------------------------------------------------
+# Updates the four mutable per-item cache fields in
+# .orchestrator/integrations/github.json for items.<oid>. Preserves
+# issue_number. Atomic write (temp-file + rename).
+#
+# Exit codes:
+#   0 on success
+#   2 on sidecar-absent (FR-11 reversibility: no-op cleanly)
+#   2 on sidecar holding pending-operator-complete sentinel (FR-11)
+#
+# Root defaults to ".". Callers pass a fixture root to redirect the write.
+# Bash 3.2 compatible. jq-optional (awk + sed only).
+sidecar_update_item_cache() {
+  local oid="${1:-}"
+  local ts="${2:-}"
+  local err="${3:-null}"
+  local synced="${4:-false}"
+  local attached="${5:-false}"
+  local root="${6:-.}"
+  if [ -z "$oid" ] || [ -z "$ts" ]; then
+    echo "sidecar_update_item_cache: missing args (oid, ts)" >&2
+    return 2
+  fi
+  local sc="${root}/.orchestrator/integrations/github.json"
+  if [ ! -f "$sc" ]; then
+    echo "sidecar-not-configured: ${sc}" >&2
+    return 2
+  fi
+  if grep -q '"pending"' "$sc"; then
+    echo "sidecar-pending-operator-complete: ${sc}" >&2
+    return 2
+  fi
+  local tmp
+  tmp="$(mktemp -t m013-sc-update.XXXXXX)"
+  awk -v oid="$oid" -v ts="$ts" -v err="$err" -v sy="$synced" -v at="$attached" '
+    BEGIN { in_oid = 0 }
+    {
+      line = $0
+      if (match(line, "\"" oid "\"[ \t]*:[ \t]*\\{")) { in_oid = 1 }
+      if (in_oid == 1) {
+        gsub(/"last_attempt_at":[ \t]*"[^"]*"/, "\"last_attempt_at\": \"" ts "\"", line)
+        if (err == "null") {
+          gsub(/"last_error":[ \t]*(null|"[^"]*")/, "\"last_error\": null", line)
+        } else {
+          gsub(/"last_error":[ \t]*(null|"[^"]*")/, "\"last_error\": \"" err "\"", line)
+        }
+        gsub(/"status_field_synced":[ \t]*(true|false)/, "\"status_field_synced\": " sy, line)
+        gsub(/"project_v2_attached":[ \t]*(true|false)/, "\"project_v2_attached\": " at, line)
+        if (match(line, /\}/)) { in_oid = 0 }
+      }
+      print line
+    }
+  ' "$sc" > "$tmp"
+  mv "$tmp" "$sc"
+  return 0
+}
+
+# --- Tier 1 JSONL emitter (P04/T01) ------------------------------------------
+
+# emit_tier1_record <record-type> <key>=<value> [<key>=<value>...]
+# ----------------------------------------------------------------------------
+# Appends one JSONL record to .orchestrator/execution-log.jsonl in the
+# M019 Tier 1 shape: {"ts":"<ISO>","event":"<type>","source":"runtime",<kv>...}
+# Values are JSON-escaped (backslash, double-quote). Keys are emitted in the
+# order they arrive (callers are responsible for stable ordering). Numeric /
+# null / bool values bypass quoting.
+#
+# Respects ORCHESTRATOR_ROOT env var for state root (M008/M015 4-rule resolver
+# convention); defaults to ".orchestrator".
+#
+# Append-only; never rotates. FR-17: source is hard-coded "runtime".
+#
+# Bash 3.2 compatible. jq-optional (sed + printf only).
+emit_tier1_record() {
+  local rtype="${1:-}"
+  if [ -z "$rtype" ]; then
+    echo "emit_tier1_record: missing record-type arg" >&2
+    return 2
+  fi
+  shift
+  local root="${ORCHESTRATOR_ROOT:-.orchestrator}"
+  local log="${root}/execution-log.jsonl"
+  local ts
+  ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  local out
+  out='{"ts":"'"${ts}"'","event":"'"${rtype}"'","source":"runtime"'
+  local pair key val esc
+  for pair in "$@"; do
+    key="${pair%%=*}"
+    val="${pair#*=}"
+    case "$val" in
+      null|true|false)
+        out="${out},\"${key}\":${val}"
+        ;;
+      ''|*[!0-9-]*)
+        esc="$(printf '%s' "$val" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')"
+        out="${out},\"${key}\":\"${esc}\""
+        ;;
+      *)
+        out="${out},\"${key}\":${val}"
+        ;;
+    esac
+  done
+  out="${out}}"
+  mkdir -p "$root"
+  printf '%s\n' "$out" >> "$log"
+  return 0
+}
+
 # --- Self-check when run directly ---------------------------------------------
 
 # If executed directly (not sourced), print a friendly usage hint and exit 0.
@@ -724,6 +891,7 @@ if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
   echo "                  sidecar_upsert_item, sidecar_item_exists,"
   echo "                  gh_auth_preflight, gh_subissue_rest_preflight, gh_label_collision_preflight,"
   echo "                  manifest_header, manifest_upsert_line, manifest_footer,"
-  echo "                  gh_marker_search_remote."
+  echo "                  gh_marker_search_remote,"
+  echo "                  http_probe, sidecar_update_item_cache, emit_tier1_record."
   exit 0
 fi

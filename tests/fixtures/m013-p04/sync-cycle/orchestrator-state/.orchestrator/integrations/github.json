@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "repo_slug": "test/sync-fixture",
+  "project_v2_id": "PVT_kwDOAAAAAAAAAAAA",
+  "sync_mode": "manual",
+  "sub_issue_mode": "native",
+  "recommended_cron": "",
+  "custom_field_mappings": {},
+  "last_sync": "",
+  "items": {
+    "M013-FIX": { "issue_number": 301, "project_v2_attached": true, "status_field_synced": true, "last_attempt_at": "2026-04-21T00:00:00Z", "last_error": null },
+    "M013-FIX-P01-FIX": { "issue_number": 302, "project_v2_attached": true, "status_field_synced": false, "last_attempt_at": "2026-04-21T00:00:00Z", "last_error": null },
+    "M013-FIX-P01-FIX-T01": { "issue_number": 303, "project_v2_attached": true, "status_field_synced": false, "last_attempt_at": "2026-04-21T00:00:00Z", "last_error": null },
+    "M013-FIX-P01-FIX-T02": { "issue_number": 304, "project_v2_attached": true, "status_field_synced": false, "last_attempt_at": "2026-04-21T00:00:00Z", "last_error": null },
+    "M013-FIX-P02-FIX": { "issue_number": 305, "project_v2_attached": true, "status_field_synced": true, "last_attempt_at": "2026-04-21T00:00:00Z", "last_error": null },
+    "M013-FIX-P02-FIX-T01": { "issue_number": 306, "project_v2_attached": true, "status_field_synced": true, "last_attempt_at": "2026-04-21T00:00:00Z", "last_error": null }
+  }
+}

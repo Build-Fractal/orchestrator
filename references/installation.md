@@ -231,6 +231,12 @@ The installer preserves user edits to the generated instruction file and refresh
 
 Check `CHANGELOG.md` in the spec-kit-orchestrator repo for breaking changes before updating.
 
+## Uninstall
+
+The canonical removal path for the Claude Code runtime is `bash packaging/install/install-claude-code.sh --uninstall`, which strips orchestrator-managed entries from `~/.claude/settings.json` via `scripts/util/settings-merge.sh uninstall` and reports a `UNINSTALLED: hooks-removed=<N> config-removed=<0|1>` summary. The uninstall path preserves every non-orchestrator top-level key byte-identically at the structural level (modulo the jq/python canonicalization the installer applies on merge — re-running the installer then uninstalling again is a reversible round-trip against the canonicalized baseline).
+
+To remove only orchestrator-added hooks manually (for example on a machine where the installer is no longer available), open `~/.claude/settings.json` in an editor or jq and delete each hook object whose `_orchestrator_managed` field is `true`. Cascade the cleanup: if removing a hook leaves a wrapper object with an empty `hooks` array, remove the wrapper; if that leaves an event key (`Stop`, `PreToolUse`, …) with an empty array, remove the event key; if that leaves the top-level `hooks` object empty, remove the `hooks` key. Every other key — `$schema`, `statusLine`, `permissions`, sibling tools' hook entries — must stay untouched.
+
 ## Migrating from spec-kit
 
 If you have an existing spec-kit project with state under `.specify/`, see `docs/migrating-from-speckit.md` for the migration path. The orchestrator preserves spec-kit as a migration *source* via `scripts/migrate/adapters/speckit.sh` and related tooling — it is not a runtime dependency.

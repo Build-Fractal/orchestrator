@@ -349,6 +349,21 @@ Look for `HOOK_START hook="token_limit"` and `HOOK_COMPLETE` (or `HOOK_BLOCKED`)
 
 ---
 
+## Claude Code Event Mapping
+
+The orchestrator emits six internal lifecycle events, two of which map onto native Claude Code hook events. The remaining four are deferred pending a CC-native equivalent and are tracked here as `TODO(M025+)` markers. This mapping is emitted by `scripts/dispatch/adapters/runtime/claude-code.sh --hook-config` and consumed by `packaging/install/install-claude-code.sh` via the merge-not-overwrite path introduced in M025.
+
+| Orchestrator Event | Claude Code Target | Notes |
+|---|---|---|
+| `post_verify` | `Stop` | Terminal CC event; no matcher. Command: `orchestrator-post-verify`. |
+| `before_commit` | `PreToolUse` matcher `Bash` | Fires on every Bash tool use; git-commit filter applied in the command wrapper. Command: `orchestrator-before-commit`. |
+| `before_tasks` | deferred | TODO(M025+): no CC equivalent; revisit if CC gains a task-start event. |
+| `after_tasks` | deferred | TODO(M025+): no CC equivalent; revisit if CC gains a task-end event. |
+| `before_implement` | deferred | TODO(M025+): no CC equivalent; revisit if CC gains an implement-start event. |
+| `after_implement` | deferred | TODO(M025+): no CC equivalent; revisit if CC gains an implement-end event. |
+
+Every orchestrator-emitted hook object carries `"_orchestrator_managed": true` so the uninstall path (`install-claude-code.sh --uninstall`) can strip only orchestrator entries without touching sibling-tool hooks. See MEM026 (lesson, M013/P04/T04 regression) and MEM027 (pattern, merge-not-overwrite user-scope config) for the rationale and gate shape.
+
 ## Cross-References
 
 - [State Machine Reference](state-machine.md) — phase and task state transitions that hooks can gate

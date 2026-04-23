@@ -4,6 +4,26 @@ All notable changes to spec-kit-orchestrator are documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This project uses semantic versioning.
 
+## [0.9.1] — 2026-04-23
+
+v0.9.1 closes M025 (021-github-installer-coexistence) — remediation of the M013/P04/T04 hook-config regression whose installer overwrote any pre-existing `~/.claude/settings.json` with a schema-invalid wrapper document. See `specs/021-github-installer-coexistence/spec.md` for the authoritative scope.
+
+### Fixed
+
+- M013/P04/T04 hook-config regression: `scripts/dispatch/adapters/runtime/claude-code.sh --hook-config` no longer emits wrapper metadata (`runtime`, `hook_count`, `target_file`) with orchestrator-internal event names, and `packaging/install/install-claude-code.sh` no longer overwrites an existing `~/.claude/settings.json` unconditionally.
+
+### Added
+
+- `--uninstall` flag on `packaging/install/install-claude-code.sh` — strips only orchestrator-tagged entries from `~/.claude/settings.json`, preserves every other key byte-identically, reports `UNINSTALLED: hooks-removed=<N> config-removed=<0|1>`.
+- `scripts/util/settings-merge.sh` — jq-optional / python3-fallback helper that merges orchestrator hook entries into existing settings.json files via temp-file-then-rename; exposes `merge` and `uninstall` subcommands.
+- Coexistence + reversibility + idempotency test fixtures under `tests/fixtures/m025-p01/` and matching gates at `scripts/verify/m025-p01-*.sh` (hook-schema, merge-preservation, coexistence, uninstall-reversibility, idempotency, runtime-scope-guard, bash32-compat, docs, knowledge-entries, recent-changes, phase-suite).
+- Knowledge entries MEM026 (lesson: M013/P04/T04 hook-config regression) and MEM027 (pattern: merge-not-overwrite user-scope config).
+
+### Changed
+
+- `scripts/dispatch/adapters/runtime/claude-code.sh --hook-config` now emits a valid Claude Code `hooks` schema (`{"hooks": {"Stop": […], "PreToolUse": […]}}`) with each leaf hook object tagged `"_orchestrator_managed": true`. Deferred events (`before_tasks`, `after_tasks`, `before_implement`, `after_implement`) are documented as `TODO(M025+)` in the adapter source and in `references/hooks.md`.
+- `packaging/install/install-claude-code.sh` merges the orchestrator hook fragment into any existing `~/.claude/settings.json` via `scripts/util/settings-merge.sh merge` instead of overwriting — idempotent on repeat install, reversible via `--uninstall`.
+
 ## [0.9.0] — 2026-04-15
 
 M015 (015-standalone-cutover). Standalone cutover — removes the spec-kit extension host, migrates orchestrator state from `.specify/orchestrator/` to `.orchestrator/`, moves the constitution to `.orchestrator/memory/constitution.md`, reduces the state-root resolver from 5 rules to 4 (bridge removed), and reframes all current-state documentation for the standalone narrative. The orchestrator now runs with zero runtime dependency on spec-kit. Spec-kit migration adapters are preserved — they help users coming FROM spec-kit, not TO it.

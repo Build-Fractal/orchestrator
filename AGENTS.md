@@ -1,3 +1,3 @@
 # >>> orchestrator:recent-changes >>>
-- 021-github-installer-coexistence: Remediate the M013/P04 regression where scripts/dispatch/adapters/runtime/claude
+- M025/P01: settings.json coexistence — hook-config valid CC schema + merge-not-overwrite installer + --uninstall reversibility (closes M013/P04/T04 regression)
 # <<< orchestrator:recent-changes <<<

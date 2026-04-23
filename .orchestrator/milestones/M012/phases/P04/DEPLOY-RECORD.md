@@ -3,49 +3,55 @@ schema_version: "1.0"
 type: deploy-record
 milestone: "M012"
 phase: "P04"
-deployed_url: "pending"
-commit_sha: "pending"
-deployed_at: "2026-04-21T03:49:37Z"
-deployer: "pending"
-gate_giscus_config_result: "skip"
-gate_mkdocs_build_result: "skip"
-gate_link_check_result: "skip"
-gate_giscus_smoke_result: "skip"
+deployed_url: "https://Build-Fractal.github.io/spec-kit-orchestrator/"
+commit_sha: "84ce4bdc9c398d4108162ab27259e42283bbf5a2"
+deployed_at: "2026-04-23T03:52:07Z"
+deployer: "bkellgren"
+gate_giscus_config_result: "pass"
+gate_mkdocs_build_result: "pass"
+gate_link_check_result: "pass"
+gate_giscus_smoke_result: "pass"
 ---
 
 # M012/P04 First-deploy record
 
 ## Deploy summary
 
-This record was written on the fixture-sentinel path. The autonomous
-dispatch context that produced it has no network access, no
-`GISCUS_*` environment variables, and no `gh-pages` push rights, so
-`scripts/wiki/wiki-deploy.sh` was not executed. The file carries the
-`pending` sentinel in `deployed_url`, `commit_sha`, and `deployer`,
-and each `gate_*_result` is `skip` because the wrapper's four gates
-(giscus-config, mkdocs-build, link-check, giscus-smoke) did not run
-in this context.
+Live deploy completed 2026-04-23 against `Build-Fractal/spec-kit-orchestrator`
+(private repo; Giscus App installed directly). Wrapper ran clean: all four
+gates PASS, `mkdocs gh-deploy --force` created the `gh-pages` branch, and the
+site is live at <https://Build-Fractal.github.io/spec-kit-orchestrator/>.
 
-Per T04-PLAN.md, the T05 gate (`m012-p04-deploy-record.sh`) accepts
-the `pending` sentinels in Tier 1. A human operator completes the
-record on the live path during M012 consolidation — see the
-"Pending-value path" section below.
+Deploy required a remediation patch first — the M012 auto-mode execution
+used SKIP-as-PASS on mkdocs-dependent gates, so three bugs were caught at
+first live run: (1) `mkdocs-include-markdown-plugin` aborting on self-
+reference task plans containing literal `{% include-markdown %}` examples
+inside code fences; (2) stub-generator emitting 52 broken section-index
+links for archived-phase + phase-subdir artifacts; (3) `wiki-link-check.sh`
+taking 30+ minutes because of per-anchor `grep` subprocess calls. All three
+fixed in the remediation patch (commits `b3cbf74`, `1fef016`, `84ce4bd`).
 
-## Wrapper output (abbreviated)
+## Wrapper output (actual live run)
 
 ```
-GATE: giscus-config SKIP (fixture path — not run)
-BUILD: skip (fixture path — not run)
-GATE: link-check SKIP (fixture path — not run)
-GATE: giscus-smoke SKIP (fixture path — not run)
-DEPLOY: pending (fixture path — not run)
-OK: fixture-sentinel record written (no deploy attempted)
+GATE: giscus-config PASS
+INFO    -  Cleaning site directory
+INFO    -  Documentation built in 44.87 seconds
+BUILD: ok
+PASS: 0 broken in-scope links (1292 pages, 22217 in-scope ok, 1293 out-of-scope)
+GATE: link-check PASS
+PASS: 1291 pages have Giscus (site=wiki/site)
+GATE: giscus-smoke PASS
+DEPLOY: pushing to gh-pages
+INFO    -  Copying '.../wiki/site' to 'gh-pages' branch and pushing to GitHub.
+ * [new branch]      gh-pages -> gh-pages
+INFO    -  Your documentation should shortly be available at: https://Build-Fractal.github.io/spec-kit-orchestrator/
+OK: deployed to gh-pages
 ```
 
-The wrapper this record refers to lives at
-`scripts/wiki/wiki-deploy.sh` (T03). When a human operator runs it
-on the live path, they capture the wrapper's actual last lines and
-replace the abbreviated block above with the real output.
+The wrapper lives at `scripts/wiki/wiki-deploy.sh` (T03). Its gate-ordering
+contract (config → build → link-check → smoke → gh-deploy) is validated
+end-to-end by this live run.
 
 ## Notes
 
@@ -62,29 +68,11 @@ replace the abbreviated block above with the real output.
   this record is safe; a later live run by a human operator is the
   only action that pushes to `gh-pages`.
 
-## Pending-value path
+## SC-5 persistence check (pending)
 
-`deployed_url`, `commit_sha`, and `deployer` in the frontmatter read
-`pending`, which indicates this record was written without network
-access at plan-execution time.
-
-Before the M012 milestone closes, a human operator must:
-
-1. Complete the `wiki/README.md` first-deploy checklist (steps 1–5:
-   Pages source configured, Discussions enabled, Giscus category
-   created, the four `GISCUS_*` env vars exported, `gh-pages` push
-   rights confirmed).
-2. Run `bash scripts/wiki/wiki-deploy.sh` from the repo root.
-3. Capture the wrapper's terminator line (`OK: deployed to <url>`),
-   the latest commit SHA on `main` (`git rev-parse HEAD`), and the
-   ISO-8601 UTC timestamp (`date -u +%Y-%m-%dT%H:%M:%SZ`).
-4. Replace `pending` sentinels in the frontmatter with the real
-   values, update each `gate_*_result` to `pass` / `fail` per the
-   wrapper's per-gate output, update `deployer` with the operator's
-   GitHub handle, and replace the abbreviated Wrapper-output block
-   with the actual last six lines of the wrapper run.
-5. Verify SC-5 by posting a test comment on any wiki page through
-   the Giscus thread, triggering a redeploy via a trivial wiki edit
-   + rerunning the wrapper, and confirming the test comment persists
-   across the redeploy. Record the SC-5 observation in
-   `P04-SUMMARY.md` during consolidation.
+SC-5 (Giscus comment persistence across redeploy) was validated partially
+during the test phase: a test comment posted via local `mkdocs serve`
+rendered and persisted on reload. Full SC-5 verification requires a second
+live deploy after making a trivial wiki edit and confirming a test comment
+posted via the deployed URL survives. Record that observation in
+`P04-SUMMARY.md` during M012 consolidation.

@@ -333,7 +333,7 @@ for d in "${STATE_ROOT}/specs"/*/ ; do
     SLUG_COLLISION="$d"
   fi
 done
-NEXT=$((HIGHEST + 1))
+NEXT=$((10#$HIGHEST + 1))
 NEXT_STR="$(printf '%03d' "$NEXT")"
 SPEC_DIR="${STATE_ROOT}/specs/${NEXT_STR}-${SLUG}"
 SPEC_PATH="${SPEC_DIR}/spec.md"

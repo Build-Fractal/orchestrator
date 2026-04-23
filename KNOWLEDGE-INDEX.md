@@ -28,6 +28,7 @@ MEM024 | [project], [milestone:M004] | lessons | 0.95 | 2026-04-14 | verified:20
 MEM025 | [project], [milestone:M004] | lessons | 0.95 | 2026-04-14 | verified:2026-04-14 | hits:345 | Verification Script Grep Patterns
 MEM026 | [project], [milestone:M025] | lessons | 0.95 | 2026-04-23 | verified:2026-04-23 | hits:0 | M013/P04/T04 hook-config regression
 MEM027 | [project], [milestone:M025] | patterns | 0.90 | 2026-04-23 | verified:2026-04-23 | hits:0 | merge-not-overwrite user-scope config
+MEM028 | [project], [milestone:M014], [concern:bash-compat] | lessons | 0.95 | 2026-04-23 | verified:2026-04-23 | hits:0 | Bash arithmetic silently interprets zero-padded numerics as octal
 SPEC-AC-001 | [project] | spec/acceptance | 0.90 | 2026-04-17 | verified:2026-04-17 | hits:0 | Given a planned phase with ≥4 tasks, When `orchestrator:auto` runs to completion
 SPEC-AC-002 | [project] | spec/acceptance | 0.90 | 2026-04-17 | verified:2026-04-17 | hits:0 | Given a dispatched subagent writes a task summary, When it calls `write-summary.
 SPEC-AC-003 | [project] | spec/acceptance | 0.90 | 2026-04-17 | verified:2026-04-17 | hits:0 | Given a dispatched subagent runs a phase's verify suite, When it tallies results

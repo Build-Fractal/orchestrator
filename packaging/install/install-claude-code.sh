@@ -41,6 +41,7 @@ PROJECT_DIR="$PWD"
 DRY_RUN=0
 FORCE=0
 VERBOSE=0
+UNINSTALL=0
 
 # --- Argument parsing (while-case, bash 3.2 safe) ---
 while [ $# -gt 0 ]; do
@@ -62,6 +63,8 @@ while [ $# -gt 0 ]; do
       FORCE=1; shift ;;
     --verbose)
       VERBOSE=1; shift ;;
+    --uninstall)
+      UNINSTALL=1; shift ;;
     -h|--help)
       sed -n '2,32p' "$0"
       exit 0 ;;
@@ -77,6 +80,56 @@ log() { [ "$VERBOSE" = "1" ] && echo "[install-claude-code] $*" >&2 || true; }
 if [ -z "${HOME:-}" ] || [ "${HOME}" = "/" ]; then
   echo "FAIL: unsafe HOME (empty or '/'): refusing to install" >&2
   exit 2
+fi
+
+MERGE_HELPER="$REPO_ROOT/scripts/util/settings-merge.sh"
+
+# --- Uninstall short-circuit (M025/P01/T02) ---
+# When --uninstall is set, skip probe/register/config-stage and only remove
+# orchestrator-tagged entries from ~/.claude/settings.json plus any
+# orchestrator-written config.yml (gated by a marker comment).
+if [ "$UNINSTALL" = "1" ]; then
+  hook_target="$HOME/.claude/settings.json"
+  hooks_removed=0
+  config_removed=0
+
+  if [ -f "$MERGE_HELPER" ] && [ -e "$hook_target" ]; then
+    if [ "$DRY_RUN" = "1" ]; then
+      un_out="$(bash "$MERGE_HELPER" uninstall --target "$hook_target" --dry-run 2>&1)"
+    else
+      un_out="$(bash "$MERGE_HELPER" uninstall --target "$hook_target" 2>&1)"
+    fi
+    un_rc=$?
+    printf '%s\n' "$un_out"
+    if [ $un_rc -ne 0 ]; then
+      echo "FAIL: settings-merge.sh uninstall exited $un_rc" >&2
+      exit 1
+    fi
+    hooks_removed="$(printf '%s\n' "$un_out" | sed -n 's/^removed=\([0-9][0-9]*\)$/\1/p' | head -n 1)"
+    [ -z "$hooks_removed" ] && hooks_removed=0
+  fi
+
+  # Resolve state root to locate a possibly-staged config.yml.
+  state_root=""
+  if [ -x "$RESOLVE_ROOT" ]; then
+    state_root="$(cd "$PROJECT_DIR" && bash "$RESOLVE_ROOT" --absolute 2>/dev/null)"
+  fi
+  [ -z "$state_root" ] && state_root="$PROJECT_DIR/.orchestrator"
+  cfg_target="$state_root/config.yml"
+  if [ -f "$cfg_target" ]; then
+    if grep -q '_orchestrator_managed' "$cfg_target" 2>/dev/null; then
+      if [ "$DRY_RUN" = "1" ]; then
+        echo "would_remove=$cfg_target"
+      else
+        rm -f "$cfg_target"
+        echo "removed=$cfg_target"
+      fi
+      config_removed=1
+    fi
+  fi
+
+  echo "UNINSTALLED: hooks-removed=${hooks_removed} config-removed=${config_removed}"
+  exit 0
 fi
 
 # --- Sanity: adapter exists ---
@@ -126,28 +179,47 @@ else
   [ -z "$skills_installed" ] && skills_installed=0
 fi
 
-# --- 3. Wire hooks: capture hook-config JSON, write to settings.json ---
-# M013/P04: hook-config emits 6 entries (post_verify added at P04 per FR-12
-# Claude-Code-only v1 — sixth entry descriptor lives at
-# packaging/bundle/hooks/post-verify.json, registered via settings.json).
+# --- 3. Wire hooks: merge-not-overwrite into settings.json (M025/P01/T02) ---
+# The adapter emits a Claude Code hooks fragment tagged with
+# "_orchestrator_managed": true on every leaf. The merge helper
+# (scripts/util/settings-merge.sh) preserves any pre-existing user-authored
+# keys byte-identically and only appends orchestrator entries that are not
+# already present (idempotent on repeat install). --force bypasses the
+# idempotency guard so manual edits that stripped the managed tag can be
+# recovered. Writes via temp-file-then-rename.
 log "capturing hook-config"
 hook_json="$(bash "$ADAPTER" --hook-config 2>/dev/null)"
 hook_target="$HOME/.claude/settings.json"
 hooks_wired=0
 
-if [ "$DRY_RUN" = "1" ]; then
-  echo "would_write=$hook_target"
-  hooks_wired=1
-else
-  if [ -e "$hook_target" ] && [ "$FORCE" = "0" ]; then
-    echo "SKIP: $hook_target exists (use --force to overwrite)"
-  else
-    mkdir -p "$HOME/.claude"
-    printf '%s\n' "$hook_json" > "$hook_target"
-    echo "wrote=$hook_target"
-    hooks_wired=1
-  fi
+if [ ! -f "$MERGE_HELPER" ]; then
+  echo "FAIL: settings-merge helper not found at $MERGE_HELPER" >&2
+  exit 1
 fi
+
+mkdir -p "$HOME/.claude"
+
+merge_args="merge --target $hook_target"
+if [ "$DRY_RUN" = "1" ]; then
+  if [ "$FORCE" = "1" ]; then
+    bash "$MERGE_HELPER" merge --target "$hook_target" --fragment "$hook_json" --force --dry-run
+  else
+    bash "$MERGE_HELPER" merge --target "$hook_target" --fragment "$hook_json" --dry-run
+  fi
+  merge_rc=$?
+else
+  if [ "$FORCE" = "1" ]; then
+    bash "$MERGE_HELPER" merge --target "$hook_target" --fragment "$hook_json" --force
+  else
+    bash "$MERGE_HELPER" merge --target "$hook_target" --fragment "$hook_json"
+  fi
+  merge_rc=$?
+fi
+if [ $merge_rc -ne 0 ]; then
+  echo "FAIL: settings-merge.sh merge exited $merge_rc" >&2
+  exit 1
+fi
+hooks_wired=1
 
 # --- 4. Stage orchestrator config into project state root ---
 log "resolving state root for $PROJECT_DIR"

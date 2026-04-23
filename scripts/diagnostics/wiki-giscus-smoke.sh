@@ -95,7 +95,10 @@ list_file="$(mktemp -t wiki-giscus-smoke.XXXXXX)"
 # shellcheck disable=SC2064
 trap "rm -f '$list_file'" EXIT
 
-find "$SITE_DIR" -type f -name '*.html' -print > "$list_file"
+# Exclude mkdocs auto-generated 404.html (no comments surface expected on
+# an error page — the Material theme's 404 template does not include the
+# comments partial by design).
+find "$SITE_DIR" -type f -name '*.html' ! -name '404.html' -print > "$list_file"
 
 total=0
 missing=0

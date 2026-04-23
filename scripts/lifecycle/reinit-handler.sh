@@ -67,7 +67,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-# Required args (Bash 3.2 safe — no ${var,,} lowercasing).
+# Required args (Bash 3.2 safe -- no bash 4+ lowercasing parameter expansion).
 for req in project-dir state-root runtime; do
   case "$req" in
     project-dir) v="$PROJECT_DIR" ;;
@@ -183,7 +183,7 @@ if [ $DRY_RUN -eq 1 ]; then
   [ -n "$CUSTOM_BLOCK" ] && has_block="true"
   echo "would_write=$INSTRUCTION_FILE (mode=update custom_block_preserved=$has_block)"
   echo "would_write=$CONFIG_FILE (mode=update preserve_user_fields=true)"
-  echo "SUMMARY: mode=update runtime=$RUNTIME instruction_file=$INSTRUCTION_FILE config_file=$CONFIG_FILE"
+  echo "SUMMARY: mode=update runtime=$RUNTIME instruction_file=$INSTRUCTION_FILE config_file=$CONFIG_FILE dual_writes=0"
   exit 0
 fi
 
@@ -254,6 +254,44 @@ else
 fi
 log "wrote=$INSTRUCTION_FILE (custom_block_preserved=$CUSTOM_BLOCK_PRESERVED)"
 
+# --- Dual-write project-identity region (M014/P02 FR-12) ---
+DUAL_WRITE_HELPER="$REPO_ROOT/scripts/util/dual-write-runtime-md.sh"
+DUAL_WRITES=0
+if [ -x "$DUAL_WRITE_HELPER" ]; then
+  FRAG_FILE="$(mktemp)"
+  {
+    printf 'project_name=%s\n'           "$(basename "$PROJECT_DIR")"
+    printf 'runtime=%s\n'                "$RUNTIME"
+    printf 'cap_score=%s\n'              "${CAP_SCORE:-unknown}"
+    printf 'recommended_intensity=%s\n'  "${RECOMMENDED_INTENSITY:-standard}"
+    printf 'initialized_at=%s\n'         "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  } > "$FRAG_FILE"
+
+  if bash "$DUAL_WRITE_HELPER" \
+      --marker project-identity \
+      --content "$FRAG_FILE" \
+      --root "$PROJECT_DIR" \
+      --file CLAUDE.md --file AGENTS.md \
+      >/dev/null 2>&1; then
+    DUAL_WRITES=2
+  else
+    if bash "$DUAL_WRITE_HELPER" \
+        --marker project-identity \
+        --content "$FRAG_FILE" \
+        --root "$PROJECT_DIR" \
+        --file CLAUDE.md \
+        >/dev/null 2>&1; then
+      DUAL_WRITES=1
+    else
+      echo "WARN: reinit dual-write project-identity failed; continuing" >&2
+    fi
+  fi
+  rm -f "$FRAG_FILE"
+else
+  echo "SKIPPED: dual-write-runtime-md.sh not executable (reinit)" >&2
+fi
+log "dual_writes=$DUAL_WRITES region=project-identity"
+
 # --- 6f. Merge config.yml: strip project:/capabilities:, refresh, preserve rest ---
 merged_cfg="$(mktemp)"
 
@@ -307,5 +345,5 @@ EOF
 mv "$merged_cfg" "$CONFIG_FILE"
 log "wrote=$CONFIG_FILE"
 
-echo "SUMMARY: mode=update runtime=$RUNTIME instruction_file=$INSTRUCTION_FILE config_file=$CONFIG_FILE custom_block_preserved=$CUSTOM_BLOCK_PRESERVED"
+echo "SUMMARY: mode=update runtime=$RUNTIME instruction_file=$INSTRUCTION_FILE config_file=$CONFIG_FILE custom_block_preserved=$CUSTOM_BLOCK_PRESERVED dual_writes=$DUAL_WRITES"
 exit 0

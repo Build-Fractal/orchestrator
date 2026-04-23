@@ -1,0 +1,1 @@
+Add an opt-in exporter that ships merged-PR diffs to a Slack channel for async review. Operator configures channel via env var; diffs post with one thread per PR; orchestrator stays idempotent across retries.

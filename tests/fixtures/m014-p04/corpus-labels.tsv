@@ -1,0 +1,7 @@
+spec_id	spec_path	fr_count	user_story_count	raw_token_count	todo_count	expected_label	primary_reason
+M011	specs/011-spec-management/spec.md	16	5	2392	0	above-threshold	fr_count>=15
+M013	specs/023-github-native-integration/spec.md	18	6	7851	0	above-threshold	user_story_count>=5
+M016	specs/016-autonomous-hardening/spec.md	0	3	1218	0	below-threshold	hardening-spec-exception
+M021	specs/021-autonomous-hardening-v2/spec.md	0	5	2430	0	below-threshold	hardening-spec-exception
+M022	specs/022-spec-wiki/spec.md	10	5	3613	0	above-threshold	user_story_count>=5
+M024	specs/024-spec-management-extended/spec.md	20	5	11083	14	above-threshold	fr_count>=15

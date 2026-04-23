@@ -1,0 +1,38 @@
+Add an exporter that ships merged PRs to Slack.
+The command must prompt the operator interactively for each PR.
+The command must never prompt; all operations are silent.
+FR-1 The exporter runs under the orchestrator:auto loop.
+FR-2 The exporter never runs under orchestrator:auto.
+FR-3 Each PR's metadata is included.
+FR-4 PR metadata must not be shared with third parties.
+FR-5 Slack is the target surface.
+FR-6 Slack must not receive any data.
+FR-7 The exporter writes to GitHub directly.
+FR-8 The exporter is strictly a read-only consumer.
+FR-9 The exporter emits structured JSONL telemetry.
+FR-10 Telemetry is strictly forbidden.
+FR-11 Operators see a summary view in Slack.
+FR-12 Operators receive email instead of Slack.
+FR-13 The exporter batches updates hourly.
+FR-14 The exporter delivers updates immediately.
+FR-15 Retries follow exponential backoff.
+FR-16 The exporter makes no retries.
+FR-17 Each PR has a unique slug.
+FR-18 Slugs are unused; numeric ids only.
+FR-19 The exporter runs in background.
+FR-20 The exporter runs inline and blocks the caller.
+User Story 1: As a reviewer, I need daily digests.
+User Story 2: As a reviewer, digests must never be produced.
+Each of FR-1..FR-20 crosses into at least one other requirement with opposite polarity, making this
+prose a deliberate contradiction corpus used by the T04 three-way-prompt gate and the T07
+zero-prompts gate. The contradiction density is intentionally high so that an LLM-gated probe
+invoked under Claude Code will trip the contradiction_signal_count threshold of 1 regardless of
+which heuristic counter would otherwise win. Under Codex/Cursor the probe still crosses
+above-threshold on FR count (>=15) and user-story count (>=5), independent of the LLM signal.
+<TODO: confirm Slack workspace token rotation cadence>
+<TODO: reconcile FR-5 vs FR-6 surface contradiction>
+<TODO: decide whether FR-9 JSONL or FR-10 no-telemetry wins for v1>
+<TODO: clarify FR-17 slug vs FR-18 numeric-id identity scheme>
+The file is exactly long enough to bring the raw line count above forty while keeping the FR
+enumeration dense. T07's zero-prompts gate reads this to feed into a --yes --dry-run invocation
+of specify.sh to confirm that the three-way-prompt code path is silent in non-interactive mode.

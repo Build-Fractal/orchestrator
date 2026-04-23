@@ -109,6 +109,7 @@ run_check "Run ID Coverage" "$SCRIPT_DIR/check-run-ids.sh" "--root $PROJECT_ROOT
 run_check "Recipe Conformance" "$SCRIPT_DIR/check-recipe.sh" "--root $PROJECT_ROOT" "0"
 run_check "Task Plan Shape" "$SCRIPT_DIR/check-plans.sh" "--root $PROJECT_ROOT" "1"
 run_check "Documentation Completeness" "$SCRIPT_DIR/check-docs.sh" "--root $PROJECT_ROOT" "0"
+run_check "Runtime Instruction Drift" "$SCRIPT_DIR/check-docs.sh" "--check drift --root $PROJECT_ROOT" "1"
 
 # Graph health checks (requires knowledge.db from M007)
 if [ -f "$PROJECT_ROOT/knowledge.db" ]; then

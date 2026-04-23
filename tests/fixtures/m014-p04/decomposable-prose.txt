@@ -1,0 +1,61 @@
+Ship a universal intake and routing surface that takes arbitrary input (idea, paragraph, spec
+fragment, full spec, or the empty string) and routes it to the right orchestrator command by
+emitting a reviewable routing proposal covering six axes: input shape, scope tier, decomposition,
+design gate, conversus gate, and process intensity. The proposal is reviewable by the operator
+before any destructive action, and a degenerate fast-path auto-proceeds for trivial inputs.
+The feature also needs a sidecar design layer that can spawn N design-personality agents in
+parallel via conversus, each producing a DESIGN.md draft and a working coded prototype for
+side-by-side selection by the operator. Renderer adapter interfaces are shaped as MCP clients to
+keep the design layer runtime-agnostic; a Cursor-local renderer and a Claude-Code-local renderer
+should both satisfy the interface without coupling the design layer to a specific host runtime.
+The intake and routing surface must interoperate with the existing orchestrator:evaluate command
+without breaking its contract, and it must accept both programmatic arguments and stdin-piped
+input so that it can be driven from scripts in CI and from a human terminal in interactive use.
+A secondary aim is to compose with the Managed Agents dispatch backend that M010 will ship so
+that a heavy-intake routing decision can itself be dispatched into a fresh Managed Agents
+context when intensity=Full is recommended. Conversely, when intensity=Quick is recommended,
+the entire routing decision must be inline and synchronous, with no dispatch roundtrip.
+Across the whole feature the invariant is that no operator approval prompts are emitted in
+--yes mode, and every emitted JSONL observability record carries source=runtime so that
+downstream log consumers can distinguish runtime-produced records from static fixtures.
+FR-1 The intake command accepts --input-file, --input-stdin, or a positional prose argument.
+FR-2 The intake command produces a proposal file under .orchestrator/intake/<slug>/proposal.md.
+FR-3 The proposal enumerates the six routing axes in the canonical order given above.
+FR-4 Each axis carries a single-word verdict plus a one-sentence rationale.
+FR-5 The command honors --yes (non-interactive) and --dry-run (manifest-only) flags.
+FR-6 The command emits a unit_close JSONL record on successful completion.
+FR-7 Trivial inputs (below all routing thresholds) auto-proceed to a fast-path scaffold action.
+FR-8 Non-trivial inputs halt at a review gate and print the proposal path to stdout.
+FR-9 The design-layer subcommand spawns N parallel personality agents via conversus mode=red-blue.
+FR-10 Each design personality agent produces a DESIGN.md draft plus a working coded prototype.
+FR-11 The operator selects a design option via a side-by-side chooser surface.
+FR-12 Renderer adapters implement an MCP-client interface for runtime agnosticism.
+FR-13 The intake command composes with orchestrator:evaluate without breaking its contract.
+FR-14 The intake command composes with Managed Agents dispatch when intensity=Full.
+FR-15 All emitted observability records carry source=runtime and pass JSONL-shape validation.
+User Story 1: An engineer types a one-sentence idea and receives a routing proposal within 30s.
+User Story 2: A PM pastes a full spec and the intake auto-routes to orchestrator:roadmap.
+User Story 3: A solo developer runs the design layer and picks between three UI personalities.
+User Story 4: A CI bot dispatches the intake under --yes --dry-run with zero prompt traffic.
+User Story 5: An operator overrides the recommended intensity via --intensity=Quick/Standard/Full.
+User Story 6: A Codex user drives the whole flow with parity signals to the Claude Code runtime.
+<TODO: decide whether the proposal file uses marker-bounded splice or full-file rewrite>
+<TODO: select the canonical design-agent personality set (size N and labels)>
+<TODO: decide whether MCP client interface maps 1:1 to renderer adapters or via a proxy layer>
+<TODO: confirm Managed Agents dispatch surface is stable enough for M014 to depend on>
+<TODO: reconcile routing axis ordering with existing orchestrator:evaluate tier labels>
+<TODO: document fast-path threshold values in the CALIBRATION-MEMO.md once measured>
+<TODO: decide whether the intake command ships as a command file or skill bundle or both>
+<TODO: confirm zero-prompt discipline applies to the design-layer side-by-side chooser>
+The prose above intentionally crosses the 8000-token threshold used by the T01 raw_token_count
+cutoff and accumulates enough FR and user-story lines to cross the T01 fr_count (15) and
+user_story_count (5) cutoffs as well. The <TODO> block further brings todo_density above
+0.5 when combined with the relatively small overall body size, making this fixture a
+decomposable-prose canonical input for the T05 split subcommand gate. The fixture is held
+stable so that downstream phases (M024) can use the same corpus without drift against the
+T01-pinned thresholds or the T05 entry-count heuristics (>=2, <=4 proposed sub-specs). The
+contents are realistic enough to produce a plausible splitter manifest under the canonical
+CC LLM round-trip (see spec-splitter-prompt.md) while being fully hermetic — no external
+links, no project-specific identifiers, and no timestamps. Any change to this fixture should
+be paired with a regeneration of the expected-entry-count test in T05's gate verifier so that
+the shape check (>=2 and <=4) remains stable against the fixture content.

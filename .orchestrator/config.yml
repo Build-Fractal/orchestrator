@@ -10,3 +10,15 @@ dispatch:
   default_backend: local-agent
 knowledge:
   graph_backend: sqlite
+dual_write_agents: true  # M014/P01 FR-12 — when false, skip AGENTS.md dual-write
+specify:
+  complexity_thresholds:
+    fr_count: 15              # T01 calibration — gate threshold (above if >= this)
+    user_story_count: 5       # T01 calibration — gate threshold (above if >= this)
+    raw_token_count: 8000     # T01 calibration — gate threshold (above if >= this)
+    todo_density: 0.5         # T01 calibration — todo / (todo + authored-section) ratio above
+    contradiction_signal_count: 1  # Any LLM-detected signal trips the probe
+  contradiction_signal_criterion: cc-llm-or-zero  # Non-CC runtimes emit zero
+  hardening_spec_exception: true  # fr_count==0 treated as strong below-threshold signal
+  scaffolder_description_min_words: 80
+  scaffolder_llm_on_codex: false

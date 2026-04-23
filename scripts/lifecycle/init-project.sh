@@ -152,8 +152,9 @@ INITIALIZED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 if [ $DRY_RUN -eq 1 ]; then
   echo "would_write=$CONFIG_FILE"
   echo "would_write=$INSTRUCTION_FILE"
+  echo "would_dual_write_region=project-identity files=CLAUDE.md,AGENTS.md"
   echo "would_invoke=$REPO_ROOT/packaging/install/install-$RUNTIME.sh --project-dir $PROJECT_DIR --dry-run"
-  echo "SUMMARY: project_type=$PROJECT_TYPE runtime=$RUNTIME instruction_file=$INSTRUCTION_FILE config_file=$CONFIG_FILE cap_score=$CAP_SCORE recommended_intensity=$RECOMMENDED_INTENSITY next_step=run_orchestrator_evaluate"
+  echo "SUMMARY: project_type=$PROJECT_TYPE runtime=$RUNTIME instruction_file=$INSTRUCTION_FILE config_file=$CONFIG_FILE cap_score=$CAP_SCORE recommended_intensity=$RECOMMENDED_INTENSITY dual_writes=0 next_step=run_orchestrator_evaluate"
   exit 0
 fi
 
@@ -192,6 +193,48 @@ render_template() {
 mkdir -p "$(dirname "$INSTRUCTION_FILE")"
 render_template "$REPO_ROOT/templates/project-instruction.md" > "$INSTRUCTION_FILE"
 log "wrote=$INSTRUCTION_FILE"
+
+# --- 12b. Dual-write project-identity region to CLAUDE.md + AGENTS.md ----------
+# Per M014/P02 FR-12 — populate a marker-bounded project-identity region in
+# both runtime-instruction files so runtime-agnostic identity is queryable
+# from either file. Outside-markers bytes preserved per SC-6a.
+DUAL_WRITE_HELPER="$REPO_ROOT/scripts/util/dual-write-runtime-md.sh"
+DUAL_WRITES=0
+if [ -x "$DUAL_WRITE_HELPER" ]; then
+  FRAG_FILE="$(mktemp)"
+  {
+    printf 'project_name=%s\n'           "$PROJECT_NAME"
+    printf 'runtime=%s\n'                "$RUNTIME"
+    printf 'cap_score=%s\n'              "$CAP_SCORE"
+    printf 'recommended_intensity=%s\n'  "$RECOMMENDED_INTENSITY"
+    printf 'initialized_at=%s\n'         "$INITIALIZED_AT"
+  } > "$FRAG_FILE"
+
+  if bash "$DUAL_WRITE_HELPER" \
+      --marker project-identity \
+      --content "$FRAG_FILE" \
+      --root "$PROJECT_DIR" \
+      --file CLAUDE.md --file AGENTS.md \
+      >/dev/null 2>&1; then
+    DUAL_WRITES=2
+  else
+    # Fallback: try CLAUDE.md only (e.g. dual_write_agents=false gated AGENTS.md).
+    if bash "$DUAL_WRITE_HELPER" \
+        --marker project-identity \
+        --content "$FRAG_FILE" \
+        --root "$PROJECT_DIR" \
+        --file CLAUDE.md \
+        >/dev/null 2>&1; then
+      DUAL_WRITES=1
+    else
+      echo "WARN: dual-write project-identity failed; continuing" >&2
+    fi
+  fi
+  rm -f "$FRAG_FILE"
+else
+  echo "SKIPPED: dual-write-runtime-md.sh not executable (init)" >&2
+fi
+log "dual_writes=$DUAL_WRITES region=project-identity"
 
 # --- 13. Write config.yml ---------------------------------------------------
 mkdir -p "$STATE_ROOT_ABS"
@@ -246,5 +289,5 @@ if [ "$INSTALL_RC" -ne 0 ]; then
 fi
 
 # --- 15. Summary ------------------------------------------------------------
-echo "SUMMARY: project_type=$PROJECT_TYPE runtime=$RUNTIME instruction_file=$INSTRUCTION_FILE config_file=$CONFIG_FILE cap_score=$CAP_SCORE recommended_intensity=$RECOMMENDED_INTENSITY skills_installed=$SKILLS_INSTALLED next_step=run_orchestrator_evaluate"
+echo "SUMMARY: project_type=$PROJECT_TYPE runtime=$RUNTIME instruction_file=$INSTRUCTION_FILE config_file=$CONFIG_FILE cap_score=$CAP_SCORE recommended_intensity=$RECOMMENDED_INTENSITY skills_installed=$SKILLS_INSTALLED dual_writes=$DUAL_WRITES next_step=run_orchestrator_evaluate"
 exit 0

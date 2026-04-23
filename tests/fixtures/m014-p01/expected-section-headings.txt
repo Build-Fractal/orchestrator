@@ -1,0 +1,16 @@
+# Feature Specification: {{feature_title}}
+## Problem Statement
+## User Scenarios & Testing *(mandatory)*
+### Minimal Slice (Phase 1 Load-Bearing Scope)
+### User Story 1 — <TODO: short-title> (Priority: P1)
+## Edge Cases
+## Functional Requirements
+## Success Criteria
+## Non-Goals
+## Constraints
+### Knowledge-Layer Boundary (<TODO: this-milestone> vs. <TODO: owning-knowledge-milestone>)
+## Assumptions
+## Constitution Check
+## Open Questions (defer to planning)
+## Dependencies
+## Downstream Consumers (informational, not binding)

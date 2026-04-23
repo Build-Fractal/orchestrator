@@ -44,6 +44,15 @@ fi
 ORCH_ROOT="$1"
 MILESTONE_ID="$2"
 
+# Capture start epoch for elapsed_ms computation (Bash 3.2: second-resolution + 000).
+START_EPOCH_MS="$(date +%s)000"
+
+# Dual-write project root is the parent of $ORCH_ROOT (where CLAUDE.md / AGENTS.md
+# live adjacent to .orchestrator/). This decouples the dual-write target from
+# $PROJECT_ROOT (which locates the helper script itself) and makes the script
+# hermetically testable against a scratch state directory.
+DUAL_WRITE_ROOT="$(cd "$(dirname "$ORCH_ROOT")" && pwd)"
+
 MILESTONE_DIR="$ORCH_ROOT/milestones/$MILESTONE_ID"
 ROADMAP_FILE="$MILESTONE_DIR/${MILESTONE_ID}-ROADMAP.md"
 
@@ -178,6 +187,60 @@ if [ -f "$KNOWLEDGE_DIR/compute-staleness.sh" ]; then
   fi
 else
   echo "CONSOLIDATE: compute-staleness.sh not found, skipping staleness check" >&2
+fi
+
+# --- Dual-write Recent Changes entry (M014/P02 FR-12) ---
+DUAL_WRITE_HELPER="$PROJECT_ROOT/scripts/util/dual-write-runtime-md.sh"
+DUAL_WRITES=0
+if [ -x "$DUAL_WRITE_HELPER" ]; then
+  FRAG_FILE="$(mktemp)"
+  EXISTING_REGION="$(mktemp)"
+  # Preserve any existing region entries by reading them out of CLAUDE.md
+  # first; the helper replaces the region wholesale, so we pre-concatenate
+  # existing bytes with the new one-line entry.
+  if [ -f "$DUAL_WRITE_ROOT/CLAUDE.md" ]; then
+    awk '/^# >>> orchestrator:recent-changes >>>/ { in_r=1; next } /^# <<< orchestrator:recent-changes <<</ { in_r=0; next } in_r==1 { print }' \
+      "$DUAL_WRITE_ROOT/CLAUDE.md" > "$EXISTING_REGION"
+  fi
+  {
+    cat "$EXISTING_REGION"
+    printf -- '- %s: milestone consolidated (%d%% reduction, %d phases archived)\n' \
+      "$MILESTONE_ID" "$reduction" "$archived_count"
+  } > "$FRAG_FILE"
+
+  if bash "$DUAL_WRITE_HELPER" \
+      --marker recent-changes \
+      --content "$FRAG_FILE" \
+      --root "$DUAL_WRITE_ROOT" \
+      --file CLAUDE.md --file AGENTS.md \
+      >/dev/null 2>&1; then
+    DUAL_WRITES=2
+  else
+    if bash "$DUAL_WRITE_HELPER" \
+        --marker recent-changes \
+        --content "$FRAG_FILE" \
+        --root "$DUAL_WRITE_ROOT" \
+        --file CLAUDE.md \
+        >/dev/null 2>&1; then
+      DUAL_WRITES=1
+    else
+      echo "WARN: consolidate dual-write recent-changes failed; continuing" >&2
+    fi
+  fi
+  rm -f "$FRAG_FILE" "$EXISTING_REGION"
+else
+  echo "SKIPPED: dual-write-runtime-md.sh not executable (consolidate)" >&2
+fi
+
+# --- Emit unit_close JSONL record (M014/P02 FR-16 / M019 Tier 1) ---
+END_EPOCH_MS="$(date +%s)000"
+ELAPSED_MS=$((END_EPOCH_MS - START_EPOCH_MS))
+LOG_FILE="$ORCH_ROOT/execution-log.jsonl"
+mkdir -p "$ORCH_ROOT"
+if ! printf '{"command":"orchestrator:consolidate","unit_type":"command","milestone":"%s","dual_writes":%d,"reduction_pct":%d,"archived_count":%d,"elapsed_ms":%d,"source":"runtime"}\n' \
+    "$MILESTONE_ID" "$DUAL_WRITES" "$reduction" "$archived_count" "$ELAPSED_MS" \
+    >> "$LOG_FILE" 2>/dev/null; then
+  echo "WARN: failed to append unit_close record to $LOG_FILE" >&2
 fi
 
 # Report to stderr

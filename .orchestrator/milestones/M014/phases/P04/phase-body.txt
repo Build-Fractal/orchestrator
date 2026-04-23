@@ -1,0 +1,124 @@
+## What Was Built
+
+P04 converts the P01 stubs (complexity probe, `--amend`, `split`) into full FR-5 / FR-14 / FR-7 implementations and wires the US-3 three-way prompt that delegates to the M011/P07 conversus adapter for pressure-testing. Seven tasks, 12-gate phase suite all green. CC-first runtime posture with defensive Codex/Cursor fallbacks on every LLM path.
+
+**Full FR-5 complexity probe** (T02 replaces P01 stub):
+- Five measured axes: FR count, user-story count, raw token count, TODO density, contradiction-signal count.
+- OR-semantics: above-threshold if ANY axis trips its cutoff; below otherwise.
+- `hardening_spec_exception: true` — `fr_count==0 AND user_story_count>=5` routes below-threshold (handles M016/M021 hardening-spec pattern where user stories exist but no FR-list).
+- CC-only LLM contradiction pass via `templates/spec-complexity-contradiction-prompt.md` (T03 template); Codex/Cursor report `contradiction_signals=0` deterministically per CON-2.
+- Caller contract byte-preserved from P01 stub — T04/US-3 consumes without modification.
+- Emits `spec_complexity_probe` JSONL record per invocation to `execution-log.jsonl`.
+
+**Calibration corpus** (T01 → `.orchestrator/milestones/M014/phases/P04/CALIBRATION-MEMO.md`):
+- Six retrospective specs labeled: M011 above (fr_count=16), M013 above (fr_count=18), M016 below (hardening exception, fr_count=0), M021 below (hardening exception, fr_count=0), M022 above (user_story_count=5), M024 above (fr_count=20).
+- Token measurements ran 13-59% lower than planner approximations — re-measured on live files; no label flipped.
+- M013 actual tokens = 7851 (lands just below 8000 cutoff) — still above via fr_count + user_story_count (OR-semantics).
+- M024 showed 14 TODOs yielding density 0.538 — above via multiple other axes anyway.
+- Pinned thresholds in `.orchestrator/config.yml specify.complexity_thresholds:`: `fr_count: 15`, `user_story_count: 5`, `raw_token_count: 8000`, `todo_density: 0.5`, `contradiction_signal_count: 1`, plus new top-level keys `contradiction_signal_criterion: cc-llm-or-zero` and `hardening_spec_exception: true`.
+
+**Conversus pressure-test preset** (T03 → `templates/conversus-presets/spec-pressure-test.yml`):
+- FR-6 red-blue preset: `blue-advocate` + `red-advocate` with constitution-grounded arbiter.
+- `verdict_contract: PASS|BLOCK` with required_fields `verdict disputes rationale source_hash`.
+- **Zero adapter modifications** — byte-identical `scripts/dispatch/adapters/tool/conversus.sh` pre/post T03 (shasum verified). D007 reuse discipline.
+- Red-blue-mode adapter support unverified (planner risk): adapter may treat unknown mode as cooperative pass-through; T04 hermetic gate uses `CONVERSUS_STUB=1` rather than exercising the real adapter end-to-end.
+
+**US-3 three-way prompt wiring** (T04 → `scripts/specify/specify.sh`):
+- On above-threshold probe, prints `conversus pressure-test recommended (<reason>). [y/n/d]` to stderr.
+- `--yes` auto-mode defaults to `n` (SC-7 zero-approval-prompt invariant verified).
+- Explicit `y` path: invokes `scripts/dispatch/adapters/tool/conversus.sh gate --strict spec-pressure-test <spec> <output>`. Writes adapter summary to `.orchestrator/specify/pressure-test/<spec-id>/summary.md`. Emits `conversus_gate_invocation` JSONL with `{gate_id, adapter_version, verdict, llm_calls, elapsed_ms, estimated_cost_usd}`.
+- Explicit `d` path: invokes `specify split <spec>` (T05 body).
+- Explicit `n` (or default under `--yes`): exit clean unmodified.
+- `unit_close` extended with `conversus_invocations` + `adapter_verdicts`.
+- Hermetic y-path smoke exercised via `CONVERSUS_STUB=1 CONVERSUS_STUB_VERDICT=PASS` env — adapter honors this natively via fixture-copy path.
+
+**Full FR-7 `split` subcommand** (T05 replaces P01 hard-stub):
+- CC-only: invokes `scripts/dispatch/dispatch-interface.sh --prompt-file templates/spec-splitter-prompt.md --input-file <spec> --mode oneshot`, parses returned YAML decomposition-manifest (2-4 sub-specs), writes `.orchestrator/specify/decomposition/<source-id>/manifest.md`.
+- Codex/Cursor: exits 3 with clear diagnostic (distinct from P01 stub's exit 2).
+- Interim path schema is M024-forward-compat (migrates to `.orchestrator/intake/<id>/decomposition.md` when M024 lands).
+- `RUNTIME-ASSUMPTIONS.md` FR-7 entry appended.
+
+**Full FR-14 `--amend` three-case body** (T06 replaces P01 placeholder):
+- Case (a) all-placeholder: re-scaffold (no-op in P04 since FR-3 LLM-fill still deferred; logs "would re-fill" diagnostic, exits 0).
+- Case (b) partial: amend target placeholder sections (no-op in P04 for same reason; logs which sections would be amended).
+- Case (c) fully-authored: no-op, logs that the spec is authored.
+- AS-7 preservation discipline: no re-probe on unchanged sections; prior deliberation preserved.
+- SC-14 byte-preservation: all three cases no-op in P04 → spec shasum unchanged pre/post amend (trivially satisfied).
+
+**Registry + references completion** (T06 → `RUNTIME-ASSUMPTIONS.md` + `references/spec-management.md`):
+- FR-5-stub entry body refreshed to FR-5-full prose (heading preserved byte-identical; body describes full probe logic instead of stub).
+- FR-7 entry appended for splitter.
+- `references/spec-management.md` completed: pressure-test section + decomposition section + 3 new action_type rows (`invoke-conversus-gate`, `propose-decomposition`, `amend-section`). `<!-- partial: P04 -->` sentinel removed. **SC-11 milestone-close gate satisfied.**
+
+## Key Decisions
+
+- **`hardening_spec_exception` key** (T01 design invention): cleanly handles M016/M021 both having 3-5 user stories but zero FR-list. Without it, M021's 5 stories would trip `user_story_count>=5`; raising to >=6 would let M011's legitimately-needed 5-story spec slip through.
+- **Red-blue mode in preset** (T03): ships `mode: red-blue` unverified against adapter behavior. If adapter degrades to cooperative pass-through, preset still functions at weaker deliberation depth. Follow-up on M011/P07 adapter side deferred per CON-4.
+- **Split exit code 3 under Codex/Cursor** (T05): distinct from P01 stub's exit 2. Signals "CC-only runtime gate" rather than "not yet implemented."
+- **Case (a) and (b) no-op in P04** (T06): FR-3 LLM-fill is still deferred (per P01 RUNTIME-ASSUMPTIONS FR-3). The three-case classifier engine is in place; actual re-filling lands when FR-3 is invoked. Removes scope bubble; SC-14 byte-preservation trivially satisfied.
+- **FR-5 entry body refresh over append** (T06): kept heading byte-identical, refreshed body. Alternative (append new "FR-5-full" section) would leave stale stub prose. Strict append-only would be misleading; chose accuracy.
+- **STATE_ROOT separator for mutation sinks** (T07 structural fix): `ORCHESTRATOR_PROJECT_ROOT` env override routes `execution-log.jsonl`, `specs/`, dual-writes, `.orchestrator/specify/` to scratch dirs while `PROJECT_ROOT` stays at repo root for dependency lookups (`templates/`, `scripts/dispatch/`, `references/`). Unlocks hermetic test coverage for every P04 emitter. Sanity case (env unset) preserves live-repo behavior.
+- **Alias forwarder** (T07 pragma): `m014-p04-complexity-thresholds-pinned.sh` thin shim to `m014-p04-calibration-thresholds.sh` (T01 shipped under the second name; plan + phase-suite reference the first). Cleaner than renaming T01 artifact + summary + memo + D017 refs.
+
+## Cross-Cutting Patterns Established
+
+- **CC-first with defensive fallback**: every LLM call gated by `detect-capabilities.sh --runtime` or `CLAUDE_CODE_RUNTIME` env check, wrapped in `|| true` with empty-response bailout. Never fails the caller; silently degrades to heuristic-only / no-op under non-CC runtimes.
+- **STATE_ROOT vs PROJECT_ROOT separation**: mutation sinks vs dependency lookups distinguishable. Enables hermetic test scratch dirs without duplicating the codebase.
+- **`CONVERSUS_STUB` hermetic testing**: `CONVERSUS_STUB=1 CONVERSUS_STUB_VERDICT=PASS|BLOCK` exercised via fixture-copy path in the adapter. No adapter modification needed.
+- **Dispatch-interface mock via backup-and-swap** (T05 hermetic pattern): backup real `dispatch-interface.sh`, swap with canned-response mock, run test, restore via cleanup trap. Works for any script that shells out through the dispatch layer.
+- **Section-split awk + per-section classifier** (T06): `awk '/^## /{...}'` splits spec into per-section files; each file independently classified (a)/(b)/(c) via TODO count. Enables partial-spec amend targeting.
+- **Append-with-body-refresh for registry entries** (T06): heading byte-identical, body refreshed. Tracks stub→full transitions without leaving stale prose.
+- **Bash32 scanner comment-strip**: `grep -vE '^[[:space:]]*#'` before pattern match avoids false-positives on comment prose mentioning prohibited constructs. Pattern inherited from P01/T07.
+
+## Verification Results
+
+**P04 phase suite**: 12/12 gates PASS, exit 0.
+1. `m014-p04-complexity-thresholds-pinned.sh` (T01 via alias)
+2. `m014-p04-complexity-probe-full.sh` (T02)
+3. `m014-p04-pressure-test-preset.sh` (T03)
+4. `m014-p04-specify-command-wiring.sh` (T04)
+5. `m014-p04-three-way-prompt.sh` (T04)
+6. `m014-p04-split-subcommand.sh` (T05)
+7. `m014-p04-amend-three-case.sh` (T06)
+8. `m014-p04-runtime-assumptions-fr5-fr7.sh` (T06)
+9. `m014-p04-spec-management-reference-complete.sh` (T06)
+10. `m014-p04-bash32-and-lint.sh` (T07)
+11. `m014-p04-zero-prompts.sh` (T07)
+12. `m014-p04-observability-records.sh` (T07)
+
+**Cross-cutting invariants**:
+- SC-6a dual-write byte-preservation: passes against specify.sh + adapter invocations.
+- SC-7 zero-approval-prompt: `--yes` auto-resolves three-way prompt to `n` without blocking.
+- SC-11 references/spec-management.md completion: partial sentinel removed; pressure-test + decomposition sections landed.
+- SC-14 `--amend` byte-preservation: spec shasum unchanged pre/post amend across all three cases.
+- CON-2 CC-first posture: every LLM path has runtime gate + defensive fallback; Codex/Cursor report deterministic zero.
+- CON-6 anti-pattern lint: every new + modified shell script passes.
+- CON-8 idempotency: `--amend` re-runs preserve deliberation state; probe re-runs yield deterministic verdict.
+- D007 conversus-adapter-reuse: `scripts/dispatch/adapters/tool/conversus.sh` byte-identical pre/post P04.
+- MEM001 Bash 3.2 compat: all new scripts pass bash32+lint rollup gate.
+- FR-16 observability: `spec_complexity_probe` + `conversus_gate_invocation` + `unit_close` records emitted to `.orchestrator/execution-log.jsonl`.
+
+## Deviations Worth Surfacing
+
+Thirteen task-level deviations from verbatim plan bodies across T01-T07. All correctness fixes or hermetic-testability enablers with documented rationale in task summaries. Significant ones:
+
+- **T02**: YAML inline-comment stripping in threshold parser; `grep -c` multi-line no-match handling (both would have produced silently wrong verdicts).
+- **T04**: dry-run probe extension (pre-existing `--dry-run` block exited before the probe ran); hermetic scratch setup for specify.sh's SCRIPT_DIR-relative PROJECT_ROOT.
+- **T05**: `detect-capabilities.sh` path discrepancy noted (plan body references `scripts/lifecycle/`; actual at `scripts/dispatch/`). Env-var gate (`CLAUDE_CODE_RUNTIME=1`) is primary; path reference is defensive fallback.
+- **T06**: section classifier rewritten for awk blank-separator (verbatim formula mis-classified all-placeholder as case b).
+- **T07**: STATE_ROOT separator fix (structural) + alias forwarder (pragma) + bash32 scanner comment-strip.
+
+No deviations affected cross-task contracts or downstream phase scope. Every deviation documented in its task summary's `key_decisions` field.
+
+## State After P04
+
+- `orchestrator:specify --description <prose> --slug <slug>` now runs full FR-5 complexity probe, delegates to conversus adapter on operator `y`-choice, and supports full `--amend` + `split` subcommand surface.
+- `.orchestrator/config.yml specify.complexity_thresholds:` pinned with operator-reviewable defaults and a design memo explaining why each value was chosen.
+- `RUNTIME-ASSUMPTIONS.md` has FR-3, FR-5-full, FR-7 entries — M009 runtime-parity-audit consumes this registry.
+- `references/spec-management.md` is complete (SC-11 gate cleared).
+- `scripts/dispatch/adapters/tool/conversus.sh` byte-identical from P04 start — D007 reuse discipline honored.
+- P03 stays deferred (D018 — blocked on M012 DEPLOY-RECORD resolution + inbox dogfood data).
+
+## Ready for Milestone Close
+
+P01 + P02 + P04 complete. P03 deferred per D018. Milestone validation gate will flag P03 as incomplete — this is the expected state per the user-selected auto-run option. Milestone close happens via `/orchestrator-auto` after operator resolves the P03 preflight gates.

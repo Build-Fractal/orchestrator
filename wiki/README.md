@@ -281,34 +281,41 @@ Run this exactly once when standing up the dogfood wiki on a fresh
 GitHub Pages deployment. Subsequent deploys use the "Running the
 deploy wrapper" section below.
 
-### 1. Enable GitHub Discussions on the repository
+> **Private-repo note:** the giscus.app setup tool validates that the
+> target repo is public and will refuse to generate config for private
+> repos. This is a false-positive for the internal-team case — the
+> underlying giscus GitHub App + client.js work fine on private repos
+> for authenticated team members who have repo read access. Skip
+> giscus.app entirely; install the App directly (step 1) and fetch the
+> four IDs via the helper in step 3.
 
-Settings → General → Features → check **Discussions**. Giscus reads
-from and writes to Discussions; the deploy will build successfully
-without this step, but the comment threads will 404 on first click.
+### 1. Install the giscus GitHub App on the repository
 
-### 2. Choose a Giscus discussions category
+Open <https://github.com/apps/giscus> and click **Install**. On the
+account selector pick the target org. On the repo selector pick
+**Only select repositories** → your repo. Works for both public and
+private repos.
 
-Create a Discussions category named `Wiki Comments` (or pick an
-existing one). Note the category name and the category ID — the
-category ID is visible in the URL when you edit the category on
-GitHub, or retrievable via `gh api graphql` with a
-`repositoryDiscussionCategories` query. See
-<https://giscus.app> for the category-ID lookup tool.
+### 2. Enable GitHub Discussions and create a category
 
-### 3. Set the four `GISCUS_*` environment variables
+Settings → General → Features → check **Discussions**. Then go to the
+Discussions tab and create a category named `Wiki Comments` (or pick
+an existing one — just note the exact name for step 3).
 
-Export these in the shell that will run the deploy wrapper:
+### 3. Fetch the four `GISCUS_*` values
+
+Use the bundled helper. It queries the GitHub GraphQL API via `gh`
+(which works on private repos) and prints paste-ready `export` lines:
 
 ```
-export GISCUS_REPO="<org>/<repo>"
-export GISCUS_REPO_ID="<opaque-node-id>"
-export GISCUS_CATEGORY="Wiki Comments"
-export GISCUS_CATEGORY_ID="<opaque-node-id>"
+bash scripts/diagnostics/giscus-ids-from-gh.sh \
+  --repo <org>/<repo> --category "Wiki Comments"
 ```
 
-A missing or empty value trips the pre-build config-check gate with
-a diagnostic line naming the missing var — see `scripts/diagnostics/wiki-giscus-config-check.sh`.
+Paste the four lines it prints into the shell that will run the
+deploy wrapper. A missing or empty value trips the pre-build
+config-check gate with a diagnostic line naming the missing var —
+see `scripts/diagnostics/wiki-giscus-config-check.sh`.
 
 ### 4. Enable GitHub Pages with the `gh-pages` branch source
 

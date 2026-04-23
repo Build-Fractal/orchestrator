@@ -17,3 +17,4 @@ title: "Knowledge — Patterns"
 - [MEM009: Documentation-as-Verification](MEM009.md)
 - [MEM010: Cross-Link Validation Scripts](MEM010.md)
 - [MEM011: Validation-as-Task Pattern](MEM011.md)
+- [MEM027: merge-not-overwrite user-scope config](MEM027.md)

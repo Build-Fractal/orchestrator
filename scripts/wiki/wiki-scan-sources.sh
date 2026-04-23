@@ -128,6 +128,18 @@ should_exclude() {
       return 0
       ;;
   esac
+  # Include-markdown self-reference carve-out: these six task plans document
+  # the stub generator + Giscus comments partial and contain literal `{% ... %}`
+  # Jinja/include-markdown blocks inside code fences (stub template at
+  # P01/T03 + P02/T02; Material comments-partial override at P03/T01).
+  # mkdocs-include-markdown-plugin does not respect code fences when scanning
+  # for nested includes, so projecting them through the wiki aborts the build.
+  # Canonical source on disk preserved (Constitution VI).
+  case "$_rel" in
+    milestones/M012/archive/P01/T03-PLAN.md|milestones/M012/archive/P01/T03-PAYLOAD.md|milestones/M012/archive/P02/T02-PLAN.md|milestones/M012/archive/P02/T02-PAYLOAD.md|milestones/M012/archive/P03/T01-PLAN.md|milestones/M012/archive/P03/T01-PAYLOAD.md)
+      return 0
+      ;;
+  esac
   # non-.md
   case "$_base" in
     *.md) : ;;

@@ -357,7 +357,9 @@ while IFS='|' read -r CAT REL TITLE; do
     milestone:*)
       # STUB_REL is like "milestones/M###/M###-FOO.md" or
       # "milestones/M###/phases/P##/P##-PLAN.md" or
-      # "milestones/M###/phases/P##/tasks/T##-PLAN.md".
+      # "milestones/M###/phases/P##/tasks/T##-PLAN.md" or
+      # "milestones/M###/phases/P##/{fixtures,evidence}/*.md" or
+      # "milestones/M###/archive/P##/*.md" (archived phase subtree).
       _mid=$(printf '%s' "$CAT" | sed 's/^milestone://')
       # Top-level "milestones" index gets each M### once — handled after the loop.
       # Milestone index gets top-level M###-*.md children directly, plus P## dirs.
@@ -370,11 +372,24 @@ while IFS='|' read -r CAT REL TITLE; do
           _task_base=$(basename "$_tail")
           register_child "milestones/${_mid}/phases/${_pid}" "tasks/${_task_base}" "$TITLE"
           ;;
+        phases/*/*/*)
+          # Phase subdir file (fixtures/, evidence/, etc.) — register under
+          # the phase index with the sub-tail preserved so the link resolves.
+          _pid=$(printf '%s' "$_tail" | sed 's#^phases/\([^/]*\)/.*#\1#')
+          _sub_tail=${_tail#phases/${_pid}/}
+          register_child "milestones/${_mid}/phases/${_pid}" "${_sub_tail}" "$TITLE"
+          ;;
         phases/*/*)
           # Phase-top file (P##-PLAN.md, P##-SUMMARY.md): register under milestone and under phase itself.
           _pid=$(printf '%s' "$_tail" | sed 's#^phases/\([^/]*\)/.*#\1#')
           _pbase=$(basename "$_tail")
           register_child "milestones/${_mid}/phases/${_pid}" "${_pbase}" "$TITLE"
+          ;;
+        archive/*)
+          # Archived phase file — register flat on the milestone index with the
+          # full archive/P##/... sub-tail preserved so the link resolves to the
+          # stub nested under the milestone's archive/ subtree.
+          register_child "milestones/${_mid}" "${_tail}" "$TITLE"
           ;;
         *)
           # Milestone-top file (M###-CONTEXT.md, etc.).

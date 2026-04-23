@@ -11,3 +11,4 @@ title: "Knowledge — Lessons"
 - [MEM023: Backtick-in-Plan-Artifacts Breaks Must-Have Checks](MEM023.md)
 - [MEM024: Lib Path Resolution in Task Plans](MEM024.md)
 - [MEM025: Verification Script Grep Patterns](MEM025.md)
+- [MEM026: M013/P04/T04 hook-config regression](MEM026.md)

@@ -124,27 +124,42 @@ fi
 # --- Hook-config mode ---
 
 if [[ "$MODE" = "hook-config" ]]; then
-  # Emit a JSON-shaped settings.json fragment describing the hook
-  # registrations for Claude Code lifecycle events. No jq dependency.
-  # hook_count reflects spec-kit orchestrator lifecycle hooks (6 points:
-  # before_tasks, after_tasks, before_implement, after_implement,
-  # before_commit, post_verify). The sixth entry (post_verify) was
-  # added at M013/P04 per FR-12 Claude-Code-only v1 — wires
-  # packaging/bundle/hooks/post-verify.json into the runtime.
-  target_file="${HOME:-}/.claude/settings.json"
-  cat <<EOF
+  # M025/P01: emit a valid Claude Code `settings.json` hooks fragment.
+  # Event mapping (locked in P01-PLAN):
+  #   post_verify    -> Stop        (terminal; no matcher)
+  #   before_commit  -> PreToolUse  (matcher: Bash; git-commit filter in wrapper)
+  # Deferred orchestrator events (no CC equivalent at M025):
+  #   TODO(M025+): before_tasks     -- revisit if CC gains a task-start event
+  #   TODO(M025+): after_tasks      -- revisit if CC gains a task-end event
+  #   TODO(M025+): before_implement -- revisit if CC gains an implement-start event
+  #   TODO(M025+): after_implement  -- revisit if CC gains an implement-end event
+  # Every leaf hook object carries "_orchestrator_managed": true so the
+  # installer's --uninstall path (FR-7) can remove only orchestrator entries
+  # without touching user-authored hooks. HOME guard preserved for adapter
+  # convention (not strictly required for stdout emission).
+  if [[ -z "${HOME:-}" ]] || [[ "${HOME}" = "/" ]]; then
+    echo "FAIL: unsafe HOME (empty or '/'): refusing to emit" >&2
+    exit 2
+  fi
+  cat <<'EOF'
 {
-  "runtime": "claude-code",
-  "hook_count": 6,
-  "target_file": "${target_file}",
-  "hooks": [
-    { "event": "before_tasks", "command": "orchestrator-before-tasks" },
-    { "event": "after_tasks", "command": "orchestrator-after-tasks" },
-    { "event": "before_implement", "command": "orchestrator-before-implement" },
-    { "event": "after_implement", "command": "orchestrator-after-implement" },
-    { "event": "before_commit", "command": "orchestrator-before-commit" },
-    { "event": "post_verify", "command": "orchestrator-post-verify" }
-  ]
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "orchestrator-post-verify", "_orchestrator_managed": true }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "orchestrator-before-commit", "_orchestrator_managed": true }
+        ]
+      }
+    ]
+  }
 }
 EOF
   exit 0

@@ -1,3 +1,3 @@
 # >>> orchestrator:recent-changes >>>
-- M025/P01: settings.json coexistence — hook-config valid CC schema + merge-not-overwrite installer + --uninstall reversibility (closes M013/P04/T04 regression)
+- 027-conversus-oss-migration: Migrate orchestrator default Conversus integration from paid build to OSS build with paid-escape-hatch preserved (M026).
 # <<< orchestrator:recent-changes <<<

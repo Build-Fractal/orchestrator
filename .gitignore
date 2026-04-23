@@ -15,6 +15,9 @@ Thumbs.db
 # M013 GitHub integration sidecar — operator-owned, never committed
 .orchestrator/integrations/github.json
 
+# Claude Code harness transient state (regenerated per session)
+.claude/scheduled_tasks.lock
+
 # Ephemeral auto-loop transients (per-iteration output; not state of record)
 .orchestrator/milestones/**/*-result.txt
 .orchestrator/tmp/

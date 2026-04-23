@@ -147,6 +147,27 @@ case "$SUBCMD" in
       exit 1
     fi
 
+    # Pre-flight: refuse to gate artifacts that still contain `<TODO:`
+    # section placeholders. Running adversarial deliberation against a
+    # half-authored scaffold produces nonsense findings — the gate only
+    # earns its cost on a body that's been through the author pass. See
+    # D019 + specs/025-knowledge-layer-maturation/conversus/PRESSURE-TEST-FINDINGS.md.
+    #
+    # Threshold (env `CONVERSUS_GATE_TODO_THRESHOLD`, default 1): any
+    # artifact with >= threshold `<TODO:` markers is refused. Tests and
+    # intentional "gate a stub" callers can bypass via
+    # `CONVERSUS_GATE_SKIP_TODO_CHECK=1`.
+    if [ "${CONVERSUS_GATE_SKIP_TODO_CHECK:-0}" != "1" ]; then
+      _todo_threshold="${CONVERSUS_GATE_TODO_THRESHOLD:-1}"
+      _todo_count="$(grep -cE '<TODO:' "$_artifact" 2>/dev/null | head -n 1)"
+      _todo_count="${_todo_count// /}"
+      : "${_todo_count:=0}"
+      if [ "$_todo_count" -ge "$_todo_threshold" ]; then
+        _emit_fail "artifact contains ${_todo_count} <TODO: marker(s); gate refuses unauthored drafts. Run the author pass first (see commands/specify.md three-pass flow) or set CONVERSUS_GATE_SKIP_TODO_CHECK=1 to bypass."
+        exit 1
+      fi
+    fi
+
     # Stub mode: use canned fixtures for deterministic testing.
     if [ "${CONVERSUS_STUB:-0}" = "1" ]; then
       _stub_verdict="${CONVERSUS_STUB_VERDICT:-PASS}"
@@ -201,22 +222,152 @@ case "$SUBCMD" in
       exit 1
     fi
 
-    "$_bin_path" gate --preset "$_preset_file" --artifact "$_artifact" --output "$_output"
-    _rc=$?
-    if [ $_rc -ne 0 ]; then
-      _emit_fail "conversus exited non-zero (rc=${_rc})"
+    # --- Shim: conversus has no native `gate` subcommand (upstream spec 998
+    # parked). We bridge by synthesizing a conversus.yml from the preset +
+    # artifact, invoking `conversus run`, and deriving PASS/BLOCK from the
+    # surviving-dispute count in the synthesis output.
+    #
+    # The conversus pipx/venv Python is reused for both YAML synth
+    # (PyYAML is a conversus dep) and output parsing (`python -m
+    # linter.output_contract`), avoiding a second Python dependency on
+    # the orchestrator side.
+
+    # Extract venv python from the conversus launcher shebang.
+    _venv_py="$(head -n 1 "$_bin_path" | sed -E 's|^#!([^[:space:]]+).*|\1|')"
+    if [ -z "$_venv_py" ] || [ ! -x "$_venv_py" ]; then
+      _emit_fail "could not resolve conversus venv python from ${_bin_path}"
       exit 1
     fi
 
-    _v_line="$(_parse_verdict "$_output")"
-    _pv_rc=$?
-    if [ $_pv_rc -ne 0 ]; then
+    # Derive the conversus run output dir. Default: the directory
+    # containing the gate-result.md output path. Callers who want a
+    # different tree (e.g., specs/NNN-slug/conversus/) set
+    # CONVERSUS_RUN_OUTPUT_DIR explicitly.
+    _run_output_dir="${CONVERSUS_RUN_OUTPUT_DIR:-$(dirname "$_output")}"
+    mkdir -p "$_run_output_dir"
+
+    # Synthesize conversus.yml in a TEMP dir, NOT in the run output dir.
+    # Rationale: conversus walks upward from the config file looking
+    # for a `templates/` directory (engine/templates.py:find_templates_dir),
+    # and if it finds one before reaching the installed conversus
+    # package's own templates, it uses that. Putting the config inside
+    # this orchestrator repo makes conversus pick up the orchestrator's
+    # `templates/` (which has no red-blue/review.md etc.) and fail.
+    # A temp-dir config sidesteps that by having no ancestor `templates/`.
+    _conv_tmp="$(mktemp -d -t conversus-gate.XXXXXX)"
+    trap 'rm -rf "$_conv_tmp"' EXIT
+    _conv_config="${_conv_tmp}/conversus.yml"
+    "$_venv_py" "${_SCRIPT_DIR}/conversus-synth.py" \
+      --preset "$_preset_file" \
+      --artifact "$_artifact" \
+      --output-dir "$_run_output_dir" \
+      --out "$_conv_config"
+    _rc=$?
+    if [ $_rc -ne 0 ]; then
+      _emit_fail "conversus-synth.py failed (rc=${_rc})"
       exit 1
     fi
-    echo "$_v_line"
-    case "$_v_line" in
-      verdict=PASS) exit 0 ;;
-      verdict=BLOCK) exit 2 ;;
+
+    # Invoke conversus run.
+    _provider="${CONVERSUS_PROVIDER:-anthropic}"
+    "$_bin_path" run "$_conv_config" --provider "$_provider"
+    _rc=$?
+    if [ $_rc -ne 0 ]; then
+      _emit_fail "conversus run exited non-zero (rc=${_rc})"
+      exit 1
+    fi
+
+    # Preserve the synthesized config in the run output dir for audit
+    # (the tmp dir is disposable; the repo-side copy is the record).
+    _conv_config_preserved="${_run_output_dir}/conversus.yml"
+    cp "$_conv_config" "$_conv_config_preserved" 2>/dev/null || true
+
+    _synthesis="${_run_output_dir}/summary/final.md"
+    if [ ! -f "$_synthesis" ]; then
+      _emit_fail "conversus produced no synthesis at ${_synthesis}"
+      exit 1
+    fi
+
+    # Parse using conversus's canonical output contract. Do the whole
+    # extract-fields-from-JSON dance inside a single venv-python process
+    # so JSON values don't have to survive a bash heredoc.
+    _mode="$(grep -E '^mode:' "$_conv_config" | head -n 1 | sed -E 's/^mode:[[:space:]]*//;s/[[:space:]]*$//')"
+    _extract_py='
+import json, subprocess, sys
+path, mode = sys.argv[1], sys.argv[2]
+res = subprocess.run([sys.executable, "-m", "linter.output_contract", path, "--mode", mode], capture_output=True, text=True)
+if res.returncode != 0:
+    sys.stderr.write(res.stderr)
+    sys.exit(res.returncode)
+data = json.loads(res.stdout)
+qi = data.get("quality_indicators", {})
+print("SURVIVING=%d" % qi.get("genuine_disagreements_surviving", -1))
+print("HEADLINE=%s" % data.get("headline", "").replace("\n", " "))
+print("SUMMARY=%s" % data.get("summary", "").replace("\n", " "))
+'
+    _extracted="$("$_venv_py" -c "$_extract_py" "$_synthesis" "${_mode:-cooperative}" 2>&1)"
+    _rc=$?
+    if [ $_rc -ne 0 ]; then
+      _emit_fail "output parser failed (rc=${_rc}): ${_extracted}"
+      exit 1
+    fi
+
+    _surviving="$(printf '%s\n' "$_extracted" | grep -E '^SURVIVING=' | head -n 1 | sed -E 's/^SURVIVING=//')"
+    _headline="$(printf '%s\n' "$_extracted" | grep -E '^HEADLINE=' | head -n 1 | sed -E 's/^HEADLINE=//')"
+    _summary="$(printf '%s\n' "$_extracted" | grep -E '^SUMMARY=' | head -n 1 | sed -E 's/^SUMMARY=//')"
+
+    if [ -z "$_surviving" ] || [ "$_surviving" = "-1" ]; then
+      _emit_fail "could not extract surviving-dispute count from parser output"
+      exit 1
+    fi
+
+    if [ "$_surviving" = "0" ]; then
+      _verdict="PASS"
+    else
+      _verdict="BLOCK"
+    fi
+
+    # Source hash for the audit trail.
+    if command -v shasum >/dev/null 2>&1; then
+      _source_hash="$(shasum -a 256 "$_artifact" | awk '{print $1}')"
+    elif command -v sha256sum >/dev/null 2>&1; then
+      _source_hash="$(sha256sum "$_artifact" | awk '{print $1}')"
+    else
+      _source_hash="unavailable"
+    fi
+
+    _preset_name="$(basename "$_preset_file" .yml)"
+    mkdir -p "$(dirname "$_output")"
+    cat > "$_output" <<EOF
+---
+verdict: "${_verdict}"
+disputes: ${_surviving}
+rationale: "${_summary}"
+source_hash: "${_source_hash}"
+preset: "${_preset_name}"
+artifact: "${_artifact}"
+conversus_output_dir: "${_run_output_dir}"
+conversus_config: "${_conv_config_preserved}"
+---
+# Gate Result: ${_preset_name}
+
+**Verdict:** ${_verdict}
+**Surviving disputes:** ${_surviving}
+**Headline:** ${_headline}
+
+## Rationale
+
+${_summary}
+
+## Full deliberation
+
+See: \`${_run_output_dir}/summary/final.md\`
+EOF
+
+    echo "verdict=${_verdict}"
+    case "$_verdict" in
+      PASS) exit 0 ;;
+      BLOCK) exit 2 ;;
       *) exit 1 ;;
     esac
     ;;

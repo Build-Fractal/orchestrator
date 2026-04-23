@@ -2,9 +2,9 @@
 schema_version: "1.0"
 type: context-draft
 milestone: "M026"
-status: draft
+status: finalized
 created_at: "2026-04-23"
-finalized_at: null
+finalized_at: "2026-04-23T19:37:56Z"
 ---
 
 ## Architectural Decisions
@@ -160,6 +160,19 @@ Operator decision at discuss-finalize.
   tests naturally re-run green under the post-migration resolver order.
 - Knowledge-layer schema authority stays with M020 per D013/D016.
 
+### SB-5. Sequencing vs. spec 026 — committed to Option A `[operator-approved]`
+
+M026 lands BEFORE spec 026's M014 shell-impl phase. Rationale: the OSS smoke test
+confirmed the preset-schema drifts and synthesis-crux concern; landing M026 first
+avoids spec 026's shell tests being written against a paid-only adapter surface
+that then gets rehomed. This is the Option A path named in both the discuss-draft
+(formerly OQ-1) and spec 027 OQ-1 / #OQ-2.
+
+This commitment supersedes SB-3's "Operator decision at discuss-finalize" framing
+and DC-3's "Operator decides at discuss-finalize". SB-3 and DC-3 remain in the
+draft as the rationale / cost-of-inversion audit trail; the committed sequencing
+lives here.
+
 ---
 
 ## Design Constraints
@@ -221,19 +234,32 @@ contract. The new `edition=` line in `check` output is an exception — `check` 
 emits structured stdout and `edition=` joins that namespace. All other diagnostics
 (US-4 paid-only preset refusal, US-1 fallback reason) are stderr-only.
 
+### DC-6. Synthesis-crux verification spike required before resolver flip `[operator-approved]`
+
+Before the resolver order flips in spec 027's FR-1/FR-2, a pre-implementation
+spike must verify that OSS's `synthesis` phase produces (or can be made to
+produce) content the adapter's `linter.output_contract` (or an OSS-side
+equivalent) can parse into the four adapter-expected fields: `verdict`,
+`disputes`, `rationale`, `source_hash`.
+
+The spike lives as the first task in M026's P01 plan. If the spike surfaces a
+blocker (e.g., `linter.output_contract` is paid-only and has no OSS analogue),
+M026 pauses at the spike-gate until the shape question is resolved — the
+resolver flip does not land against an unverified synthesis contract. This
+crystallizes spec 027 OQ-13 (OSS-arbiter-block-absent-or-renamed — PARITY CRUX)
+as plan-phase scope and is the load-bearing reason SB-5 commits to Option A
+sequencing: landing the spike and the flip together, upstream of spec 026's
+Pass-3 wiring, means spec 026 never writes tests against an unverified
+synthesis surface.
+
 ---
 
 ## Open Questions
 
-### OQ-1. Sequencing vs. spec 026 (M014 three-pass shell impl)
-
-**Agent-default answer** `[agent-default — operator review required]`: Option A — land
-M026 Minimal Slice BEFORE spec 026 shell-impl. Rationale: spec 026 bakes
-`conversus.sh gate --strict` invocation into `scripts/specify/specify.sh`; if M026
-lands second, spec 026's tests get one round of churn (not catastrophic, but
-preventable). Option B (M026 after spec 026 shell-impl) is the defensible alternative
-if the operator judges the three-pass shell more urgent than the edition flip.
-Load-bearing decision — affects the D016 forward roadmap's interpretation.
+<!-- OQ-1 (sequencing vs. spec 026) was resolved at discuss-finalize 2026-04-23
+     to Option A (M026 before spec 026 shell-impl). See SB-5 for the committed
+     decision text and DC-6 for the synthesis-crux spike that must precede the
+     resolver flip. -->
 
 ### OQ-2. OSS parity confidence level — what if fs-inspection surfaces gaps
 
@@ -376,14 +402,20 @@ Key items that **should inform discuss-finalize** and may revise agent-defaults 
 
 ### Open Questions that gain priority
 
-- **OQ-1 (sequencing vs. spec 026)** — smoke test strengthens the case for Option A
-  (M026 first). Spec 026's Pass 3 gate will land on whatever adapter the orchestrator
-  ships; landing M026 first avoids spec 026's shell tests being written against a
-  paid-only surface that then gets rehomed.
-- **OQ-3 (ollama fallback for FR-8 OSS branch)** — implied by OQ-14. If PR #29 is
-  unresolved at plan-phase, FR-8's dual-edition integration test needs either ollama,
-  a skip-on-429 mode, or a version-gate. Operator should flag preference at
-  discuss-finalize.
+- **OQ-1 (sequencing vs. spec 026)** — **resolved at discuss-finalize 2026-04-23**
+  to Option A (M026 before spec 026 shell-impl). See SB-5 for the committed
+  decision text. The smoke-test evidence is what tipped the call.
+- **OQ-3 (ollama fallback for FR-8 OSS branch)** — **resolved at discuss-finalize
+  2026-04-23 to Option (a): ollama as the FR-8 OSS-branch provider.**
+  Rationale: (b) skip-on-429 masks real failures and creates a test that "passes"
+  by not running; (c) version-gating couples FR-8's arming to upstream merge-status,
+  which is fragile. Ollama as the integration-test provider for the OSS branch
+  keeps the signal honest without depending on upstream PR #29 timing. **Follow-up
+  for plan-phase**: confirm ollama availability on the operator's machine at
+  plan-phase task-0. If ollama is absent, option (b) skip-on-429 is the fallback
+  with an explicit `known-upstream-429` annotation in the test output so the skip
+  is visibly attributable rather than silent. This is a planning-level preference;
+  plan-phase validates against the actual environment before committing task shape.
 
 ### Parity matrix status
 

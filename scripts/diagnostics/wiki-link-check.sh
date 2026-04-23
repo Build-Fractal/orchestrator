@@ -28,6 +28,11 @@
 #
 # Bash 3.2 compatible. MEM004 carve-out: internal pipes/awk/sed permitted.
 # Single-script-file shape (AD-19) -- callable directly as the Check command.
+#
+# Performance: classification runs in two awk passes (one over all HTML to
+# extract links + anchors, one over the extracted records to classify using
+# pre-built file/dir indexes). Completes in < 1 second on a 1300-page site;
+# the prior per-link `grep -qE` implementation took 30+ minutes.
 
 set -u
 
@@ -87,200 +92,243 @@ if [ ! -r "$SITE_DIR" ]; then
   exit 2
 fi
 
-# ----- Path normalization -----------------------------------------------------
+# ----- Build site indexes -----------------------------------------------------
 
-normalize_path() {
-  # Collapse "./" and "../" against a raw path string. No realpath.
-  # Split on "/", walk into a positional-parameter stack.
-  local raw="$1"
-  local IFS=/
-  # shellcheck disable=SC2086
-  set -- $raw
-  local out=""
-  local seg
-  for seg in "$@"; do
-    case "$seg" in
-      ''|'.')
-        continue
-        ;;
-      '..')
-        # Pop one segment from out.
-        case "$out" in
-          */*) out="${out%/*}" ;;
-          *)   out="" ;;
-        esac
-        ;;
-      *)
-        if [ -z "$out" ]; then
-          out="$seg"
-        else
-          out="$out/$seg"
-        fi
-        ;;
-    esac
-  done
-  case "$raw" in
-    /*) printf '/%s\n' "$out" ;;
-    *)  printf '%s\n' "$out" ;;
-  esac
-}
+TMP_PFX="/tmp/wiki-link-check.$$"
+HTML_LIST="${TMP_PFX}.html"
+FILES_IDX="${TMP_PFX}.files"
+DIRS_IDX="${TMP_PFX}.dirs"
+LA_FILE="${TMP_PFX}.la"
+ANCHORS_FILE="${TMP_PFX}.anchors"
+LINKS_FILE="${TMP_PFX}.links"
+FINDINGS_FILE="${TMP_PFX}.findings"
+trap 'rm -f "$HTML_LIST" "$FILES_IDX" "$DIRS_IDX" "$LA_FILE" "$ANCHORS_FILE" "$LINKS_FILE" "$FINDINGS_FILE" 2>/dev/null' EXIT INT TERM
 
-# ----- Enumerate HTML files ---------------------------------------------------
+find "$SITE_DIR" -type f -name '*.html' 2>/dev/null | LC_ALL=C sort > "$HTML_LIST"
+find "$SITE_DIR" -type f 2>/dev/null > "$FILES_IDX"
+find "$SITE_DIR" -type d 2>/dev/null > "$DIRS_IDX"
 
-HTML_LIST="/tmp/wiki-link-check.html.$$"
-LINKS_FILE="${HTML_LIST}.links"
-FINDINGS_FILE="${HTML_LIST}.findings"
-trap 'rm -f "$HTML_LIST" "$LINKS_FILE" "$FINDINGS_FILE" 2>/dev/null' EXIT
-
-find "$SITE_DIR" -type f -name '*.html' | LC_ALL=C sort > "$HTML_LIST"
-
-PAGE_COUNT=0
-while IFS= read -r _pg; do
-  if [ -n "$_pg" ]; then
-    PAGE_COUNT=$((PAGE_COUNT + 1))
-  fi
-done < "$HTML_LIST"
+PAGE_COUNT=$(wc -l < "$HTML_LIST" | awk '{print $1}')
 
 if [ "$PAGE_COUNT" -eq 0 ]; then
   printf 'ERROR: no .html files found under %s\n' "$SITE_DIR" >&2
   exit 2
 fi
 
-# ----- Extract links per page -------------------------------------------------
+# ----- Phase 1: extract links + anchors via one awk pass over all HTML -------
+# Emits two record types on stdout, tab-separated:
+#   L<TAB>page<TAB>href
+#   A<TAB>page<TAB>anchor-id
+# Uses FNR==1 to detect filename transitions (BSD awk compatible). xargs
+# may split the file list into multiple awk invocations on very large trees;
+# that is safe here because stage 1 is stateless across files.
 
-: > "$LINKS_FILE"
-while IFS= read -r page; do
-  if [ -z "$page" ]; then
-    continue
-  fi
-  # Relative/absolute links: href="..." excluding leading "#" or "?".
-  grep -oE 'href="[^"#?][^"]*"' "$page" 2>/dev/null \
-    | sed -e 's/^href="//' -e 's/"$//' \
-    | while IFS= read -r href; do
-        if [ -n "$href" ]; then
-          printf '%s|%s\n' "$page" "$href" >> "$LINKS_FILE"
-        fi
-      done
-  # In-page anchor-only hrefs (#foo).
-  grep -oE 'href="#[^"]+"' "$page" 2>/dev/null \
-    | sed -e 's/^href="//' -e 's/"$//' \
-    | while IFS= read -r href; do
-        if [ -n "$href" ]; then
-          printf '%s|%s\n' "$page" "$href" >> "$LINKS_FILE"
-        fi
-      done
-done < "$HTML_LIST"
+NCPU=$(sysctl -n hw.ncpu 2>/dev/null || printf '4')
+[ "$NCPU" -gt 1 ] || NCPU=1
 
-# ----- Classify links ---------------------------------------------------------
+# Parallel extraction: each worker writes to its own temp file (keyed by the
+# worker bash's PID) so block-buffered awk output never interleaves across
+# workers. Final concatenation reassembles the complete LA stream.
+BATCH_DIR="${TMP_PFX}.batches.d"
+mkdir -p "$BATCH_DIR"
+export BATCH_DIR
+xargs -n 150 -P "$NCPU" bash -c '
+  awk '"'"'
+    FNR == 1 { page = FILENAME; in_article = 0 }
+    /<article[ >]/ { in_article = 1 }
+    /<\/article>/  { in_article = 0; next }
+    !in_article { next }
+    {
+      s = $0
+      while (match(s, /<a [^>]*href="[^"]*"/)) {
+        piece = substr(s, RSTART, RLENGTH)
+        hp = index(piece, "href=\"")
+        val = substr(piece, hp + 6, length(piece) - hp - 6)
+        print "L\t" page "\t" val
+        s = substr(s, RSTART + RLENGTH)
+      }
+      t = $0
+      while (match(t, /(id|name)="[^"]*"/)) {
+        attr = substr(t, RSTART, RLENGTH)
+        eq_pos = index(attr, "=\"")
+        val = substr(attr, eq_pos + 2, length(attr) - eq_pos - 2)
+        print "A\t" page "\t" val
+        t = substr(t, RSTART + RLENGTH)
+      }
+    }
+  '"'"' "$@" > "$BATCH_DIR/batch.$$"
+' bash < "$HTML_LIST"
 
-: > "$FINDINGS_FILE"
-BROKEN=0
-OUT_OF_SCOPE=0
-OK_LINKS=0
+cat "$BATCH_DIR"/batch.* > "$LA_FILE" 2>/dev/null
+rm -rf "$BATCH_DIR"
 
-SITE_PREFIX="${SITE_DIR%/}/"
+# Split into per-type + dedupe: nav/TOC are re-rendered on every page so the
+# same (page_dir, href) link is emitted 1000+ times; sorting + uniq kills the
+# duplicate work before classification. Dedupe key for L is the full record
+# (page|href) — same page + same href is one logical link. For anchors we
+# dedupe on (page|anchor) too.
+LC_ALL=C awk -F'\t' '$1 == "A" {print $2 "\t" $3}' "$LA_FILE" \
+  | LC_ALL=C sort -u > "$ANCHORS_FILE"
+LC_ALL=C awk -F'\t' '$1 == "L" {print $2 "\t" $3}' "$LA_FILE" \
+  | LC_ALL=C sort -u > "$LINKS_FILE"
+rm -f "$LA_FILE"
 
-while IFS='|' read -r page href; do
-  if [ -z "$page" ]; then
-    continue
-  fi
-  if [ -z "$href" ]; then
-    continue
-  fi
+# ----- Phase 2: classify ------------------------------------------------------
+# One awk invocation loads files + dirs + anchors, then classifies every link.
+# Normalizes relative paths in-awk (no realpath dep).
 
-  # External URL?
-  case "$href" in
-    http://*|https://*|mailto:*|tel:*|ftp://*)
-      printf 'OUT-OF-SCOPE: %s -> %s [external]\n' "$page" "$href" \
-        >> "$FINDINGS_FILE"
-      OUT_OF_SCOPE=$((OUT_OF_SCOPE + 1))
+awk -F'\t' \
+    -v site="$SITE_DIR" \
+    -v strict="$STRICT" \
+    -v files_idx="$FILES_IDX" \
+    -v dirs_idx="$DIRS_IDX" \
+    -v anchors_file="$ANCHORS_FILE" '
+function normalize(raw,    parts, n, i, top, seg, out, stack, leading) {
+  leading = (substr(raw, 1, 1) == "/") ? 1 : 0
+  n = split(raw, parts, "/")
+  top = 0
+  for (i = 1; i <= n; i++) {
+    seg = parts[i]
+    if (seg == "" || seg == ".") continue
+    if (seg == "..") {
+      if (top > 0) delete stack[top--]
       continue
-      ;;
-  esac
+    }
+    stack[++top] = seg
+  }
+  out = ""
+  for (i = 1; i <= top; i++) {
+    out = (i == 1 ? stack[i] : out "/" stack[i])
+  }
+  if (leading) out = "/" out
+  return out
+}
+function dirname_of(p,    slash) {
+  slash = length(p)
+  while (slash > 0 && substr(p, slash, 1) != "/") slash--
+  if (slash <= 1) return ""
+  return substr(p, 1, slash - 1)
+}
+function strip_fragment(h,    n) {
+  n = index(h, "#")
+  if (n > 0) return substr(h, 1, n - 1)
+  return h
+}
+function fragment_of(h,    n) {
+  n = index(h, "#")
+  if (n > 0) return substr(h, n + 1)
+  return ""
+}
+function strip_query(h,    n) {
+  n = index(h, "?")
+  if (n > 0) return substr(h, 1, n - 1)
+  return h
+}
+BEGIN {
+  site_prefix = site "/"
+  while ((getline line < files_idx) > 0) files_set[line] = 1
+  close(files_idx)
+  while ((getline line < dirs_idx) > 0) dirs_set[line] = 1
+  close(dirs_idx)
+  while ((getline line < anchors_file) > 0) {
+    tab = index(line, "\t")
+    anchors[substr(line, 1, tab - 1) "|" substr(line, tab + 1)] = 1
+  }
+  close(anchors_file)
+  ok = 0; broken = 0; out_of_scope = 0
+}
+{
+  page = $1; href = $2
+  if (page == "" || href == "") next
+
+  # External?
+  if (href ~ /^https?:/ || href ~ /^mailto:/ || href ~ /^tel:/ || href ~ /^ftp:/) {
+    print "OUT-OF-SCOPE: " page " -> " href " [external]"
+    out_of_scope++
+    next
+  }
+
+  # Absolute path (starts with /): these are site_url-rooted URLs intended for
+  # the deployed site (e.g. the 404.html page uses /<base>/... refs). They
+  # resolve correctly on the deployed URL but do not correspond to filesystem
+  # paths under the build directory, so treat as out-of-scope.
+  if (substr(href, 1, 1) == "/") {
+    print "OUT-OF-SCOPE: " page " -> " href " [absolute-path]"
+    out_of_scope++
+    next
+  }
 
   # In-page anchor only?
-  case "$href" in
-    '#'*)
-      anchor="${href#\#}"
-      if grep -qE "(id=\"${anchor}\"|name=\"${anchor}\")" "$page"; then
-        OK_LINKS=$((OK_LINKS + 1))
-      else
-        printf 'BROKEN: %s -> %s [in-page anchor missing]\n' "$page" "$href" \
-          >> "$FINDINGS_FILE"
-        BROKEN=$((BROKEN + 1))
-      fi
-      continue
-      ;;
-  esac
+  if (substr(href, 1, 1) == "#") {
+    a = strip_query(substr(href, 2))
+    if ((page "|" a) in anchors) ok++
+    else { print "BROKEN: " page " -> " href " [in-page anchor missing]"; broken++ }
+    next
+  }
 
-  # Relative path. Strip fragment for resolution; keep for anchor check.
-  path_only="${href%%\#*}"
-  frag=""
-  case "$href" in
-    *'#'*) frag="${href#*\#}" ;;
-  esac
-  # Strip query string.
-  path_only="${path_only%%\?*}"
+  # Strip fragment + query.
+  path_only = strip_fragment(href)
+  frag = fragment_of(href)
+  path_only = strip_query(path_only)
+  # Fragment may still carry query.
+  frag = strip_query(frag)
 
-  # If all that remains is empty (e.g. href="?q" or href="#"), treat as ok
-  # (same-page reference with no fragment target to verify).
-  if [ -z "$path_only" ]; then
-    OK_LINKS=$((OK_LINKS + 1))
-    continue
-  fi
+  if (path_only == "") { ok++; next }
 
-  # Resolve against the source page's directory.
-  src_dir=$(dirname "$page")
-  raw="$src_dir/$path_only"
+  src_dir = dirname_of(page)
+  raw = (src_dir == "" ? path_only : src_dir "/" path_only)
+  resolved = normalize(raw)
 
-  resolved=$(normalize_path "$raw")
-
-  # Escape check -- must stay under SITE_DIR.
-  case "$resolved" in
-    "$SITE_DIR"|"$SITE_PREFIX"*)
-      : # inside site -- continue
-      ;;
-    *)
-      reason="escapes site root"
-      if [ "$STRICT" -eq 1 ]; then
-        printf 'BROKEN: %s -> %s [%s]\n' "$page" "$href" "$reason" \
-          >> "$FINDINGS_FILE"
-        BROKEN=$((BROKEN + 1))
-      else
-        printf 'OUT-OF-SCOPE: %s -> %s [%s]\n' "$page" "$href" "$reason" \
-          >> "$FINDINGS_FILE"
-        OUT_OF_SCOPE=$((OUT_OF_SCOPE + 1))
-      fi
-      continue
-      ;;
-  esac
+  # Escape check.
+  if (resolved != site && index(resolved, site_prefix) != 1) {
+    reason = "escapes site root"
+    if (strict == 1) {
+      print "BROKEN: " page " -> " href " [" reason "]"
+      broken++
+    } else {
+      print "OUT-OF-SCOPE: " page " -> " href " [" reason "]"
+      out_of_scope++
+    }
+    next
+  }
 
   # Directory -> index.html.
-  if [ -d "$resolved" ]; then
-    resolved="${resolved%/}/index.html"
-  fi
+  if (resolved in dirs_set) {
+    resolved = resolved "/index.html"
+  }
 
-  if [ ! -f "$resolved" ]; then
-    printf 'BROKEN: %s -> %s [file missing: %s]\n' "$page" "$href" "$resolved" \
-      >> "$FINDINGS_FILE"
-    BROKEN=$((BROKEN + 1))
-    continue
-  fi
+  if (!(resolved in files_set)) {
+    print "BROKEN: " page " -> " href " [file missing: " resolved "]"
+    broken++
+    next
+  }
 
-  # If we have a fragment, verify anchor exists in target page.
-  if [ -n "$frag" ]; then
-    if ! grep -qE "(id=\"${frag}\"|name=\"${frag}\")" "$resolved"; then
-      printf 'BROKEN: %s -> %s [target anchor missing: #%s]\n' \
-        "$page" "$href" "$frag" >> "$FINDINGS_FILE"
-      BROKEN=$((BROKEN + 1))
-      continue
-    fi
-  fi
+  # Fragment on cross-page link.
+  if (frag != "") {
+    if ((resolved "|" frag) in anchors) ok++
+    else { print "BROKEN: " page " -> " href " [target anchor missing: #" frag "]"; broken++ }
+    next
+  }
 
-  OK_LINKS=$((OK_LINKS + 1))
-done < "$LINKS_FILE"
+  ok++
+}
+END {
+  print "SUMMARY\t" ok "\t" broken "\t" out_of_scope > "/dev/stderr"
+}
+' "$LINKS_FILE" > "$FINDINGS_FILE" 2> "${TMP_PFX}.summary"
 
 # ----- Emit findings and summary ---------------------------------------------
+
+SUMMARY_LINE=$(cat "${TMP_PFX}.summary" 2>/dev/null | head -n 1)
+rm -f "${TMP_PFX}.summary" 2>/dev/null
+
+OK_LINKS=$(printf '%s' "$SUMMARY_LINE" | awk -F'\t' '{print $2}')
+BROKEN=$(printf '%s' "$SUMMARY_LINE" | awk -F'\t' '{print $3}')
+OUT_OF_SCOPE=$(printf '%s' "$SUMMARY_LINE" | awk -F'\t' '{print $4}')
+
+[ -n "$OK_LINKS" ] || OK_LINKS=0
+[ -n "$BROKEN" ] || BROKEN=0
+[ -n "$OUT_OF_SCOPE" ] || OUT_OF_SCOPE=0
 
 if [ -s "$FINDINGS_FILE" ]; then
   LC_ALL=C sort -u "$FINDINGS_FILE"

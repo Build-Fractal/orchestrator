@@ -264,6 +264,8 @@ To remove only orchestrator-added hooks manually (for example on a machine where
 
 If you have an existing spec-kit project with state under `.specify/`, see `docs/migrating-from-speckit.md` for the migration path. The orchestrator preserves spec-kit as a migration *source* via `scripts/migrate/adapters/speckit.sh` and related tooling — it is not a runtime dependency.
 
+**Stale `~/.specify/` after uninstalling spec-kit globally:** if you previously had spec-kit installed and removed the CLI without also removing `~/.specify/`, a standalone orchestrator project can still see the home-directory `.specify/` when scripts walk upward looking for project roots. Build-context's spec resolver is hardened against this (it checks `.orchestrator/` as a marker first), but other tooling may not be. If you're seeing unexpected "home directory" resolutions, remove the stale tree: `rm -rf ~/.specify`.
+
 ## Verification
 
 After installation, verify the orchestrator is working:

@@ -48,9 +48,12 @@ RESOLVE_ENTRIES="$PROJECT_ROOT/scripts/knowledge/resolve-entries.sh"
 INCREMENT_HITS="$PROJECT_ROOT/scripts/knowledge/increment-hits.sh"
 
 # --- Result emission on exit (single RESULT line, written to stderr) ---
+# We must capture the original $? at trap entry before any cleanup commands
+# mutate it — otherwise `rm -rf` (or any other cleanup) overwrites the real
+# exit code and the trap would emit status:"ok" on a failed run.
 _BC_RESULT_EMITTED=0
 _bc_final_result() {
-  local rc=$?
+  local rc="${1:-$?}"
   if [ "$_BC_RESULT_EMITTED" -eq 0 ]; then
     if [ "$rc" -eq 0 ]; then
       emit_result ok "" "context assembled for ${MILESTONE_ID:-?}/${PHASE_ID:-?}/${TASK_ID:-?}" >&2
@@ -61,9 +64,10 @@ _bc_final_result() {
   fi
 }
 _bc_cleanup_and_result() {
+  local rc=$?
   [ -n "${TMPDIR_BUILD:-}" ] && rm -rf "$TMPDIR_BUILD" 2>/dev/null || true
   [ -n "${INCLUDED_IDS_FILE:-}" ] && rm -f "$INCLUDED_IDS_FILE" 2>/dev/null || true
-  _bc_final_result
+  _bc_final_result "$rc"
 }
 trap _bc_cleanup_and_result EXIT
 
@@ -242,20 +246,41 @@ _bc_assemble_planning_payload() {
   fi
 
   # --- Find feature spec (deterministic resolution via roadmap frontmatter) ---
+  # Resolution order (standalone-first, legacy-embedded as fallback):
+  #   1. basename(ORCH_ROOT) == ".orchestrator" → PROJECT_DIR = dirname(ORCH_ROOT)
+  #   2. ORCH_ROOT contains .orchestrator/       → PROJECT_DIR = ORCH_ROOT
+  #   3. Walker up the tree for .specify/ (legacy spec-kit-embedded shape)
+  # Walker is canonicalized to an absolute path first and uses a fixed-point
+  # terminator so a relative ORCH_ROOT cannot infinite-loop (prev dirname == curr).
+  # Rule 1 is the critical fix for standalone orchestrator projects where a stale
+  # ~/.specify/ in the home directory would otherwise hijack PROJECT_DIR.
   local FEATURE_SPEC=""
   local PROJECT_DIR=""
-  local candidate="$ORCH_ROOT"
-  while [ "$candidate" != "/" ]; do
-    if [ "$(basename "$candidate")" = ".specify" ]; then
-      PROJECT_DIR="$(dirname "$candidate")"
-      break
-    fi
-    if [ -d "$candidate/.specify" ]; then
-      PROJECT_DIR="$candidate"
-      break
-    fi
-    candidate="$(dirname "$candidate")"
-  done
+  local abs_orch_root
+  abs_orch_root="$(cd "$ORCH_ROOT" 2>/dev/null && pwd)" || abs_orch_root="$ORCH_ROOT"
+  if [ "$(basename "$abs_orch_root")" = ".orchestrator" ]; then
+    PROJECT_DIR="$(dirname "$abs_orch_root")"
+  elif [ -d "$abs_orch_root/.orchestrator" ]; then
+    PROJECT_DIR="$abs_orch_root"
+  else
+    # Walker covers invocations from a path deeper than ORCH_ROOT (e.g. a
+    # milestone or phase directory passed directly). Accept .orchestrator/ as
+    # a marker alongside .specify/ so standalone projects aren't forced to
+    # rely on the legacy spec-kit layout.
+    local candidate="$abs_orch_root" prev=""
+    while [ "$candidate" != "/" ] && [ "$candidate" != "$prev" ]; do
+      if [ "$(basename "$candidate")" = ".specify" ] || [ "$(basename "$candidate")" = ".orchestrator" ]; then
+        PROJECT_DIR="$(dirname "$candidate")"
+        break
+      fi
+      if [ -d "$candidate/.specify" ] || [ -d "$candidate/.orchestrator" ]; then
+        PROJECT_DIR="$candidate"
+        break
+      fi
+      prev="$candidate"
+      candidate="$(dirname "$candidate")"
+    done
+  fi
 
   local spec_file=""
   if [ -n "$PROJECT_DIR" ]; then
@@ -279,10 +304,15 @@ _bc_assemble_planning_payload() {
     fi
 
     if [ -z "$spec_file" ] || [ ! -f "$spec_file" ]; then
-      local spec_count
-      spec_count="$(find "$PROJECT_DIR/specs" -name "spec.md" -type f 2>/dev/null | wc -l | tr -d ' ')"
-      if [ "$spec_count" = "1" ]; then
-        spec_file="$(find "$PROJECT_DIR/specs" -name "spec.md" -type f 2>/dev/null | head -1)"
+      # Guard: find on a nonexistent dir exits 1, which under set -euo pipefail
+      # would kill the script (2>/dev/null silences stderr but not the exit
+      # code). Skip the fallback entirely when specs/ is absent.
+      if [ -d "$PROJECT_DIR/specs" ]; then
+        local spec_count
+        spec_count="$(find "$PROJECT_DIR/specs" -name "spec.md" -type f 2>/dev/null | wc -l | tr -d ' ')"
+        if [ "$spec_count" = "1" ]; then
+          spec_file="$(find "$PROJECT_DIR/specs" -name "spec.md" -type f 2>/dev/null | head -1)"
+        fi
       fi
     fi
 

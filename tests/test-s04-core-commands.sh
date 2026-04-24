@@ -663,12 +663,19 @@ if [ -f "$BUILD_CTX" ]; then
     fail "build-context.sh stderr reports percentage (stderr: '$stderr_output')"
   fi
 
-  # Assert: percentage is less than 100% (payload is subset of total)
+  # Assert: payload ratio stays bounded.
+  # M019/P00/L1 (First-Turn Completeness) intentionally re-surfaces intent /
+  # constraints / acceptance / files-to-touch inside the payload for Opus 4.7
+  # senior-engineer delegation — the ratio against milestone-dir bytes alone
+  # can legitimately exceed 100% on small fixtures (observed: ~103%). The
+  # denominator also excludes out-of-milestone inputs (e.g. shared spec
+  # chunks), so "< 100%" was a pre-M019 assumption. Cap at 150% so we still
+  # catch a real payload blowup but don't fail on the designed duplication.
   pct=$(echo "$stderr_output" | grep -oE '[0-9]+%' | head -1 | tr -d '%')
-  if [ -n "$pct" ] && [ "$pct" -lt 100 ]; then
-    pass "build-context.sh payload ratio < 100% (${pct}%)"
+  if [ -n "$pct" ] && [ "$pct" -lt 150 ]; then
+    pass "build-context.sh payload ratio < 150% (${pct}%)"
   else
-    fail "build-context.sh payload ratio < 100% (got: ${pct:-empty}%)"
+    fail "build-context.sh payload ratio < 150% (got: ${pct:-empty}%)"
   fi
 else
   fail "build-context.sh payload ratio tests (script not found)"

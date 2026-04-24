@@ -50,6 +50,7 @@
 #   10 — milestone already complete
 #   11 — pause requested
 #   12 — unexpected state
+#   13 — planning payload assembly failed (build-context.sh non-zero on PHASE_PLAN)
 #   14 — context rotation recommended
 
 set -euo pipefail
@@ -385,10 +386,20 @@ case "$state" in
   planning)
     # Phase needs planning before tasks can be dispatched
     active_phase=$(bash "$READ_ROADMAP" "$ROADMAP_FILE" active-phase 2>/dev/null) || active_phase="unknown"
-    # Build planning payload using PHASE_PLAN mode
-    plan_payload=$(bash "$BUILD_CONTEXT" "$ORCH_ROOT" "$MILESTONE_ID" "$active_phase" "PHASE_PLAN" 2>/dev/null) || {
-      plan_payload="Plan phase $active_phase for milestone $MILESTONE_ID"
+    # Build planning payload using PHASE_PLAN mode. Mirror the task-dispatch
+    # error-handling pattern (capture stderr, fail loud) — a silent fallback
+    # to a one-line stub would let the planner hallucinate over missing
+    # spec/roadmap/knowledge context with no way to tell the difference.
+    plan_stderr_log="$MILESTONE_DIR/build-context-planning-stderr.log"
+    plan_payload=$(bash "$BUILD_CONTEXT" "$ORCH_ROOT" "$MILESTONE_ID" "$active_phase" "PHASE_PLAN" 2>"$plan_stderr_log") || {
+      plan_stderr=$(cat "$plan_stderr_log" 2>/dev/null || true)
+      plan_stderr_tail=$(printf '%s' "$plan_stderr" | tail -5 | tr '\n' ' ')
+      rm -f "$plan_stderr_log"
+      echo "auto-loop.sh: build-context.sh (planning) failed: $plan_stderr" >&2
+      _auto_output "AUTO:PLANNING_FAILED phase=$active_phase milestone=$MILESTONE_ID stderr=$plan_stderr_tail"
+      exit 13
     }
+    rm -f "$plan_stderr_log"
     plan_payload_bytes=$(printf '%s' "$plan_payload" | wc -c | tr -d ' ')
     plan_payload_file="$MILESTONE_DIR/phases/$active_phase/${active_phase}-PLANNING-PAYLOAD.md"
     mkdir -p "$(dirname "$plan_payload_file")"

@@ -1,6 +1,6 @@
 # >>> orchestrator:recent-changes >>>
 - 027-conversus-oss-migration: Migrate orchestrator default Conversus integration from paid build to OSS build with paid-escape-hatch preserved (M026).
-- M026/P02: conversus-OSS resolver flip — OSS primary, paid escape hatch via CONVERSUS_EDITION; JSONL edition field; dual-edition regression test with visible-skip annotations; gate-verdict-reliability bundle (verdict-text rationale, arbiter preference, OAuth auto-preflight closes OQ-16 false-PASS).
+- M026/P02: conversus-OSS resolver flip — OSS primary, paid escape hatch via CONVERSUS_EDITION; JSONL edition field; dual-edition regression test with visible-skip annotations; gate-verdict-reliability bundle (verdict-text rationale, arbiter preference, OAuth auto-preflight closes OQ-16 false-PASS). See `.orchestrator/milestones/M026/phases/P02/P02-SUMMARY.md`.
 - M026/P01: conversus-OSS migration — parity matrix + DC-6 synthesis-crux spike verdict + ollama/pipx env probe
 - installer-staging-fix: install-{claude-code,codex,cursor}.sh now stage scripts/templates/references/ into target project + manifest-backed --uninstall; references/installation.md rewritten with Upgrading/Uninstall sections.
 - state-tier-fix: scripts/state/find-active-milestone.sh reads tier from EVALUATION.md first, falls back to ROADMAP.md — unblocks orchestrator:auto on evaluated-but-unroadmapped Tier C milestones.

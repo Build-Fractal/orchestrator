@@ -3,7 +3,8 @@ schema_version: "1.0"
 type: feature-spec
 feature_slug: "027-conversus-oss-migration"
 created_at: "2026-04-23"
-status: "Draft"
+revised_at: "2026-04-24"
+status: "Revised-post-P01"
 milestone: "M026"
 ---
 
@@ -11,7 +12,8 @@ milestone: "M026"
 
 **Feature Branch**: `027-conversus-oss-migration`
 **Created**: 2026-04-23
-**Status**: Draft
+**Revised**: 2026-04-24 (post-P01, post-round-3 deliberation)
+**Status**: Revised-post-P01 (was Draft)
 **Milestone**: M026
 **Input**: User description: "Migrate the orchestrator's default Conversus integration from the paid build at ~/Sites/conversus to the open-source build at ~/Sites/conversus-oss, while preserving an operator-controlled escape hatch so paid-only features remain reachable from the adapter layer. Scope: (a) parity audit of the orchestrator's consumption surface (conversus.sh adapter CLI invocations, conversus-synth.py config shape, output-tree + linter.output_contract schema, CLI flags, env vars, exit codes) against both builds; (b) resolver-order update in scripts/dispatch/adapters/tool/conversus.sh so $HOME/Sites/conversus-oss is the user-local default with $HOME/Sites/conversus reachable via opt-in; (c) clear diagnostic when a caller names a paid-only feature on an OSS install; (d) preservation of the D019 TODO pre-flight, --strict flag, 0/1/2 exit-code contract, stub-mode fixtures, and CONVERSUS_STUB / CONVERSUS_STRICT / CONVERSUS_HOME / CONVERSUS_PROVIDER env-var semantics; (e) documentation updates across commands/conversus-gate.md, commands/ingest.md, commands/specify.md, docs/ingesting-arbitrary-specs.md, and references/ so resolver order + paid-escape-hatch shape are discoverable; (f) test updates to tests/test-conversus-adapter-shim.sh covering both OSS and paid binary paths with CONVERSUS_INTEGRATION=1 gating. Non-goals: do not change the adapter's 0/1/2 exit-code contract or preset shape; do not modify either conversus repo; do not re-open spec 025 (M020) or spec 026 (M014 three-pass shell impl) scope; do not implement MCP-renderer escape hatch (that is M023 scope). Must respect in-flight M014 three-pass shell (spec 026) and M020 knowledge-layer pressure-test re-run dependency on upstream PRs #28/#29."
 
@@ -24,6 +26,158 @@ Three concrete pain-points follow from the current resolver-order shape. **First
 The minimum surface that fixes all three: **(a)** extend `conversus.sh` resolver order to prefer `$HOME/Sites/conversus-oss/bin/conversus` (new user-local default) over `$HOME/Sites/conversus/bin/conversus` (now the escape hatch), leave `CONVERSUS_HOME` as the absolute override, and add a `CONVERSUS_EDITION=oss|paid` env var that flips the relative resolver preference between the two user-local paths; **(b)** add one edition-aware diagnostic the adapter prints when the resolved binary appears to be OSS but the invocation names a paid-only surface (detected by preset metadata or provider selection, deferred to plan-phase for mechanical detection rules); **(c)** preserve every other adapter invariant byte-identically — 0/1/2 exit codes, `--strict` flag semantics, D019 TODO pre-flight, stub-mode fixture shape, all existing env vars including `CONVERSUS_STUB`/`CONVERSUS_STRICT`/`CONVERSUS_HOME`/`CONVERSUS_PROVIDER`/`CONVERSUS_RUN_OUTPUT_DIR`/`CONVERSUS_GATE_TODO_THRESHOLD`/`CONVERSUS_GATE_SKIP_TODO_CHECK`; **(d)** update six documentation surfaces (`commands/conversus-gate.md`, `commands/ingest.md`, `commands/specify.md`, `docs/ingesting-arbitrary-specs.md`, `references/github-integration.md`, `references/spec-management.md`) so the new resolver order and escape-hatch shape are discoverable at the same reading paths operators already use; **(e)** extend the integration test to run against both builds under `CONVERSUS_INTEGRATION=1`, keeping the stub-mode path unchanged.
 
 This feature explicitly does not attempt: (1) modifications to either `~/Sites/conversus` or `~/Sites/conversus-oss` — both repos are read-only from this milestone's POV; (2) re-opening the 0/1/2 exit-code contract, the `--strict` flag semantics, the preset YAML shape, or the `conversus.yml` synthesis output shape (those are cross-cutting contracts other milestones depend on); (3) re-opening spec 025's (M020 knowledge-layer) status of `Ready-for-discuss-gate-deferred` — this spec notes the cross-cut in Open Questions and defers scheduling decisions to discuss-finalize; (4) re-opening spec 026's (M014 three-pass shell) scope — this spec's implementation must land before or after spec 026's shell-impl but does not modify that spec's body; (5) implementing an MCP-renderer escape hatch for M023 Design Layer — that is M023 scope per D016; (6) a migration of the paid build's upstream PRs (#28 claude-code, #29 anthropic parallel-429) into the OSS build — those are upstream concerns to the operator, not the orchestrator's work; (7) automatic runtime detection of paid-feature usage at dispatch time — mechanical detection is deferred to plan-phase, with the minimum-viable diagnostic being edition + binary path logged at every `gate` invocation.
+
+## Post-P01 Addendum (2026-04-24)
+
+Reading posture: the body below was authored 2026-04-23 before M026/P01 ran
+the authoritative parity inspection and the DC-6 synthesis-crux spike. That
+body is preserved for narrative continuity. This addendum supersedes it
+wherever they conflict. P01 artifacts — consulted by every addendum
+reframing — are:
+
+- Parity matrix: `.orchestrator/milestones/M026/M026-CONVERSUS-PARITY.md` (16 rows, status: final, 11 verified-identical / 3 verified-drifted / 2 verified-absent)
+- DC-6 spike: `.orchestrator/milestones/M026/phases/P01/SPIKE-SYNTHESIS-CRUX.md` (Verdict: GO; adapter requires zero code changes for OSS)
+- Dogfood smoke: `.orchestrator/milestones/M026/phases/P01/DOGFOOD-SMOKE-OSS.md` (§1 isolation probes, §2 mock end-to-end GO, §6 real-signal claude-code run surfacing false-PASS on claude-code provider)
+- Post-phase findings: `.orchestrator/milestones/M026/phases/P01/POST-P01-FINDINGS.md` (F1–F4 for P02 plan-phase)
+- P01 summary: `.orchestrator/milestones/M026/phases/P01/P01-SUMMARY.md`
+
+### A. Compatibility-claim reframing (supersedes FR-5 / FR-6 / FR-7 prose)
+
+The original FR-5 / FR-6 / FR-7 asserted byte-identical behavior as a bare
+claim. Per Constitution Principle II (Evidence Before Claims), each is
+hereby re-grounded on the parity-matrix row that verified it. The FR text
+below stays in place for traceability; read each through this addendum:
+
+- **FR-5 (exit-code-contract-preserved)** — verified by parity matrix row
+  "Exit-code contract (0 PASS, 1 error, 2 BLOCK via adapter)" = `verified-identical`.
+  Adapter-layer contract (0/1/2) is stable across editions; no new exit
+  codes.
+- **FR-6 (flag-and-env-var-preserved)** — verified by parity matrix row
+  "`conversus run <config.yml> --provider <p>` CLI" = `verified-identical`
+  (OSS `engine/run.py` byte-identical to paid). `CONVERSUS_PROVIDER` /
+  `CONVERSUS_HOME` / `CONVERSUS_STUB` are adapter-layer env vars unchanged
+  by the migration. `CONVERSUS_PROVIDER=claude-code` behavior under OAuth
+  is called out in FR-14 below because it promotes a previously tribal rule
+  to a documented preflight.
+- **FR-7 (gate-result-shape-preserved)** — verified by DC-6 spike
+  (SPIKE-SYNTHESIS-CRUX.md Q3): OSS's Pydantic `ConversusOutput` emits a
+  strict superset of the adapter-consumed keys
+  (`quality_indicators.genuine_disagreements_surviving`, `headline`,
+  `summary`) at exact nesting. Parity matrix row "`linter.output_contract`
+  Python module importable" = `verified-identical` (434-line module
+  byte-identical between OSS and paid). DOGFOOD-SMOKE-OSS.md §2a empirically
+  confirms the module imports, executes, and emits the documented keys
+  against a real OSS `summary/final.md`.
+
+### B. Round-3 deliberation — P0 mitigations already closed
+
+The round-3 deliberation at
+`specs/027-conversus-oss-migration/conversus/summary/final.md` produced a
+BLOCK with 8 surviving disputes and 2 P0 mitigations. Both P0s are
+**already closed** by P01 work that preceded but was not in-context for
+the deliberation:
+
+- **MIT-001 (YAML parsing compatibility)** — CLOSED. The parity matrix
+  row "Top-level YAML contract — frontmatter rejection" = `verified-identical`:
+  BOTH conversus trees reject frontmatter-plus-body shape. This is a
+  preset-vs-tree drift (orchestrator presets lead with frontmatter), not
+  an OSS-vs-paid drift. Synth-layer work in `conversus-synth.py` handles
+  it equally for either edition. DOGFOOD-SMOKE-OSS.md §1 probe 1
+  empirically confirmed the identical rejection on OSS. §6's real-signal
+  claude-code run demonstrated the synth layer translates the
+  `spec-pressure-test` preset cleanly on OSS end-to-end.
+- **MIT-002 (Arbiter functionality verification)** — CLOSED. DC-6 spike
+  verdict=GO. OSS ships `linter.output_contract` byte-identical to paid;
+  red-blue synthesis path writes to `summary/final.md` at the same path
+  the adapter reads; JSON schema emits the adapter-consumed keys as a
+  strict superset. DOGFOOD-SMOKE-OSS.md §6 confirmed the pipeline runs
+  and the module parses OSS output. The deliberation's concern was
+  valid at the time (parity matrix was empty at spec-authoring); now
+  empirically closed.
+
+### C. Round-3 deliberation — P1 / P2 mitigation disposition
+
+- **MIT-003 (Validation Sequence Reordering, P1)** — CLOSED. This
+  mitigation required "produce parity matrix during discuss-finalize
+  before architectural commitment". P01 performed exactly this
+  resequencing de facto (parity matrix produced before P02 scope
+  commitment; OQ-2 narrow-scope threshold evaluated post-matrix;
+  DC-6 spike gated the resolver-flip decision). No further process
+  change is required for M026. Pattern graduates to P02 planning
+  practice.
+- **MIT-004 (Regression Test Coverage Expansion, P1)** — IN-SCOPE for
+  P02 via FR-8 expansion. FR-8 today names only
+  `spec-pressure-test` + `normalize-fidelity`. P02 plan-phase must
+  decide between (a) expand FR-8's preset set to cover major schema
+  patterns (additive but bounded) or (b) document a preset
+  compatibility matrix with known limitations. DOGFOOD-SMOKE-OSS.md
+  §5 established that the four "smoke-confirmed" drifts apply
+  identically to both editions, so the preset-corpus coverage is
+  edition-symmetric. Either option absorbs MIT-004.
+- **MIT-005 (Cross-Spec Coordination Resolution, P2)** — CLOSED. The
+  two cross-spec cuts are already resolved in the Open Questions:
+  `#OQ-1` (spec 025 deferred pending upstream PR #28/#29; M026 lands
+  first with adapter regression coverage) and `#OQ-2` (spec 026
+  sequencing Option A — M026 before shell impl; recommended and
+  confirmed at discuss). No circular dependency exists: the migration
+  is resolver-local (per SC-10) and spec 025/026 consume the adapter
+  post-migration without caller-code churn.
+
+### D. Single-venv reality (supersedes Problem Statement path-preference framing)
+
+The pre-P01 body assumes `~/.local/pipx/venvs/conversus-oss/` and
+`~/.local/pipx/venvs/conversus/` coexist as separate venvs under two
+separate `$HOME/Sites/*/bin/conversus` binaries. The parity matrix
+"Addendum: 2026-04-23 post-verification install reality" corrects this:
+
+- Both editions publish to PyPI under the same `conversus` package
+  name and install to the same pipx venv `~/.local/pipx/venvs/conversus/`.
+  Path-based edition detection is **infeasible**.
+- OSS additionally ships a `conversus-lint` console-script entry
+  point; paid's entry-point inventory post-uninstall is unconfirmed.
+  `conversus-lint` is a template-file schema validator, NOT a
+  replacement for the adapter's `python -m linter.output_contract`
+  invocation (DOGFOOD-SMOKE-OSS.md §4 corrects the earlier
+  addendum's implication otherwise).
+
+**Implication for FR-1 / FR-2 / FR-3**: the "resolver flip" is not a
+literal path-preference flip; it is an edition-detection strategy.
+Plan-phase M026/P02 must pick (operator's recommendation in the matrix
+addendum is **b + a**):
+
+- **(b) `CONVERSUS_EDITION=oss|paid` env-var override** — operator
+  declares active edition; adapter trusts the declaration. Lowest
+  overhead; primary.
+- **(a) `python -m pip show conversus` metadata probe (fallback)** —
+  parse `Home-page:` (OSS = `github.com/Build-Fractal/conversus-oss`);
+  catches the accident-prone case where the operator forgot to set
+  the env var.
+
+FR-1 / FR-2 / FR-3 prose remains in place for traceability; P02
+plan-phase refines the mechanical contract.
+
+### E. Post-P01 findings flagged for P02 scope
+
+DOGFOOD-SMOKE-OSS.md §6 surfaced a **new parity row not in the original
+matrix**: on `CONVERSUS_PROVIDER=claude-code`, the synthesizer emits
+prose-shaped output that `linter.output_contract`'s structural parser
+cannot tally, producing a **false-PASS** gate verdict. The gate-result
+reported `verdict: PASS / disputes: 0` while the synthesis text
+said BLOCK with 8 surviving disputes. This false-PASS is what the
+round-3 BLOCK surfaced against a later run of the same gate.
+
+Post-phase findings F1–F3 (`POST-P01-FINDINGS.md`) collectively restore
+gate-verdict reliability on the claude-code path: extract rationale
+from verdict prose (F1); prefer `arbiter/resolution.md` when present
+(F2); auto-detect OAuth and set `CONVERSUS_PROVIDER=claude-code`
+(F3). These are P02 scope additions beyond the FR-1/FR-2 resolver
+flip and the already-in-scope FR-3 / FR-4 diagnostics. P02 plan-phase
+must decide how tightly to bundle them with the resolver flip.
+
+FR-14 below promotes the CONVERSUS_PROVIDER=claude-code operator rule
+to a documented reference-layer surface.
+
+---
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -128,8 +282,9 @@ The operator reads `commands/conversus-gate.md`, `commands/ingest.md`, `commands
 - **FR-9 (parity-matrix-artifact)**: plan-phase produces `.orchestrator/milestones/M026/M026-CONVERSUS-PARITY.md` capturing every CLI flag, env var, config-schema key, output-tree path, and exit-code contract the orchestrator consumes, with a column per edition marked `verified: true|false`. Scratch parity note at `.orchestrator/scratch/conversus-oss-migration-parity.md` (shipped with this spec) is the pre-planning input; the plan-phase artifact is the authoritative close-out. Satisfies US-3 discoverability.
 - **FR-10 (preset-edition_required-field)**: the `templates/conversus-presets/*.yml` frontmatter schema is extended with an optional `edition_required: paid` field. Presets with the field trigger US-4's diagnostic when run on OSS; presets without it behave identically to today. No existing presets gain the field as part of this migration — that's a per-preset authoring decision made by whoever authors a paid-dependent preset in the future. Satisfies US-4.
 - **FR-11 (diagnostic-on-paid-only-surface)**: when `edition_required: paid` is present in the preset frontmatter and the resolved binary edition is `oss`, the adapter prints to stderr a line matching the regex `ERROR: preset '<name>' requires paid Conversus \(edition_required: paid\); resolved edition is oss\. Set CONVERSUS_EDITION=paid or install the paid build at \$HOME/Sites/conversus/bin/conversus\.` and exits 1. The diagnostic fires before any `conversus run` invocation — no upstream work is triggered. Satisfies US-4.
-- **FR-12 (doc-surface-updates)**: six doc surfaces listed in the Problem Statement update their resolver-order prose in place. The M011-era `commands/conversus-gate.md:24-28` four-step resolver order is rewritten as a five-step order: STUB → HOME → PATH → OSS-user-local (new default) → paid-user-local (now escape hatch); the `CONVERSUS_EDITION` env var is documented as the user-local-order selector. Docs must grep-match `conversus-oss` and `CONVERSUS_EDITION`. Satisfies US-5.
+- **FR-12 (doc-surface-updates)**: seven doc surfaces update their resolver-order prose in place — the original six (`commands/conversus-gate.md`, `commands/ingest.md`, `commands/specify.md`, `docs/ingesting-arbitrary-specs.md`, `references/github-integration.md`, `references/spec-management.md`) plus `references/architecture.md` (per the 2026-04-24 revision, this is the durable home for the CONVERSUS_PROVIDER=claude-code operator runbook — see FR-14). The M011-era `commands/conversus-gate.md:24-28` four-step resolver order is rewritten to reflect the single-venv reality (per Addendum §D): edition detection via `CONVERSUS_EDITION=oss|paid` env var primary, `python -m pip show conversus` metadata-probe fallback; `CONVERSUS_HOME` remains absolute override. Docs must grep-match `conversus-oss` and `CONVERSUS_EDITION`. Satisfies US-5.
 - **FR-13 (knowledge-layer-entry)**: this milestone contributes at most two `knowledge/decisions/MEM*.md` entries (edition-resolution pattern, paid-escape-hatch pattern) at consolidate. No mutation of `knowledge/spec/**` chunks produced by spec 027's own ingest. The Knowledge-Layer Boundary section below names M020 as the owner of knowledge/** schema evolution — this milestone adds entries under its own decision namespace only. Satisfies principle VII (knowledge compounds) without crossing the M020 schema boundary.
+- **FR-14 (claude-code-provider-operator-doc) — added 2026-04-24**: `references/architecture.md` contains a `## Conversus Adapter — Operator Notes` section that documents the `CONVERSUS_PROVIDER=claude-code` rule under Anthropic OAuth (Max/subscription): the default `--provider anthropic` path hits a server-side concurrency policy gate that 429s deterministically, not a transient rate limit, and the `claude-code` provider path spawns one `claude -p` subprocess per agent (which is what OAuth is designed for). The section covers: rule, reason (policy gate vs rate limit), how-to-apply, trade-offs (~3-4x wall time, terser synthesis), escape hatch (set `ANTHROPIC_API_KEY` and leave `CONVERSUS_PROVIDER` unset), and don'ts. Adapter header comment at `scripts/dispatch/adapters/tool/conversus.sh` points at this section. This lands durably at reference-layer and supersedes the memory-only convention captured in `feedback_conversus_provider_claude_code`. Closes OQ-14-mitigation documentation coverage. **Note**: FR-14 was shipped as part of the 2026-04-24 M026/P01 post-verify commit; it is scoped here as a spec line-item for traceability, not as further P02 work.
 
 ## Success Criteria
 
@@ -194,7 +349,9 @@ Compliance with `.orchestrator/memory/constitution.md` for each principle materi
 - **#OQ-2 (spec-026-sequencing)**: spec 026 (M014 three-pass shell impl) bakes `conversus.sh gate` invocation into `scripts/specify/specify.sh` Pass 3. Sequence options: **Option A** — land M026 BEFORE spec 026 shell impl (spec 026 tests land on the post-migration adapter, zero adapter churn on their tests). **Option B** — land M026 AFTER spec 026 shell impl (spec 026 tests land on paid, then the migration re-homes them — one round of test churn). Recommendation (pending operator): Option A. This is a slot-within-M014 decision since M014 owns the shell impl and the three-pass contract.
 - **#OQ-3 (mechanical-paid-detection-rules)**: FR-10's minimum-viable paid-only detection is preset frontmatter `edition_required: paid`. Do we want a second rule at plan-phase (e.g., `CONVERSUS_PROVIDER=claude-code` before PR #28 merges)? Plan-phase proposes: no — the cost of mechanical CLI-flag detection exceeds the value at this scale; the frontmatter field is sufficient. Operator confirms at discuss-finalize.
 - **#OQ-4 (OSS-parity-confidence-level)**: the session that scaffolded this spec could not fs-inspect `~/Sites/conversus-oss` (sandbox). The parity matrix's `Verified:` column is empty until plan-phase runs an inspection pass. If OSS diverges on ≥3 surfaces the orchestrator consumes, does the migration pause, narrow scope, or ship with paid-escape-hatch as the default for those surfaces? Plan-phase proposes: narrow scope (ship FR-1/FR-2 minimally; defer FR-4/FR-10/FR-11 to a follow-up if parity surprises surface). Operator decides at discuss-finalize with the parity matrix in hand.
+  - **Resolution (2026-04-24, post-P01)**: CLOSED. Parity matrix is final (`.orchestrator/milestones/M026/M026-CONVERSUS-PARITY.md`) with 16 rows inspected. Narrow-scope threshold triggered (drifted+absent=5>3). P02 scope narrowed per the matrix's "OQ-2 Decision Input" section: concentrate on FR-1/FR-2 resolver flip and PR #29 / PR #28 mitigations; defer preset-migration and mcp_server refactor concerns.
 - **#OQ-5 (pipx-venv-lookup)**: the integration test extracts the conversus venv-python from `~/.local/pipx/venvs/conversus/bin/python` (`tests/test-conversus-adapter-shim.sh:119-120`). Under OSS install, the venv path likely differs. Plan-phase proposes: make the lookup edition-aware (probe `conversus-oss` venv first under `CONVERSUS_EDITION=oss` or default, else `conversus` venv). Operator approves at discuss-finalize.
+  - **Resolution (2026-04-24, post-P01)**: CLOSED — assumption corrected. Parity-matrix post-verify addendum confirmed both editions install to the same `~/.local/pipx/venvs/conversus/` venv (single namespace). The existing lookup path in `tests/test-conversus-adapter-shim.sh:119-120` is already correct and requires no edition-awareness. Edition detection happens above the venv layer (per Addendum §D: env-var primary + `pip show` metadata-probe fallback). Supersedes the original proposal.
 - **#OQ-6 (knowledge-MEM-graduate-count)**: FR-13 caps this milestone at 2 graduated MEM entries. Is that the right ceiling? Plan-phase proposes: yes — edition-resolution and paid-escape-hatch are the two load-bearing patterns; other lessons graduate in M018/M023/M024 where they have call sites. Operator confirms at discuss-finalize.
 - **#OQ-7 (conversus_edition-naming)**: is `CONVERSUS_EDITION` the right env-var name? Alternatives considered: `CONVERSUS_BUILD`, `CONVERSUS_TIER`, `CONVERSUS_VARIANT`. Plan-phase proposes: `CONVERSUS_EDITION` for consistency with "open-source edition" / "paid edition" framing. Operator decides.
 - **#OQ-8 (M023-mcp-cross-cut)**: D016 commits M023 to MCP-adapter posture for design renderers. If MCP is a paid-only surface on conversus, does M026's escape hatch generalize to support it? Plan-phase proposes: defer to M023 — edition escape hatch is sufficient for M023 to choose its edition per invocation; no M026 work needed today. Operator confirms at discuss-finalize.
@@ -204,12 +361,23 @@ Compliance with `.orchestrator/memory/constitution.md` for each principle materi
 See `specs/027-conversus-oss-migration/conversus/oss-early-review.md` for full commentary. OQ-9..OQ-15 are concrete drift rows verified against OSS 0.3.0 by running `conversus validate` + `conversus run --provider mock` + one attempted `--provider anthropic` pass against spec 027. The smoke **confirmed** OSS pipeline end-to-end on mock (0.71s, 5 phases) and **reproduced** upstream PR #29 (parallel-429) on first contact against Anthropic with no concurrent traffic.
 
 - **#OQ-9 (OSS-yaml-single-doc-contract)**: OSS 0.3.0's YAML parser (`engine/config.py:600 parse_config` → `yaml.safe_load`) rejects frontmatter-plus-body shape with `ComposerError: expected a single document in the stream`. Orchestrator presets lead with a frontmatter block. Confirm at plan-phase that `scripts/dispatch/adapters/tool/conversus-synth.py` strips frontmatter before synthesis (or restructure into a single document with frontmatter-keys folded into the body). Add a smoke assertion to FR-8 that the synthesized `conversus.yml` passes `conversus validate` on OSS.
+  - **Resolution (2026-04-24)**: CLOSED — preset-vs-tree drift, not OSS-vs-paid drift. Parity-matrix row "Top-level YAML contract — frontmatter rejection" = `verified-identical` (BOTH conversus trees reject identically). DOGFOOD-SMOKE-OSS.md §1 probe 1 confirmed OSS rejection. DOGFOOD §6 real-signal claude-code run confirmed `conversus-synth.py` handles the translation cleanly. Synth-layer work applies equally to either edition; no edition-specific handling needed.
 - **#OQ-10 (OSS-agents-role-required)**: in `mode: red-blue`, OSS requires `agents[].role: blue|red` explicitly. Paid preset `spec-pressure-test.yml` does not declare roles (implied by agent name). Confirm at plan-phase that `conversus-synth.py` injects `role:` fields from agent-name heuristics, OR update the preset schema to require explicit roles (latter breaks CON-1 "preset YAML shape" invariant — spec 027 should resolve which side absorbs the change).
+  - **Resolution (2026-04-24)**: CLOSED — preset-vs-tree drift. Parity-matrix row "`agents[].role` required under `mode: red-blue` on OSS" = `verified-identical` (BOTH trees enforce at `engine/config.py`, OSS line 708, paid line 655 byte-identical rule). DOGFOOD-SMOKE-OSS.md §1 probe 4 confirmed. Synth-layer absorbs via name-heuristic injection; already working in the §6 real-signal run.
 - **#OQ-11 (OSS-prompt-field-rename)**: OSS expects `agents[].prompt:`, paid preset uses `agents[].system_prompt:`. Confirm synthesis-layer handles the rename; add to parity matrix (FR-9).
+  - **Resolution (2026-04-24)**: CLOSED — framing was wrong. Parity-matrix row "`agents[].prompt:` (OSS) vs `agents[].system_prompt:` (paid)" = `verified-identical`: BOTH trees read `agents[].prompt:` (OSS `engine/config.py:45`, paid `engine/config.py:42`). The drift is orchestrator-preset `spec-pressure-test.yml` (which uses `system_prompt:`) vs BOTH conversus trees. Synth-layer absorbs via rename.
 - **#OQ-12 (OSS-output-key-semantic-collision)**: top-level `output:` in paid preset is a structured object (`{template, required_fields}`); in OSS it is a path string. Synthesis layer must disambiguate. Add to parity matrix.
+  - **Resolution (2026-04-24)**: CLOSED — framing was wrong. Parity-matrix row "Top-level `output:` — object-vs-string semantic" = `verified-identical`: BOTH trees use `output: Path` model binding (OSS `engine/config.py:102`, paid `engine/config.py:82`). The drift is orchestrator-preset's structured-object shape vs BOTH conversus trees. DOGFOOD-SMOKE-OSS.md §1 probe 2 confirmed: both editions raise the same `TypeError: unsupported operand type(s) for /: 'PosixPath' and 'dict'`. **Synth-layer must strip/rewrite `output:` before passing to conversus**, not merely rename it — leaving the object shape produces an unhandled exception on both editions.
 - **#OQ-13 (OSS-arbiter-block-absent-or-renamed) — PARITY CRUX**: OSS's `validate` cost-estimate reports `Arbiter: no`; the red-blue pipeline's final phase is `synthesis`, not `arbitration`. Whether OSS exposes an arbiter slot at all, OR whether the orchestrator must treat `synthesis` output as arbiter-equivalent, is open. This is the highest-risk parity question for FR-5/FR-7/SC-6 (the adapter's `PASS\|BLOCK` verdict contract lives in the arbiter block today). Plan-phase proposes: inspect OSS `engine/pipeline.py` for red-blue's synthesis → verdict path; determine whether a `linter.output_contract` equivalent ships in OSS; document in the parity matrix. Cannot land FR-7 without this answer.
+  - **Resolution (2026-04-24)**: CLOSED — DC-6 spike verdict=GO. `SPIKE-SYNTHESIS-CRUX.md`: OSS ships `linter/output_contract.py` byte-identical to paid (434 lines); red-blue pipeline (`engine/phases.py:551+`) writes synthesis to `summary/final.md` at the same path the adapter reads; Pydantic `ConversusOutput` emits all three adapter-consumed keys at exact nesting as a strict superset. The adapter at `scripts/dispatch/adapters/tool/conversus.sh:285-322` requires **zero code changes** for OSS. The "arbiter" vs "synthesis" phase naming is cosmetic — both feed the same `linter.output_contract` contract. Post-phase finding F2 (POST-P01-FINDINGS.md) separately notes the new `arbiter/resolution.md` file as a *future* preference-order enhancement, orthogonal to this OQ.
 - **#OQ-14 (OSS-upstream-PR-29-reproduced)**: upstream PR #29 (anthropic parallel-429) reproduces on first contact against an authenticated subscription account with no other concurrent traffic, for a 2-agent red-blue config (dogfood smoke 2026-04-23). This re-centers #OQ-1 from "sequencing question" to "is OSS actually usable for red-blue/multi-agent on Anthropic right now?". Until #29 is resolved upstream OR the adapter force-serializes OSS on Anthropic OR integration tests use a non-Anthropic provider on the OSS branch, FR-8/SC-4's dual-edition test may not exercise OSS against Anthropic. Plan-phase proposes either (a) run the OSS branch of FR-8 against `ollama` or a local provider, (b) document skip-on-429 as an explicit test-mode path, or (c) gate FR-8's OSS-branch arming behind an OSS version check for PR #29 merge-status.
+  - **Resolution (2026-04-24)**: PARTIALLY CLOSED with operator-discipline mitigation. Parity-matrix row "Upstream PR #29" = `verified-absent` on OSS. The mitigation is `CONVERSUS_PROVIDER=claude-code`: on Anthropic OAuth auth, subprocess-per-agent dispatch sidesteps the policy gate entirely (see FR-14 and `references/architecture.md "Conversus Adapter — Operator Notes"`). DOGFOOD-SMOKE-OSS.md §6 empirically confirmed the claude-code path runs cleanly on OSS end-to-end (5 phases × 9 dispatches, no 429s, ~12 min wall time). **Still live for P02 plan-phase**: FR-8 posture when direct-API Anthropic path is exercised on OSS — choose (a) ollama/local provider, (b) skip-on-429 with `known-upstream-429` annotation, or (c) gate OSS branch on PR #29 merge-status. Per `P01-SUMMARY.md` the operator-recommended posture is `skip-on-429` with `known-upstream-429` annotation (ollama absent on operator machine).
 - **#OQ-15 (OSS-mock-synth-does-not-honor-config)**: OSS 0.3.0's mock provider synthesis phase emits a hard-coded "pragmatist + devils-advocate / cooperative" stub template regardless of configured agents + mode. This breaks any stub-mode test that asserts synthesis-content shape beyond "a file exists". Confirm at plan-phase that orchestrator stub-mode fixtures (CON-4-adjacent) do NOT rely on OSS's mock synth output — they should use the adapter's own stub-mode fixtures per `CONVERSUS_STUB=1`.
+  - **Resolution (2026-04-24)**: CLOSED. DOGFOOD-SMOKE-OSS.md §2a confirmed: `linter.output_contract` faithfully surfaces what the mock synthesizer wrote, which is a content-stub. The adapter's own `CONVERSUS_STUB=1` fixtures are independent of upstream conversus's mock provider and remain the canonical test surface. P02 stub-mode tests must assert structural keys only, not synthesis content — this rule lands as a doc note in the plan-phase test section.
+
+### Added 2026-04-24 from M026/P01 dogfood smoke §6 (real-signal gate run)
+
+- **#OQ-16 (claude-code-false-PASS)**: DOGFOOD-SMOKE-OSS.md §6 demonstrated that on `CONVERSUS_PROVIDER=claude-code`, the synthesizer emits prose-shaped output (1-2 KB per review) that `linter.output_contract`'s red-blue structural parser cannot tally, producing `quality_indicators.*=0` and a **false-PASS** gate verdict. Confirmed against spec 027 itself: adapter reported PASS/0 disputes while the synthesis said BLOCK/8 disputes. This is a new parity axis not in the original matrix: the `linter.output_contract` ↔ synthesizer output-shape contract is **broken on --provider claude-code** (intact on mock; assumed intact on direct-API anthropic). Plan-phase M026/P02 must choose: (1) upstream fix — tighten synthesizer prompt under claude-code to emit the structural tally, (2) adapter-layer fix — provider-aware verdict derivation with prose-parsing fallback or PASS-refusal on claude-code, or (3) document-only — treat gate-result.md as advisory on claude-code and require operators to read `summary/final.md` by eye. Option 3 is minimum-viable; option 2 is the correct adapter-side fix; option 1 is the right upstream fix. Interacts with POST-P01-FINDINGS.md F1 (extract rationale from verdict prose) and F2 (prefer `arbiter/resolution.md`). Bundled with F1/F2/F3 as a single P02 adapter task is recommended.
 
 ## Dependencies
 

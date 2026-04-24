@@ -145,8 +145,12 @@ fi
 
 # ----------------------------------------------------------------------------
 # FR-17 Tier 1 emission: one conversus_gate_invocation record per invocation.
+# M026/P02/T02 (FR-4): resolve the adapter's edition so the JSONL record
+# carries it adjacent to adapter_version. Stderr is dropped per DC-5.
 # ----------------------------------------------------------------------------
-emit_conversus_gate_record "$ISSUE_REF" "$TIMEOUT" "$verdict" "$rc" "$duration_ms" || true
+_edition="$(bash "$ADAPTER" check 2>/dev/null | grep -E '^edition=' | head -n 1 | sed -E 's/^edition=//')"
+: "${_edition:=unknown}"
+emit_conversus_gate_record "$ISSUE_REF" "$TIMEOUT" "$verdict" "$rc" "$duration_ms" "$_edition" || true
 
 rm -f "$tmp_out" "$tmp_err"
 exit "$rc"

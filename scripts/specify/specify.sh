@@ -529,8 +529,13 @@ if [ "$PROBE_VERDICT" = "above-threshold" ]; then
     esac
     ADAPTER_VERDICTS="$V"
     # Emit conversus_gate_invocation JSONL record per FR-16.
+    # M026/P02/T02 (FR-4, AD-4): resolve edition from adapter and place
+    # "edition" immediately adjacent to "adapter_version". Stderr dropped
+    # per DC-5 so adapter diagnostics don't contaminate the JSON literal.
+    EDITION="$(bash "$ADAPTER" check 2>/dev/null | grep -E '^edition=' | head -n 1 | sed -E 's/^edition=//')"
+    : "${EDITION:=unknown}"
     TS_G="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    REC_G="{\"type\":\"conversus_gate_invocation\",\"ts\":\"${TS_G}\",\"gate_id\":\"spec-pressure-test\",\"spec_path\":\"${SPEC_PATH}\",\"verdict\":\"${V}\",\"adapter_version\":\"m011-p07\",\"llm_calls\":0,\"elapsed_ms\":${G_MS},\"estimated_cost_usd\":0.0,\"source\":\"runtime\"}"
+    REC_G="{\"type\":\"conversus_gate_invocation\",\"ts\":\"${TS_G}\",\"gate_id\":\"spec-pressure-test\",\"spec_path\":\"${SPEC_PATH}\",\"verdict\":\"${V}\",\"adapter_version\":\"m011-p07\",\"edition\":\"${EDITION}\",\"llm_calls\":0,\"elapsed_ms\":${G_MS},\"estimated_cost_usd\":0.0,\"source\":\"runtime\"}"
     LOG_FILE="${STATE_ROOT}/.orchestrator/execution-log.jsonl"
     printf '%s\n' "$REC_G" >> "$LOG_FILE" 2>/dev/null || true
     rm -f /tmp/.specify-p04-conversus-$$.out

@@ -921,22 +921,32 @@ classify_gh_rc() {
 
 # --- FR-17 conversus gate record emitter (P04/T03) ---------------------------
 
-# emit_conversus_gate_record <issue-ref> <timeout-sec> <verdict> <rc> <duration-ms>
+# emit_conversus_gate_record <issue-ref> <timeout-sec> <verdict> <rc> <duration-ms> [<edition>]
 # ----------------------------------------------------------------------------
 # Thin wrapper around emit_tier1_record for the conversus gate call site.
 # Shared between github-sync.sh (if the gate is invoked inline) and the
 # standalone github-conversus-gate.sh (T05). Honors source:"runtime" via
 # emit_tier1_record and respects ORCHESTRATOR_ROOT for state root resolution.
+#
+# M026/P02/T02 (FR-4, AD-4): accepts an optional 6th positional `edition`
+# argument ∈ {oss, paid, unknown} resolved from the conversus adapter's
+# `check` output. Emits `adapter_version` (M019 Tier 1 provenance marker)
+# immediately followed by `edition` so the two provenance fields cluster
+# adjacently per AD-4. Defaults to "unknown" when the caller omits the
+# argument — backward compatible, no caller breakage (AD-4 additive).
 emit_conversus_gate_record() {
   local ref="${1:-}"
   local to="${2:-}"
   local verdict="${3:-}"
   local rc="${4:-}"
   local dur="${5:-}"
+  local edition="${6:-unknown}"
   emit_tier1_record conversus_gate_invocation \
     "issue_ref=${ref}" \
     "timeout_sec=${to}" \
     "verdict=${verdict}" \
+    "adapter_version=m013-p04" \
+    "edition=${edition}" \
     "rc=${rc}" \
     "duration_ms=${dur}"
 }

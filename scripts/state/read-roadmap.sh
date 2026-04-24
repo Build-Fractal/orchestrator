@@ -9,6 +9,7 @@
 #     status <P##>    — outputs "complete" or "incomplete" for a specific phase
 #     phase <P##>     — outputs detail for one phase: id status risk depends demo
 #     active-phase    — outputs the first incomplete phase ID (risk-ordered, dep-satisfied)
+#     affects <P##>   — outputs CSV of phase IDs whose Depends: contains <P##>
 #     tier            — outputs the tier value from frontmatter
 #     count           — outputs the number of phases
 #
@@ -26,8 +27,8 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --query)
       QUERY="$2"; shift 2
-      # If query takes an argument (phase, status), grab next non-flag arg
-      if [[ "$QUERY" = "phase" || "$QUERY" = "status" ]]; then
+      # If query takes an argument (phase, status, affects), grab next non-flag arg
+      if [[ "$QUERY" = "phase" || "$QUERY" = "status" || "$QUERY" = "affects" ]]; then
         if [[ $# -gt 0 && ! "$1" =~ ^-- ]]; then
           # Check if this is a phase ID or the roadmap file
           if [[ "$1" =~ ^P[0-9] ]]; then
@@ -295,6 +296,24 @@ case "$QUERY" in
     fi
     ;;
 
+  affects)
+    if [[ -z "$QUERY_ARG" ]]; then
+      echo "read-roadmap.sh: 'affects' query requires a phase ID argument" >&2
+      exit 1
+    fi
+    # Find phases whose Depends list contains the target phase. Output CSV in
+    # roadmap-declaration order. Empty result → "none".
+    result=$(parse_phases | awk -v target="$QUERY_ARG" '
+      {
+        n = split($4, deps, ",")
+        for (i = 1; i <= n; i++) {
+          if (deps[i] == target) { print $1; next }
+        }
+      }
+    ' | paste -sd, -)
+    echo "${result:-none}"
+    ;;
+
   tier)
     value=$(get_frontmatter_value "tier")
     if [[ -n "$value" ]]; then
@@ -311,7 +330,7 @@ case "$QUERY" in
 
   *)
     echo "read-roadmap.sh: unknown query '$QUERY'" >&2
-    echo "Valid queries: frontmatter, phases, status, phase, active-phase, tier, count" >&2
+    echo "Valid queries: frontmatter, phases, status, phase, active-phase, affects, tier, count" >&2
     exit 1
     ;;
 esac

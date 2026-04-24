@@ -4,6 +4,17 @@ All notable changes to spec-kit-orchestrator are documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This project uses semantic versioning.
 
+## [Unreleased]
+
+### Changed
+
+- Task plan filename convention canonicalized to `T##-<slug>-PLAN.md` in `commands/plan-phase.md`. The no-slug form `T##-PLAN.md` remains accepted by every discovery glob and downstream tooling — historical milestones are unchanged. Planners producing new task plans should use the slug form for readability and sibling-symmetry with `T##-<slug>-PAYLOAD.md` / `T##-<slug>-SUMMARY.md`. (Bug H)
+
+### Fixed
+
+- `scripts/integrations/github-init.sh` now canonicalizes task IDs from slugged filenames (e.g. `T01-conversus-resolver-PLAN.md` → orchestrator ID `T01`), so slug-form task plans are projected to GitHub Issues instead of being silently skipped. (Bug H)
+- `scripts/lifecycle/phase-transition.sh` deduplicates concatenated task-summary fields (`provides`, `key_files`, `key_decisions`, `patterns_established`) and overrides `requires`/`affects` with roadmap-derived phase graph position instead of leaking internal task IDs into phase frontmatter. Adds a new `affects <P##>` query to `scripts/state/read-roadmap.sh` (reverse-Depends). (Bug F)
+
 ## [0.9.1] — 2026-04-23
 
 v0.9.1 closes M025 (021-github-installer-coexistence) — remediation of the M013/P04/T04 hook-config regression whose installer overwrote any pre-existing `~/.claude/settings.json` with a schema-invalid wrapper document. See `specs/021-github-installer-coexistence/spec.md` for the authoritative scope.

@@ -290,15 +290,34 @@ if [[ "$STEP" = "V" ]]; then
     VERIFY_PROJECT_ROOT="$(cd "$MILESTONE_DIR/../.." 2>/dev/null && pwd)" || VERIFY_PROJECT_ROOT="."
   fi
 
-  # Extract and run check commands from backtick-wrapped lines
+  # Extract and run check commands from the Verification section. Two
+  # forms are supported:
+  #   1. Inline backticks — `Check: \`cmd\`` or `- \`cmd\`` (the historical form)
+  #   2. Fenced code blocks — ```...``` (e.g. plans that list multiple
+  #      bash invocations on consecutive lines, M026/P02 dogfood symptom).
+  # Lines inside a fence are treated as one command per line; the language
+  # hint after the opening fence (` ```bash `) is recognized but not run.
   checks_passed=0
   checks_failed=0
   fail_details=""
+  in_fence=false
 
   while IFS= read -r line; do
-    # Match lines containing `command` backtick patterns (Check: `cmd` or - `cmd`)
+    # Toggle fence state on ``` lines (with optional language hint).
+    if printf '%s\n' "$line" | grep -qE '^[[:space:]]*```'; then
+      if [[ "$in_fence" = "true" ]]; then
+        in_fence=false
+      else
+        in_fence=true
+      fi
+      continue
+    fi
+
     check_cmd=""
-    if echo "$line" | grep -qE '`[^`]+`'; then
+    if [[ "$in_fence" = "true" ]]; then
+      # Strip leading/trailing whitespace; skip blank lines.
+      check_cmd=$(printf '%s' "$line" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+    elif echo "$line" | grep -qE '`[^`]+`'; then
       check_cmd=$(echo "$line" | sed 's/.*`\([^`]*\)`.*/\1/')
     fi
     [[ -z "$check_cmd" ]] && continue
@@ -313,6 +332,23 @@ if [[ "$STEP" = "V" ]]; then
       fail_details="${fail_details}FAIL: $check_cmd\n"
     fi
   done <<< "$verify_section"
+
+  # Silent-zero PASS is the anti-pattern that masked M026/P02/T01's actual
+  # verification. If the section had real content but the parser found
+  # nothing executable, fail loud rather than green-lighting a no-op.
+  total_checks=$((checks_passed + checks_failed))
+  if [[ "$total_checks" -eq 0 ]]; then
+    # Count non-empty, non-header lines in the verify section to decide
+    # whether the silence is "no Verification declared" (legitimate skip)
+    # or "Verification section exists but parser missed everything" (bug).
+    section_body_lines=$(printf '%s\n' "$verify_section" | sed -E '/^## /d' | grep -cE '[^[:space:]]' || true)
+    if [[ "$section_body_lines" -gt 0 ]]; then
+      _auto_output "AUTO:VERIFY_NO_CHECKS phase=$PHASE task=$TASK section_body_lines=$section_body_lines"
+      echo "auto-loop.sh: Verification section in $task_plan has $section_body_lines content lines but the parser extracted zero executable commands." >&2
+      echo "  Use either inline backticks (\`bash scripts/verify/foo.sh\`) or a fenced code block (\`\`\` ... \`\`\`) so commands can be extracted." >&2
+      exit 1
+    fi
+  fi
 
   if [[ "$checks_failed" -gt 0 ]]; then
     _auto_output "AUTO:VERIFY_FAIL phase=$PHASE task=$TASK checks_passed=$checks_passed checks_failed=$checks_failed"
@@ -381,6 +417,27 @@ fi
 # --- Ensure knowledge graph is current before dispatch ---
 if [ -f "$REBUILD_INDEX" ]; then
   bash "$REBUILD_INDEX" --root "$PROJECT_ROOT" >/dev/null 2>&1 || true
+fi
+
+# --- Roadmap↔disk drift guard ---
+# Run sync-roadmap in read-only mode at the top of the loop. If the
+# roadmap checkboxes disagree with phase-summary existence on disk,
+# fail loud — derive-phase would otherwise return a stale state and the
+# loop could re-plan an already-planned phase or skip past a completed
+# one. Author must reconcile manually before auto can proceed.
+if [[ -f "$ROADMAP_FILE" && -f "$SYNC_ROADMAP" ]]; then
+  drift_log=$(mktemp)
+  bash "$SYNC_ROADMAP" "$ROADMAP_FILE" "$MILESTONE_DIR" >"$drift_log" 2>&1 || true
+  if grep -q '^SYNC:MISMATCH' "$drift_log"; then
+    drift_lines=$(grep '^SYNC:MISMATCH' "$drift_log" | tr '\n' ';' | sed 's/;$//')
+    rm -f "$drift_log"
+    _auto_output "AUTO:ROADMAP_DRIFT milestone=$MILESTONE_ID details=$drift_lines"
+    echo "auto-loop.sh: roadmap↔disk drift detected — refusing to advance" >&2
+    echo "  Mismatches: $drift_lines" >&2
+    echo "  Recover with: bash $SYNC_ROADMAP $ROADMAP_FILE $MILESTONE_DIR --fix" >&2
+    exit 12
+  fi
+  rm -f "$drift_log"
 fi
 
 # --- Step A: Derive state and identify next task ---

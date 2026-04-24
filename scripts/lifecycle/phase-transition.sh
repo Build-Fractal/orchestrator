@@ -47,6 +47,25 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 SYNC_ROADMAP="$PROJECT_ROOT/scripts/lifecycle/sync-roadmap.sh"
 CHECK_EXTERNAL="$PROJECT_ROOT/scripts/verify/check-external-mods.sh"
+READ_ROADMAP="$PROJECT_ROOT/scripts/state/read-roadmap.sh"
+
+# Dedup a CSV string while preserving first-seen order. Empty input → empty.
+# Used to clean cosmetic duplicates from concatenated task-summary fields
+# (provides, key_files, key_decisions, patterns_established) before they land
+# in phase frontmatter. Stripping is whitespace-only — token content is not
+# normalized otherwise.
+_dedup_csv() {
+  # Empty input → empty output. Without this guard, `grep -v` with no matching
+  # lines exits 1, which trips `set -o pipefail` and aborts the script.
+  if [[ -z "$1" ]]; then
+    return 0
+  fi
+  printf '%s' "$1" \
+    | tr ',' '\n' \
+    | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' \
+    | awk 'NF && !seen[$0]++' \
+    | paste -sd, -
+}
 
 # --- Argument parsing ---
 if [[ $# -lt 2 ]]; then
@@ -225,6 +244,32 @@ if [[ -d "$TASKS_DIR" ]]; then
       body_parts="${body_parts:+$body_parts\n}[$task_id]: $body_text"
     fi
   done
+fi
+
+# --- Post-process accumulated lists ---
+# Cosmetic dedup on fields that legitimately concat across tasks. Without this,
+# concatenated task summaries produce frontmatter like
+# "provides=foo, foo, bar, bar" (M026/P00 dogfood symptom).
+provides_list=$(_dedup_csv "$provides_list")
+key_files_list=$(_dedup_csv "$key_files_list")
+key_decisions_list=$(_dedup_csv "$key_decisions_list")
+patterns_list=$(_dedup_csv "$patterns_list")
+
+# requires/affects describe phase-to-phase graph position, not internal task
+# IDs — so override the task-level concat with roadmap-derived values.
+# Falls back to the task-derived value only if the roadmap query fails (no
+# roadmap, missing phase, etc). The roadmap is the source of truth.
+ROADMAP_FILE="$MILESTONE_DIR/${MILESTONE_ID}-ROADMAP.md"
+if [[ -f "$ROADMAP_FILE" && -f "$READ_ROADMAP" ]]; then
+  phase_line=$(bash "$READ_ROADMAP" "$ROADMAP_FILE" phase "$PHASE_ID" 2>/dev/null || true)
+  if [[ -n "$phase_line" ]]; then
+    requires_list=$(printf '%s' "$phase_line" | awk '{print $4}')
+    [[ -z "$requires_list" || "$requires_list" = "none" ]] && requires_list="none"
+  fi
+  affects_from_roadmap=$(bash "$READ_ROADMAP" "$ROADMAP_FILE" affects "$PHASE_ID" 2>/dev/null || true)
+  if [[ -n "$affects_from_roadmap" ]]; then
+    affects_list="$affects_from_roadmap"
+  fi
 fi
 
 # --- Output derived fields ---

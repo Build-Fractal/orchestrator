@@ -210,7 +210,7 @@ Write the plan files to the phase directory:
 
 1. **Write the phase plan** to `<milestone-dir>/phases/P##/P##-PLAN.md`.
 2. **Create the tasks directory** at `<milestone-dir>/phases/P##/tasks/` if it doesn't exist.
-3. **Write individual task plans** to `<milestone-dir>/phases/P##/tasks/T##-PLAN.md` for each task, using the `templates/task-plan.md` template format.
+3. **Write individual task plans** to `<milestone-dir>/phases/P##/tasks/T##-<slug>-PLAN.md` for each task (e.g. `T01-conversus-resolver-PLAN.md`), using the `templates/task-plan.md` template format. The `<slug>` is a short kebab-case descriptor derived from the task title; it keeps the filename readable and sibling-symmetric with the `T##-<slug>-PAYLOAD.md` / `T##-<slug>-SUMMARY.md` files that dispatch and phase-transition emit. Back-compat: the no-slug form `T##-PLAN.md` is still accepted by every discovery glob (`T*-PLAN.md`) and by downstream tooling (which canonicalizes the leading `T##` prefix for orchestrator IDs), so historical milestones are not affected.
 
 ## Post-Completion
 

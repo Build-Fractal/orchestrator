@@ -205,6 +205,21 @@ handle_template() {
       printf 'A pre-Bash hook (`scripts/hooks/pre-bash-shape-guard.sh`) auto-rewrites six\n'
       printf 'common deviations from these shapes and hard-rejects four others with a\n'
       printf 'wrapper-pointing diagnostic. See ANTIPATTERNS.md AP-005..AP-009.\n'
+      printf '\n### Branch Discipline\n\n'
+      printf 'You inherit the git branch the dispatcher is sitting on. Commit your work\n'
+      printf 'on that branch.\n\n'
+      printf -- '- Do NOT `git checkout`, `git switch`, `git branch`, `git merge`, or\n'
+      printf '  `git rebase` to a different branch unless your task plan explicitly\n'
+      printf '  requires it.\n'
+      printf -- '- Do NOT create a new branch as a side-effect of "isolating" your work\n'
+      printf '  — git worktrees handle that at the dispatcher layer when configured.\n'
+      printf -- '- If you genuinely believe a side-branch is required (e.g. the task plan\n'
+      printf '  calls for a hotfix branch), STOP and report rather than acting\n'
+      printf '  unilaterally. The dispatcher will tell you whether to proceed.\n\n'
+      printf 'This rule exists because branch switches inside a dispatched task are\n'
+      printf 'invisible to the dispatcher audit trail and have caused mid-loop\n'
+      printf 'confusion (commits landing on a branch the operator did not expect,\n'
+      printf 'then being merged opaquely).\n'
       ;;
     *)
       printf 'section-handlers: unknown template section: %s\n' "$section_name" >&2

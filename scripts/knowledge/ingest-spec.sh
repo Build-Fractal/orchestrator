@@ -487,8 +487,16 @@ classify_requirements_section() {
         if [ -n "$current_fr_id" ]; then
           _emit_requirement "$current_fr_id" "$current_fr_body"
         fi
-        # Extract FR ID number
-        current_fr_id="$(printf '%s' "$rline" | sed 's/.*\*\*FR-\([0-9]*\)\*\*.*/\1/')"
+        # Extract FR ID number. Accept both:
+        #   - **FR-N**: desc
+        #   - **FR-N (slug-or-anything)**: desc
+        # The numeric ID is what matters; the optional parenthetical is decoration.
+        current_fr_id="$(printf '%s' "$rline" | sed -n 's/.*\*\*FR-\([0-9][0-9]*\)\([^*]*\)\*\*.*/\1/p')"
+        if [ -z "$current_fr_id" ]; then
+          echo "ERROR: ingest-spec.sh: line looks like an FR marker but no numeric ID could be extracted. Aborting to avoid silent data loss." >&2
+          echo "ERROR: offending line: $rline" >&2
+          exit 1
+        fi
         current_fr_body="$rline"
         ;;
       '  '*)
@@ -532,9 +540,10 @@ _emit_requirement() {
   fr_padded="$(printf '%03d' "$fr_num")"
   local fr_id="SPEC-FR-${fr_padded}"
   FR_SEQ=$((FR_SEQ + 1))
-  # Extract description: strip the "- **FR-NNN**: " prefix from first line
+  # Extract description: strip the "- **FR-NNN**: " or "- **FR-NNN (slug)**: "
+  # prefix from first line. The optional parenthetical is decoration.
   local description
-  description="$(printf '%s' "$fr_body" | head -1 | sed 's/^- \*\*FR-[0-9]*\*\*:[[:space:]]*//')"
+  description="$(printf '%s' "$fr_body" | head -1 | sed 's/^- \*\*FR-[0-9][0-9]*[^*]*\*\*:[[:space:]]*//')"
   create_chunk "$fr_id" "spec/requirement" "FR-${fr_padded}" "$description" "$fr_body"
 }
 

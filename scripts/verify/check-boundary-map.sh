@@ -75,12 +75,25 @@ while IFS= read -r line; do
       # Extract items on the same line after "Produces:"
       items=$(echo "$line" | sed 's/.*Produces:[[:space:]]*//')
       if [[ -n "$items" && "$items" != "$line" ]]; then
+        # Strip parenthetical commentary so comma-inside-parens doesn't
+        # explode a single path-with-annotation into fragments. Same pattern
+        # read-roadmap.sh uses on Risk: and Depends: lines.
+        items=$(printf '%s' "$items" | sed 's/([^)]*)//g')
         # Split comma-separated items
         IFS=',' read -ra ITEMS <<< "$items"
         for item in "${ITEMS[@]}"; do
           item=$(echo "$item" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
           # Handle glob patterns like "commands/*.md" or "scripts/state/*.sh"
           if [[ -z "$item" ]]; then
+            continue
+          fi
+          # Skip fragments that aren't path-shaped. Roadmap Produces: cells
+          # sometimes carry narrative prose like "patched conversus.sh;
+          # edition env-var handling; OAuth auto-preflight" which comma-splits
+          # into fragments that aren't files on disk. Heuristic: a path is
+          # alnum + [._/*-] with no whitespace, semicolons, or quotes.
+          # (Parenthetical annotations were already stripped above.)
+          if ! printf '%s' "$item" | grep -qE '^[A-Za-z0-9._/*-]+$'; then
             continue
           fi
           CHECKS=$((CHECKS + 1))

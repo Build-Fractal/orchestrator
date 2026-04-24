@@ -383,6 +383,27 @@ if [ -f "$REBUILD_INDEX" ]; then
   bash "$REBUILD_INDEX" --root "$PROJECT_ROOT" >/dev/null 2>&1 || true
 fi
 
+# --- Roadmap↔disk drift guard ---
+# Run sync-roadmap in read-only mode at the top of the loop. If the
+# roadmap checkboxes disagree with phase-summary existence on disk,
+# fail loud — derive-phase would otherwise return a stale state and the
+# loop could re-plan an already-planned phase or skip past a completed
+# one. Author must reconcile manually before auto can proceed.
+if [[ -f "$ROADMAP_FILE" && -f "$SYNC_ROADMAP" ]]; then
+  drift_log=$(mktemp)
+  bash "$SYNC_ROADMAP" "$ROADMAP_FILE" "$MILESTONE_DIR" >"$drift_log" 2>&1 || true
+  if grep -q '^SYNC:MISMATCH' "$drift_log"; then
+    drift_lines=$(grep '^SYNC:MISMATCH' "$drift_log" | tr '\n' ';' | sed 's/;$//')
+    rm -f "$drift_log"
+    _auto_output "AUTO:ROADMAP_DRIFT milestone=$MILESTONE_ID details=$drift_lines"
+    echo "auto-loop.sh: roadmap↔disk drift detected — refusing to advance" >&2
+    echo "  Mismatches: $drift_lines" >&2
+    echo "  Recover with: bash $SYNC_ROADMAP $ROADMAP_FILE $MILESTONE_DIR --fix" >&2
+    exit 12
+  fi
+  rm -f "$drift_log"
+fi
+
 # --- Step A: Derive state and identify next task ---
 state=$(bash "$DERIVE_PHASE" "$MILESTONE_DIR" 2>/dev/null) || state="unknown"
 

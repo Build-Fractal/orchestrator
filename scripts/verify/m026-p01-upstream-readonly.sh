@@ -18,7 +18,11 @@ FAIL=0
 # Pre-T01 baseline dirt captured from the two trees at dispatch time:
 #   ~/Sites/conversus-oss: `?? .claude/` and `?? .conversus/`
 #   ~/Sites/conversus:     ` M uv.lock`
-# Any new dirt beyond these paths is a T01 CON-5 violation.
+# Operator-tooling whitelist extension (2026-04-23, post-verify): aider
+# drops `.aider.*` working files (chat history, input history, tags cache)
+# into trees where the operator is actively editing. These are operator
+# tool state, not orchestrator writes, so they are whitelisted by prefix.
+# Any new dirt beyond these paths/prefixes is a CON-5 violation.
 
 check_tree_readonly() {
   tree_path="$1"
@@ -47,11 +51,13 @@ check_tree_readonly() {
       *conversus-oss)
         case "$path" in
           ".claude/"|".conversus/") whitelisted=1 ;;
+          .aider.*) whitelisted=1 ;;
         esac
         ;;
       *conversus)
         case "$path" in
           "uv.lock") whitelisted=1 ;;
+          .aider.*) whitelisted=1 ;;
         esac
         ;;
     esac

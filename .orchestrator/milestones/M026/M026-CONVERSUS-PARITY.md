@@ -95,6 +95,65 @@ a significant finding: the orchestrator's `conversus-synth.py` must
 already be performing (or must start performing) these translations, and
 that work is independent of the migration default.
 
+## Addendum: 2026-04-23 post-verification install reality
+
+After P01 verification, the operator ran `pipx install conversus` against
+the OSS tree (editable-install via `~/Sites/conversus-oss`). This surfaced
+three facts the initial matrix missed and that reshape P02 planning:
+
+1. **Both editions publish to PyPI under the same package name `conversus`**
+   and install to the same venv path `~/.local/pipx/venvs/conversus/`.
+   Installing OSS replaces paid (and vice versa) — you cannot hold both
+   editions in pipx's default namespace simultaneously. **Path-based
+   edition detection is infeasible.** Verdict: `verified-drifted`
+   (upgraded from the original `pipx venv path` row, which assumed
+   separate `conversus-oss/` and `conversus/` venv directories).
+2. **OSS ships a second console-script entry point `conversus-lint`**
+   (installed at `~/.local/pipx/venvs/conversus/bin/conversus-lint`)
+   alongside the `python -m linter.output_contract` module invocation
+   the adapter currently uses. Paid's entry-point inventory is not
+   confirmed post-uninstall but the orchestrator adapter does not use
+   `conversus-lint` today. Verdict: `verified-moot` for current adapter;
+   noted as a P02 opportunity (the adapter could switch from `python -m`
+   to `conversus-lint` for cleaner invocation on OSS).
+3. **Editable-install source path is `~/Sites/conversus-oss`.** The
+   installed package imports source directly from that working tree, so
+   any changes in the tree propagate to the installed binary without
+   reinstall. This tightens the operator-discipline CON-5 read-only
+   posture: a write under `~/Sites/conversus-oss` is simultaneously a
+   write to the operator's installed conversus. Verdict: `verified-moot`
+   for parity (both editions behave the same way under editable installs)
+   but `verified-operational-constraint` for P02 test planning.
+
+### P02 edition-detection strategy (updated from OQ-5)
+
+Since path collision rules out directory-based detection, P02 must pick one:
+
+- **(a) pip-show metadata probe.** Run `python -m pip show conversus` in
+  the pipx venv and parse `Home-page:`. OSS = `github.com/Build-Fractal/conversus-oss`;
+  paid = different (to be confirmed when paid reinstall happens).
+  Adds one subprocess per adapter invocation unless cached.
+- **(b) `CONVERSUS_EDITION=oss|paid` env-var override.** Operator declares
+  which edition is active; adapter trusts the declaration. Lowest overhead,
+  highest operator discipline. Matches the dual-edition escape-hatch
+  posture captured in `project_m026_oss_posture`.
+- **(c) `conversus-lint` presence sniff.** If the binary exists in the
+  venv, treat as OSS. Works today but assumes paid never adds that
+  entry point — brittle as a long-term differentiator.
+
+Recommendation for P02: **(b) primary + (a) fallback.** Env-var makes the
+common case zero-cost; metadata probe catches the accident-prone case
+where the operator forgot to set the var.
+
+### OSS venv inventory (authoritative as of 2026-04-23T22:50 PT)
+
+- OSS installed: `/Users/brettkellgren/.local/pipx/venvs/conversus/` —
+  package `conversus 0.3.0`, editable at `/Users/brettkellgren/Sites/conversus-oss`,
+  binaries `conversus` + `conversus-lint`, License Apache-2.0,
+  Home-page `https://github.com/Build-Fractal/conversus-oss`.
+- Paid: **uninstalled** (displaced by OSS install). Re-install requires
+  a separate pipx namespace or displacing OSS back.
+
 ## Drill-down pointers
 
 - Seed scratch matrix: `.orchestrator/scratch/conversus-oss-migration-parity.md`

@@ -49,3 +49,29 @@ paid_venv_conversus_binary_present=true
   - `~/.local/pipx/venvs/conversus/bin/conversus` -> 198-byte executable (present).
 - No writes to `~/.local/pipx/venvs/` or `~/Sites/conversus*` trees; no
   network invocations; no ollama model pulls.
+
+## Addendum: 2026-04-23T22:50 PT post-verify install
+
+After P01 verification passed, the operator ran `pipx install conversus`
+against the OSS tree. This changed the pipx-venv state captured above.
+The T03 probe lines remain as the historical T03-time snapshot for gate
+stability; the current state as of this addendum is:
+
+- OSS is now installed at `~/.local/pipx/venvs/conversus/` (same path the
+  T03 probe labeled as "paid"). Package `conversus 0.3.0`, editable at
+  `~/Sites/conversus-oss`, Home-page `github.com/Build-Fractal/conversus-oss`.
+  Binaries: `conversus` + `conversus-lint`.
+- Paid is uninstalled (displaced by the OSS install under the same
+  package name `conversus`).
+
+### Updated P02 Fallback Posture (supersedes the OQ-5 lookup chain above)
+
+The dual-venv fallback chain (OSS path + paid path) assumed path-based
+edition separation. That assumption is wrong: both editions install to
+the same path. P02's edition-detection strategy must not rely on venv
+path — see `M026-CONVERSUS-PARITY.md` § Addendum "P02 edition-detection
+strategy" for the recommended `CONVERSUS_EDITION=oss|paid` env-var primary
++ `pip show` metadata fallback.
+
+FR-8 OSS-branch test still uses `skip-on-429` with `known-upstream-429`
+annotation (OQ-3 unchanged — ollama remains absent).

@@ -5,19 +5,25 @@
 
 ## Overview
 
-spec-kit-orchestrator is a standalone autonomous orchestrator. It is distributed as a runtime-specific skill bundle installed via `packaging/install/install-<runtime>.sh`. The installer is idempotent and safe to re-run for updates. There is no copy-based install path and no dependency on any other workflow tool at runtime.
+spec-kit-orchestrator is a standalone autonomous orchestrator. It is distributed as a runtime-specific installer that runs from a clone of this repo. The installer does three things:
+
+1. Registers the `orchestrator:*` skills/commands into the active runtime (Claude Code / Codex CLI / Cursor).
+2. Wires runtime hooks (Claude Code + Codex CLI only).
+3. **Stages the orchestrator runtime** — `scripts/`, `templates/`, `references/` — directly into the target project, alongside `.orchestrator/`. Every `orchestrator:*` command invokes its helpers via project-relative paths (e.g. `bash scripts/state/find-active-milestone.sh …`), so these trees must live inside the project.
+
+The installer records every file it stages in `.orchestrator/installed-files.txt` so `--uninstall` can remove exactly what it wrote.
 
 ## Install
 
-From a clone of the orchestrator repo (or a prebuilt skill bundle), run the installer that matches your host runtime:
+From a clone of the orchestrator repo, run the installer that matches your host runtime:
 
 | Runtime | Installer |
 |---------|-----------|
-| Claude Code | `bash packaging/install/install-claude-code.sh` |
-| Codex CLI | `bash packaging/install/install-codex.sh` |
-| Cursor | `bash packaging/install/install-cursor.sh` |
+| Claude Code | `bash packaging/install/install-claude-code.sh --project-dir <path>` |
+| Codex CLI | `bash packaging/install/install-codex.sh --project-dir <path>` |
+| Cursor | `bash packaging/install/install-cursor.sh --project-dir <path>` |
 
-The installer registers the `orchestrator:*` skills/commands into the active runtime, drops the orchestrator's scripts / templates / references into the expected locations, and verifies the install with a fast structural probe.
+`--project-dir` defaults to `$PWD` for Claude Code / Codex CLI and is **required** for Cursor. The installer prints a final `SUMMARY:` line reporting `skills_installed`, `hooks_wired`, `config_written`, and `runtime_staged` counts.
 
 ## Installation Steps
 
@@ -114,10 +120,13 @@ your-project/
 │   └── 001-your-feature/
 │       └── spec.md
 ├── orchestrator-config.yml            # Optional project override (or use .orchestrator/config.yml)
-└── CLAUDE.md                          # Runtime-specific instruction file (or equivalent)
+├── CLAUDE.md                          # Runtime-specific instruction file (or equivalent)
+├── scripts/                           # Orchestrator runtime — staged by installer
+├── templates/                         # Orchestrator runtime — staged by installer
+└── references/                        # Orchestrator runtime — staged by installer
 ```
 
-The orchestrator's own commands, scripts, templates, and references live inside the installed skill bundle — you do not copy them into every project.
+`scripts/`, `templates/`, and `references/` are **staged into the project** by the installer because every `commands/*.md` invokes its helpers via project-relative paths. The installer records every file it wrote in `.orchestrator/installed-files.txt` so `--uninstall` can remove exactly what was staged.
 
 ## Autonomy Configuration
 
@@ -219,21 +228,35 @@ shape guidance in `commands/plan-phase.md`. The advisory lint at
 `scripts/diagnostics/check-plans.sh` scans task plans and
 flags violations so you can fix them before running auto mode.
 
-## Updating
+## Upgrading
 
-To update the orchestrator, re-run the installer for your runtime:
+There is no version check. To upgrade, pull the latest orchestrator repo and re-run the installer with `--force`:
 
 ```bash
-bash packaging/install/install-claude-code.sh
+cd /path/to/spec-kit-orchestrator
+git pull
+bash packaging/install/install-claude-code.sh --project-dir /path/to/your-project --force
 ```
 
-The installer preserves user edits to the generated instruction file and refreshes only orchestrator-managed assets. Your project-specific files (`specs/`, `.orchestrator/`, config overrides, CLAUDE.md user edits) are unaffected.
+`--force` re-stages the runtime unconditionally (runtime files are orchestrator-owned, not user-owned) and overwrites `.orchestrator/config.yml`. User-authored files — `specs/`, `CLAUDE.md` body edits, `.orchestrator/milestones/`, `.orchestrator/DECISIONS.md`, `.orchestrator/KNOWLEDGE.md`, etc. — are untouched.
 
-Check `CHANGELOG.md` in the spec-kit-orchestrator repo for breaking changes before updating.
+**Known limitation (accepted):** if an upstream release removes a file that a previous install wrote, the stale file remains on disk. The new manifest won't list it, so it will not be removed on subsequent `--uninstall`. This is a deliberate trade-off; the alternative (diff manifests and delete) is a fast-follow.
+
+Check `CHANGELOG.md` in the spec-kit-orchestrator repo for breaking changes before upgrading.
 
 ## Uninstall
 
-The canonical removal path for the Claude Code runtime is `bash packaging/install/install-claude-code.sh --uninstall`, which strips orchestrator-managed entries from `~/.claude/settings.json` via `scripts/util/settings-merge.sh uninstall` and reports a `UNINSTALLED: hooks-removed=<N> config-removed=<0|1>` summary. The uninstall path preserves every non-orchestrator top-level key byte-identically at the structural level (modulo the jq/python canonicalization the installer applies on merge — re-running the installer then uninstalling again is a reversible round-trip against the canonicalized baseline).
+All three installers support `--uninstall`:
+
+```bash
+bash packaging/install/install-claude-code.sh --project-dir /path/to/your-project --uninstall
+```
+
+The uninstall path reads `.orchestrator/installed-files.txt` and removes exactly the files listed — every staged `scripts/*`, `templates/*`, and `references/*` entry — then prunes empty runtime directories bottom-up. The Claude Code installer additionally strips orchestrator-managed entries from `~/.claude/settings.json` via `scripts/util/settings-merge.sh uninstall`. The final `UNINSTALLED:` line reports `hooks-removed=<N> config-removed=<0|1> runtime-removed=<N>` (Claude Code) or `runtime-removed=<N> config-removed=<0|1>` (Codex / Cursor).
+
+If the manifest is missing, the installer refuses to guess at directory contents — it will not blindly `rm -rf` trees that might belong to the user. Reinstall to regenerate the manifest, then uninstall.
+
+Uninstall does **not** touch `CLAUDE.md`, `specs/`, `.orchestrator/milestones/`, or any file not recorded in the manifest.
 
 To remove only orchestrator-added hooks manually (for example on a machine where the installer is no longer available), open `~/.claude/settings.json` in an editor or jq and delete each hook object whose `_orchestrator_managed` field is `true`. Cascade the cleanup: if removing a hook leaves a wrapper object with an empty `hooks` array, remove the wrapper; if that leaves an event key (`Stop`, `PreToolUse`, …) with an empty array, remove the event key; if that leaves the top-level `hooks` object empty, remove the `hooks` key. Every other key — `$schema`, `statusLine`, `permissions`, sibling tools' hook entries — must stay untouched.
 

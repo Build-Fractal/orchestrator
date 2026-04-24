@@ -44,6 +44,7 @@ PROJECT_DIR=""
 DRY_RUN=0
 FORCE=0
 VERBOSE=0
+UNINSTALL=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -64,6 +65,8 @@ while [ $# -gt 0 ]; do
       FORCE=1; shift ;;
     --verbose)
       VERBOSE=1; shift ;;
+    --uninstall)
+      UNINSTALL=1; shift ;;
     -h|--help)
       sed -n '2,33p' "$0"
       exit 0 ;;
@@ -93,6 +96,55 @@ fi
 if [ "${HOME:-}" = "/" ]; then
   echo "FAIL: unsafe HOME ('/'): refusing to install" >&2
   exit 2
+fi
+
+# --- Uninstall short-circuit: remove staged runtime per manifest. ---
+if [ "$UNINSTALL" = "1" ]; then
+  runtime_removed=0
+  config_removed=0
+
+  state_root=""
+  if [ -x "$RESOLVE_ROOT" ]; then
+    state_root="$(cd "$PROJECT_DIR" && bash "$RESOLVE_ROOT" --absolute 2>/dev/null)"
+  fi
+  [ -z "$state_root" ] && state_root="$PROJECT_DIR/.orchestrator"
+  cfg_target="$state_root/config.yml"
+  if [ -f "$cfg_target" ] && grep -q '_orchestrator_managed' "$cfg_target" 2>/dev/null; then
+    if [ "$DRY_RUN" = "1" ]; then
+      echo "would_remove=$cfg_target"
+    else
+      rm -f "$cfg_target"
+      echo "removed=$cfg_target"
+    fi
+    config_removed=1
+  fi
+
+  manifest_file="$PROJECT_DIR/.orchestrator/installed-files.txt"
+  if [ -f "$manifest_file" ]; then
+    while IFS= read -r rel; do
+      [ -z "$rel" ] && continue
+      f="$PROJECT_DIR/$rel"
+      if [ -f "$f" ]; then
+        if [ "$DRY_RUN" = "1" ]; then
+          echo "would_remove=$f"
+        else
+          rm -f "$f"
+        fi
+        runtime_removed=$((runtime_removed + 1))
+      fi
+    done < "$manifest_file"
+    if [ "$DRY_RUN" = "0" ]; then
+      for d in scripts templates references; do
+        [ -d "$PROJECT_DIR/$d" ] && find "$PROJECT_DIR/$d" -type d -empty -depth -exec rmdir {} \; 2>/dev/null || true
+      done
+      rm -f "$manifest_file"
+    fi
+  elif [ "$DRY_RUN" = "0" ] && [ -d "$PROJECT_DIR/scripts" ]; then
+    echo "WARN: manifest $manifest_file missing; refusing to guess removal" >&2
+  fi
+
+  echo "UNINSTALLED: runtime-removed=${runtime_removed} config-removed=${config_removed}"
+  exit 0
 fi
 
 if [ ! -f "$ADAPTER" ]; then
@@ -184,6 +236,47 @@ else
   config_written=1
 fi
 
+# --- 4.5 Stage runtime (scripts/, templates/, references/) into project ---
+# See install-claude-code.sh for the rationale (Direction 1 in
+# installer-staging-handoff). Every commands/*.md invokes helpers via
+# project-relative paths, so the runtime must live alongside the project.
+RUNTIME_DIRS="scripts templates references"
+manifest_file="$PROJECT_DIR/.orchestrator/installed-files.txt"
+runtime_staged=0
+
+for dir in $RUNTIME_DIRS; do
+  src="$REPO_ROOT/$dir"
+  dst="$PROJECT_DIR/$dir"
+  if [ ! -d "$src" ]; then
+    echo "FAIL: runtime source missing: $src" >&2
+    exit 1
+  fi
+  if [ "$DRY_RUN" = "1" ]; then
+    find "$src" -type f | while IFS= read -r f; do
+      rel="${f#$src/}"
+      echo "would_write=$dst/$rel"
+    done
+    count=$(find "$src" -type f | wc -l | tr -d ' ')
+    runtime_staged=$((runtime_staged + count))
+    continue
+  fi
+  mkdir -p "$dst"
+  cp -R "$src/." "$dst/"
+  count=$(find "$src" -type f | wc -l | tr -d ' ')
+  runtime_staged=$((runtime_staged + count))
+done
+
+if [ "$DRY_RUN" = "0" ]; then
+  mkdir -p "$(dirname "$manifest_file")"
+  : > "$manifest_file"
+  for dir in $RUNTIME_DIRS; do
+    if [ -d "$PROJECT_DIR/$dir" ]; then
+      ( cd "$PROJECT_DIR" && find "$dir" -type f ) >> "$manifest_file"
+    fi
+  done
+  echo "staged=$runtime_staged files manifest=$manifest_file"
+fi
+
 # --- 5. Summary line ---
-echo "SUMMARY: runtime=cursor skills_installed=${skills_installed} hooks_wired=${hooks_wired} config_written=${config_written} dry_run=${DRY_RUN}"
+echo "SUMMARY: runtime=cursor skills_installed=${skills_installed} hooks_wired=${hooks_wired} config_written=${config_written} runtime_staged=${runtime_staged} dry_run=${DRY_RUN}"
 exit 0

@@ -92,6 +92,7 @@ if [ "$UNINSTALL" = "1" ]; then
   hook_target="$HOME/.claude/settings.json"
   hooks_removed=0
   config_removed=0
+  runtime_removed=0
 
   if [ -f "$MERGE_HELPER" ] && [ -e "$hook_target" ]; then
     if [ "$DRY_RUN" = "1" ]; then
@@ -128,7 +129,33 @@ if [ "$UNINSTALL" = "1" ]; then
     fi
   fi
 
-  echo "UNINSTALLED: hooks-removed=${hooks_removed} config-removed=${config_removed}"
+  # Remove runtime files recorded in the install manifest.
+  manifest_file="$PROJECT_DIR/.orchestrator/installed-files.txt"
+  if [ -f "$manifest_file" ]; then
+    while IFS= read -r rel; do
+      [ -z "$rel" ] && continue
+      f="$PROJECT_DIR/$rel"
+      if [ -f "$f" ]; then
+        if [ "$DRY_RUN" = "1" ]; then
+          echo "would_remove=$f"
+        else
+          rm -f "$f"
+        fi
+        runtime_removed=$((runtime_removed + 1))
+      fi
+    done < "$manifest_file"
+    # Prune empty runtime directories bottom-up.
+    if [ "$DRY_RUN" = "0" ]; then
+      for d in scripts templates references; do
+        [ -d "$PROJECT_DIR/$d" ] && find "$PROJECT_DIR/$d" -type d -empty -depth -exec rmdir {} \; 2>/dev/null || true
+      done
+      rm -f "$manifest_file"
+    fi
+  elif [ "$DRY_RUN" = "0" ] && [ -d "$PROJECT_DIR/scripts" ]; then
+    echo "WARN: manifest $manifest_file missing; refusing to guess removal" >&2
+  fi
+
+  echo "UNINSTALLED: hooks-removed=${hooks_removed} config-removed=${config_removed} runtime-removed=${runtime_removed}"
   exit 0
 fi
 
@@ -253,6 +280,49 @@ else
   config_written=1
 fi
 
+# --- 4.5 Stage runtime (scripts/, templates/, references/) into project ---
+# Every commands/*.md invokes helpers via project-relative paths (e.g.
+# `bash scripts/state/find-active-milestone.sh`). Without this stage, the
+# first command after orchestrator:init dies with No such file or directory.
+# Direction 1 from installer-staging-handoff: stage source trees directly
+# from $REPO_ROOT. Runtime is orchestrator-owned; copy is always unconditional.
+RUNTIME_DIRS="scripts templates references"
+manifest_file="$PROJECT_DIR/.orchestrator/installed-files.txt"
+runtime_staged=0
+
+for dir in $RUNTIME_DIRS; do
+  src="$REPO_ROOT/$dir"
+  dst="$PROJECT_DIR/$dir"
+  if [ ! -d "$src" ]; then
+    echo "FAIL: runtime source missing: $src" >&2
+    exit 1
+  fi
+  if [ "$DRY_RUN" = "1" ]; then
+    find "$src" -type f | while IFS= read -r f; do
+      rel="${f#$src/}"
+      echo "would_write=$dst/$rel"
+    done
+    count=$(find "$src" -type f | wc -l | tr -d ' ')
+    runtime_staged=$((runtime_staged + count))
+    continue
+  fi
+  mkdir -p "$dst"
+  cp -R "$src/." "$dst/"
+  count=$(find "$src" -type f | wc -l | tr -d ' ')
+  runtime_staged=$((runtime_staged + count))
+done
+
+if [ "$DRY_RUN" = "0" ]; then
+  mkdir -p "$(dirname "$manifest_file")"
+  : > "$manifest_file"
+  for dir in $RUNTIME_DIRS; do
+    if [ -d "$PROJECT_DIR/$dir" ]; then
+      ( cd "$PROJECT_DIR" && find "$dir" -type f ) >> "$manifest_file"
+    fi
+  done
+  echo "staged=$runtime_staged files manifest=$manifest_file"
+fi
+
 # --- 5. Summary line ---
-echo "SUMMARY: runtime=claude-code skills_installed=${skills_installed} hooks_wired=${hooks_wired} config_written=${config_written} dry_run=${DRY_RUN}"
+echo "SUMMARY: runtime=claude-code skills_installed=${skills_installed} hooks_wired=${hooks_wired} config_written=${config_written} runtime_staged=${runtime_staged} dry_run=${DRY_RUN}"
 exit 0

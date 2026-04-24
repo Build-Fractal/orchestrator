@@ -30,24 +30,24 @@ Before installing the orchestrator, ensure you have:
 
 ## Installation
 
-The orchestrator is distributed as a runtime-specific skill bundle. Install it by running the installer that matches your host runtime.
+The orchestrator ships as a runtime-specific installer that runs from a clone of this repo. The installer registers skills/commands, wires hooks, and stages the orchestrator runtime (`scripts/`, `templates/`, `references/`) directly into your project.
 
 ### 1. Run the installer
 
-From a clone of the spec-kit-orchestrator repo (or a prebuilt skill bundle):
+From a clone of the spec-kit-orchestrator repo:
 
 ```bash
 # Claude Code (primary runtime)
-bash packaging/install/install-claude-code.sh
+bash packaging/install/install-claude-code.sh --project-dir /path/to/your-project
 
 # Codex CLI
-bash packaging/install/install-codex.sh
+bash packaging/install/install-codex.sh --project-dir /path/to/your-project
 
-# Cursor
-bash packaging/install/install-cursor.sh
+# Cursor (--project-dir required)
+bash packaging/install/install-cursor.sh --project-dir /path/to/your-project
 ```
 
-The installer registers the `orchestrator:*` skills/commands into the active runtime and drops the orchestrator's scripts, templates, and reference tree into the expected locations. No files to copy by hand.
+The installer registers `orchestrator:*` skills/commands into the active runtime and stages `scripts/`, `templates/`, `references/` into your project (every `commands/*.md` invokes helpers via project-relative paths, so they must live there). Files are recorded in `.orchestrator/installed-files.txt` for clean uninstall.
 
 ### 2. Initialize your project
 

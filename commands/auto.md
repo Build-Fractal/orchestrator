@@ -43,6 +43,14 @@ This returns one line: `M### <state> <tier>` for the first Tier C milestone in a
 
 To see all milestones: `bash scripts/state/find-active-milestone.sh .orchestrator --all`
 
+**Explicit milestone targeting**: when the caller named a specific milestone (e.g. `orchestrator:auto milestone=M026`), pass it through to the finder so the default "first numerically-sorted planning milestone" heuristic doesn't pick a different one:
+
+```bash
+bash scripts/state/find-active-milestone.sh .orchestrator --milestone M026
+```
+
+The finder validates that `M026` exists, is tier C, and is in an auto-eligible state — and fails loud with a specific reason if any of those conditions is not met (rather than silently falling back to the next eligible milestone).
+
 **State validation:**
 - `executing`, `planning`, `summarizing`, `validating`, `completing` — valid, proceed
 - `complete` — report "Milestone already complete" and exit without acquiring a lock

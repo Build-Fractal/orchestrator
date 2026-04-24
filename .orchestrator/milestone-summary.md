@@ -1,5 +1,7 @@
 ## Forward Milestone Sequence (revised 2026-04-22 per `DECISIONS.md` D016)
 
+**Out-of-band active milestone**: **M026 — Conversus-OSS Migration** *(P01 closed 2026-04-24; P02 planned at commit `512b898` but not yet dispatched; P03 pending)* — flip the orchestrator's default Conversus binary to the OSS build while preserving a first-class paid escape hatch. Sits on top of spec 027; does not block the canonical sequence below, but the resolver flip is cleanest to land before M014 extended begins wiring new `orchestrator:specify` gate call sites. Two orthogonal hotfix batches landed alongside M026 P01: the installer-staging bundle-infrastructure fix and three dogfood-discovered script bugfixes (see D021). Dogfood signal: bbt-companion is running end-to-end on the post-fix install.
+
 Remaining milestones, in execution order:
 
 1. **M013 — GitHub Native Integration** *(P01–P03 closed; P04 remaining; spec pressure-tested via conversus 2026-04-21 per D014)* — Issues/Milestones/Projects sync, UAT loop; FR-12 post-verify handler Claude-Code-only for v1 (Codex/Cursor fall back to `manual`); Minimal Slice pins Phase 1 to full US-3 + minimal US-1 scaffolding; invokes the M011/P07 conversus adapter at the single D007-named UAT PR gate. P04 ships sync cycle + post-verify hook + conversus UAT PR gate.

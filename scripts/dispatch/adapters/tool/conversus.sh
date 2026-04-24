@@ -32,6 +32,22 @@
 # `FAIL: conversus binary not available` on stderr and exits 1 instead of
 # SKIPPED+exit-0. PASS/BLOCK verdict behavior is unchanged.
 #
+# Provider selection:
+#   The model provider passed to `conversus run` is read from
+#   `CONVERSUS_PROVIDER` (default: `anthropic`). See the assignment at
+#   `_provider="${CONVERSUS_PROVIDER:-anthropic}"` below.
+#   - Default `anthropic` — direct Anthropic API calls in parallel. Fast
+#     (~6 min for a 5-phase gate) but REQUIRES `ANTHROPIC_API_KEY`.
+#   - On Anthropic OAuth (Claude Max/subscription) auth, callers MUST
+#     set `CONVERSUS_PROVIDER=claude-code` before invoking this adapter.
+#     The default path hits a server-side concurrency policy gate that
+#     429s instantly on parallel requests — this is NOT a transient
+#     rate limit; retrying won't help.
+#   - `claude-code` spawns a `claude -p` subprocess per agent (which is
+#     what OAuth is designed for). Wall time ~3-4x slower but reliable.
+#   See `references/architecture.md` ("Conversus Adapter — Operator
+#   Notes") for the full operator runbook.
+#
 # Exit-code contract for `gate`:
 #   0  PASS  (or SKIPPED when binary missing in non-strict mode — both are "proceed")
 #   2  BLOCK (distinct from 1 so callers can distinguish verdict from error)
@@ -337,12 +353,23 @@ print("SUMMARY=%s" % data.get("summary", "").replace("\n", " "))
     fi
 
     _preset_name="$(basename "$_preset_file" .yml)"
+    # Rationale is synthesized from load-bearing extracted fields only
+    # (verdict + surviving_disputes + mode). The linter's `summary`
+    # string was previously copied verbatim, but its agent_count and
+    # phases_completed heuristics don't match the Risk Register
+    # synthesizer format and produced misleading rationales. Only the
+    # surviving-dispute count is reliable, and it's already surfaced
+    # in the `disputes:` field — the rationale here just names what
+    # the verdict derives from. Operators wanting the full synthesis
+    # read `summary/final.md` via the "Full deliberation" link below.
+    _mode_label="${_mode:-cooperative}"
+    _rationale="verdict=${_verdict} derived from surviving_disputes=${_surviving} in ${_mode_label} deliberation"
     mkdir -p "$(dirname "$_output")"
     cat > "$_output" <<EOF
 ---
 verdict: "${_verdict}"
 disputes: ${_surviving}
-rationale: "${_summary}"
+rationale: "${_rationale}"
 source_hash: "${_source_hash}"
 preset: "${_preset_name}"
 artifact: "${_artifact}"
@@ -357,7 +384,7 @@ conversus_config: "${_conv_config_preserved}"
 
 ## Rationale
 
-${_summary}
+${_rationale}
 
 ## Full deliberation
 

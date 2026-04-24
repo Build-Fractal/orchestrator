@@ -371,6 +371,81 @@ M005 hardened the system for production use with additional diagnostics, provide
 
 ---
 
+## Conversus Adapter — Operator Notes
+
+The conversus cooperative-deliberation tool adapter
+(`scripts/dispatch/adapters/tool/conversus.sh`) is the orchestrator's
+bridge to the external `conversus` binary. Two operator-facing
+settings warrant durable guidance.
+
+### Subscription-OAuth provider selection
+
+**Rule.** When the operator is authenticated via Anthropic OAuth
+(Claude Max / Pro subscription, no `ANTHROPIC_API_KEY` exported),
+export `CONVERSUS_PROVIDER=claude-code` before invoking any conversus
+adapter or CLI call. Leave `CONVERSUS_PROVIDER` unset only when a
+real `ANTHROPIC_API_KEY` is available.
+
+**Why.** Subscription-OAuth tokens are gated server-side for
+concurrent programmatic requests. The default `--provider anthropic`
+path issues parallel direct-API calls (one per agent per phase) and
+hits that gate immediately — the server returns 429 as a **policy
+rejection**, not a transient rate limit. Retries do not help. The
+`claude-code` provider instead spawns a `claude -p` subprocess per
+agent; each subprocess is a real Claude Code interactive session,
+which is what OAuth is designed for, and the gate does not fire.
+
+**How to apply.** Export once per shell (or set inline):
+
+```bash
+export CONVERSUS_PROVIDER=claude-code
+# or:
+CONVERSUS_PROVIDER=claude-code bash scripts/dispatch/adapters/tool/conversus.sh gate …
+```
+
+The adapter honors the env var at `_provider="${CONVERSUS_PROVIDER:-anthropic}"`
+in `scripts/dispatch/adapters/tool/conversus.sh` (search for that
+line to confirm the contract).
+
+**Trade-offs.**
+
+- Wall time ~3-4× slower than direct API (~15-25 min for a 5-phase
+  gate vs ~6 min), because subprocesses serialize per agent.
+- Synthesis output is often terser (1-2 KB per review vs 10-13 KB on
+  direct API). This is **not** a correctness signal — the same
+  verdict math runs against both.
+- No cost-telemetry delta: the subprocess path consumes Max-plan
+  quota the same way ordinary Claude Code usage does.
+
+**Escape hatch.** If `ANTHROPIC_API_KEY` is set in the environment,
+the direct-API path works without the gate and `CONVERSUS_PROVIDER`
+should be left unset. Do not commit API keys and do not export them
+in shared shells.
+
+**Don'ts.**
+
+- Don't run parallel conversus deliberations from multiple sessions
+  against the same OAuth account. Concurrency caps beyond two
+  simultaneous agents are untested.
+- Don't treat a 429 from `--provider anthropic` + OAuth as transient.
+  It's a policy rejection; retry loops waste wall time.
+- Don't assume silence is a hang on the `claude-code` path. 5+
+  minutes per phase with no stdout is normal — the subprocess is
+  thinking, not stuck.
+
+### Rationale field in gate-result.md
+
+The `rationale:` field in `gate-result.md` frontmatter is synthesized
+from load-bearing extracted fields only (verdict + surviving-dispute
+count + deliberation mode). It is **not** a verbatim copy of the
+conversus synthesizer's `summary` string, because that string's
+`agent_count` and `phases_completed` heuristics do not match the
+Risk Register synthesizer format and produced misleading rationales.
+Operators reading a gate-result who want the full synthesis follow
+the "Full deliberation" link to `summary/final.md`.
+
+---
+
 ## Cross-References
 
 - [State Machine](state-machine.md) — Full 10-state lifecycle with transition diagram and tier-conditional behavior

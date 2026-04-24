@@ -57,6 +57,13 @@ type: dispatch-prompt
 - **Dispatch Budget**: {{dispatch_budget}}
 - **Budget Enforcement**: {{budget_enforcement}}
 
+<!-- handle_template (scripts/dispatch/lib/section-handlers.sh) emits two
+     sub-sections under Constraints: "### Prohibited inline bash patterns"
+     and "### Branch Discipline". The Branch Discipline subsection forbids
+     unannounced git checkout/switch/branch/merge/rebase inside a dispatched
+     task. -->
+
+
 ## Verification
 
 - **Verification Criteria**: {{verification_criteria}}

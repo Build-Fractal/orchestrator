@@ -16,10 +16,17 @@
 #                                           gate-result.md frontmatter.
 #
 # Resolver order for the conversus binary:
-#   1. CONVERSUS_STUB=1                      — stub mode (test-only)
-#   2. command -v conversus                  — PATH
-#   3. $CONVERSUS_HOME/bin/conversus         — explicit env var
-#   4. $HOME/Sites/conversus/bin/conversus   — user-local convention
+#   1. CONVERSUS_STUB=1                            — stub (test-only)
+#   2. command -v conversus                        — PATH
+#   3. $CONVERSUS_HOME/bin/conversus               — explicit env var
+#   4. $HOME/Sites/conversus-oss/bin/conversus     — user-local OSS
+#   5. $HOME/Sites/conversus/bin/conversus         — user-local paid
+#
+# Edition detection (M026/P02): `check` emits `edition=<oss|paid|unknown>`
+# and `reason=<env-override|metadata-probe|metadata-probe-failed|stub|
+# home|command-v|fallback>`. Primary: `CONVERSUS_EDITION=oss|paid`.
+# Fallback: `pip show conversus` Home-page probe. Single-venv reality
+# (see M026-CONVERSUS-PARITY.md) makes path-based detection infeasible.
 #
 # Graceful degradation (roadmap directive): when the binary is missing,
 # `gate` emits a `SKIPPED:` line and exits 0 so the calling pipeline can
@@ -66,13 +73,19 @@ _emit_fail() {
 }
 
 _resolve_binary() {
-  # Emits `available=<bool>` and optionally `conversus_path=<path>` /
-  # `reason=<text>` lines to stdout. Exits 0 always — "not found" is a
-  # valid state, not an error.
+  # Emits structured lines to stdout. On success:
+  #   available=true
+  #   conversus_path=<path>
+  #   edition=<oss|paid|unknown>
+  #   reason=<env-override|metadata-probe|metadata-probe-failed|stub|home|command-v|fallback>
+  # On not-found:
+  #   available=false
+  #   reason=<text>
+  # Exits 0 always — "not found" is a valid state, not an error.
   if [ "${CONVERSUS_STUB:-0}" = "1" ]; then
     echo "available=true"
     echo "conversus_path=stub"
-    echo "reason=CONVERSUS_STUB=1"
+    _resolve_edition "" stub
     return 0
   fi
   _which_path=""
@@ -80,20 +93,82 @@ _resolve_binary() {
     _which_path="$(command -v conversus)"
     echo "available=true"
     echo "conversus_path=${_which_path}"
+    _rb_venv_py="$(head -n 1 "$_which_path" 2>/dev/null | sed -E 's|^#!([^[:space:]]+).*|\1|')"
+    _resolve_edition "$_rb_venv_py" command-v
     return 0
   fi
   if [ -n "${CONVERSUS_HOME:-}" ] && [ -x "${CONVERSUS_HOME}/bin/conversus" ]; then
     echo "available=true"
     echo "conversus_path=${CONVERSUS_HOME}/bin/conversus"
+    _rb_venv_py="$(head -n 1 "${CONVERSUS_HOME}/bin/conversus" 2>/dev/null | sed -E 's|^#!([^[:space:]]+).*|\1|')"
+    _resolve_edition "$_rb_venv_py" home
+    return 0
+  fi
+  if [ -x "${HOME:-}/Sites/conversus-oss/bin/conversus" ]; then
+    echo "available=true"
+    echo "conversus_path=${HOME}/Sites/conversus-oss/bin/conversus"
+    _rb_venv_py="$(head -n 1 "${HOME}/Sites/conversus-oss/bin/conversus" 2>/dev/null | sed -E 's|^#!([^[:space:]]+).*|\1|')"
+    _resolve_edition "$_rb_venv_py" fallback
     return 0
   fi
   if [ -x "${HOME:-}/Sites/conversus/bin/conversus" ]; then
     echo "available=true"
     echo "conversus_path=${HOME}/Sites/conversus/bin/conversus"
+    _rb_venv_py="$(head -n 1 "${HOME}/Sites/conversus/bin/conversus" 2>/dev/null | sed -E 's|^#!([^[:space:]]+).*|\1|')"
+    _resolve_edition "$_rb_venv_py" fallback
     return 0
   fi
   echo "available=false"
-  echo "reason=conversus binary not found on PATH, CONVERSUS_HOME, or ~/Sites/conversus"
+  echo "reason=conversus binary not found on PATH, CONVERSUS_HOME, ~/Sites/conversus-oss, or ~/Sites/conversus"
+  return 0
+}
+
+_resolve_edition() {
+  # _resolve_edition <venv-python-path> <resolved-via-tag>
+  # Emits `edition=<oss|paid|unknown>` + `reason=<tag>` to stdout.
+  # Tags: env-override|metadata-probe|metadata-probe-failed|stub|home|command-v|fallback.
+  _ve_venv_py="$1"
+  _ve_via="$2"
+  case "${CONVERSUS_EDITION:-}" in
+    oss|paid)
+      echo "edition=${CONVERSUS_EDITION}"
+      echo "reason=env-override"
+      return 0
+      ;;
+    "") : ;;
+    *)
+      echo "warn: CONVERSUS_EDITION=${CONVERSUS_EDITION} is not oss|paid; falling through to metadata probe" >&2
+      ;;
+  esac
+  if [ "${CONVERSUS_STUB:-0}" = "1" ] || [ "$_ve_via" = "stub" ]; then
+    echo "edition=unknown"
+    echo "reason=stub"
+    return 0
+  fi
+  if [ -n "$_ve_venv_py" ] && [ -x "$_ve_venv_py" ]; then
+    _ve_pip_out="$("$_ve_venv_py" -m pip show conversus 2>/dev/null)"
+    _ve_home_line="$(printf '%s\n' "$_ve_pip_out" | grep -E '^Home-page:' | head -n 1)"
+    _ve_home="$(printf '%s\n' "$_ve_home_line" | sed -E 's/^Home-page:[[:space:]]*//;s/[[:space:]]*$//')"
+    if [ -n "$_ve_home" ]; then
+      case "$_ve_home" in
+        *conversus-oss*)
+          echo "edition=oss"
+          echo "reason=metadata-probe"
+          return 0
+          ;;
+        *)
+          echo "edition=paid"
+          echo "reason=metadata-probe"
+          return 0
+          ;;
+      esac
+    fi
+    echo "edition=unknown"
+    echo "reason=metadata-probe-failed"
+    return 0
+  fi
+  echo "edition=unknown"
+  echo "reason=${_ve_via}"
   return 0
 }
 

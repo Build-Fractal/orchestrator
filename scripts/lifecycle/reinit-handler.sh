@@ -77,6 +77,13 @@ for req in project-dir state-root runtime; do
   [ -n "$v" ] || { echo "FAIL: --$req required" >&2; exit 1; }
 done
 
+# Canonicalize PROJECT_DIR to an absolute path so downstream consumers
+# (basename → project_name, sed path substitutions) don't degrade when
+# callers pass "." or other relative paths.
+if [ -d "$PROJECT_DIR" ]; then
+  PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"
+fi
+
 log() { [ $VERBOSE -eq 1 ] && echo "$@" >&2; return 0; }
 
 # --- 2. Resolve paths -------------------------------------------------------
@@ -136,6 +143,28 @@ if [ -f "$INSTRUCTION_FILE" ]; then
   CUSTOM_BLOCK="$(extract_custom_block "$INSTRUCTION_FILE")"
 fi
 
+# --- 6a-bis. Extract generic sentinel blocks (# >>> orchestrator:NAME >>>) --
+# The handler regenerates the file from template; any sentinel-bounded
+# region the user relies on (e.g. orchestrator:recent-changes) would
+# otherwise be lost. We snapshot each sentinel's body (contents between
+# markers, exclusive) to a temp dir keyed by NAME, then re-inject them
+# after dual-write via the same dual-write-runtime-md.sh helper.
+SENTINEL_DIR="$(mktemp -d 2>/dev/null || mktemp -d -t sentinel)"
+SENTINEL_NAMES=""
+if [ -f "$INSTRUCTION_FILE" ]; then
+  # List distinct sentinel names present in the file.
+  SENTINEL_NAMES="$(grep -E '^# >>> orchestrator:[A-Za-z0-9_-]+ >>>$' "$INSTRUCTION_FILE" 2>/dev/null \
+                    | sed 's/^# >>> orchestrator:\([A-Za-z0-9_-]*\) >>>$/\1/' \
+                    | sort -u)"
+  for _name in $SENTINEL_NAMES; do
+    awk -v n="$_name" '
+      $0 == "# >>> orchestrator:" n " >>>" { inblock=1; next }
+      $0 == "# <<< orchestrator:" n " <<<" { inblock=0; next }
+      inblock == 1 { print }
+    ' "$INSTRUCTION_FILE" > "$SENTINEL_DIR/$_name.block"
+  done
+fi
+
 # --- 6b. Re-run detection + capability probe --------------------------------
 PROJECT_OUT="$(bash "$REPO_ROOT/scripts/lifecycle/detect-project.sh" --project-dir "$PROJECT_DIR" 2>/dev/null)"
 CAP_OUT="$(bash "$REPO_ROOT/scripts/dispatch/detect-capabilities.sh" --profile 2>/dev/null || true)"
@@ -171,11 +200,23 @@ fi
 INITIALIZED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 PROJECT_NAME="$(basename "$PROJECT_DIR")"
 
-# Preserve the existing runtime_confidence from the config if present
-# (auto-detection during reinit may re-pick a value; we keep the original
-# to avoid spurious churn unless reset is used).
-RUNTIME_CONFIDENCE="$(grep '^runtime_confidence:' "$CONFIG_FILE" 2>/dev/null | head -1 | sed 's/^runtime_confidence:[[:space:]]*"\{0,1\}\([^"]*\)"\{0,1\}.*/\1/')"
-[ -z "$RUNTIME_CONFIDENCE" ] && RUNTIME_CONFIDENCE="unknown"
+# Preserve the existing runtime_confidence. Config.yml doesn't currently
+# persist this key, so we read it back from the instruction file where
+# we originally rendered it (e.g. "- Detection confidence: `high`"). We
+# only downgrade if the existing value is missing or already "unknown" —
+# a previously-established "high" or "medium" is sticky.
+RUNTIME_CONFIDENCE=""
+if [ -f "$CONFIG_FILE" ]; then
+  RUNTIME_CONFIDENCE="$(grep '^runtime_confidence:' "$CONFIG_FILE" 2>/dev/null | head -1 | sed 's/^runtime_confidence:[[:space:]]*"\{0,1\}\([^"]*\)"\{0,1\}.*/\1/')"
+fi
+if [ -z "$RUNTIME_CONFIDENCE" ] && [ -f "$INSTRUCTION_FILE" ]; then
+  # Match the rendered line: "- Detection confidence: `high`"
+  RUNTIME_CONFIDENCE="$(grep -i 'Detection confidence:' "$INSTRUCTION_FILE" 2>/dev/null | head -1 | sed 's/.*Detection confidence:[[:space:]]*`\{0,1\}\([^`]*\)`\{0,1\}.*/\1/' | tr -d ' ')"
+fi
+case "$RUNTIME_CONFIDENCE" in
+  high|medium|low) ;;  # keep established value
+  *) RUNTIME_CONFIDENCE="unknown" ;;
+esac
 
 # --- 6c. Dry-run short-circuit ---------------------------------------------
 if [ $DRY_RUN -eq 1 ]; then
@@ -291,6 +332,29 @@ else
   echo "SKIPPED: dual-write-runtime-md.sh not executable (reinit)" >&2
 fi
 log "dual_writes=$DUAL_WRITES region=project-identity"
+
+# --- 6e-bis. Re-inject preserved sentinel blocks (except project-identity) --
+# dual-write-runtime-md.sh owns project-identity above; every other
+# sentinel block the user had is re-splashed into the regenerated file
+# using the same helper so insert/replace semantics match.
+if [ -x "$DUAL_WRITE_HELPER" ] && [ -n "$SENTINEL_NAMES" ]; then
+  for _name in $SENTINEL_NAMES; do
+    [ "$_name" = "project-identity" ] && continue
+    block_path="$SENTINEL_DIR/$_name.block"
+    [ -f "$block_path" ] || continue
+    if bash "$DUAL_WRITE_HELPER" \
+        --marker "$_name" \
+        --content "$block_path" \
+        --root "$PROJECT_DIR" \
+        --file "$(basename "$INSTRUCTION_FILE")" \
+        >/dev/null 2>&1; then
+      log "preserved_sentinel=$_name"
+    else
+      echo "WARN: could not re-inject sentinel '$_name' into $INSTRUCTION_FILE" >&2
+    fi
+  done
+fi
+rm -rf "$SENTINEL_DIR" 2>/dev/null || true
 
 # --- 6f. Merge config.yml: strip project:/capabilities:, refresh, preserve rest ---
 merged_cfg="$(mktemp)"

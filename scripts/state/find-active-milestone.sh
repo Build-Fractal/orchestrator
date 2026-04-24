@@ -60,9 +60,13 @@ for milestone_dir in "$MILESTONES_DIR"/M[0-9]*; do
   # Derive state
   state=$(bash "$DERIVE_PHASE" "$milestone_dir" 2>/dev/null) || state="error"
 
-  # Get tier from roadmap (if exists)
+  # Get tier — EVALUATION.md is the tier authority (per commands/evaluate.md);
+  # fall back to ROADMAP.md for milestones that predate evaluation artifacts.
+  evaluation="$milestone_dir/${mid}-EVALUATION.md"
   roadmap="$milestone_dir/${mid}-ROADMAP.md"
-  if [[ -f "$roadmap" ]]; then
+  if [[ -f "$evaluation" ]]; then
+    tier=$(bash "$READ_ROADMAP" "$evaluation" tier 2>/dev/null) || tier="unknown"
+  elif [[ -f "$roadmap" ]]; then
     tier=$(bash "$READ_ROADMAP" "$roadmap" tier 2>/dev/null) || tier="unknown"
   else
     tier="none"

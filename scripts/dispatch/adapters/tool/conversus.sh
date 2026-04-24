@@ -52,6 +52,12 @@
 #     rate limit; retrying won't help.
 #   - `claude-code` spawns a `claude -p` subprocess per agent (which is
 #     what OAuth is designed for). Wall time ~3-4x slower but reliable.
+#   - M026/P02/T04 auto-preflight: when CONVERSUS_PROVIDER is unset AND
+#     ANTHROPIC_API_KEY is not exported AND ~/.conversus/auth.json shows
+#     an OAuth marker (access_token / oauth / subscription), the adapter
+#     auto-sets CONVERSUS_PROVIDER=claude-code and emits a `note:` line
+#     to stderr. Any explicit CONVERSUS_PROVIDER value (including empty)
+#     wins — the operator's setting is never overridden.
 #   See `references/architecture.md` ("Conversus Adapter — Operator
 #   Notes") for the full operator runbook.
 #
@@ -360,6 +366,16 @@ case "$SUBCMD" in
     fi
 
     # Invoke conversus run.
+    # F3 (M026/P02/T04): auto-preflight CONVERSUS_PROVIDER=claude-code
+    # under Anthropic OAuth. Only fires when CONVERSUS_PROVIDER is unset.
+    # See references/architecture.md "Conversus Adapter — Operator Notes".
+    if [ -z "${CONVERSUS_PROVIDER+set}" ] && [ -z "${ANTHROPIC_API_KEY:-}" ] && [ -f "$HOME/.conversus/auth.json" ]; then
+      if grep -qE '"(access_token|oauth|subscription)"' "$HOME/.conversus/auth.json" 2>/dev/null; then
+        echo "note: detected Anthropic OAuth auth with no ANTHROPIC_API_KEY; auto-setting CONVERSUS_PROVIDER=claude-code (see references/architecture.md)" >&2
+        CONVERSUS_PROVIDER=claude-code
+        export CONVERSUS_PROVIDER
+      fi
+    fi
     _provider="${CONVERSUS_PROVIDER:-anthropic}"
     "$_bin_path" run "$_conv_config" --provider "$_provider"
     _rc=$?
@@ -437,8 +453,30 @@ print("SUMMARY=%s" % data.get("summary", "").replace("\n", " "))
     # in the `disputes:` field — the rationale here just names what
     # the verdict derives from. Operators wanting the full synthesis
     # read `summary/final.md` via the "Full deliberation" link below.
+    #
+    # F1/F2 (M026/P02/T04): prefer the `## Verdict` paragraph from
+    # arbiter/resolution.md (if present) else summary/final.md; fall
+    # back to the synthesized formula when no Verdict section exists.
+    _rationale_text=""
+    _arbiter_file="${_run_output_dir}/arbiter/resolution.md"
+    if [ -f "$_arbiter_file" ]; then
+      _verdict_source="$_arbiter_file"
+    else
+      _verdict_source="$_synthesis"
+    fi
+    _rationale_text="$(awk '
+      /^## Verdict/ { capture=1; next }
+      /^## / && capture { exit }
+      capture && NF { out = out (out=="" ? "" : " ") $0 }
+      END { print out }
+    ' "$_verdict_source" 2>/dev/null)"
+    _rationale_text="$(printf '%s\n' "$_rationale_text" | sed -E 's/"/\x27/g; s/[[:space:]]+/ /g; s/^ *//; s/ *$//')"
     _mode_label="${_mode:-cooperative}"
-    _rationale="verdict=${_verdict} derived from surviving_disputes=${_surviving} in ${_mode_label} deliberation"
+    if [ -n "$_rationale_text" ]; then
+      _rationale="$_rationale_text"
+    else
+      _rationale="verdict=${_verdict} derived from surviving_disputes=${_surviving} in ${_mode_label} deliberation"
+    fi
     mkdir -p "$(dirname "$_output")"
     cat > "$_output" <<EOF
 ---

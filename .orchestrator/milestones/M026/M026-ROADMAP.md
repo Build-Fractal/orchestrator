@@ -12,7 +12,7 @@ updated_at: "2026-04-23"
 
 ## Phases
 
-- [ ] **P01**: Parity audit + synthesis-crux spike-gate — "Operator reads `M026-CONVERSUS-PARITY.md` with the `Verified:` column fully populated from fs-inspection of both conversus trees, and the DC-6 synthesis-crux spike produces a committed go/no-go note on whether OSS's `synthesis` phase yields content parseable into the four `linter.output_contract` fields (`verdict`, `disputes`, `rationale`, `source_hash`)."
+- [x] **P01**: Parity audit + synthesis-crux spike-gate — "Operator reads `M026-CONVERSUS-PARITY.md` with the `Verified:` column fully populated from fs-inspection of both conversus trees, and the DC-6 synthesis-crux spike produces a committed go/no-go note on whether OSS's `synthesis` phase yields content parseable into the four `linter.output_contract` fields (`verdict`, `disputes`, `rationale`, `source_hash`)."
   - Risk: high — the DC-6 spike can block the milestone if OSS lacks a `linter.output_contract` analogue; resolving OQ-2 (parity-gap count) also happens here and feeds scope decisions for P02/P03.
   - Depends: none
   - Boundary Map:

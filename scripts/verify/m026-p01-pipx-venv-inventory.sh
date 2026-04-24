@@ -9,6 +9,7 @@
 set -euo pipefail
 
 PROBE=".orchestrator/milestones/M026/phases/P01/OLLAMA-PROBE.md"
+MATRIX=".orchestrator/milestones/M026/M026-CONVERSUS-PARITY.md"
 PASS=0
 FAIL=0
 
@@ -58,6 +59,27 @@ check_boolean_line() {
   esac
 }
 
+check_matrix_pipx_venv_row() {
+  # Cross-artifact assertion (T04 extension): the parity matrix must carry
+  # a data row whose Surface cell mentions `pipx venv` AND whose Verified
+  # cell is drawn from the fixed vocabulary
+  # {verified-identical, verified-drifted, verified-absent, verified-moot}.
+  if [ ! -f "$MATRIX" ]; then
+    echo "FAIL: parity matrix file not found at $MATRIX (required for cross-artifact check)"
+    FAIL=$((FAIL + 1))
+    return 1
+  fi
+  # grep for a single table row line matching `pipx venv` AND a verdict token.
+  if grep -E '^\|' "$MATRIX" | grep -E 'pipx venv' | grep -qE 'verified-identical|verified-drifted|verified-absent|verified-moot'; then
+    echo "PASS: matrix carries a pipx-venv data row with fixed-vocabulary verdict"
+    PASS=$((PASS + 1))
+    return 0
+  fi
+  echo "FAIL: matrix does not carry a pipx-venv data row with fixed-vocabulary verdict"
+  FAIL=$((FAIL + 1))
+  return 1
+}
+
 # Run all checks. Failures do not short-circuit — we want a full SUMMARY.
 check_exists || true
 check_path_line_nonempty "oss_venv_path" || true
@@ -66,6 +88,7 @@ check_boolean_line "oss_venv_python_present" || true
 check_boolean_line "oss_venv_conversus_binary_present" || true
 check_boolean_line "paid_venv_python_present" || true
 check_boolean_line "paid_venv_conversus_binary_present" || true
+check_matrix_pipx_venv_row || true
 
 echo "SUMMARY: pass=${PASS} fail=${FAIL}"
 if [ "$FAIL" -gt "0" ]; then

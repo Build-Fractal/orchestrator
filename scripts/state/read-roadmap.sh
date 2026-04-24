@@ -125,9 +125,14 @@ parse_phases() {
 
     # Match indented Risk/Depends lines under a phase
     elif [[ "$in_phase" = "true" ]]; then
-      # Risk line
+      # Risk line — strip parenthetical commentary so multi-word risk values
+      # don't pollute downstream IFS=' ' splits in the active-phase loop.
       if echo "$line" | grep -qiE '^[[:space:]]+-?[[:space:]]*Risk:'; then
-        phase_risk=$(echo "$line" | sed 's/.*Risk:[[:space:]]*//' | tr '[:upper:]' '[:lower:]' | sed 's/[[:space:]]*$//')
+        phase_risk=$(echo "$line" \
+          | sed 's/.*Risk:[[:space:]]*//' \
+          | sed 's/([^)]*)//g' \
+          | tr '[:upper:]' '[:lower:]' \
+          | sed 's/[[:space:]]*$//')
       fi
 
       # Depends line
@@ -250,10 +255,17 @@ case "$QUERY" in
         IFS=',' read -ra dep_list <<< "$pdepends"
         for dep in "${dep_list[@]}"; do
           dep=$(echo "$dep" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
-          # Skip empty or malformed tokens (defensive — parse_phases should
-          # already normalize to P## form, but survive unexpected input).
-          if [[ -z "$dep" || ! "$dep" =~ ^P[0-9] ]]; then
+          if [[ -z "$dep" ]]; then
             continue
+          fi
+          # Unparseable token = parser bug or malformed roadmap. A phase with
+          # a non-P## dependency must refuse to schedule rather than silently
+          # declaring itself ready (this was the load-bearing miss that let a
+          # parens-in-Risk parse mishap mark P02 ready while P01 was incomplete).
+          if [[ ! "$dep" =~ ^P[0-9] ]]; then
+            echo "read-roadmap.sh: phase $pid has unparseable dependency token '$dep' (full Depends: '$pdepends')" >&2
+            deps_satisfied=false
+            break
           fi
           # `|| true` is load-bearing: under `set -e + pipefail`, a no-match
           # grep would otherwise abort the whole script silently.

@@ -215,8 +215,13 @@ if [ -d "$PHASES_DIR" ]; then
       for tfile in "$tasks_dir"/T*-PLAN.md; do
         [ -f "$tfile" ] || continue
         tbase="$(basename "$tfile")"
-        # Extract T## from T##-PLAN.md
+        # Extract canonical T## from either T##-PLAN.md or T##-<slug>-PLAN.md.
+        # Slug form is emitted by the planner for readability; the orchestrator
+        # ID projected to GitHub stays "T##" regardless so it remains stable
+        # across slug edits. Strip the suffix first, then strip anything after
+        # the first dash.
         task_id="${tbase%%-PLAN.md}"
+        task_id="${task_id%%-*}"
         case "$task_id" in
           T[0-9][0-9]) ;;
           *) continue ;;

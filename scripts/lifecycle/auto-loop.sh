@@ -255,13 +255,19 @@ if [[ "$STEP" = "V" ]]; then
     exit 1
   fi
 
-  # Extract verification commands from the task plan's Verification section
-  # Look for lines with backtick-wrapped commands under ## Verification or ## Must-Haves
-  verify_section=$(sed -n '/^## \(Verification\|Must-Haves\)/,/^## [^#]/p' "$task_plan" | sed '$d' || true)
-  if [[ -z "$verify_section" ]]; then
-    # Try without trailing delimiter (section is last in file)
-    verify_section=$(sed -n '/^## \(Verification\|Must-Haves\)/,$p' "$task_plan" || true)
-  fi
+  # Extract verification commands from the task plan's Verification or
+  # Must-Haves section. Use ERE (`sed -nE`): BSD sed (macOS default) does not
+  # support `\|` alternation in BRE, so the legacy
+  # `sed -n '/^## \(Verification\|Must-Haves\)/...'` form silently matched zero
+  # lines on macOS — every task in a Tier C auto run reported checks_passed=0
+  # regardless of plan content (bbt-companion dogfood batch 2).
+  #
+  # We extract from the section header through end of file. The inner
+  # backtick-command extractor below skips any line without a `cmd` span, so
+  # trailing section headings ("## Notes", etc.) are no-ops and don't need to
+  # be trimmed — trimming with `sed '$d'` would drop the last Check line when
+  # Must-Haves happens to be the final section.
+  verify_section=$(sed -nE '/^## (Verification|Must-Haves)/,$p' "$task_plan" || true)
 
   if [[ -z "$verify_section" ]]; then
     _auto_output "AUTO:VERIFY_PASS phase=$PHASE task=$TASK checks_passed=0"

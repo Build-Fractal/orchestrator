@@ -124,6 +124,8 @@ Then the adapter runs per intensity:
 
 **Gate adapter pre-flight (per D019)**: the `conversus.sh gate` adapter refuses any artifact containing `<TODO:` markers above `CONVERSUS_GATE_TODO_THRESHOLD` (default 1). This guards against callers invoking the gate on unauthored scaffolds. Bypass via `CONVERSUS_GATE_SKIP_TODO_CHECK=1` is reserved for tests.
 
+The adapter resolves to the OSS conversus build (`~/Sites/conversus-oss`) by default (M026); set `CONVERSUS_EDITION=paid` to flip to the paid build for paid-only presets. See `commands/conversus-gate.md` for the full resolver and edition-aware diagnostics.
+
 ### Observability
 
 At the end of the run:

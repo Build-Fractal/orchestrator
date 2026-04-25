@@ -327,6 +327,7 @@ When `--conversus-gate` is passed, sync interposes a conversus deliberation at t
 - **Verdict-as-comment** — the conversus verdict is posted as a GitHub Issue comment on the UAT defect Issue before the close fires. On block, no close; on pass, close proceeds.
 - **Exit-code-gates-merge** — a non-zero rc from the conversus adapter blocks the close. This is the spec's merge-gate contract (FR-13).
 - **Adapter-absence semantics** — when `scripts/dispatch/adapters/tool/conversus.sh` is not installed (fresh install without the M011/P07 adapter), the gate emits `CONVERSUS-UNAVAILABLE:` warning on stderr and treats the UAT-defect close as operator-deferred (no close fires; rc=1). This preserves D014's "conversus integration stays at the M011/P07 reusable adapter" boundary — M013 invokes but does not reimplement.
+- **Edition resolution (M026)** — the adapter resolves to the OSS conversus build (`~/Sites/conversus-oss`) by default; operators set `CONVERSUS_EDITION=paid` to flip to the paid build for paid-only presets. The resolved edition is reported on every `conversus_gate_invocation` JSONL record. See `commands/conversus-gate.md` for the full resolver order.
 
 Full adapter semantics (mode selection, preset wiring, timing) are in `scripts/dispatch/adapters/tool/conversus.sh` and `references/routing.md`.
 

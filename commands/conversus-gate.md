@@ -21,11 +21,31 @@ without changing the adapter.
 ## Prerequisites
 
 - **Conversus binary is OPTIONAL.** The adapter resolves it in this
-  order:
+  order (M026/P02 — OSS is now the user-local default, paid is an
+  escape hatch):
   1. `CONVERSUS_STUB=1` — stub mode (test-only, uses canned fixtures).
   2. `command -v conversus` — PATH.
-  3. `$CONVERSUS_HOME/bin/conversus` — explicit env var.
-  4. `$HOME/Sites/conversus/bin/conversus` — user-local convention.
+  3. `$CONVERSUS_HOME/bin/conversus` — explicit absolute override.
+  4. `$HOME/Sites/conversus-oss/bin/conversus` — user-local OSS default
+     (M026/P02).
+  5. `$HOME/Sites/conversus/bin/conversus` — user-local paid escape
+     hatch.
+
+  Edition is reported on `check` stdout as
+  `edition=<oss|paid|unknown>`. Operator declares the edition via
+  `CONVERSUS_EDITION=oss|paid` (primary); fallback is
+  `python -m pip show conversus` metadata-probe against the resolved
+  venv's `Home-page:` line. Stub mode is edition-agnostic
+  (`edition=unknown reason=stub`). See `references/architecture.md`
+  "Conversus Adapter — Operator Notes" for the operator runbook.
+
+  **Paid-only-preset refusal (M026/P03)**: a preset whose YAML
+  frontmatter declares `edition_required: paid` invoked on an
+  OSS-resolved binary will be refused before any `conversus run`
+  invocation. The diagnostic on stderr names the preset, the edition
+  requirement, and `CONVERSUS_EDITION=paid` as the escape. Presets
+  without `edition_required:` behave identically to today.
+
   When the binary is missing, `gate` emits a `SKIPPED:` line and exits 0
   (graceful degradation — the calling pipeline proceeds without a gate).
 - The preset file must exist at

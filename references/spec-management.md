@@ -145,6 +145,8 @@ Every `y` invocation appends one `conversus_gate_invocation` JSONL record to `.o
 
 M014 ships preset + prompts only. `scripts/dispatch/adapters/tool/conversus.sh` is unchanged. Under `--strict`, adapter absence fails loudly.
 
+The adapter resolves to the OSS conversus build (`~/Sites/conversus-oss`) by default (M026/P02); operators set `CONVERSUS_EDITION=paid` to flip to the paid build for paid-only presets. Edition is reported on the `conversus_gate_invocation` JSONL record emitted per gate run. See `commands/conversus-gate.md` for the full resolver order and edition-aware diagnostics.
+
 ## Decomposition Flow (FR-7)
 
 `orchestrator:specify split <path>` proposes a 2–N-way decomposition of a large draft. CC only in v1 per CON-2.

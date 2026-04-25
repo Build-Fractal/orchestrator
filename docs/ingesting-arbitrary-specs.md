@@ -175,15 +175,24 @@ ingest pipeline. When the binary is missing, the adapter's `gate` subcommand
 emits a `SKIPPED:` line on stdout and exits 0 — the calling pipeline treats
 this as a pass-through and proceeds to the chunker.
 
-Resolver order for the conversus binary:
+Resolver order for the conversus binary (M026/P02 — OSS is the user-local
+default, paid is an escape hatch):
 
 1. `CONVERSUS_STUB=1` — stub mode (testing).
 2. `command -v conversus` — on PATH.
-3. `$CONVERSUS_HOME/bin/conversus` — explicit env var.
-4. `$HOME/Sites/conversus/bin/conversus` — user-local convention.
+3. `$CONVERSUS_HOME/bin/conversus` — explicit absolute override.
+4. `$HOME/Sites/conversus-oss/bin/conversus` — user-local OSS default.
+5. `$HOME/Sites/conversus/bin/conversus` — user-local paid escape hatch.
 
-To install conversus locally, clone the repo to `~/Sites/conversus` (or any
-location pointed at by `CONVERSUS_HOME`). See the conversus project for its
+Edition (`oss|paid|unknown`) is reported on `check` stdout. Operator declares
+the edition via `CONVERSUS_EDITION=oss|paid` (primary); fallback is a
+`pip show conversus` metadata probe against the resolved venv's `Home-page:`
+line. Stub mode is edition-agnostic.
+
+To install the OSS conversus locally, clone the OSS repo to
+`~/Sites/conversus-oss`. To install the paid build, clone to
+`~/Sites/conversus` (or any location pointed at by `CONVERSUS_HOME`). See the
+conversus project for its
 own install docs — the orchestrator does not ship a copy.
 
 ## Extending to new gate points

@@ -189,3 +189,78 @@ A section is "changed" if either: `<TODO>` count changed, or `shasum -a 256` of 
 ### SC-14 byte-preservation invariant
 
 `shasum` of pre-amend file bytes equals post-amend file bytes when all sections classify as (b) or (c). Verified by `tests/fixtures/m014-p04/amend-seed-spec.md` + `scripts/verify/m014-p04-amend-three-case.sh` at milestone close.
+
+## Comment Classification & Workflow Routing
+
+*Added by M014/P03 (2026-04-24). See `.orchestrator/DECISIONS.md` D023 for
+the regex/heuristic v1 baseline pin and retune trigger.*
+
+### Pipeline (orchestrator:comments classify)
+
+1. `scripts/comments/fetch.sh` enumerates unactioned Giscus + GitHub Issue/PR
+   comments, caches each to `.orchestrator/comments/inbox/<comment-id>.json`,
+   skips entries already in `.orchestrator/comments/actioned.jsonl`.
+2. `scripts/comments/classify.sh <inbox-file>` emits per-comment verdict
+   `class=<class> confidence=<score> reason=<rule-id>` for one of four FR-9
+   classes: `uat-bug`, `decision-append`, `spec-amendment`, `ambiguous`.
+3. `scripts/comments/comments.sh` master pipeline routes per class:
+   - `uat-bug` >= threshold → M013/FR-10 UAT ingestion path (auto-apply).
+   - `decision-append` >= threshold → templated block appended to `DECISIONS.md`.
+   - `spec-amendment` (any confidence) → review-queue (NEVER auto-applies).
+   - `ambiguous` → `scripts/dispatch/adapters/tool/conversus.sh gate
+     classify-comment` (--strict); on PASS-with-reclassification, route to
+     new class; on BLOCK / low-confidence / adapter unavailable, route to
+     human triage bucket.
+
+### Regex/heuristic v1 ruleset (D023)
+
+See `scripts/comments/classify.sh` rules R1-R10 inline. Confidence values
+are coarse (0.7–0.95 in 0.05–0.10 steps) pinned on intuition + four-class
+precedent, NOT on measured precision/recall. Retune trigger documented below.
+
+### Auto-apply thresholds
+
+`.orchestrator/config.yml` `comments.auto_apply_threshold:` — per-class:
+
+| Class | Default | Behavior at/above threshold |
+|---|---|---|
+| `uat-bug` | 0.8 | Route through M013/FR-10 UAT ingestion. |
+| `decision-append` | 0.8 | Append templated block to `DECISIONS.md`. |
+| `spec-amendment` | 1.0 | NEVER auto-applies (CON-5/SC-5 invariant). |
+| `ambiguous` | 1.0 | Always conversus-triage. |
+
+Operators tune by editing `.orchestrator/config.yml`. SC-4 measures precision
+on dogfood data; SC-5 forbids auto-apply regardless of `spec-amendment` threshold.
+
+### Spec-amendment human-gate (CON-5/SC-5/Constitution III + XIV)
+
+The `apply <queue-id>` subcommand is the SINGLE path for spec mutation from
+comments. No script under `scripts/comments/` auto-applies a spec-amendment
+regardless of confidence score. `scripts/verify/m014-p03-spec-amendment-human-gate.sh`
+asserts this invariant mechanically.
+
+### D023 retune trigger
+
+The regex/heuristic v1 baseline is provisional. Open a follow-up D-row to
+re-pin FR-9 shape when EITHER condition holds:
+
+1. `actioned.jsonl` shows >=30 fetched comments across the four classes.
+2. Classifier confidence calibration on observed comments diverges from
+   regex/heuristic predictions in >=20% of samples (sample = comment whose
+   conversus-triage verdict OR human-triage outcome disagrees with the
+   regex/heuristic verdict).
+
+Either trigger justifies escalating to one of the alternative shapes from
+spec OQ #C-1 (embedding-distance, LLM-call-per-comment, two-pass hybrid).
+
+### FR-19 dry-run manifest shape (comments)
+
+`comments classify --dry-run` emits JSONL action records to stdout:
+
+```
+{"command":"comments classify","action_type":"<action>","target_path":"<path>","source_ref":"<url>","description":"<text>"}
+```
+
+`action_type` values: `cache-comment`, `classify-comment`, `auto-apply-uat-bug`,
+`auto-apply-decision-append`, `queue-spec-amendment`, `route-ambiguous-to-conversus`,
+`apply-amendment`, `reject-queue-item`.

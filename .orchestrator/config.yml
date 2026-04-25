@@ -22,3 +22,14 @@ specify:
   hardening_spec_exception: true  # fr_count==0 treated as strong below-threshold signal
   scaffolder_description_min_words: 80
   scaffolder_llm_on_codex: false
+comments:
+  # FR-17 (M014/P03): per-class auto-apply confidence thresholds.
+  # Pinned conservatively; D023 retune trigger documented in
+  # specs/024-spec-management-extended/planning-inputs/inbox-dogfood.md.
+  auto_apply_threshold:
+    uat-bug: 0.8
+    decision-append: 0.8
+    spec-amendment: 1.0  # CON-5/SC-5 — never auto-applies regardless.
+    ambiguous: 1.0       # always routes through conversus.
+  reply_on_apply: false  # OQ #C-8 v1 conservative pin.
+  fetch_schedule: manual # OQ #C-2 v1 conservative pin (alternatives: post-verify, cron).

@@ -1,4 +1,5 @@
 # >>> orchestrator:recent-changes >>>
+- M014/P03: comment→workflow classifier (regex/heuristic v1 per D023) + spec-amendment human-gated apply path; consumes M012 wiki + M013 GitHub comment surfaces; conversus-triage on ambiguous; FR-19 dry-run + FR-16 observability; phase suite 14 gates green.
 - M026/P03: conversus-OSS migration close — preset edition_required:paid refusal on OSS, six-surface doc updates, knowledge graduation (MEM029 pattern + MEM030 convention), DECISIONS D022, CHANGELOG entry. Closes M026.
 - 027-conversus-oss-migration: Migrate orchestrator default Conversus integration from paid build to OSS build with paid-escape-hatch preserved (M026).
 - M026/P02: conversus-OSS resolver flip — OSS primary, paid escape hatch via CONVERSUS_EDITION; JSONL edition field; dual-edition regression test with visible-skip annotations; gate-verdict-reliability bundle (verdict-text rationale, arbiter preference, OAuth auto-preflight closes OQ-16 false-PASS). See `.orchestrator/milestones/M026/phases/P02/P02-SUMMARY.md`.
@@ -7,4 +8,5 @@
 - state-tier-fix: scripts/state/find-active-milestone.sh reads tier from EVALUATION.md first, falls back to ROADMAP.md — unblocks orchestrator:auto on evaluated-but-unroadmapped Tier C milestones.
 - ingest-fr-slug-fix: scripts/knowledge/ingest-spec.sh accepts **FR-N (slug)** markers and aborts loudly on unmatched FR lines (was silent data loss on 36 chunks per bbt-companion dogfood).
 - reinit-sentinel-fix: scripts/lifecycle/reinit-handler.sh preserves all # >>> orchestrator:NAME >>> sentinel blocks (not just project-identity), canonicalizes relative --project-dir, and keeps runtime_confidence sticky. Known limitation: template-regenerate model still loses free-form prose outside sentinel/CUSTOM blocks — redesign pending.
+- M026: milestone consolidated (87% reduction, 3 phases archived)
 # <<< orchestrator:recent-changes <<<

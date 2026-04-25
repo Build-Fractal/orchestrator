@@ -1,0 +1,101 @@
+## What Was Built
+
+P03 closes M014's original mission — wiki Giscus + GitHub Issue/PR comments now classify into one of four workflow actions (`uat-bug`, `decision-append`, `spec-amendment`, `ambiguous`) with the two trivial classes auto-applying above threshold, spec-amendments queued for human sign-off (CON-5/SC-5), and ambiguous comments routed through the M011/P07 conversus adapter with adapter-missing graceful-degradation to human triage. Five tasks, 14-gate phase suite all green.
+
+**Core surface (FR-1, FR-8, FR-9, FR-10, FR-11)**:
+
+- `commands/comments.md` — user-facing command with six subcommands (`classify`, `status`, `apply`, `reject`, `triage`, `reclassify`).
+- `scripts/comments/fetch.sh` — Giscus + GitHub Issue/PR fetcher; JSONL inbox cache at `.orchestrator/comments/inbox/<id>.json`; idempotency via `actioned.jsonl` URL log; FR-19 dry-run manifest; hermetic via `GH_API_STUB` / `GH_GRAPHQL_STUB` env vars.
+- `scripts/comments/classify.sh` — per-comment pure classifier with 10 regex/heuristic v1 rules (per D023); emits `class=<c> confidence=<f> reason=<r>` on stdout.
+- `scripts/comments/apply.sh` — US-5 human-gated spec-amendment apply path; stale-diff refusal via `patch -N`; in-flight-conversus refusal; `rebuild-index.sh` hook; atomic actioned.jsonl row + comment_actioned event.
+- `scripts/comments/reject.sh` + `scripts/comments/triage.sh` — rejection + human-triage bucket readers.
+- `scripts/comments/comments.sh` — master pipeline; routes per class; threshold-gated auto-apply for `uat-bug` (via M013/FR-10 ingest when available) and `decision-append` (DECISIONS.md templated row); always-queue for `spec-amendment`; conversus-strict for `ambiguous` with `adapter-missing` triage fallback.
+- `templates/conversus-presets/classify-comment.yml` — new preset for ambiguous-comment triage (D007 reuse; conversus adapter byte-identical pre/post P03).
+
+**D023 regex/heuristic v1 pin**:
+- Classifier shape pinned to regex/heuristic v1 baseline per D023 (2026-04-24) — SC-16 ≥1-week-inbox-dogfood preflight relaxed because wiki was deployed 2026-04-23 (one day before plan-phase). Retune trigger: ≥30 actioned comments OR ≥20% calibration divergence → follow-up D-row re-pins FR-9 shape. Rule set R1–R10 captured inline in `classify.sh` with coarse confidence steps (0.7–0.95 in 0.05–0.10 increments).
+- Dogfood capture at `specs/024-spec-management-extended/planning-inputs/inbox-dogfood.md` documents snapshot state, per-class baseline counts, and retune trigger — single source of truth cited from `commands/comments.md` + `references/spec-management.md`.
+
+**Configuration (FR-17)**:
+- `.orchestrator/config.yml` `comments:` section added: `auto_apply_threshold` per-class (uat-bug 0.8, decision-append 0.8, spec-amendment 1.0 per SC-5, ambiguous 1.0), `reply_on_apply: false` (OQ #C-8 v1), `fetch_schedule: manual` (OQ #C-2 v1).
+
+**Documentation (SC-11 extension)**:
+- `references/spec-management.md` gains `## Comment Classification & Workflow Routing` section; all P04 sections byte-preserved (verified by `m014-p03-references-section.sh`).
+
+**Observability (FR-16)**:
+- `comment_actioned` JSONL events emitted on every auto-apply with `{comment_url, class, confidence, action_taken, source_surface, timestamp}`.
+- `unit_close` records carry `{comments_classified, comments_auto_applied, comments_queued, conversus_invocations, elapsed_ms, source: "runtime"}`.
+
+## Key Decisions
+
+- **Regex/heuristic v1 baseline (D023)** — FR-9 classifier shape pinned on the conservative end of OQ #C-1 (no LLM on primary path; ambiguous-only delegation to conversus). Retune-via-follow-up-D-row is the explicit escalation contract.
+- **Conversus adapter zero modifications (D007)** — new `classify-comment` preset drops in without adapter changes; adapter file byte-identical pre/post P03.
+- **Two-tier SC-5 invariant verification** — source-level grep in `m014-p03-spec-amendment-human-gate.sh` + runtime-event assertion in pipeline/auto-apply verifiers; defense-in-depth against future drift.
+- **`patch -N` for stale-diff probe** — vanilla `patch --dry-run` silently auto-reverses previously-applied diffs (rc=0), masking staleness; `-N` forward-only refuses reverse-apply and is the operative US-5 AS-2 signal.
+- **Adapter-missing as routing verdict** — non-executable conversus adapter lands ambiguous comments in human triage with `conversus_verdict=adapter-missing` rather than failing loudly; matches M013/FR-13 graceful-degradation at the comments seam.
+- **Deterministic content-addressed queue/triage filenames** — `shasum-256(comment-url)[:8]`-keyed; re-runs overwrite-in-place rather than accumulate duplicates (CON-8).
+- **Env-overridable sub-script paths** — `COMMENTS_FETCH`/`COMMENTS_CLASSIFY`/`COMMENTS_ADAPTER`/`COMMENTS_UAT_INGEST`/`COMMENTS_APPLY`/`COMMENTS_REJECT`/`COMMENTS_TRIAGE` extend the T01 `ORCHESTRATOR_PROJECT_ROOT` hermetic pattern to every fan-out point; lets verifiers stub the adapter + M013 UAT ingest without modifying real binaries (D007 reuse preservation).
+
+## Cross-Cutting Patterns Established
+
+- **Hermetic fetch via JSONL stub env-vars** (`GH_API_STUB` / `GH_GRAPHQL_STUB`) — verifiers never invoke real `gh`; same pattern reusable for any future GitHub API consumer.
+- **Per-surface `source_surface` filter on shared fixture** — prevents double-count when one fixture feeds both surfaces in a verifier.
+- **Pure-verdict classifier + imperative pipeline** — classify.sh is read-only/deterministic; the auto-apply / queue / triage decision lives in comments.sh. Keeps the invariant checkable at two seams.
+- **Single-agent cooperative conversus preset** for refinement-only LLM calls (no red-blue when prior is already encoded by regex/heuristic).
+- **`patch -N` forward-only stale probe** — canonical US-5-style idempotency check.
+- **Deterministic content-addressed operational artifacts** — review-queue + triage files keyed on `shasum-256(url)[:8]`; trivially replayable.
+- **Defense-in-depth must-not-happen invariant** — source-level grep + runtime-event-shape assertion; reusable for any SC-N that forbids a pattern.
+- **Env-overridable sub-script paths for fan-out pipelines** — extends `ORCHESTRATOR_PROJECT_ROOT` to delegated scripts.
+- **Dynamic-enumeration bash32+lint omnibus** — scans `scripts/comments/*.sh` + `scripts/verify/m014-p03-*.sh` at runtime rather than via static list; picks up future additions automatically; self-exempts via basename match.
+- **Zero-prompts gate on hermetic scratch + fixture replay** — full classify pipeline exercised under `--yes` with adapter-missing stub to cover auto-apply + queue + triage routes in one invocation.
+- **Outside-marker shasum invariant pre/post dual-write** — mechanical SC-6a verification during phase close; verifiable proxy for the FR-12 byte-preservation promise.
+
+## Verification Results
+
+**P03 phase suite**: 14/14 gates PASS, exit 0.
+
+1. `m014-p03-fetch.sh` (T01)
+2. `m014-p03-classify.sh` (T02)
+3. `m014-p03-commands-md.sh` (T03)
+4. `m014-p03-apply.sh` (T03)
+5. `m014-p03-reject-triage.sh` (T03)
+6. `m014-p03-spec-amendment-human-gate.sh` (T03 SC-5 invariant)
+7. `m014-p03-pipeline.sh` (T04)
+8. `m014-p03-auto-apply.sh` (T04)
+9. `m014-p03-observability.sh` (T04)
+10. `m014-p03-config-keys.sh` (T05)
+11. `m014-p03-references-section.sh` (T05)
+12. `m014-p03-dogfood-capture.sh` (T05)
+13. `m014-p03-bash32-and-lint.sh` (T05 omnibus; 20 scripts scanned)
+14. `m014-p03-zero-prompts.sh` (T05 SC-7)
+
+**Cross-cutting invariants**:
+
+- **SC-5 / CON-5 spec-amendment human-gate**: two-tier verification — source-level grep (no `auto-apply.*spec-amendment` pattern in any `scripts/comments/*.sh` except `apply.sh`) + runtime-event assertion (no `comment_actioned` event with `class=spec-amendment AND action_taken=auto-apply-*`).
+- **SC-6a outside-marker byte-preservation**: CLAUDE.md + AGENTS.md outside-marker shasums byte-identical pre/post dual-write.
+- **SC-7 zero-approval-prompt**: `comments classify --yes` under hermetic scratch produces zero approval-prompt-shaped strings (M021 corpus cross-check).
+- **SC-9 Bash 3.2 + anti-pattern lint**: all new shell scripts pass both gates (20 scripts scanned).
+- **SC-11 references/spec-management.md**: new Comment Classification section added; P04 sections byte-preserved.
+- **SC-16 dogfood-data sizing**: captured at best-available signal per D023; retune trigger documented.
+- **CON-4 conversus adapter reuse**: byte-identical pre/post P03 (D007).
+- **CON-8 idempotency**: re-running classify on a clean slate produces deterministic queue + triage filenames keyed by URL shasum.
+- **FR-16 observability**: `comment_actioned` + `unit_close` JSONL emitted to `.orchestrator/execution-log.jsonl`.
+
+## Deviations Worth Surfacing
+
+Each documented in its task summary; none affected cross-task contracts:
+
+- **T01**: JSONL stubs filter by `source_surface` on shared fixture; plan step 7 `pass=8` reconciled by adding inbox-record-shape check.
+- **T03**: `patch -N` replaces vanilla `patch --dry-run` for stale-diff probe (plan would have silently passed on re-applied diffs); additive `action_taken` field on actioned.jsonl rows.
+- **T04**: env-overridable sub-script paths (`COMMENTS_*`) added for hermetic testability without D007 violation; additive `confidence` + `timestamp` fields on `comment_actioned` events; DECISIONS.md append guarded on file existence.
+- **T01–T04 collectively**: side-fix at commit 4465b42 (auto-loop.sh accepts slug-bearing `T##-<slug>-PLAN.md` in `--step=V`) — caught during T01 dispatch when the literal-concat path constructor failed on `T01-fetch-PLAN.md`; every other consumer already globbed `T*-PLAN.md`.
+
+No deviations affected the phase demo sentence or downstream phases' dependencies.
+
+## State After P03
+
+- `orchestrator:comments classify` runs end-to-end: fetch (hermetic-testable) → classify (regex/heuristic v1) → route per class (auto-apply | queue | triage) with FR-16 observability.
+- Spec-amendment human-gate invariant (CON-5/SC-5) verified at two seams; mechanically impossible to auto-apply a spec-amendment via any script under `scripts/comments/` except the explicit `apply <queue-id>` manual path.
+- `references/spec-management.md` + `commands/comments.md` cite `specs/024-spec-management-extended/planning-inputs/inbox-dogfood.md` as the SSOT for the D023 retune trigger.
+- Conversus adapter remains byte-identical (D007 reuse discipline preserved).
+- M014 milestone is ready for validation + close. All four phases now shipped: P01 (create-path + minimal dual-write), P02 (full dual-write + drift detector), P04 (conversus auto-propose + probe + preset), P03 (classifier + apply-path). The bootstrapping loop closes: the next milestone's spec will be authored via `orchestrator:specify` + reviewed via `orchestrator:comments`.

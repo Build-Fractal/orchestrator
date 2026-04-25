@@ -55,7 +55,7 @@ updated_at: "2026-04-22T16:30:00Z"
       - `commands/init.md`, `commands/consolidate.md` (existing, patched)
       - `scripts/verify/check-docs.sh` (existing M006 docs diagnostic, extended)
 
-- [ ] **P03**: Comment→workflow classifier + human-gated spec-amendment apply path — "A maintainer runs `orchestrator:comments classify`; the command fetches unactioned Giscus + GitHub Issue/PR comments, classifies each into one of `{uat-bug, decision-append, spec-amendment, ambiguous}`, auto-applies the two trivial classes above threshold, queues spec-amendments for human sign-off, and routes ambiguous comments through the M011/P07 conversus adapter — running `orchestrator:comments apply <id>` on an approved queue item edits the target spec atomically."
+- [x] **P03**: Comment→workflow classifier + human-gated spec-amendment apply path — "A maintainer runs `orchestrator:comments classify`; the command fetches unactioned Giscus + GitHub Issue/PR comments, classifies each into one of `{uat-bug, decision-append, spec-amendment, ambiguous}`, auto-applies the two trivial classes above threshold, queues spec-amendments for human sign-off, and routes ambiguous comments through the M011/P07 conversus adapter — running `orchestrator:comments apply <id>` on an approved queue item edits the target spec atomically."
   - Risk: high
   - Depends: P01
   - Preflight (external, operator-gated — see D023):

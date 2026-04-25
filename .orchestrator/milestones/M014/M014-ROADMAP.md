@@ -57,8 +57,11 @@ updated_at: "2026-04-22T16:30:00Z"
 
 - [ ] **P03**: Comment→workflow classifier + human-gated spec-amendment apply path — "A maintainer runs `orchestrator:comments classify`; the command fetches unactioned Giscus + GitHub Issue/PR comments, classifies each into one of `{uat-bug, decision-append, spec-amendment, ambiguous}`, auto-applies the two trivial classes above threshold, queues spec-amendments for human sign-off, and routes ambiguous comments through the M011/P07 conversus adapter — running `orchestrator:comments apply <id>` on an approved queue item edits the target spec atomically."
   - Risk: high
-  - Depends: P01, P99
-  - Deferral-reason: Depends on synthetic P99 to park this phase behind external preflight. M012/P04 DEPLOY-RECORD.md has 3 pending sentinels (wiki not deployed) and planning-inputs/inbox-dogfood.md requires ≥1 week real inbox data. Once resolved, edit Depends back to "P01" and rerun `orchestrator:auto`.
+  - Depends: P01
+  - Preflight (external, operator-gated — see D023):
+    - M012/P04 wiki DEPLOY-RECORD: **RESOLVED 2026-04-23** (all four gates PASS, site live at `https://Build-Fractal.github.io/spec-kit-orchestrator/`).
+    - `specs/024-spec-management-extended/planning-inputs/inbox-dogfood.md`: **RELAXED per D023** — original SC-16 ≥1 week organic inbox data target deferred. FR-9 classifier shape pins on best-available signal at plan time (regex/heuristic v1 baseline) with explicit retune commitment after meaningful comment volume accumulates.
+  - Phase-entry gate (CONTEXT OQ-4): dispatcher refuses P03 task dispatch on stubbed DEPLOY-RECORD sentinels with a clear error; this gate remains the load-bearing enforcement for the wiki preflight.
   - Boundary Map:
     - Produces:
       - `commands/comments.md` — user-facing surface with `classify`, `status`, `apply`, `reject`, `triage`, `reclassify` subcommands

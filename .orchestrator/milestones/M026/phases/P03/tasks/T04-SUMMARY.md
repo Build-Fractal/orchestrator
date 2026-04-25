@@ -1,0 +1,26 @@
+---
+schema_version: "1.0"
+type: task-summary
+id: "T04"
+parent: "P03"
+milestone: "M026"
+provides:
+  - "D022 row appended to .orchestrator/DECISIONS.md (canonical When/Scope/Decision/Choice/Rationale/Revisable shape, 7-cell long-line markdown row); CHANGELOG.md bullet under [0.9.1] ### Added describing the M026 conversus-OSS migration (resolver flip, CONVERSUS_EDITION env var, edition= JSONL field, edition_required: paid frontmatter contract, six doc-surface updates, MEM029/MEM030 graduations); verifier scripts/verify/m026-p03-decision-row.sh (single-script-file AD-19 shape, Bash 3.2, 6 PASS contract — 4 DECISIONS.md checks + 2 CHANGELOG.md checks)"
+requires:
+  - "from:P03/T01 what:edition_required: paid preset-frontmatter contract referenced in D022 cell-3; from:P03/T03 what:MEM029 (pattern) and MEM030 (convention) cross-referenced in D022 Choice cell; pre-existing .orchestrator/DECISIONS.md with D021 as last row + trailing newline; pre-existing CHANGELOG.md with [0.9.1] heading and ### Added subsection"
+affects:
+  - "T05 (phase suite verifier rolls up m026-p03-decision-row.sh); milestone-close consolidation (D022 anchors three M026 commitments — two-tier detection, env-var convention, preset-frontmatter contract — for downstream M013/M014/M018/M023/M024 audit-trail lookups); future tool integrations adopting OSS-default-with-paid-escape-hatch shape (D022 + MEM029 + MEM030 form the reusable triad)"
+key_files:
+  - ".orchestrator/DECISIONS.md (modified, +1 row D022); CHANGELOG.md (modified, +1 bullet under [0.9.1] ### Added before ### Changed); scripts/verify/m026-p03-decision-row.sh (created, 27 lines)"
+key_decisions:
+  - "case-sensitivity deviation: payload verbatim verifier used grep -qE 'D022.*edition-resolution' (case-sensitive lowercase) but the verbatim D022 row body uses 'Edition-resolution' (capitalized at start of Decision cell) and lowercase 'edition-resolution pattern' only later; updated the verifier line to grep -qiE (case-insensitive) — D022 row body left verbatim per payload; CHANGELOG bullet placed at end of existing [0.9.1] ### Added subsection (append-only, no modification of pre-existing bullets) per payload guidance 'under the v0.9.1 heading'; D022 appended after D021 with no extra leading blank line per payload step 2c (D021 already provides separation)"
+patterns_established:
+  - "payload-verbatim-with-minor-grep-tolerance (when payload-supplied verifier text is case-sensitive but the canonical knowledge body uses mixed case, prefer adjusting the verifier with -i to a case-insensitive regex over rewriting the knowledge body — verifier semantics preserved, audit-trail body untouched); idempotent-append-via-precount (grep -c '^| D022 ' before append confirms non-duplication on re-run); single-script-file verifier with PASS/FAIL counter pattern (AD-19) extends cleanly to D-row + CHANGELOG audit checks"
+drill_down_paths:
+  - ".orchestrator/DECISIONS.md (D022 row, last row in file); CHANGELOG.md ([0.9.1] ### Added subsection, last bullet); scripts/verify/m026-p03-decision-row.sh (full verifier source); .orchestrator/milestones/M026/phases/P03/tasks/T04-PAYLOAD.md lines 996 (verbatim D022 row source) + 1012 (verbatim CHANGELOG bullet source) + 1023-1053 (verifier template)"
+duration: "10m"
+verification_result: "pass"
+completed_at: "2026-04-25T00:19:07Z"
+---
+
+T04 records the M026 conversus-OSS migration in the auditable cross-milestone trail. Three artifacts changed: (1) .orchestrator/DECISIONS.md gains row D022 — When=M026/P03 (2026-04-24); Scope=scope, contract, knowledge; Decision names the edition-resolution two-tier detection pattern, the <TOOL>_EDITION env-var convention, the edition_required: <edition> preset-frontmatter contract, and the CHANGELOG update; Choice cell cross-references MEM029 (pattern), MEM030 (convention), the canonical _resolve_edition implementation at scripts/dispatch/adapters/tool/conversus.sh:132-179, and the SC-7 paid-only refusal diagnostic; Rationale explains why a single D-row consolidates three load-bearing commitments instead of scattering them across MEM entries; Revisable lists three forward-compatible amendment paths. (2) CHANGELOG.md gains one bullet under [0.9.1] ### Added (after MEM026/MEM027 line, before ### Changed) describing the migration in operator-facing prose — resolver flip, CONVERSUS_EDITION env var, adapter check edition= output, JSONL edition field, edition_required preset frontmatter, six doc surfaces, MEM029/MEM030, D022 cross-link. (3) scripts/verify/m026-p03-decision-row.sh (AD-19 single-script-file shape, Bash 3.2 portable, no compound bash) runs 6 grep assertions and emits SUMMARY: m026-p03-decision-row.sh pass=6 fail=0 followed by PASS: trailer. One deviation from the payload-verbatim verifier: changed grep -qE to grep -qiE on the edition-resolution check because the verbatim D022 body uses 'Edition-resolution' (capitalized at start of Decision cell) per the payload's verbatim row text — the case-insensitive variant satisfies both the verifier intent (D022 names edition-resolution) and the verbatim D-row body. Idempotency confirmed via grep -c precount; re-running T04 finds D022 + CHANGELOG bullet already present and skips append. CON-6 honored: T04 writes only DECISIONS.md and CHANGELOG.md; Recent Changes update is T05's responsibility via dual-write-runtime-md.sh.

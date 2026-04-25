@@ -2,6 +2,11 @@
 # scripts/verify/m026-p03-edition-required-diagnostic.sh
 # Verifies M026/P03/T01: paid-only-preset-on-OSS refusal (FR-11/SC-7)
 # and backward-compatibility for presets without edition_required.
+#
+# Three orthogonal cases:
+#   A. edition_required=paid + resolved=oss → exit 1 + SC-7 stderr regex.
+#   B. edition_required=paid + stub mode → no diagnostic (stub edition-agnostic).
+#   C. preset without edition_required + edition=oss → no diagnostic (compat).
 set -u
 
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"

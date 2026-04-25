@@ -69,6 +69,24 @@ pid_alive() {
   return 1
 }
 
+# --- Helper: detect Claude Code runtime ---
+# Claude Code's Bash tool spawns a fresh shell per tool call, so the PID we
+# recorded in `create` exits the moment that call returns. By the next status
+# check, the recorded PID is dead and `pid_alive` returns false — flipping a
+# legitimately-held lock to STALE within seconds. The orchestrator-auto skill
+# then refuses to enter the loop with a misleading "Stale lock detected" error.
+#
+# Under Claude Code, the orchestrator-driving agent (Claude) is the holder, not
+# any single shell. Lock-file existence is the right liveness signal; stale
+# recovery is the explicit `resume` invocation.
+#
+# CLAUDECODE=1 is set by the Claude Code CLI harness on every Bash tool call.
+# Discovered during bbt-companion dogfood (M001/P01, 2026-04-24); see
+# bbt-companion docs/orchestrator-followups.md FU-4 for forensic notes.
+is_claude_code() {
+  [[ -n "${CLAUDECODE:-}" ]]
+}
+
 # --- Operation: create ---
 op_create() {
   if [[ $# -lt 3 ]]; then
@@ -140,6 +158,15 @@ op_status() {
   pid="$(json_field "$lock_file" "pid")"
   unit_id="$(json_field "$lock_file" "unitId")"
   started="$(json_field "$lock_file" "startedAt")"
+
+  # Claude Code: lock-file existence is the active signal (see is_claude_code).
+  # The recorded PID belongs to a per-tool-call shell that exited the moment
+  # `create` returned, so kill -0 here would always lie. Stale recovery in CC
+  # mode is the explicit `resume` invocation, not auto-detection.
+  if is_claude_code; then
+    echo "LOCK:ACTIVE pid=$pid unit=$unit_id started=$started"
+    return 0
+  fi
 
   if [[ -n "$pid" ]] && pid_alive "$pid"; then
     echo "LOCK:ACTIVE pid=$pid unit=$unit_id started=$started"

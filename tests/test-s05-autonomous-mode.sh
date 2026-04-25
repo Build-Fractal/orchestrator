@@ -57,10 +57,12 @@ fi
 # PID 1 (launchd/init — always alive) so the status check can verify ACTIVE detection.
 sed "s/\"pid\":[[:space:]]*[0-9]*/\"pid\": 1/" "$TMPLOCK" > "${TMPLOCK}.new" && mv "${TMPLOCK}.new" "$TMPLOCK"
 
-# Status should be ACTIVE (our own PID is running)
-output=$(bash "$LOCK_MGR" status "$TMPLOCK" 2>/dev/null) && exit_code=0 || exit_code=$?
+# Status should be ACTIVE (PID 1 is launchd/init, always running). Unset
+# CLAUDECODE so this asserts PID-based liveness, not the FU-4 CC-mode short
+# circuit. CC-mode is covered by tests/test-lock-manager-claude-code-mode.sh.
+output=$(env -u CLAUDECODE bash "$LOCK_MGR" status "$TMPLOCK" 2>/dev/null) && exit_code=0 || exit_code=$?
 if [ "$exit_code" -eq 0 ] && echo "$output" | grep -q "^LOCK:ACTIVE"; then
-  pass "lock-manager.sh status → LOCK:ACTIVE (own PID)"
+  pass "lock-manager.sh status → LOCK:ACTIVE (PID alive, non-CC runtime)"
 else
   fail "lock-manager.sh status → LOCK:ACTIVE (exit=$exit_code, output: $output)"
 fi
@@ -88,9 +90,12 @@ rm -rf "$TMPDIR_LOCK"
 # --------------------------------------------------------------------------
 
 STALE_FIXTURE="$PROJECT_ROOT/tests/fixtures/auto-lock/orchestrator.lock"
-output=$(bash "$LOCK_MGR" status "$STALE_FIXTURE" 2>/dev/null) && exit_code=0 || exit_code=$?
+# Unset CLAUDECODE so this test continues to validate the legacy runtime path.
+# Under CLAUDECODE=1, lock-file existence is the active signal (FU-4 fix); the
+# CC-mode behavior is covered by tests/test-lock-manager-claude-code-mode.sh.
+output=$(env -u CLAUDECODE bash "$LOCK_MGR" status "$STALE_FIXTURE" 2>/dev/null) && exit_code=0 || exit_code=$?
 if [ "$exit_code" -eq 0 ] && echo "$output" | grep -q "^LOCK:STALE"; then
-  pass "lock-manager.sh status on stale fixture → LOCK:STALE"
+  pass "lock-manager.sh status on stale fixture → LOCK:STALE (non-CC runtime)"
 else
   fail "lock-manager.sh status on stale fixture → LOCK:STALE (exit=$exit_code, output: $output)"
 fi

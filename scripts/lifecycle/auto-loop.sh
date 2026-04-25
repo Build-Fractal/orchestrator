@@ -262,12 +262,20 @@ if [[ "$STEP" = "V" ]]; then
   # lines on macOS — every task in a Tier C auto run reported checks_passed=0
   # regardless of plan content (bbt-companion dogfood batch 2).
   #
-  # We extract from the section header through end of file. The inner
-  # backtick-command extractor below skips any line without a `cmd` span, so
-  # trailing section headings ("## Notes", etc.) are no-ops and don't need to
-  # be trimmed — trimming with `sed '$d'` would drop the last Check line when
-  # Must-Haves happens to be the final section.
-  verify_section=$(sed -nE '/^## (Verification|Must-Haves)/,$p' "$task_plan" || true)
+  # Scope: stop at the NEXT `## ` header (not EOF). Otherwise informational
+  # backticks in trailing Inputs / Constraints / Expected Output / Notes
+  # sections (e.g. file paths, env-var names, identifiers in prose) get
+  # eval'd as commands and produce false-failure noise — symptom: every
+  # Tier C task verify reported AUTO:VERIFY_FAIL even when the real
+  # verifiers all passed (M026/P03 dogfood). Extracting only the body of
+  # the Verification/Must-Haves sections themselves keeps the contract
+  # tight: Must-Haves provides Check: sub-items, Verification provides
+  # fenced-block commands, anything in another section is not a command.
+  verify_section=$(awk '
+    /^## (Verification|Must-Haves)/ { in_section=1; print; next }
+    /^## / && in_section { in_section=0 }
+    in_section { print }
+  ' "$task_plan" || true)
 
   if [[ -z "$verify_section" ]]; then
     _auto_output "AUTO:VERIFY_PASS phase=$PHASE task=$TASK checks_passed=0"
@@ -317,8 +325,13 @@ if [[ "$STEP" = "V" ]]; then
     if [[ "$in_fence" = "true" ]]; then
       # Strip leading/trailing whitespace; skip blank lines.
       check_cmd=$(printf '%s' "$line" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
-    elif echo "$line" | grep -qE '`[^`]+`'; then
-      check_cmd=$(echo "$line" | sed 's/.*`\([^`]*\)`.*/\1/')
+    elif echo "$line" | grep -qE '^[[:space:]]*-?[[:space:]]*Check:[[:space:]]*`[^`]+`'; then
+      # Outside fences, only extract from explicit `Check:` sub-items.
+      # Truth statements themselves often carry informational backticks
+      # (filenames, env vars, regex examples) that are NOT commands; the
+      # documented contract per templates/phase-plan.md is that the
+      # `- Check: ` ` cmd ` ` ` sub-item is the executable form.
+      check_cmd=$(echo "$line" | sed 's/.*Check:[[:space:]]*`\([^`]*\)`.*/\1/')
     fi
     [[ -z "$check_cmd" ]] && continue
 

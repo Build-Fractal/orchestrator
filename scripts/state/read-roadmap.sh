@@ -129,11 +129,15 @@ parse_phases() {
       # Risk line — strip parenthetical commentary so multi-word risk values
       # don't pollute downstream IFS=' ' splits in the active-phase loop.
       if echo "$line" | grep -qiE '^[[:space:]]+-?[[:space:]]*Risk:'; then
+        # Risk: <level> [— commentary]. Take only the first token so trailing
+        # prose (em-dash, semicolons, periods) cannot leak into pdepends via
+        # the space-separated parse_phases output. Documented values are
+        # high|medium|low.
         phase_risk=$(echo "$line" \
           | sed 's/.*Risk:[[:space:]]*//' \
           | sed 's/([^)]*)//g' \
-          | tr '[:upper:]' '[:lower:]' \
-          | sed 's/[[:space:]]*$//')
+          | awk '{print $1}' \
+          | tr '[:upper:]' '[:lower:]')
       fi
 
       # Depends line

@@ -1,0 +1,28 @@
+---
+schema_version: "1.0"
+type: milestone-summary
+id: "M026"
+parent: "027-conversus-oss-migration"
+milestone: "M026"
+provides:
+  - "OSS-default Conversus integration with paid escape hatch: scripts/dispatch/adapters/tool/conversus.sh resolves to ~/Sites/conversus-oss by default with paid build reachable via CONVERSUS_EDITION=paid; check subcommand emits edition=oss|paid|unknown stdout line; conversus_gate_invocation JSONL records carry edition field; preset frontmatter edition_required: paid contract with paid-only-on-OSS refusal diagnostic; six FR-12 doc surfaces updated in-place; KNOWLEDGE-INDEX.md regenerated with MEM029 (edition-resolution two-tier-detection pattern) and MEM030 (paid-escape-hatch env-var convention); D022 audit-trail row in DECISIONS.md; CHANGELOG.md migration entry under [0.9.1]; CLAUDE.md and AGENTS.md Recent Changes dual-written for both phase-closes"
+requires:
+  - "conversus binary installed at ~/Sites/conversus-oss (OSS) and/or ~/Sites/conversus (paid); pipx venv at ~/.local/pipx/venvs/conversus/ for metadata-probe fallback; dual-write helper scripts/util/dual-write-runtime-md.sh (M014/P01); M011/P07 reusable adapter shape"
+affects:
+  - "downstream consumers M013/M014/M018/M023/M024 inherit OSS-by-default behavior with paid escape hatch; spec-026 (M014 shell-impl Pass 3) is the next consumer that may exercise the new resolver under a fresh-install code path"
+key_files:
+  - "scripts/dispatch/adapters/tool/conversus.sh; tests/fixtures/preset-edition-required-paid.yml; scripts/verify/m026-p02-edition-detection-contract.sh; scripts/verify/m026-p02-adapter-invariants.sh; scripts/verify/m026-p02-jsonl-edition-field.sh; scripts/verify/m026-p02-dual-edition-test-shape.sh; scripts/verify/m026-p02-gate-verdict-reliability.sh; scripts/verify/m026-p02-phase-suite.sh; scripts/verify/m026-p03-edition-required-diagnostic.sh; scripts/verify/m026-p03-doc-surface-coverage.sh; scripts/verify/m026-p03-mem-graduation.sh; scripts/verify/m026-p03-decision-row.sh; scripts/verify/m026-p03-recent-changes.sh; scripts/verify/m026-p03-phase-suite.sh; commands/conversus-gate.md; commands/ingest.md; commands/specify.md; docs/ingesting-arbitrary-specs.md; references/github-integration.md; references/spec-management.md; references/architecture.md; knowledge/patterns/MEM029.md; knowledge/conventions/MEM030.md; KNOWLEDGE-INDEX.md; .orchestrator/DECISIONS.md; CHANGELOG.md; CLAUDE.md; AGENTS.md"
+key_decisions:
+  - "OSS-primary posture per project_m026_oss_posture.md (operator memory); env-var primary over metadata-only detection (operator declares edition without venv probe); FAIL: stderr prefix kept per adapter convention rather than FR-11 literal ERROR: (SC-7 case-insensitive regex matches body either way); refuse only on edition=oss explicitly proceed on edition=unknown (false-positive avoidance); awk-only frontmatter parser for Bash 3.2 + minimal-deps discipline; AD-7 revise-in-place for doc surfaces; taxonomy deviation knowledge/decisions->knowledge/patterns+conventions placement matches MEM027 precedent; D022 consolidation audit row cross-references MEM029+MEM030; --append-entry mode for Recent Changes preserves prior entries below"
+patterns_established:
+  - "two-tier detection (env-var declaration + metadata probe) reusable for runtime-identification questions where path-based detection is infeasible; <TOOL>_EDITION=<value> env-var convention for OSS-default escape hatches; frontmatter-keyed adapter behavior gating (preset declares contract adapter enforces) reusable for future runtime-required-feature gating; awk-only YAML-frontmatter parser as POSIX-portable default; refusal diagnostic shape (literal substring matched by case-insensitive regex) decouples human-prose from machine-verifiable contract; visible-skip annotations over silent-skip for unavailable edition branches; shape-not-value cross-edition equivalence assertions (DC-4); detection-replay harnesses as hermetic path for deep-gate logic that cant run end-to-end in a verifier; paired knowledge graduation (pattern + convention emit together when one codifies a mechanism and the other names the operator-facing surface)"
+drill_down_paths:
+  - ".orchestrator/milestones/M026/phases/P01/P01-SUMMARY.md,.orchestrator/milestones/M026/phases/P02/P02-SUMMARY.md,.orchestrator/milestones/M026/phases/P03/P03-SUMMARY.md"
+duration: "233m"
+verification_result: "pass"
+completed_at: "2026-04-25T00:30:45Z"
+observability_surfaces:
+  - "conversus_gate_invocation JSONL records carry new edition field via emit_tier1_record adjacent-pair pattern (AD-4)"
+---
+
+M026 flips the orchestrator's default Conversus integration from paid to OSS while preserving a first-class paid escape hatch and adds two operator-facing surfaces (edition-aware diagnostics for paid-only presets six discoverable doc updates). Three phases: P01 audit + DC-6 spike-gate (parity matrix + go-verdict on synthesis output contract); P02 minimal slice (resolver flip + CONVERSUS_EDITION env var + JSONL edition field + dual-edition regression test + gate-verdict-reliability bundle closing OQ-16 false-PASS); P03 layer-on (preset edition_required: paid frontmatter contract + refusal diagnostic + six doc-surface revisions + knowledge graduation MEM029/MEM030 + DECISIONS D022 + CHANGELOG entry). All adapter invariants CON-1..CON-5 preserved across all three phases. Three side-fixes bundled into the milestone branch: read-roadmap.sh Risk-field truncation; auto-loop.sh --step=V over-extraction (parser scoped to section body and Check: lines); roadmap+sync-roadmap drift guard (P02 batch 3). Validation: 48/48 cross-phase checks pass.

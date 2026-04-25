@@ -146,7 +146,7 @@ if [ "$UNINSTALL" = "1" ]; then
     done < "$manifest_file"
     # Prune empty runtime directories bottom-up.
     if [ "$DRY_RUN" = "0" ]; then
-      for d in scripts templates references; do
+      for d in scripts templates references commands; do
         [ -d "$PROJECT_DIR/$d" ] && find "$PROJECT_DIR/$d" -type d -empty -depth -exec rmdir {} \; 2>/dev/null || true
       done
       rm -f "$manifest_file"
@@ -191,9 +191,11 @@ if [ "$DRY_RUN" = "1" ]; then
     echo "FAIL: adapter --register --dry-run exited $reg_rc" >&2
     exit 1
   fi
-  # Extract count from `dry_run=true count=<N>` or `would_write=` lines.
-  skills_installed="$(printf '%s\n' "$reg_out" | sed -n 's/^dry_run=true count=\([0-9][0-9]*\)$/\1/p' | head -n 1)"
+  # Extract count from `dry_run=true count=<N> agents=<M>` (agents may be 0 or absent on older adapters).
+  skills_installed="$(printf '%s\n' "$reg_out" | sed -n 's/^dry_run=true count=\([0-9][0-9]*\).*$/\1/p' | head -n 1)"
   [ -z "$skills_installed" ] && skills_installed=0
+  agents_installed="$(printf '%s\n' "$reg_out" | sed -n 's/^dry_run=true count=[0-9][0-9]* agents=\([0-9][0-9]*\)$/\1/p' | head -n 1)"
+  [ -z "$agents_installed" ] && agents_installed=0
 else
   reg_out="$(bash "$ADAPTER" --register 2>&1)"
   reg_rc=$?
@@ -202,8 +204,10 @@ else
     echo "FAIL: adapter --register exited $reg_rc" >&2
     exit 1
   fi
-  skills_installed="$(printf '%s\n' "$reg_out" | sed -n 's/^registered=true count=\([0-9][0-9]*\)$/\1/p' | head -n 1)"
+  skills_installed="$(printf '%s\n' "$reg_out" | sed -n 's/^registered=true count=\([0-9][0-9]*\).*$/\1/p' | head -n 1)"
   [ -z "$skills_installed" ] && skills_installed=0
+  agents_installed="$(printf '%s\n' "$reg_out" | sed -n 's/^registered=true count=[0-9][0-9]* agents=\([0-9][0-9]*\)$/\1/p' | head -n 1)"
+  [ -z "$agents_installed" ] && agents_installed=0
 fi
 
 # --- 3. Wire hooks: merge-not-overwrite into settings.json (M025/P01/T02) ---
@@ -280,13 +284,15 @@ else
   config_written=1
 fi
 
-# --- 4.5 Stage runtime (scripts/, templates/, references/) into project ---
+# --- 4.5 Stage runtime (scripts/, templates/, references/, commands/) into project ---
 # Every commands/*.md invokes helpers via project-relative paths (e.g.
 # `bash scripts/state/find-active-milestone.sh`). Without this stage, the
 # first command after orchestrator:init dies with No such file or directory.
+# `commands/` is staged because dispatched-agent prompts reference rubric
+# files like `commands/plan-phase.md` from the project root (auto.md Stage 2).
 # Direction 1 from installer-staging-handoff: stage source trees directly
 # from $REPO_ROOT. Runtime is orchestrator-owned; copy is always unconditional.
-RUNTIME_DIRS="scripts templates references"
+RUNTIME_DIRS="scripts templates references commands"
 manifest_file="$PROJECT_DIR/.orchestrator/installed-files.txt"
 runtime_staged=0
 
@@ -324,5 +330,5 @@ if [ "$DRY_RUN" = "0" ]; then
 fi
 
 # --- 5. Summary line ---
-echo "SUMMARY: runtime=claude-code skills_installed=${skills_installed} hooks_wired=${hooks_wired} config_written=${config_written} runtime_staged=${runtime_staged} dry_run=${DRY_RUN}"
+echo "SUMMARY: runtime=claude-code skills_installed=${skills_installed} agents_installed=${agents_installed} hooks_wired=${hooks_wired} config_written=${config_written} runtime_staged=${runtime_staged} dry_run=${DRY_RUN}"
 exit 0

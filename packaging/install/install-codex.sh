@@ -118,7 +118,7 @@ if [ "$UNINSTALL" = "1" ]; then
       fi
     done < "$manifest_file"
     if [ "$DRY_RUN" = "0" ]; then
-      for d in scripts templates references; do
+      for d in scripts templates references commands; do
         [ -d "$PROJECT_DIR/$d" ] && find "$PROJECT_DIR/$d" -type d -empty -depth -exec rmdir {} \; 2>/dev/null || true
       done
       rm -f "$manifest_file"
@@ -227,11 +227,13 @@ else
   config_written=1
 fi
 
-# --- 4.5 Stage runtime (scripts/, templates/, references/) into project ---
+# --- 4.5 Stage runtime (scripts/, templates/, references/, commands/) into project ---
 # See install-claude-code.sh for the rationale (Direction 1 in
 # installer-staging-handoff). Every commands/*.md invokes helpers via
 # project-relative paths, so the runtime must live alongside the project.
-RUNTIME_DIRS="scripts templates references"
+# `commands/` is staged because dispatched-agent prompts reference rubric
+# files like `commands/plan-phase.md` from the project root (auto.md Stage 2).
+RUNTIME_DIRS="scripts templates references commands"
 manifest_file="$PROJECT_DIR/.orchestrator/installed-files.txt"
 runtime_staged=0
 

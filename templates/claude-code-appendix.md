@@ -10,11 +10,13 @@ Platform-specific dispatch instructions for running the orchestrator inside Clau
 
 ## Agent Tool Invocation
 
-Use the Agent tool to dispatch tasks in fresh contexts. Pass the assembled dispatch payload as the prompt parameter with `subagent_type='general-purpose'`.
+Use the Agent tool to dispatch tasks in fresh contexts. Pass the assembled dispatch payload as the prompt parameter with `subagent_type='orchestrator-agent'`. The `orchestrator-agent` is registered by `orchestrator:init` into `~/.claude/agents/` and carries a guardrail system prompt that treats the dispatch payload as authoritative.
 
 ```
-Agent(prompt=<assembled dispatch payload>, subagent_type="general-purpose")
+Agent(prompt=<assembled dispatch payload>, subagent_type="orchestrator-agent")
 ```
+
+Fall back to `subagent_type='general-purpose'` only when `orchestrator-agent` is not in the discovery list (older install). **Never pick framework-named agents** like `gsd-planner`, `gsd-executor`, etc. from the discovery list — their system prompts impose framework conventions on the dispatch and corrupt the orchestrator's output shape. (Observed in bbt-companion dogfood, FU-7, 2026-04-24.)
 
 Each dispatched task runs in a fresh context with zero prior codebase knowledge. The payload assembled by `build-context.sh` is the task's entire world.
 

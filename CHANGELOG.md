@@ -9,11 +9,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This pr
 ### Changed
 
 - Task plan filename convention canonicalized to `T##-<slug>-PLAN.md` in `commands/plan-phase.md`. The no-slug form `T##-PLAN.md` remains accepted by every discovery glob and downstream tooling — historical milestones are unchanged. Planners producing new task plans should use the slug form for readability and sibling-symmetry with `T##-<slug>-PAYLOAD.md` / `T##-<slug>-SUMMARY.md`. (Bug H)
+- `commands/auto.md` Stage 2 dispatch and Planning Dispatch sections now recommend `subagent_type='orchestrator-agent'` (registered into `~/.claude/agents/` by the installer). Adds explicit guard against picking framework-named agents (`gsd-*`) from Claude Code's discovery list — their system prompts impose conventions incompatible with orchestrator output shape. `general-purpose` remains the documented fallback. (FU-7)
+
+### Added
+
+- `packaging/agents/orchestrator-agent.md` — guardrail-style agent system prompt that treats the dispatch payload as authoritative and explicitly forbids imposing framework conventions or rewriting output shape. Registered by the Claude Code adapter `--register` mode into `~/.claude/agents/` alongside the existing slash-command registration. (FU-7)
+- `commands/` is now staged into project root by `packaging/install/install-{claude-code,codex,cursor}.sh` so dispatched agents can resolve rubric references like `commands/plan-phase.md`. Manifest-backed `--uninstall` automatically tracks the new files. (FU-8)
 
 ### Fixed
 
 - `scripts/integrations/github-init.sh` now canonicalizes task IDs from slugged filenames (e.g. `T01-conversus-resolver-PLAN.md` → orchestrator ID `T01`), so slug-form task plans are projected to GitHub Issues instead of being silently skipped. (Bug H)
 - `scripts/lifecycle/phase-transition.sh` deduplicates concatenated task-summary fields (`provides`, `key_files`, `key_decisions`, `patterns_established`) and overrides `requires`/`affects` with roadmap-derived phase graph position instead of leaking internal task IDs into phase frontmatter. Adds a new `affects <P##>` query to `scripts/state/read-roadmap.sh` (reverse-Depends). (Bug F)
+- `scripts/lifecycle/check-settings-state.sh` now captures regen/write/merge failure detail to `.orchestrator/diagnostics/settings-regen-<ISO8601>.log` and emits a stderr breadcrumb. Previously the captured stderr was silently dropped behind a `keeping existing` fallback. Exit code unchanged (still 0) — escalation to non-zero in unattended mode deferred pending evidence. (FU-9)
 
 ## [0.9.1] — 2026-04-23
 

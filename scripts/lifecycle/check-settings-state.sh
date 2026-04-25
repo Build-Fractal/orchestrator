@@ -26,6 +26,21 @@ GENERATE_SCRIPT="$SCRIPT_DIR/generate-permissions.sh"
 WRITE_SCRIPT="$SCRIPT_DIR/write-permissions.sh"
 CHECK_SCRIPT="$SCRIPT_DIR/../diagnostics/check-permissions.sh"
 TEMPLATE="$SCRIPT_DIR/../../templates/claude-settings.json"
+DIAGNOSTICS_DIR="$PROJECT_ROOT/.orchestrator/diagnostics"
+
+# Captures regen/write/merge failure detail that would otherwise be silently
+# dropped by `keeping existing` fallbacks. Returns the log path on stdout.
+# (Discovered during bbt-companion dogfood, FU-9, 2026-04-24.)
+log_failure() {
+  local kind="$1"
+  local detail="$2"
+  mkdir -p "$DIAGNOSTICS_DIR"
+  local ts
+  ts="$(date -u +%Y%m%dT%H%M%SZ)"
+  local log="$DIAGNOSTICS_DIR/settings-regen-${ts}.log"
+  printf 'kind=%s\nstate=%s\ntimestamp=%s\n---\n%s\n' "$kind" "${state:-unknown}" "$ts" "$detail" > "$log"
+  echo "$log"
+}
 
 # Detect state
 if [[ ! -f "$SETTINGS_FILE" ]]; then
@@ -76,13 +91,18 @@ case "$state" in
     if [[ "$has_pipeline" = "true" ]]; then
       # Regenerate to catch toolchain changes
       gen_output=$(bash "$GENERATE_SCRIPT" "$PROJECT_ROOT" 2>&1) || {
+        log_path="$(log_failure regen-failed "$gen_output")"
+        echo "SETTINGS:ORCHESTRATOR — regeneration failed, keeping existing (see $log_path)" >&2
         echo "SETTINGS:ORCHESTRATOR — regeneration failed, keeping existing"
         exit 0
       }
-      echo "$gen_output" | bash "$WRITE_SCRIPT" "$PROJECT_ROOT" 2>&1 || {
+      write_output=$(echo "$gen_output" | bash "$WRITE_SCRIPT" "$PROJECT_ROOT" 2>&1) || {
+        log_path="$(log_failure write-failed "$write_output")"
+        echo "SETTINGS:ORCHESTRATOR — write failed, keeping existing (see $log_path)" >&2
         echo "SETTINGS:ORCHESTRATOR — write failed, keeping existing"
         exit 0
       }
+      [[ -n "$write_output" ]] && echo "$write_output"
       echo "SETTINGS:ORCHESTRATOR — regenerated"
     else
       echo "SETTINGS:ORCHESTRATOR — pipeline unavailable, keeping existing"
@@ -93,13 +113,18 @@ case "$state" in
     if [[ "$has_pipeline" = "true" ]]; then
       # Merge orchestrator patterns into existing
       gen_output=$(bash "$GENERATE_SCRIPT" "$PROJECT_ROOT" 2>&1) || {
+        log_path="$(log_failure user-authored-gen-failed "$gen_output")"
+        echo "SETTINGS:USER_AUTHORED — generation failed, keeping existing (see $log_path)" >&2
         echo "SETTINGS:USER_AUTHORED — generation failed, keeping existing"
         exit 0
       }
-      echo "$gen_output" | bash "$WRITE_SCRIPT" "$PROJECT_ROOT" --merge 2>&1 || {
+      merge_output=$(echo "$gen_output" | bash "$WRITE_SCRIPT" "$PROJECT_ROOT" --merge 2>&1) || {
+        log_path="$(log_failure user-authored-merge-failed "$merge_output")"
+        echo "SETTINGS:USER_AUTHORED — merge failed, keeping existing (see $log_path)" >&2
         echo "SETTINGS:USER_AUTHORED — merge failed, keeping existing"
         exit 0
       }
+      [[ -n "$merge_output" ]] && echo "$merge_output"
       echo "SETTINGS:USER_AUTHORED — merged orchestrator patterns"
     else
       echo "SETTINGS:USER_AUTHORED — pipeline unavailable, keeping existing"

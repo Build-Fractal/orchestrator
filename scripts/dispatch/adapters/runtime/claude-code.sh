@@ -14,9 +14,15 @@
 #     Installs orchestrator commands as user-level Claude Code skill files
 #     under $HOME/.claude/commands/orchestrator-<cmd>.md, one per
 #     commands/*.md in the repo root (excluding README.md per MEM008).
+#     Also installs orchestrator agents under $HOME/.claude/agents/, one per
+#     packaging/agents/*.md (currently: orchestrator-agent.md). The agent
+#     surface is the FU-7 fix: dispatched units pick `subagent_type=
+#     orchestrator-agent` so discovery does not surface gsd-* / framework
+#     agents whose system prompts impose incompatible conventions.
 #     With --dry-run: emits `would_write=<path>` lines and writes nothing.
-#     Without --dry-run: mkdir -p "$HOME/.claude/commands" and copy, then
-#     emit `registered=true count=<N>`.
+#     Without --dry-run: mkdir -p both target dirs and copy.
+#     Final line: `registered=true count=<N> agents=<M>` (or
+#     `dry_run=true count=<N> agents=<M>`).
 #
 #     HOME guard: refuses to run when $HOME is unset/empty or "/". Emits
 #     "FAIL: unsafe HOME" on stderr and exits 2. All tests MUST use
@@ -84,6 +90,7 @@ if [[ "$MODE" = "register" ]]; then
   # scripts/dispatch/adapters/runtime/claude-code.sh -> repo root is 4 levels up
   repo_root="$(cd "$script_dir/../../../.." && pwd)"
   commands_dir="$repo_root/commands"
+  agents_dir="$repo_root/packaging/agents"
 
   if [[ ! -d "$commands_dir" ]]; then
     echo "FAIL: commands directory not found at $commands_dir" >&2
@@ -91,8 +98,10 @@ if [[ "$MODE" = "register" ]]; then
   fi
 
   target_dir="$HOME/.claude/commands"
+  agents_target_dir="$HOME/.claude/agents"
 
   count=0
+  agents_count=0
   if [[ "$DRY_RUN" = "1" ]]; then
     # Dry-run: list what would be written, write nothing.
     for src in "$commands_dir"/*.md; do
@@ -103,11 +112,19 @@ if [[ "$MODE" = "register" ]]; then
       echo "would_write=${target_dir}/orchestrator-${stem}.md"
       count=$((count + 1))
     done
-    echo "dry_run=true count=${count}"
+    if [[ -d "$agents_dir" ]]; then
+      for src in "$agents_dir"/*.md; do
+        [[ -f "$src" ]] || continue
+        base="$(basename "$src")"
+        echo "would_write=${agents_target_dir}/${base}"
+        agents_count=$((agents_count + 1))
+      done
+    fi
+    echo "dry_run=true count=${count} agents=${agents_count}"
     exit 0
   fi
 
-  # Real register: mkdir target dir + copy each command.
+  # Real register: mkdir target dirs + copy each command and agent.
   mkdir -p "$target_dir"
   for src in "$commands_dir"/*.md; do
     [[ -f "$src" ]] || continue
@@ -117,7 +134,16 @@ if [[ "$MODE" = "register" ]]; then
     cp "$src" "${target_dir}/orchestrator-${stem}.md"
     count=$((count + 1))
   done
-  echo "registered=true count=${count}"
+  if [[ -d "$agents_dir" ]]; then
+    mkdir -p "$agents_target_dir"
+    for src in "$agents_dir"/*.md; do
+      [[ -f "$src" ]] || continue
+      base="$(basename "$src")"
+      cp "$src" "${agents_target_dir}/${base}"
+      agents_count=$((agents_count + 1))
+    done
+  fi
+  echo "registered=true count=${count} agents=${agents_count}"
   exit 0
 fi
 

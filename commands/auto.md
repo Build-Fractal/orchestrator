@@ -223,7 +223,7 @@ Then read `<milestone-dir>/auto-loop-result.txt` to get milestone, phase, task, 
 **a. Dispatch**: Read the payload file from the `payload_file` path in the `AUTO:READY` output. Pass its contents directly as the Agent tool prompt — do NOT manually read task plans, upstream summaries, knowledge files, or decisions yourself. The payload is pre-assembled by `build-context.sh` with scope-filtered context.
 
 **Capability self-check**: Check your own toolkit to determine the dispatch method:
-- If you have the **Agent tool** available: Use it with the payload as prompt and `subagent_type='general-purpose'`. See `templates/claude-code-appendix.md`.
+- If you have the **Agent tool** available: Use it with the payload as prompt and `subagent_type='orchestrator-agent'` (registered by `orchestrator:init` into `~/.claude/agents/`). If `orchestrator-agent` is not in the discovery list (older install or non-CC runtime), fall back to `subagent_type='general-purpose'`. **Do NOT pick framework-named agents like `gsd-*` from the discovery list** — they impose framework conventions on the dispatch and corrupt the output shape. See `templates/claude-code-appendix.md`.
 - If you have **CLI access** to `claude` or `cursor`: Use CLI subagent dispatch.
 - If neither is available: Execute sequentially in current context.
 
@@ -278,8 +278,10 @@ When `auto-loop.sh` returns `AUTO:PLANNING phase=P## milestone=M###`, the active
    - The target phase ID and milestone directory path
 
    ```
-   Agent(prompt="Plan phase P## for milestone M### following the speckit.orchestrator.plan-phase command.\n\n<assembled context>\n\nMilestone directory: <milestone-dir>", subagent_type="general-purpose")
+   Agent(prompt="Plan phase P## for milestone M### following the speckit.orchestrator.plan-phase command (rubric at commands/plan-phase.md, staged at project root by orchestrator:init).\n\n<assembled context>\n\nMilestone directory: <milestone-dir>", subagent_type="orchestrator-agent")
    ```
+
+   Fall back to `subagent_type="general-purpose"` only if `orchestrator-agent` is not in the discovery list. **Do NOT pick `gsd-*` or other framework-named agents** — their system prompts impose conventions incompatible with orchestrator output shape (observed in bbt-companion dogfood, FU-7).
 
 3. **Verify planning completed**: After the planning agent returns, check that the phase plan and task plans exist. Do NOT use compound boolean chains or pipe chains — use the dedicated helper script:
 

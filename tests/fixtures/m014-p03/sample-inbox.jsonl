@@ -1,0 +1,4 @@
+{"url":"https://github.com/Build-Fractal/spec-kit-orchestrator/issues/1#issuecomment-1","body":"acceptance criterion 2 fails on macOS 13","source_surface":"github","id":"c1","created_at":"2026-04-24T00:00:00Z"}
+{"url":"https://github.com/Build-Fractal/spec-kit-orchestrator/issues/2#issuecomment-2","body":"decision: we should pin Bash 3.2 across all scripts","source_surface":"github","id":"c2","created_at":"2026-04-24T00:01:00Z"}
+{"url":"https://github.com/Build-Fractal/spec-kit-orchestrator/discussions/3#discussioncomment-3","body":"FR-5 should also cover token-density measurement","source_surface":"giscus","id":"c3","created_at":"2026-04-24T00:02:00Z"}
+{"url":"https://github.com/Build-Fractal/spec-kit-orchestrator/discussions/4#discussioncomment-4","body":"hmm not sure about this approach","source_surface":"giscus","id":"c4","created_at":"2026-04-24T00:03:00Z"}

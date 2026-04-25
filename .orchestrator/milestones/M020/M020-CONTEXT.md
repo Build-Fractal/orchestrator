@@ -2,9 +2,9 @@
 schema_version: "1.0"
 type: context-draft
 milestone: "M020"
-status: draft
+status: finalized
 created_at: "2026-04-23"
-finalized_at: null
+finalized_at: "2026-04-25T04:25:26Z"
 ---
 
 <!--
@@ -155,8 +155,58 @@ Operator should confirm: are there additional pain points from real dogfooding (
 <!--
   SUMMARY: 7 Architectural Decisions (AD-1..AD-7), 5 Scope Boundaries
   (SB-1..SB-5), 7 Design Constraints (DC-1..DC-7), 6 Open Questions
-  (OQ-1..OQ-6). Total: 25 items, all with [agent-default — operator review
-  required] annotations. Operator to review, revise, resolve OQ-1..OQ-6, and
-  re-invoke `orchestrator:discuss` with finalize intent (status: draft →
-  status: finalized) before `orchestrator:roadmap` can proceed.
+  (OQ-1..OQ-6). Total: 25 items, populated by fresh-context agent with
+  [agent-default — operator review required] annotations.
+
+  OPERATOR REVIEW landed 2026-04-25 — see "## Operator Resolutions" below.
+  Status flipped draft → finalized.
 -->
+
+## Operator Resolutions (2026-04-25)
+
+This section closes the [agent-default — operator review required] annotations on AD-1..AD-7, SB-1..SB-5, DC-1..DC-7, and resolves OQ-1..OQ-6. It also folds in the verdict from a fresh `spec-pressure-test` conversus gate run (verdict file: `specs/025-knowledge-layer-maturation/conversus/gate-result-2026-04-25.md`) and records two spec amendments made in response.
+
+### Conversus gate re-run — closes DC-7
+
+The 2026-04-25 OSS-edition gate run (`CONVERSUS_EDITION=oss CONVERSUS_PROVIDER=claude-code`) completed all five phases (review, cross-review, revision, disputes, synthesis). Verdict: **BLOCK** with two P0 mitigations and four surviving non-P0 disputes. The OSS resolver flip closed the prior claude-code false-fail (M026/P02), proving the gate path is now reliable end-to-end on this repo.
+
+**Spec amendments landed in response (closes both P0 mitigations)**:
+
+- **MIT-001 (Jaccard feature vector contradiction)**: spec FR-5 L124 amended to defer to CON-5: `"computes pairwise Jaccard similarity on the feature vector defined in CON-5"`. Single source of truth restored.
+- **MIT-002 (query-surface semantics)**: spec FR-2 amended with deterministic semantics covering: (a) case-insensitive whole-string `topic:` exact-match, (b) topic-keyword-index = case-folded `tags[]` set rebuilt lazily, (c) match rule (topic OR tag), (d) state filter with `graduated`-only default, (e) ranking (topic-match > tag-match, ties by `last_verified` desc), (f) output shape (`--format ids|json` per OQ-3). SC-1 updated to assert deterministic ranking and JSON shape.
+
+A re-gate after these amendments is **recommended but not required** before `orchestrator:roadmap`. Mechanical fixes for MIT-001 + MIT-002 are inspection-verifiable; surviving non-P0 threats are addressed in DC-8 below.
+
+### Architectural Decisions — confirmations + additions
+
+- **AD-1..AD-7**: confirmed as written by fresh-context agent. No amendments. Ground in spec 025 + Principle XIV + Principle VI as cited.
+- **AD-8 (NEW) — query-surface deterministic semantics**: see spec FR-2 (post-amendment) for the full contract. Codified here so the spec amendment and the context draft remain consistent. Source: MIT-002 closure.
+
+### Scope Boundaries — confirmations
+
+- **SB-1..SB-5**: confirmed as written. Five user stories in scope, six non-goals out of scope, schema-authority boundary held by M020, dispatch-read-only invariant preserved, M020-before-M024 sequencing per D016. No amendments.
+
+### Design Constraints — confirmations + additions
+
+- **DC-1..DC-6**: confirmed as written. CON-2 metadata-only results, CON-3 no-speculative-complexity bound on query surface, CON-4 byte-equivalence, CON-5 feature-vector cap, default Jaccard threshold 0.7, on-disk SSOT.
+- **DC-7**: closed by the 2026-04-25 gate run (see above).
+- **DC-8 (NEW) — disposition of surviving non-P0 conversus threats**:
+  - **THREAT-004 (unbounded review queue growth)**: ACCEPTED for v1, with explicit trigger to revisit. Rationale: visibility is a deliberate design choice (FR-4 + Principle VI — operator decision over silent backpressure). Trigger for backpressure work: a milestone where review queue exceeds 50 candidates or `orchestrator:status` runtime exceeds 2 s on a fixture-equivalent knowledge tree. Backpressure design lands in a future milestone (not M020).
+  - **THREAT-005 (query scalability cliff)**: ACCEPTED for v1. Rationale: AD-2's lazy-rebuild-on-each-query is bounded by current knowledge-tree size (~25–50 entries per milestone). Trigger for indexing work: M019 Tier 2+3 metrics show query latency >100 ms median or rebuild cost dominates dispatch context-assembly. Persistent index design lands in a future milestone (not M020).
+  - **THREAT-006 (cluster state consistency)**: PARTIALLY MITIGATED via plan-phase task. Rationale: cluster operations must read entry state at graduate-time (not at cluster-time) and abort with a clear diagnostic when membership has drifted. Implementation guidance lands in M020 plan-phase as an explicit task on `graduate.sh --cluster`; not a spec amendment.
+  - **THREAT-007 (preferences cascade ambiguity for partial overlaps)**: ACCEPTED for v1, with documentation requirement. Rationale: spec FR-6 + AD-5 cover direct conflicts; partial-overlap behavior is "each key resolves independently with project>user>default precedence." Documentation task lands in M020 plan-phase (README/preferences-walkthrough); not a spec amendment.
+
+### Open Questions — resolutions
+
+- **OQ-1 (staleness threshold default)**: **14 days** (default). Single-operator project, consolidate cadence is per-milestone (not weekly), 7 would over-trigger. Operator-tunable via FR-6 preferences.
+- **OQ-2 (operator identity in decision_history)**: **`git config user.email`** at write time, with fallback to `preferences.yml:operator_identifier` only when explicitly set. Zero-config; matches existing orchestrator convention.
+- **OQ-3 (query-surface output shape)**: **`--format ids|json`, `ids` default**. Folded into FR-2 amendment. `ids` is grep-friendly + lowest-context for dispatches; `json` is for richer callers.
+- **OQ-4 (query-surface entry point)**: **standalone `scripts/knowledge/query.sh`** + one-line wrapper inside `scripts/dispatch/dispatch-interface.sh`. Folded into FR-2 amendment. Matches `scripts/knowledge/` convention (graduate.sh, hash.sh).
+- **OQ-5 (P01 sequencing)**: **Jaccard validation first → query-surface wiring → status integration → graduate/decision-history extensions**. Validate the algorithm against live `knowledge/**/MEM*.md` before downstream work depends on its semantics. Locked into roadmap as P01 task ordering.
+- **OQ-6 (scope-coverage audit)**: **DONE — no new pain points**. Scan of `.orchestrator/KNOWLEDGE.md` and `.orchestrator/DECISIONS.md` D011..D019 for "knowledge"-related entries surfaces M002 (three-temperature architecture), M005 (content-hash idempotency), M021/M026 (unrelated to knowledge layer). All existing patterns are either compatible with or already covered by spec 025's five user stories. No additional scope additions warranted.
+
+### Provenance
+
+- Discussion completed: 2026-04-25T04:25:26Z by operator (brett@fivestar.studio) via `/orchestrator-discuss` with explicit "you decide on all of this" delegation.
+- Conversus gate verdict: BLOCK (6 surviving disputes), 2 P0 mitigations addressed via spec amendments, 4 non-P0 disputes addressed via DC-8 dispositions.
+- Next command: **`orchestrator:roadmap`** — gate-blocking conditions cleared.

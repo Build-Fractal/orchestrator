@@ -47,6 +47,22 @@ PAYLOAD=""
 INTENSITY_METADATA=""
 BACKEND=""
 
+# --- M020/P02/T03: --query subcommand passthrough (OQ-4) ---------------------
+# When the FIRST argument is --query, delegate to scripts/knowledge/query.sh
+# and exec out, preserving exit code + stdout + stderr byte-equivalent. Never
+# reaches backend resolution or the dispatch_usage JSONL emitter — query is
+# a side-effect-free knowledge-layer read (FR-8 / CON-1 / SC-7).
+if [ "${1:-}" = "--query" ]; then
+  shift
+  query_script="$SCRIPT_DIR/../knowledge/query.sh"
+  if [ ! -x "$query_script" ]; then
+    echo "FAIL: query.sh missing or not executable at $query_script" >&2
+    exit 1
+  fi
+  exec bash "$query_script" "$@"
+fi
+# -----------------------------------------------------------------------------
+
 # Parse arguments
 while [[ $# -gt 0 ]]; do
   case "$1" in

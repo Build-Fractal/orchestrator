@@ -18,8 +18,190 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# Honor caller-supplied PROJECT_ROOT (P01 fixture-isolation convention used by
+# verifiers + preferences.sh path resolution). Fall back to script-derived
+# parent when unset.
+if [ -z "${PROJECT_ROOT:-}" ]; then
+  PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+fi
 READ_ROADMAP="$PROJECT_ROOT/scripts/state/read-roadmap.sh"
+
+# --- P05 / FR-5 cluster proposal short-circuit ---
+# When the first argument is --cluster, route to the clustering subcommand
+# and do not run the legacy archive-task-plans code path. The cluster
+# proposal is read-only (CON-1 / FR-8): no entries mutated, no archive
+# moves performed.
+if [ "${1:-}" = "--cluster" ]; then
+  shift  # consume --cluster
+  if [ $# -lt 2 ]; then
+    echo "ERROR: --cluster requires <orch-root> <milestone-id> [<knowledge-root>] [<threshold>]" >&2
+    exit 1
+  fi
+  CLUSTER_ORCH_ROOT="$1"
+  CLUSTER_MILESTONE_ID="$2"
+  shift 2
+  # Optional positionals: knowledge-root, threshold.
+  CLUSTER_KNOWLEDGE_ROOT="${1:-}"
+  if [ "$#" -ge 2 ] && [ -n "${2:-}" ]; then
+    CLUSTER_THRESHOLD="$2"
+    cluster_threshold_seen_on_cli=1
+  else
+    CLUSTER_THRESHOLD=""
+    cluster_threshold_seen_on_cli=0
+  fi
+  if [ -z "$CLUSTER_KNOWLEDGE_ROOT" ]; then
+    # Default knowledge root: <project-root>/knowledge derived from the
+    # script location (parent of scripts/knowledge/) — honors PROJECT_ROOT
+    # if exported per the P01 fixture-isolation pattern. Note: the legacy
+    # PROJECT_ROOT=<script-derived> assignment above runs unconditionally,
+    # so this default mirrors it; verifier scripts always pass an explicit
+    # <knowledge-root> positional.
+    CLUSTER_PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
+    CLUSTER_KNOWLEDGE_ROOT="$CLUSTER_PROJECT_ROOT/knowledge"
+  fi
+  if [ ! -d "$CLUSTER_KNOWLEDGE_ROOT" ]; then
+    echo "ERROR: --cluster knowledge-root does not exist: $CLUSTER_KNOWLEDGE_ROOT" >&2
+    exit 1
+  fi
+
+  # Source helpers from this phase.
+  CLUSTER_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/lib" && pwd)"
+  # shellcheck source=lib/cluster.sh
+  . "$CLUSTER_LIB_DIR/cluster.sh"
+  # shellcheck source=lib/decision-history.sh
+  . "$CLUSTER_LIB_DIR/decision-history.sh"
+  # shellcheck source=lib/frontmatter.sh
+  . "$CLUSTER_LIB_DIR/frontmatter.sh"
+  # shellcheck source=lib/preferences.sh
+  . "$CLUSTER_LIB_DIR/preferences.sh"
+
+  # FR-6 / P06: deferred similarity_threshold resolution.
+  # CLI > project preferences > user preferences > built-in default 0.7.
+  # NOTE (P06/T04): pref_resolve's stderr is intentionally NOT suppressed —
+  # the malformed-value WARN diagnostic is a spec-required operator surface
+  # (US-5 edge case "Preferences file declares a threshold outside the
+  # valid range"). Suppressing 2>&- here would hide it.
+  if [ "${cluster_threshold_seen_on_cli:-0}" = "0" ] || [ -z "$CLUSTER_THRESHOLD" ]; then
+    resolved_threshold="$(pref_resolve similarity_threshold || true)"
+    if [ -n "$resolved_threshold" ]; then
+      CLUSTER_THRESHOLD="$resolved_threshold"
+    else
+      CLUSTER_THRESHOLD="0.7"
+    fi
+  fi
+
+  # Export ORCH_ROOT for dh_emit_jsonl (which reads ${ORCH_ROOT:-.orchestrator}).
+  ORCH_ROOT="$CLUSTER_ORCH_ROOT"
+  export ORCH_ROOT
+  mkdir -p "$CLUSTER_ORCH_ROOT" 2>/dev/null || true
+
+  # Compute clusters (allow non-zero without aborting under set -e).
+  CLUSTER_OUTPUT=""
+  CLUSTER_RC=0
+  set +e
+  CLUSTER_OUTPUT="$(cluster_compute "$CLUSTER_KNOWLEDGE_ROOT" "$CLUSTER_THRESHOLD" 2>&1)"
+  CLUSTER_RC=$?
+  set -e
+  if [ "$CLUSTER_RC" -ne 0 ]; then
+    echo "ERROR: cluster_compute exited $CLUSTER_RC. Output: $CLUSTER_OUTPUT" >&2
+    exit 1
+  fi
+
+  # Group cluster_compute output by cluster_id.
+  # Output format from cluster_compute: <cluster-id>\t<member-id> lines.
+  # We need to iterate clusters in order, emit the human-readable block,
+  # detect conflicts, and emit one JSONL record per cluster.
+  CLUSTER_TMP="$CLUSTER_ORCH_ROOT/.cluster-output.tmp.$$"
+  printf '%s\n' "$CLUSTER_OUTPUT" | awk -F'\t' '
+    NF == 2 {
+      members[$1] = (members[$1] ? members[$1] ";" $2 : $2)
+      if (!seen[$1]) { order[++n_clusters] = $1; seen[$1] = 1 }
+    }
+    END {
+      for (k=1; k<=n_clusters; k++) {
+        cid = order[k]
+        print cid "\t" members[cid]
+      }
+    }
+  ' >"$CLUSTER_TMP"
+
+  # FR-6 / SC-5: emit the resolved threshold once, before the per-cluster blocks.
+  printf 'effective_threshold=%s\n' "$CLUSTER_THRESHOLD"
+
+  # Walk the cluster summary, emit per-cluster output + JSONL.
+  while IFS=$'\t' read -r cid members_csv; do
+    [ -z "$cid" ] && continue
+    # Emit human-readable block.
+    printf 'cluster_id=%s\n' "$cid"
+    member_count=0
+    # Iterate members (semicolon-separated).
+    OLDIFS="$IFS"
+    IFS=';'
+    for mem in $members_csv; do
+      printf '  member=%s\n' "$mem"
+      member_count=$(( member_count + 1 ))
+    done
+    IFS="$OLDIFS"
+
+    # Conflict detection: read decision_history: presence per member.
+    # Heuristic: if at least one member has decision_history AND at least
+    # one member does not, OR if any two members have decision_history
+    # blocks that differ in rationale_hash, surface a conflict diagnostic.
+    has_history_count=0
+    no_history_count=0
+    rationale_hashes=""
+    OLDIFS="$IFS"
+    IFS=';'
+    for mem in $members_csv; do
+      mem_file="$(set +o pipefail; set +e; find "$CLUSTER_KNOWLEDGE_ROOT" -name "${mem}.md" -type f 2>/dev/null | head -1)"
+      [ -z "$mem_file" ] && continue
+      if grep -q '^decision_history:' "$mem_file" 2>/dev/null; then
+        has_history_count=$(( has_history_count + 1 ))
+        # Capture rationale_hash values (one per record).
+        hashes_for_mem="$(awk '/^decision_history:/{in_dh=1; next} in_dh && /^[a-zA-Z_]+:/{in_dh=0} in_dh && /rationale_hash:/{sub(/.*rationale_hash:[[:space:]]*/, ""); sub(/[[:space:]].*/, ""); gsub(/[",}]/, ""); print}' "$mem_file" 2>/dev/null || true)"
+        if [ -n "$hashes_for_mem" ]; then
+          rationale_hashes="$rationale_hashes
+$hashes_for_mem"
+        fi
+      else
+        no_history_count=$(( no_history_count + 1 ))
+      fi
+    done
+    IFS="$OLDIFS"
+
+    conflict_flag=0
+    # Mixed-history conflict: at least one member has history, at least one does not.
+    if [ "$has_history_count" -gt 0 ] && [ "$no_history_count" -gt 0 ]; then
+      conflict_flag=1
+    fi
+    # Divergent-history conflict: more than one distinct rationale_hash within the cluster.
+    # Wrap in subshell with set +e/pipefail since grep -v returns 1 on empty input.
+    distinct_hashes="$(set +o pipefail; set +e; printf '%s\n' "$rationale_hashes" | grep -v '^$' | LC_ALL=C sort -u | wc -l | awk '{print $1}')"
+    if [ -z "$distinct_hashes" ]; then
+      distinct_hashes=0
+    fi
+    if [ "$distinct_hashes" -gt 1 ]; then
+      conflict_flag=1
+    fi
+
+    if [ "$conflict_flag" -eq 1 ]; then
+      printf 'conflict: cluster=%s reason=divergent-decision-history\n' "$cid"
+    fi
+
+    # JSONL record.
+    dh_emit_jsonl consolidate_cluster \
+      "cluster_id=$cid" \
+      "member_count=$member_count" \
+      "member_ids=$members_csv" \
+      "threshold_used=$CLUSTER_THRESHOLD" \
+      "conflict_flag=$conflict_flag" \
+      "milestone_id=$CLUSTER_MILESTONE_ID"
+  done <"$CLUSTER_TMP"
+
+  rm -f "$CLUSTER_TMP"
+  exit 0
+fi
+# --- end P05 / FR-5 cluster proposal short-circuit ---
 
 usage() {
   cat <<'EOF'

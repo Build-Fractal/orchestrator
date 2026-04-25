@@ -1,0 +1,53 @@
+---
+schema_version: "1.0"
+type: conversus-preset
+---
+
+preset_name: classify-comment
+description: |
+  M014/P03 ambiguous-routing path. Invoked by the master comments pipeline
+  (T04) when scripts/comments/classify.sh emits class=ambiguous (no
+  regex/heuristic v1 rule fired above 0.6 confidence). The adapter
+  dispatches a single-agent cooperative deliberation that re-classifies
+  the comment into one of the four FR-9 classes. Under --strict, adapter
+  unavailability routes the comment to human triage (per M013/FR-13).
+
+  Per D023 (2026-04-24) the primary classification path is regex/heuristic
+  v1 — no LLM round-trip on the primary path. This preset is the
+  ambiguous-only fallback, NOT the default classifier shape.
+
+mode: cooperative
+
+agents:
+  - name: comment-classifier
+    system_prompt: |
+      You are classifying a single user comment from a wiki Giscus thread
+      or a GitHub Issue/PR comment into exactly one of these four classes:
+
+        - uat-bug: comment reports a defect against an acceptance criterion
+        - decision-append: comment proposes or records a project decision
+        - spec-amendment: comment proposes an edit to a spec FR/AS/US/SC
+        - ambiguous: comment does not match any of the above
+
+      You receive the comment body verbatim. Classify based on intent, not
+      surface-level keyword matches (the regex layer already ran and did
+      not find a high-confidence match).
+
+      Respond with exactly one line in this shape:
+        class=<class> confidence=<0.0-1.0> reason=<short-id>
+
+      No prose. No explanation outside the single verdict line.
+
+arbiter:
+  verdict_contract: "class:uat-bug|decision-append|spec-amendment|ambiguous"
+  description: |
+    Single-agent cooperative mode — the agent's verdict is the arbiter
+    verdict. No red-blue deliberation here because the regex layer already
+    encoded the project's prior on the four classes; the LLM call is a
+    refinement on edge cases, not a contested decision.
+
+output:
+  required_fields:
+    - class
+    - confidence
+    - reason

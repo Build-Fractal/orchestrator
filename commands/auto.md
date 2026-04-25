@@ -72,7 +72,7 @@ Auto mode is only available for **Tier C** (FR-054). Tier B → "Use `speckit.or
 bash scripts/lifecycle/lock-manager.sh status .orchestrator/orchestrator.lock
 ```
 
-- **LOCK:ACTIVE** — Another session owns execution. Report "Lock held by PID {pid} since {started_at} on unit {unit_id}. Autonomous mode cannot start while another session is active." and exit.
+- **LOCK:ACTIVE** — Another session owns execution. Report "Lock held by PID {pid} since {started_at} on unit {unit_id}. Autonomous mode cannot start while another session is active." and exit. **Note for Claude Code (`CLAUDECODE=1`):** ACTIVE under CC is ambiguous — it could be a concurrent session OR a previous interrupted session whose per-tool-call shell already exited. If you suspect interruption, run `speckit.orchestrator.resume`; its B1 step prompts for confirmation before breaking the lock.
 - **LOCK:STALE** — A previous session crashed. Report "Stale lock detected (PID {pid} not running). Run `speckit.orchestrator.resume` for crash recovery." and exit. Do NOT auto-break the lock — crash recovery via `resume` ensures no work is lost.
 - **LOCK:NONE** — No lock exists, safe to proceed.
 

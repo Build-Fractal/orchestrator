@@ -40,20 +40,28 @@ Detected when:
 ### Crash Recovery
 
 Detected when:
-- A stale lock file exists (verified via the status command below returning `LOCK:STALE`):
+- The lock file `.orchestrator/orchestrator.lock` exists, AND
+- No continue file exists at `<milestone-dir>/continue.md`
 
 ```bash
 bash scripts/lifecycle/lock-manager.sh status .orchestrator/orchestrator.lock
 ```
 
-- AND no continue file exists at `<milestone-dir>/continue.md`
+The status verdict varies by runtime:
+- `LOCK:STALE` — non-Claude-Code runtime confirmed the holder PID is dead.
+- `LOCK:ACTIVE` under `CLAUDECODE=1` — the CC runtime cannot prove the
+  lock is orphaned, because each Bash tool call spawns a fresh shell
+  with a fresh PID. The lock file's recorded PID belongs to a per-call
+  shell that has already exited; status falls back to "file exists =
+  active." See `scripts/lifecycle/lock-manager.sh` `is_claude_code()`.
 
-→ Follow **Path B** below.
+In either case, → Follow **Path B** below. B1 distinguishes the two
+verdicts and applies different break-safety logic.
 
 ### Mixed State
 
 Detected when:
-- Both a continue file AND a stale lock exist
+- Both a continue file AND a lock file exist
 
 This indicates the pause may not have completed cleanly. Treat as **crash recovery** (Path B), but also read the continue file for additional context about what the pausing session intended as the next action. Include that context in the recovery briefing output.
 
@@ -100,22 +108,41 @@ After executing the immediate next action, if the user wants to continue in auto
 
 Follow these steps to recover from a crash:
 
-### B1. Check and Break the Stale Lock
+### B1. Check and Break the Lock
 
-Verify the lock is stale and break it:
+Verify the lock state, then decide whether to break it:
 
 ```bash
-# Verify stale status
 bash scripts/lifecycle/lock-manager.sh status .orchestrator/orchestrator.lock
 ```
 
-If the output is `LOCK:STALE`, break the lock:
+Three cases:
+
+**`LOCK:STALE`** (any runtime) — the holder PID is dead. Break the lock:
 
 ```bash
 bash scripts/lifecycle/lock-manager.sh break .orchestrator/orchestrator.lock
 ```
 
-If the output is `LOCK:ACTIVE`, the previous session is still running — do NOT break the lock. Report: "Lock is still active (PID {pid}). Cannot resume while another session is running." and exit.
+**`LOCK:ACTIVE` outside Claude Code** (`CLAUDECODE` unset) — the holder
+PID is alive on this machine. The previous session is still running.
+Do NOT break. Report: "Lock is still active (PID {pid}). Cannot resume
+while another session is running." and exit.
+
+**`LOCK:ACTIVE` under Claude Code** (`CLAUDECODE=1`) — the verdict is
+ambiguous: the recorded PID is a per-tool-call shell that always exits
+immediately, so this output cannot distinguish "live concurrent CC
+session" from "interrupted previous session that left the lock behind."
+Resume is the user's explicit recovery action — surface the ambiguity
+and require confirmation:
+
+> "A previous orchestrator-auto session may have been interrupted, but
+> Claude Code cannot tell that apart from a concurrent session on this
+> project. Confirm no other Claude session is currently running
+> orchestrator-auto here. Proceed with breaking the lock? [y/N]"
+
+On `y`, break the lock with the same `lock-manager.sh break` command
+above. On `n` or anything else, exit without modifying the lock.
 
 ### B2. Synthesize Recovery Briefing
 

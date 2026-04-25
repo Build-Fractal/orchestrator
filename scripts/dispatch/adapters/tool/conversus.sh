@@ -28,6 +28,14 @@
 # Fallback: `pip show conversus` Home-page probe. Single-venv reality
 # (see M026-CONVERSUS-PARITY.md) makes path-based detection infeasible.
 #
+# Paid-only-preset refusal (M026/P03): when a preset's YAML frontmatter
+# declares `edition_required: paid` and the resolved edition is `oss`,
+# the gate subcommand emits a FAIL: diagnostic and exits 1 BEFORE any
+# conversus run invocation. Presets with no `edition_required:` key are
+# backward-compatible. Diagnostic message contains the literal
+# "paid-only" + "CONVERSUS_EDITION=paid" so SC-7's case-insensitive
+# regex matches.
+#
 # Graceful degradation (roadmap directive): when the binary is missing,
 # `gate` emits a `SKIPPED:` line and exits 0 so the calling pipeline can
 # proceed without a gate. Conversus is an optional external dependency,
@@ -206,6 +214,29 @@ _parse_verdict() {
 _SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 _REPO_ROOT="$(cd "$_SCRIPT_DIR/../../../.." && pwd)"
 
+# _read_preset_edition_required <preset-file-path>
+# Emits the value of the top-level `edition_required:` key in the YAML
+# frontmatter (the block between the leading `---` and the next `---`),
+# or empty string if the key is absent or the file has no frontmatter.
+# Bash 3.2 / awk-only — no python, no yq.
+_read_preset_edition_required() {
+  _rper_file="$1"
+  [ -f "$_rper_file" ] || { echo ""; return 0; }
+  awk '
+    /^---[[:space:]]*$/ { fm++; next }
+    fm == 1 && /^edition_required:[[:space:]]*/ {
+      val = $0
+      sub(/^edition_required:[[:space:]]*/, "", val)
+      sub(/[[:space:]]*$/, "", val)
+      gsub(/"/, "", val)
+      gsub(/\x27/, "", val)
+      print val
+      exit
+    }
+    fm >= 2 { exit }
+  ' "$_rper_file"
+}
+
 # --- subcommand dispatch ---
 
 SUBCMD="${1:-}"
@@ -316,6 +347,29 @@ case "$SUBCMD" in
     _bin_path="$(printf '%s\n' "$_probe" | grep -E '^conversus_path=' | head -n 1 | sed -E 's/^conversus_path=//')"
     if [ -z "$_bin_path" ]; then
       _emit_fail "resolver reported available=true but no path"
+      exit 1
+    fi
+
+    # FR-10 / FR-11: paid-only-preset-on-OSS refusal.
+    # If the preset's frontmatter declares edition_required: paid AND the
+    # resolved edition (from _resolve_binary stdout above) is oss, refuse
+    # to invoke conversus run. The diagnostic points at the escape hatch
+    # so the operator has an actionable remediation. We refuse only on
+    # the explicit oss case; on edition=unknown (e.g. metadata-probe
+    # failure with no CONVERSUS_EDITION declared) we proceed rather than
+    # block — refusing on unknown would be a false-positive class with
+    # no clear remediation, and the operator can already declare the
+    # edition via CONVERSUS_EDITION=paid if they want strict gating.
+    #
+    # Prefix is FAIL: per the adapter's stderr convention (line 77's
+    # _emit_fail), not the FR-11 literal ERROR:. The case-insensitive
+    # SC-7 regex `paid-only.*CONVERSUS_EDITION=paid` matches the body,
+    # so the contract is preserved. See P03/T04 DECISIONS.md row for
+    # the prefix-uniformity rationale.
+    _required_edition="$(_read_preset_edition_required "$_preset_file")"
+    _resolved_edition="$(printf '%s\n' "$_probe" | grep -E '^edition=' | head -n 1 | sed -E 's/^edition=//')"
+    if [ "$_required_edition" = "paid" ] && [ "$_resolved_edition" = "oss" ]; then
+      _emit_fail "preset '${_preset_name}' invokes a paid-only surface (edition_required: paid); resolved edition is oss. Set CONVERSUS_EDITION=paid or install the paid build at \$HOME/Sites/conversus/bin/conversus."
       exit 1
     fi
 

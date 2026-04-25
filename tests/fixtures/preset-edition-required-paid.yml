@@ -1,0 +1,11 @@
+---
+edition_required: paid
+---
+# Test fixture for M026/P03 FR-11 — preset with edition_required: paid.
+# Used by scripts/verify/m026-p03-edition-required-diagnostic.sh to
+# exercise the paid-only-on-OSS refusal path. Not invoked by any real
+# gate; the diagnostic fires before any conversus run subprocess.
+mode: cooperative
+agents:
+  - name: noop
+    prompt: "noop"

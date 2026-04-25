@@ -249,9 +249,19 @@ if [[ "$STEP" = "V" ]]; then
     exit 1
   fi
 
-  task_plan="$MILESTONE_DIR/phases/$PHASE/tasks/${TASK}-PLAN.md"
-  if [[ ! -f "$task_plan" ]]; then
-    echo "auto-loop.sh: task plan not found: $task_plan" >&2
+  # Accept both no-slug (T##-PLAN.md) and slug-bearing (T##-<slug>-PLAN.md)
+  # forms per commands/plan-phase.md back-compat. Match the glob; expect
+  # exactly one match. Other consumers (derive-phase, dispatcher init,
+  # engine/run, recovery-briefing) already glob T*-PLAN.md.
+  task_plan=""
+  for cand in "$MILESTONE_DIR/phases/$PHASE/tasks/${TASK}-PLAN.md" "$MILESTONE_DIR/phases/$PHASE/tasks/${TASK}"-*-PLAN.md; do
+    if [[ -f "$cand" ]]; then
+      task_plan="$cand"
+      break
+    fi
+  done
+  if [[ -z "$task_plan" || ! -f "$task_plan" ]]; then
+    echo "auto-loop.sh: task plan not found: $MILESTONE_DIR/phases/$PHASE/tasks/${TASK}-PLAN.md (or ${TASK}-<slug>-PLAN.md)" >&2
     exit 1
   fi
 

@@ -7,19 +7,19 @@ type: dispatch-prompt
 ## Manifest
 | Section | Lines | Est. Tokens | Priority |
 |---------|-------|-------------|----------|
-| Knowledge (25 entries) | 20-589 | ~4900 | filtered |
-| Decisions | 591-595 | ~100 | filtered |
-| Constraints | 597-630 | ~400 | required |
-| Scope | 632-646 | ~100 | required |
-| Upstream Context | 648-660 | ~100 | required |
-| Task Plan | 662-679 | ~100 | required |
-| State Context | 681-687 | ~100 | required |
-| First-Turn Completeness | 689-703 | ~100 | required |
-| **Total** | | **~5900** | |
+| Knowledge (28 entries) | 20-707 | ~7000 | filtered |
+| Decisions | 709-713 | ~100 | filtered |
+| Constraints | 715-767 | ~600 | required |
+| Scope | 769-783 | ~100 | required |
+| Upstream Context | 785-797 | ~100 | required |
+| Task Plan | 799-816 | ~100 | required |
+| State Context | 818-824 | ~100 | required |
+| First-Turn Completeness | 826-840 | ~100 | required |
+| **Total** | | **~8200** | |
 
 ## Knowledge
 
-<!-- 25 knowledge entries resolved from index -->
+<!-- 28 knowledge entries resolved from index -->
 
 ---
 id: MEM001
@@ -28,7 +28,7 @@ category: patterns
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 344
+hit_count: 420
 source_unit: "M001/P01"
 source_type: consolidation
 supersedes: ""
@@ -56,7 +56,7 @@ category: patterns
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 344
+hit_count: 420
 source_unit: "M001/P01"
 source_type: consolidation
 supersedes: ""
@@ -84,7 +84,7 @@ category: patterns
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 344
+hit_count: 420
 source_unit: "M001/P01"
 source_type: consolidation
 supersedes: ""
@@ -110,7 +110,7 @@ category: patterns
 confidence: 0.90
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 344
+hit_count: 420
 source_unit: "M005/P03"
 source_type: consolidation
 supersedes: ""
@@ -130,7 +130,7 @@ category: patterns
 confidence: 0.90
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 306
+hit_count: 370
 source_unit: "M005/P01"
 source_type: consolidation
 supersedes: ""
@@ -150,7 +150,7 @@ category: patterns
 confidence: 0.90
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 306
+hit_count: 370
 source_unit: "M005/P04"
 source_type: consolidation
 supersedes: ""
@@ -170,7 +170,7 @@ category: patterns
 confidence: 0.90
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 306
+hit_count: 370
 source_unit: "M005/P07"
 source_type: consolidation
 supersedes: ""
@@ -192,7 +192,7 @@ category: patterns
 confidence: 0.85
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 344
+hit_count: 420
 source_unit: "M001/P01"
 source_type: consolidation
 supersedes: ""
@@ -218,7 +218,7 @@ category: patterns
 confidence: 0.90
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 306
+hit_count: 370
 source_unit: "M006/P01"
 source_type: consolidation
 supersedes: ""
@@ -238,7 +238,7 @@ category: patterns
 confidence: 0.90
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 306
+hit_count: 370
 source_unit: "M006/P01"
 source_type: consolidation
 supersedes: ""
@@ -258,7 +258,7 @@ category: patterns
 confidence: 0.90
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 306
+hit_count: 370
 source_unit: "M002/P04"
 source_type: consolidation
 supersedes: ""
@@ -278,7 +278,7 @@ category: conventions
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 344
+hit_count: 420
 source_unit: "M001/P01"
 source_type: consolidation
 supersedes: ""
@@ -311,7 +311,7 @@ category: conventions
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 344
+hit_count: 420
 source_unit: "M001/P01"
 source_type: consolidation
 supersedes: ""
@@ -333,7 +333,7 @@ category: conventions
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 344
+hit_count: 420
 source_unit: "M001/P01"
 source_type: consolidation
 supersedes: ""
@@ -361,7 +361,7 @@ category: conventions
 confidence: 0.90
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 306
+hit_count: 370
 source_unit: "M005/P04"
 source_type: consolidation
 supersedes: ""
@@ -387,7 +387,7 @@ category: conventions
 confidence: 0.85
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 306
+hit_count: 370
 source_unit: "M005/P02"
 source_type: consolidation
 supersedes: ""
@@ -407,7 +407,7 @@ category: conventions
 confidence: 0.90
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 306
+hit_count: 370
 source_unit: "M005/P05"
 source_type: consolidation
 supersedes: ""
@@ -427,7 +427,7 @@ category: conventions
 confidence: 0.90
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 344
+hit_count: 420
 source_unit: "M001/P01"
 source_type: consolidation
 supersedes: ""
@@ -453,7 +453,7 @@ category: conventions
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 306
+hit_count: 370
 source_unit: "M002/P01"
 source_type: consolidation
 supersedes: ""
@@ -475,7 +475,7 @@ category: conventions
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 306
+hit_count: 370
 source_unit: "M002/P01"
 source_type: consolidation
 supersedes: ""
@@ -495,7 +495,7 @@ category: lessons
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 344
+hit_count: 420
 source_unit: "M001/P01"
 source_type: consolidation
 supersedes: ""
@@ -515,7 +515,7 @@ category: lessons
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 344
+hit_count: 420
 source_unit: "M001/P01"
 source_type: consolidation
 supersedes: ""
@@ -535,7 +535,7 @@ category: lessons
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 306
+hit_count: 370
 source_unit: "M004/P06"
 source_type: consolidation
 supersedes: ""
@@ -555,7 +555,7 @@ category: lessons
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 306
+hit_count: 370
 source_unit: "M004/P06"
 source_type: consolidation
 supersedes: ""
@@ -575,7 +575,7 @@ category: lessons
 confidence: 0.95
 created_at: 2026-04-14
 last_verified: 2026-04-14
-hit_count: 306
+hit_count: 370
 source_unit: "M004/P06"
 source_type: consolidation
 supersedes: ""
@@ -587,6 +587,124 @@ content_hash: ""
 # MEM025: Verification Script Grep Patterns
 
 Verification helper scripts that grep for library sourcing should use broad patterns (e.g. `errors\.sh`) not narrow literal patterns (e.g. `lib/errors\.sh`). Scripts may source libs via variable expansion (`$_LIB_DIR/errors.sh`) which does not match the literal path. The broader pattern still uniquely identifies the sourcing intent.
+
+---
+id: MEM026
+scope_tags: "[project], [milestone:M025]"
+category: lessons
+confidence: 0.95
+created_at: 2026-04-23
+last_verified: 2026-04-23
+hit_count: 25
+source_unit: "M025/P01"
+source_type: consolidation
+supersedes: ""
+superseded_by: ""
+relates_to: [MEM027]
+content_hash: ""
+---
+
+# MEM026: M013/P04/T04 hook-config regression
+
+## What regressed
+
+Commit `d33b8a7` (M013/P04/T04) shipped a `scripts/dispatch/adapters/runtime/claude-code.sh --hook-config` emitter whose root object carried wrapper metadata (`runtime`, `hook_count`, `target_file`) alongside orchestrator-internal event names (`before_tasks`, `after_tasks`, `before_implement`, `after_implement`, `before_commit`, `post_verify`) that Claude Code does not recognize. The companion installer `packaging/install/install-claude-code.sh` wrote that invalid document unconditionally to `$HOME/.claude/settings.json`, overwriting any sibling tool's configuration (notably GSD-authored `statusLine`, `SessionStart`, `PostToolUse`, and `permissions` keys) with no merge path and no reversibility.
+
+## Why P04 gates missed it
+
+Every P04 verification script — including `scripts/verify/m013-p04-post-verify-hook.sh` — ran against an empty `$HOME/.claude/` fixture. No gate seeded a pre-existing non-orchestrator `settings.json`, so the overwrite path was never exercised. The schema-validity failure was invisible because CC itself was not invoked against the emitted document in any P04 gate; the gates only asserted presence of the wrapper JSON's internal keys, not conformance to the CC `hooks` schema. The regression required a real user on a real multi-tool system to observe.
+
+## Lesson
+
+Every user-scope config write — `~/.claude/settings.json`, `~/.codex/*.toml`, `~/.cursor/*.json`, shell rc files, git hooks paths, and anything else jointly owned with sibling tools — requires a coexistence gate driven by a pre-seeded non-orchestrator fixture (pattern realized by M025 at `tests/fixtures/m025-p01/gsd-baseline/`). Empty-home fixtures are insufficient: they cannot surface overwrite damage or schema-shape issues that only manifest when the host tool actually parses the file. Pair the coexistence gate with (a) a round-trip reversibility gate (install → uninstall → sha256 byte-match) and (b) an idempotency gate (double-install → sha256 byte-match) to lock the invariant triad.
+
+---
+id: MEM027
+scope_tags: "[project], [milestone:M025]"
+category: patterns
+confidence: 0.90
+created_at: 2026-04-23
+last_verified: 2026-04-23
+hit_count: 25
+source_unit: "M025/P01"
+source_type: consolidation
+supersedes: ""
+superseded_by: ""
+relates_to: [MEM026]
+content_hash: ""
+---
+
+# MEM027: merge-not-overwrite user-scope config
+
+## Problem
+
+User-scope config files (`~/.claude/settings.json`, `~/.codex/*.toml`, `~/.cursor/*.json`, shell rc files, git `core.hooksPath`) are jointly owned by multiple tools — the host runtime itself, sibling workflow tools (GSD, spec-kit, orchestrator), user hand-edits, and corporate MDM policy. Any installer that writes these files with `printf > "$file"` or `cp` silently destroys sibling configurations and user edits. The regression surfaced at M013/P04/T04 (see MEM026) made this concrete: the orchestrator clobbered GSD's `statusLine`, `SessionStart`, and `PostToolUse` hooks with no warning and no rollback.
+
+## Pattern: merge-not-overwrite
+
+Every orchestrator user-scope config write obeys four rules:
+
+1. **Inline ownership tag.** Every orchestrator-inserted leaf object carries `"_orchestrator_managed": true`. No sidecar manifest — the tag travels with the data, so uninstall works even if the manifest is lost and copy-paste of config snippets between machines stays honest.
+2. **jq-optional merge with structural fallback.** Detect `jq` via `command -v jq`. Under jq, use `jq -S` for deterministic sorted-key output. Without jq, fall back to a `python3`-driven merge (or a bash-3.2-compatible awk script) that preserves every non-orchestrator key byte-identically at the structural level — semantic equivalence is the contract, not byte-identity across the jq/fallback boundary.
+3. **Temp-file-then-rename atomicity.** Write to `$target.tmp.$$`, fsync-equivalent via `mv -f`. Never write the target file in place; a half-written settings.json can lock a user out of their host runtime.
+4. **`--uninstall` strips only tagged entries, with cascade cleanup.** Remove only objects whose `_orchestrator_managed` is `true`; if that leaves a wrapper with an empty `hooks` array, remove the wrapper; if that leaves an event key with an empty array, remove the event key; if that leaves `hooks` empty, remove the `hooks` key. Every other key in the target is preserved byte-identically.
+
+## Gate shape
+
+The pattern is enforced by a three-gate triad — any user-scope config write without all three gates fails review:
+
+- **Coexistence fixture.** Pre-seed a representative non-orchestrator config shape (e.g. `tests/fixtures/m025-p01/gsd-baseline/settings.json`), run the installer, compare the result against a pinned `expected-post-install.json` via structural (not byte-identity) comparator.
+- **Round-trip reversibility.** Capture the pre-install sha256, run install then uninstall, capture the post-uninstall sha256, assert byte-identity against both the pre-install sum and a pinned `expected-post-uninstall.sha256`.
+- **Idempotency.** Run the installer twice in succession, assert the post-first-install and post-second-install sha256 match. No accretion of duplicate orchestrator entries.
+
+---
+id: MEM028
+scope_tags: "[project], [milestone:M014], [concern:bash-compat]"
+category: lessons
+confidence: 0.95
+created_at: 2026-04-23
+last_verified: 2026-04-23
+hit_count: 25
+source_unit: "M014/P01"
+source_type: dogfood
+supersedes: ""
+superseded_by: ""
+relates_to: []
+content_hash: ""
+---
+
+# MEM028: Bash arithmetic silently interprets zero-padded numerics as octal
+
+## What regressed
+
+`scripts/specify/specify.sh:336` computed the next spec number as `NEXT=$((HIGHEST + 1))` where `HIGHEST` was a zero-padded prefix parsed from existing directory names (`024-foo/` → `HIGHEST=024`). Bash arithmetic treats `024` as octal (= decimal 20), so `NEXT` became `21` and the next spec landed as `specs/021-<slug>/` rather than `025-<slug>/`. The bug is silent on octal-valid digits (0–7) and hard-errors (`value too great for base`) on `008`/`009`/`018`/`019`/etc.
+
+Historical damage: M025's spec landed at `specs/021-github-installer-coexistence/` instead of `specs/025-*` (bug pre-dated this fix; renaming deferred since all M025 artifacts reference the `021-` path consistently and the milestone is closed). A smoke-test fixture `specs/021-yn-test/` was also cleaned up as leaked state from a pre-hermetic verifier run.
+
+## Why the FR-18 shape test missed it
+
+`tests/test-specify-shape.sh` runs in a hermetic scratch whose `specs/` starts empty, so `HIGHEST=0` and `NEXT=1` — the zero-padded octal ambiguity never triggers. Shape tests asserted Section Contract conformance, not number-allocator correctness. The gap was: the allocator was exercised only in production where the bug finally surfaced on a real M014/P01 dogfood run.
+
+## Lesson
+
+In bash, never put a zero-padded external string directly into `$((...))`. Force base-10 with the `10#` prefix:
+
+```bash
+# Broken — octal interpretation
+NEXT=$((HIGHEST + 1))
+
+# Correct — explicit base-10
+NEXT=$((10#$HIGHEST + 1))
+```
+
+The `10#` prefix is portable across Bash 3.2+ and is the canonical idiom for parsing numerics that may carry leading zeros. Apply it to any arithmetic whose inputs come from (a) directory-name parsing, (b) `printf '%03d'` round-trips, (c) date-field components (`$(date +%H)` returns `08` at 8am), or (d) user-supplied strings.
+
+Regression coverage: `tests/test-specify-number-allocator.sh` pre-seeds a scratch `specs/` with `008/009/024` sentinels and asserts the expected `009/010/025` outputs. Any future allocator that consumes zero-padded input belongs in that test's fixture matrix.
+
+## Related
+
+- M014/P01 ships the allocator; the dogfood-first-use revealed the bug. The fix is a one-character change (the `10#` prefix) but the lesson generalizes to any bash script handling numeric directory names, ISO date fields, or versioned filenames.
+- This is a cousin of the Bash 3.2 discipline codified in CON-6 (anti-pattern lint) — both are "bash looks like it works, until input shape tripwires a latent feature."
 
 ## Decisions
 
@@ -628,6 +746,25 @@ of these canonical wrappers instead:
 A pre-Bash hook (`scripts/hooks/pre-bash-shape-guard.sh`) auto-rewrites six
 common deviations from these shapes and hard-rejects four others with a
 wrapper-pointing diagnostic. See ANTIPATTERNS.md AP-005..AP-009.
+
+### Branch Discipline
+
+You inherit the git branch the dispatcher is sitting on. Commit your work
+on that branch.
+
+- Do NOT `git checkout`, `git switch`, `git branch`, `git merge`, or
+  `git rebase` to a different branch unless your task plan explicitly
+  requires it.
+- Do NOT create a new branch as a side-effect of "isolating" your work
+  — git worktrees handle that at the dispatcher layer when configured.
+- If you genuinely believe a side-branch is required (e.g. the task plan
+  calls for a hotfix branch), STOP and report rather than acting
+  unilaterally. The dispatcher will tell you whether to proceed.
+
+This rule exists because branch switches inside a dispatched task are
+invisible to the dispatcher audit trail and have caused mid-loop
+confusion (commits landing on a branch the operator did not expect,
+then being merged opaquely).
 
 ## Scope
 
@@ -729,3 +866,6 @@ UPDATED: MEM022 (hit_count)
 UPDATED: MEM023 (hit_count)
 UPDATED: MEM024 (hit_count)
 UPDATED: MEM025 (hit_count)
+UPDATED: MEM026 (hit_count)
+UPDATED: MEM027 (hit_count)
+UPDATED: MEM028 (hit_count)

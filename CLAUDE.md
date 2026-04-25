@@ -9,6 +9,7 @@
 - ingest-fr-slug-fix: scripts/knowledge/ingest-spec.sh accepts **FR-N (slug)** markers and aborts loudly on unmatched FR lines (was silent data loss on 36 chunks per bbt-companion dogfood).
 - reinit-sentinel-fix: scripts/lifecycle/reinit-handler.sh preserves all # >>> orchestrator:NAME >>> sentinel blocks (not just project-identity), canonicalizes relative --project-dir, and keeps runtime_confidence sticky. Known limitation: template-regenerate model still loses free-form prose outside sentinel/CUSTOM blocks — redesign pending.
 - M026: milestone consolidated (87% reduction, 3 phases archived)
+- M014: milestone consolidated (87% reduction, 4 phases archived)
 # <<< orchestrator:recent-changes <<<
 # CLAUDE.md — spec-kit-orchestrator
 

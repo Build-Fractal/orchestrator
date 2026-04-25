@@ -1,4 +1,5 @@
 # >>> orchestrator:recent-changes >>>
+- M026/P03: conversus-OSS migration close — preset edition_required:paid refusal on OSS, six-surface doc updates, knowledge graduation (MEM029 pattern + MEM030 convention), DECISIONS D022, CHANGELOG entry. Closes M026.
 - 027-conversus-oss-migration: Migrate orchestrator default Conversus integration from paid build to OSS build with paid-escape-hatch preserved (M026).
 - M026/P02: conversus-OSS resolver flip — OSS primary, paid escape hatch via CONVERSUS_EDITION; JSONL edition field; dual-edition regression test with visible-skip annotations; gate-verdict-reliability bundle (verdict-text rationale, arbiter preference, OAuth auto-preflight closes OQ-16 false-PASS). See `.orchestrator/milestones/M026/phases/P02/P02-SUMMARY.md`.
 - M026/P01: conversus-OSS migration — parity matrix + DC-6 synthesis-crux spike verdict + ollama/pipx env probe

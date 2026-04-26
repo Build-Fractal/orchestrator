@@ -101,7 +101,10 @@ parse_phases() {
 
   while IFS= read -r line; do
     # Match phase checkbox lines: - [x] **P##**: ... or - [ ] **P##**: ...
-    if echo "$line" | grep -qE '^\- \[(x| )\] \*\*P[0-9]+\*\*'; then
+    # Decimal IDs like P09.1 are a valid roadmap-author convention for
+    # post-roadmap additions ("between P09 and P10"); the regex accepts them
+    # so the state machine doesn't silently skip a phase it can't see.
+    if echo "$line" | grep -qE '^\- \[(x| )\] \*\*P[0-9]+(\.[0-9]+)?\*\*'; then
       # Output previous phase if we had one
       if [[ "$in_phase" = "true" ]]; then
         echo "$phase_id $phase_status $phase_risk $phase_depends"
@@ -111,8 +114,11 @@ parse_phases() {
       phase_risk="low"
       phase_depends="none"
 
-      # Extract phase ID
-      phase_id=$(echo "$line" | grep -oE 'P[0-9]+' | head -1)
+      # Extract phase ID. Greedy match on `P[0-9]+(\.[0-9]+)?` so a P09.1
+      # header doesn't get truncated to `P09` (which would silently merge two
+      # distinct phases under one ID and let the milestone close with the
+      # decimal phase still incomplete).
+      phase_id=$(echo "$line" | grep -oE 'P[0-9]+(\.[0-9]+)?' | head -1)
 
       # Extract status
       if echo "$line" | grep -q '^\- \[x\]'; then

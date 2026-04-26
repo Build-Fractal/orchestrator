@@ -110,13 +110,42 @@ while IFS=' ' read -r pid pstatus prisk pdepends; do
     continue
   fi
 
-  # Parse comma/semicolon-separated file list from the first item
+  # Parse comma/semicolon-separated file list from the first item.
   files_str=$(echo "$key_files_line" | sed 's/^  - "//' | sed 's/"$//')
-  # Split on comma or semicolon (both conventions accepted — M012 used ',', M013 used ';')
-  OLD_IFS="$IFS"
-  IFS=',;'
-  for raw_file in $files_str; do
-    file=$(echo "$raw_file" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+  # Split on comma or semicolon at paren-depth 0 only. Phase summaries that
+  # annotate paths with `(modified, secondary edit)` would otherwise tokenize
+  # the inner comma as a delimiter, producing bogus path fragments
+  # (`secondary edit)`, etc.) that fail filesystem-existence checks even when
+  # every real path exists. Mirrors the parens-stripping defense used in
+  # read-roadmap.sh on Risk:/Depends: lines and check-boundary-map.sh on
+  # Produces: lines.
+  tokens=$(awk -v s="$files_str" '
+    BEGIN {
+      depth = 0
+      cur = ""
+      for (i = 1; i <= length(s); i++) {
+        c = substr(s, i, 1)
+        if (c == "(") { depth++; cur = cur c }
+        else if (c == ")") { if (depth > 0) depth--; cur = cur c }
+        else if ((c == "," || c == ";") && depth == 0) {
+          print cur
+          cur = ""
+        } else {
+          cur = cur c
+        }
+      }
+      if (length(cur) > 0) print cur
+    }
+  ')
+  while IFS= read -r raw_file; do
+    # Strip leading/trailing whitespace and any trailing parenthetical
+    # annotation so `path/file.ts (modified, secondary edit)` collapses to
+    # `path/file.ts` for the existence check.
+    file=$(printf '%s' "$raw_file" \
+      | sed 's/^[[:space:]]*//' \
+      | sed 's/[[:space:]]*$//' \
+      | sed 's/[[:space:]]*([^)]*)[[:space:]]*$//' \
+      | sed 's/[[:space:]]*$//')
     [[ -z "$file" ]] && continue
     total_checks=$((total_checks + 1))
     # Entries ending in / are directory paths; others are files.
@@ -140,8 +169,7 @@ while IFS=' ' read -r pid pstatus prisk pdepends; do
         fi
         ;;
     esac
-  done
-  IFS="$OLD_IFS"
+  done <<< "$tokens"
 done <<< "$phases_output"
 
 # --- Summary ---

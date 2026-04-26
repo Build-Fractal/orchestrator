@@ -259,7 +259,7 @@ fi
 # missing, fall back to the basename-without-extension (schema validator
 # accepts any UNIT_ID string). ORCH_ROOT follows the standard env override.
 MILESTONE_ID="$(printf '%s' "$TASK_PLAN" | grep -oE 'M[0-9]{3}' | head -n 1)"
-PHASE_ID="$(printf '%s' "$TASK_PLAN" | grep -oE 'P[0-9]{2}' | head -n 1)"
+PHASE_ID="$(printf '%s' "$TASK_PLAN" | grep -oE 'P[0-9]{2}(\.[0-9]+)?' | head -n 1)"
 TASK_ID="$(printf '%s' "$TASK_PLAN" | grep -oE 'T[0-9]{2}' | head -n 1)"
 if [ -n "$MILESTONE_ID" ] && [ -n "$PHASE_ID" ] && [ -n "$TASK_ID" ]; then
   UNIT_ID="${MILESTONE_ID}/${PHASE_ID}/${TASK_ID}"

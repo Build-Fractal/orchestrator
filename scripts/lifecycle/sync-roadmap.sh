@@ -81,13 +81,19 @@ while IFS=' ' read -r pid pstatus prisk pdepends; do
     disk_state="incomplete"
   fi
 
+  # Escape any '.' in the phase id (e.g. P09.1) before passing to sed —
+  # a bare '.' in a sed regex matches any character and would, given two
+  # phases like P09 and P09.1 in the same roadmap, partially match across
+  # them when the literal text only differs in the trailing chars.
+  pid_re=$(printf '%s' "$pid" | sed 's/\./\\./g')
+
   # Compare roadmap state with disk state
   if [[ "$pstatus" = "complete" && "$disk_state" = "incomplete" ]]; then
     has_mismatch=true
     echo "SYNC:MISMATCH phase=$pid roadmap=complete disk=incomplete"
     if [[ "$FIX_MODE" = "true" ]]; then
       # Change [x] to [ ] for this phase
-      sed_i "s/- \[x\] \*\*${pid}\*\*/- [ ] **${pid}**/" "$ROADMAP_FILE"
+      sed_i "s/- \[x\] \*\*${pid_re}\*\*/- [ ] **${pid}**/" "$ROADMAP_FILE"
       echo "SYNC:FIXED phase=$pid old=complete new=incomplete"
     fi
   elif [[ "$pstatus" = "incomplete" && "$disk_state" = "complete" ]]; then
@@ -95,7 +101,7 @@ while IFS=' ' read -r pid pstatus prisk pdepends; do
     echo "SYNC:MISMATCH phase=$pid roadmap=incomplete disk=complete"
     if [[ "$FIX_MODE" = "true" ]]; then
       # Change [ ] to [x] for this phase
-      sed_i "s/- \[ \] \*\*${pid}\*\*/- [x] **${pid}**/" "$ROADMAP_FILE"
+      sed_i "s/- \[ \] \*\*${pid_re}\*\*/- [x] **${pid}**/" "$ROADMAP_FILE"
       echo "SYNC:FIXED phase=$pid old=incomplete new=complete"
     fi
   fi

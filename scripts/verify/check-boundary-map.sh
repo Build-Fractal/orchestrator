@@ -63,8 +63,10 @@ while IFS= read -r line; do
     continue
   fi
 
-  # Detect next phase header (end of our phase)
-  if [[ "$PHASE_FOUND" = "true" ]] && echo "$line" | grep -qE '^\- \[(x| )\] \*\*P[0-9]+\*\*'; then
+  # Detect next phase header (end of our phase). Accept decimal phase IDs
+  # like P09.1 so the boundary parser doesn't read past a decimal sibling
+  # into the following phase's body.
+  if [[ "$PHASE_FOUND" = "true" ]] && echo "$line" | grep -qE '^\- \[(x| )\] \*\*P[0-9]+(\.[0-9]+)?\*\*'; then
     break
   fi
 

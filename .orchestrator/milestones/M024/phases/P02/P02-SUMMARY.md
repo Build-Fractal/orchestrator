@@ -1,0 +1,42 @@
+---
+schema_version: "1.0"
+type: phase-summary
+id: "P02"
+parent: "M024"
+milestone: "M024"
+provides:
+  - "scripts/intake/spec-shape-classify.sh; scripts/intake/proposal-emit.sh (3b spec hook); scripts/verify/m024-p02-spec-shape-classify.sh,scripts/intake/m014-manifest-read.sh; scripts/verify/m024-p02-m014-manifest-read.sh,tests/fixtures/evaluate-pre-m024-baseline.txt; scripts/intake/_capture-baseline.sh; scripts/verify/m024-p02-spec-rationale.sh; scripts/verify/m024-p02-evaluate-spec-backcompat.sh; scripts/intake/proposal-emit.sh SPEC_AXES_DONE wiring,tests/test-evaluate-spec-backcompat.sh; tests/test-m014-manifest-read.sh; scripts/verify/m024-p02-fixture-vs-live.sh; scripts/verify/m024-p02-write-confinement.sh; scripts/verify/m024-p02-suite.sh"
+requires:
+  - "P01"
+affects:
+  - "none"
+key_files:
+  - "scripts/intake/spec-shape-classify.sh,scripts/intake/proposal-emit.sh,scripts/verify/m024-p02-spec-shape-classify.sh,scripts/intake/m014-manifest-read.sh,scripts/verify/m024-p02-m014-manifest-read.sh,scripts/intake/_capture-baseline.sh,tests/fixtures/evaluate-pre-m024-baseline.txt,scripts/verify/m024-p02-spec-rationale.sh,scripts/verify/m024-p02-evaluate-spec-backcompat.sh,tests/test-evaluate-spec-backcompat.sh,tests/test-m014-manifest-read.sh,scripts/verify/m024-p02-fixture-vs-live.sh,scripts/verify/m024-p02-write-confinement.sh,scripts/verify/m024-p02-suite.sh"
+key_decisions:
+  - "Use spec 028 (M014-migrated) instead of plan-suggested spec 023 (lacks type:feature-spec frontmatter),Use spec 028 (M014-migrated) instead of plan-suggested spec 023 (lacks type:feature-spec frontmatter) — same precedent as T01,Use spec 028 instead of plan-named spec 023 for spec-rationale verify (023 lacks type:feature-spec frontmatter required by spec-shape-classify); 023 still used for raw-grep backcompat baseline since that path bypasses the classifier,Both phase tests use specs/028-universal-intake-routing for the spec-path/M014-shaped paths (T01-T03 deviation precedent); the backcompat verify path remains specs/023-github-native-integration via the per-task verify (raw-grep,classifier-bypass); template-pivot in test-m014-manifest-read.sh uses trap-guarded restore so an interrupt cannot leave templates/spec-template.md missing"
+patterns_established:
+  - "Spec-branch override hook mirroring (3a) paragraph hook; chunks-first metric path with raw-spec fallback per NG-1,Invoke-time M014 shipping probe (test -f templates/spec-template.md) with distinct exit-3 stub message — mirrors P03 route-to-specify.sh,SPEC_AXES_DONE sentinel mirroring PARA_AXES_DONE — input_shape+scope_tier+decomposition slots all swap to spec_rationale when set; baseline-fixture pattern (one-shot _capture script + diff-driven regression verify) keeps today-shape evaluate metrics frozen for downstream byte-compat,phase-suite shape (two phase-tests + every per-task verify in one runner); MEM002 parallel-array pass/fail tracking applied to spec-path tests; SB-3 atomic round-trip via trap-guarded restore for the M014 invoke-time-probe test"
+drill_down_paths:
+  - ".orchestrator/milestones/M024/phases/P02/tasks/T01-SUMMARY.md, .orchestrator/milestones/M024/phases/P02/tasks/T02-SUMMARY.md, .orchestrator/milestones/M024/phases/P02/tasks/T03-SUMMARY.md, .orchestrator/milestones/M024/phases/P02/tasks/T04-SUMMARY.md"
+duration: "45m"
+verification_result: "pass"
+completed_at: "2026-04-26T02:10:22Z"
+observability_surfaces:
+  - "none"
+---
+
+P02 (Spec-path backward compat + M014→M024 manifest read direction) closes the spec branch of `orchestrator:evaluate` against three orthogonal contracts:
+
+1. **Byte-shape backward compatibility (FR-6).** `tests/fixtures/evaluate-pre-m024-baseline.txt` was captured one-shot via `scripts/intake/_capture-baseline.sh` against `specs/023-github-native-integration/spec.md` (raw-grep path that bypasses the classifier). The new `m024-p02-evaluate-spec-backcompat.sh` and `tests/test-evaluate-spec-backcompat.sh` lock today-shape metrics (`metrics_source=raw_spec`, `story_count=7`, `requirement_count=18`, `acceptance_count=29`) so any future drift in the spec-shape evaluate path fails loudly.
+
+2. **Spec-shape proposal axes (FR-2 / FR-3).** `scripts/intake/spec-shape-classify.sh` replaces P01 stubs for the spec branch and emits `scope_tier`, `decomposition`, `recommended_command`, `metrics_source`, and `rationale_spec`. `proposal-emit.sh` gained a `(3b)` spec hook mirroring P03's `(3a)` paragraph hook, plus a `SPEC_AXES_DONE` sentinel that the rationale loop consults to skip the input_shape / scope_tier / decomposition slots — same shape pattern as `PARA_AXES_DONE`. The classifier prefers M014 chunks-first metrics and falls back to raw-spec counts (NG-1).
+
+3. **M014→M024 live manifest read direction (FR-15 / AD-4 direction `a`).** `scripts/intake/m014-manifest-read.sh` ships a six-key canonical-order reader (`schema_version`, `feature_slug`, `milestone`, `status`, `chunk_count`, `last_indexed_at`) backed by an invoke-time probe (test for `templates/spec-template.md`, exit 3 with `STUB:` stderr if absent) that mirrors the P03 #DQ-2 invoke-time probe pattern in `route-to-specify.sh`. Both `--spec-path` and `--specs-dir` argument modes resolve to the same six-line output; missing keys emit `=null` rather than failing. `scripts/verify/m024-p02-fixture-vs-live.sh` is the FR-15 canary that asserts the live reader's key list matches the M014 manifest fixture.
+
+**Verification posture.** Eight gates are green via `scripts/verify/m024-p02-suite.sh`: two phase tests (backcompat + manifest-read with trap-guarded `templates/spec-template.md` pivot for the invoke-time-probe exercise) plus six per-task verifies (spec-shape-classify, m014-manifest-read, fixture-vs-live, spec-rationale, evaluate-spec-backcompat, write-confinement). The suite uses MEM002 parallel-array pass/fail tracking; SB-3 write-confinement is grep-enforced across the three intake-tree scripts.
+
+**Patterns established for downstream phases.** The `(3X)` shape-hook + `*_AXES_DONE` sentinel pair generalizes for P04 (fast-path) and P07 (design-gate) — each new shape adds its own hook + sentinel without touching the rationale loop. The invoke-time M014 probe pattern is now used in two places (route-to-specify, m014-manifest-read) and is the canonical handshake shape for all future M014 consumers. The baseline-fixture + diff-driven regression verify pattern can be reused any time we need to freeze byte-shape compatibility against a moving target.
+
+**Open question deferred to phase-summary review (cross-task).** All three classifier-driven verifies and both phase tests substituted `specs/028-universal-intake-routing/spec.md` for the plan-named `specs/023-github-native-integration/spec.md` because spec 023 lacks the M014 `type: feature-spec` frontmatter the classifier requires. Three task summaries (T01, T02, T03) plus T04 documented this deviation. A future cleanup should either (a) retro-migrate spec 023 to M014 frontmatter or (b) re-stamp P02 (and any future) plans to canonicalize on spec 028 for classifier-driven paths.
+
+**Roadmap impact.** No reassessment triggered: P02 added no new boundary surfaces beyond what P01 produced (proposal artifact, intake tree) and what M014 already exposes (manifest reader). Downstream phases (P04 fast-path, P05 empty/Q&A, P06 revision, P07 design-gate) inherit the spec branch wiring unchanged.

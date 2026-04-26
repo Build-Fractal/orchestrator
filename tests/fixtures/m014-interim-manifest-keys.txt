@@ -1,0 +1,11 @@
+# tests/fixtures/m014-interim-manifest-keys.txt
+# M014 interim manifest frontmatter key set, captured 2026-04-25 (M024/P01/T05).
+# Source: templates/spec-template.md frontmatter + scripts/specify/specify.sh
+# scaffold output. Updated alongside M014 evolution; P02 will wire the live
+# read direction.
+schema_version
+type
+feature_slug
+created_at
+status
+milestone

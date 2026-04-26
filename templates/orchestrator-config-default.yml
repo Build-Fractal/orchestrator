@@ -10,6 +10,22 @@ dispatch_budget: null           # Max dispatches per milestone (null = unlimited
 duration_budget: null           # Max cumulative duration (null = unlimited, e.g., "2h")
 budget_enforcement: advisory    # advisory (warn only) | enforced (hard stop)
 
+# Universal intake routing fast-path (M024 — FR-3, NG-6, #Q-7)
+# When auto_proceed is true (default) AND a proposal lands at all four:
+#   scope_tier == "A"        AND
+#   intensity == "Quick"     AND
+#   conversus_gate == "none" AND
+#   design_gate == "none"
+# …`orchestrator:evaluate` flips `auto_proceeded: true` in the emitted
+# proposal frontmatter and dispatches without an approval prompt. Any
+# condition violation (or this key set to false) routes the proposal
+# through the operator approve / revise / cancel gate as before.
+#
+# Set to false project-wide to disable the fast-path entirely (every
+# proposal halts at the approval gate). Per AD-1 there is no per-invocation
+# CLI flag — this is a project-config-only knob (#Q-7).
+auto_proceed: true              # true (default) | false
+
 # Autonomy permission generation (P07 — FR-1)
 # Policy defaults live in templates/autonomy-defaults.yaml (baseline deny,
 # baseline allow, tier->mode mapping, introspection rules). This block lets

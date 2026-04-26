@@ -1,0 +1,8 @@
+# tests/fixtures/evaluate-pre-m024-baseline.txt
+# M024/P02/T03 — Pre-M024 evaluation baseline for specs/023-github-native-integration/spec.md.
+# Captured: 2026-04-26
+# Re-capture if commands/evaluate.md ## Scope Analysis metric extraction changes.
+metrics_source=raw_spec
+story_count=7
+requirement_count=18
+acceptance_count=29

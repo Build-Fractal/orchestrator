@@ -1,0 +1,38 @@
+## What Was Built
+
+P05 closes the empty-input branch of the M024 universal-intake router. With P05 in place, `orchestrator:evaluate` invoked with no argument runs a bounded ≤5-turn Q&A loop, captures the transcript verbatim, and emits a proposal with `input_shape: "empty_qa"`, the transcript embedded under `## Q&A`, and `low_confidence: true` whenever the operator short-circuits with `enough` before turn 5. The short-circuit flag flows through to P04's fast-path gate so any low-confidence proposal is forced through the approval prompt — closing the empty-shape edge case from the spec without coupling it to P04's check matrix.
+
+Four tasks shipped:
+
+- **T01 — Static qa-questions template** (`templates/intake-qa-questions.md`). Five `### Q<N>` blocks (Goal / Scope / Surface / Adversarial / Time) with `Prompt` + `Guidance` lines per the MEM013 frontmatter conventions. Resolves planning open-question #Q-3 with the static-template-first cut per D019 reuse-over-rebuild posture; conversus-loop generation deferred unless dogfood demands.
+- **T02 — `scripts/intake/qa-loop.sh`** — bash-3.2 line-mode bounded loop. Hard 5-turn cap via `head -n 5`, case-insensitive whitespace-trimmed `enough` short-circuit, transcript emission to a caller-supplied path, two-line stdout key=value contract (`turns_completed=N`, `qa_short_circuited=<bool>`). No interactive TTY mode (deferred behind dogfood need).
+- **T03 — `scripts/intake/proposal-emit.sh` empty-input branch** — `--qa-answers-from <file>` flag invokes `qa-loop.sh`, parses `qa_short_circuited`, sets `input_shape="empty_qa"`, escalates `low_confidence="true"` on short-circuit, marks `QA_AXES_DONE=1` (mirrors PARA_AXES_DONE / SPEC_AXES_DONE / FAST_PATH_AXES_DONE so per-axis stub-rationale loop skips overrides), and appends `## Q&A` + transcript after the final `mv`. Empty-qa branch overrides "Original Input" body slot with a `see ## Q&A` pointer to keep the transcript single-sourced.
+- **T04 — Phase tests + suite + commands/evaluate.md row update** — two phase tests (`tests/test-empty-qa-loop.sh`, `tests/test-qa-short-circuit.sh`), four per-claim verifies, suite runner, and a one-row update to `commands/evaluate.md` Input Shapes table replacing the stale `\`empty\`` placeholder with the canonical `\`empty_qa\`` row. Loop-back edit to `scripts/verify/m024-p03-evaluate-md.sh` to track the `empty` → `empty_qa` shape rename (the third FR-15 loop-back in M024's running pattern; first was P01/T05 → T01/T04 frontmatter, second was P02/T01 → P01 superset assertion, third is this).
+
+## Verification Results
+
+- `bash scripts/verify/m024-p05-suite.sh` → `PASS: M024/P05 suite — all 9 verifies green` (pass=9 fail=0).
+- `bash scripts/verify/m024-p04-suite.sh` → green (P04 fast-path regression preserved).
+- `bash scripts/verify/m024-p03-suite.sh` → green after loop-back to evaluate-md verify.
+- T04 reported DONE_WITH_CONCERNS for the P03-verify loop-back; the concern is scope-widening (one extra upstream file beyond payload's named SB-3 write set), not correctness. The forward-only doc-shape rename made the loop-back the conservative choice.
+
+## Patterns Established / Reused
+
+- **`<branch>_AXES_DONE=1` flag** — `QA_AXES_DONE` is the fourth instance after `SPEC_AXES_DONE` (P02), `PARA_AXES_DONE` (P03), `FAST_PATH_AXES_DONE` (P04). The loop-skip pattern is now stable across all five M024 input shapes; P06/P07 should reuse rather than reinvent.
+- **MEM002 parallel-array suite-tracker** preserved verbatim (`pass_count` / `fail_count` scalars, no `declare -A`).
+- **AD-19 single-script-file Check shape** preserved across all 9 P05 verifies.
+- **SB-3 write-confinement** — `qa-loop.sh` and the new emit branch only touch `.orchestrator/intake/<id>/` plus mktemp scratch + caller-supplied transcript path.
+- **Phase-test wrapper-as-verify** (3-line exec wrappers around `tests/test-*.sh`) re-applied for the suite-runnable phase witnesses.
+- **FR-15 loop-back-on-strict-superset** — third application this milestone; the upstream verify's intent is preserved (all five shapes named) while tracking the supersedure.
+
+## Decisions
+
+- **Static questions template over conversus-loop for first cut** — D019 reuse-over-rebuild; conversus-loop generation deferred unless dogfood produces evidence the static cut is insufficient.
+- **No interactive TTY mode** in `qa-loop.sh` — line-mode is sufficient for orchestrator-driven Q&A and the spec FR-5 cap is structural via `head -n 5`. TTY mode deferred behind concrete operator demand.
+- **Short-circuit → low_confidence: true** chosen as the P04 fast-path interlock, instead of adding a fourth fast-path condition. Keeps P04's check matrix closed and re-uses the existing `low_confidence` axis as the gate.
+- **Loop-back to `scripts/verify/m024-p03-evaluate-md.sh`** (alias-accept `empty`|`empty_qa`) chosen over freezing the legacy `empty` row in `commands/evaluate.md`. Forward-only doc-shape rename matches FR-15 strict-superset direction.
+
+## Boundary Map (delivered)
+
+- **Produces**: `scripts/intake/qa-loop.sh`, `templates/intake-qa-questions.md`, `tests/test-empty-qa-loop.sh`, `tests/test-qa-short-circuit.sh`, plus 9 `scripts/verify/m024-p05-*.sh` gates including suite runner. Modifies `scripts/intake/proposal-emit.sh` (empty-qa branch + `--qa-answers-from`), `commands/evaluate.md` (Input Shapes table row), `scripts/verify/m024-p03-evaluate-md.sh` (loop-back).
+- **Consumes**: P01 proposal schema (`input_shape=empty_qa` branch + transcript section), P01 emitter, FR-5, #Q-3 resolution.

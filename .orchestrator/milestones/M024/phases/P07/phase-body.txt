@@ -1,0 +1,33 @@
+## What Was Built
+
+P07 wires the **design gate** axis end-to-end into the M024 intake/proposal flow as a degraded-but-functional pre-M023 path.
+
+- **T01 — Design-gate classifier** (`scripts/intake/design-gate-classify.sh`): pure decision emitter that scans `--input` text or `--spec-path` body for 13 design-domain tokens (`ui UI render design layout screen view panel viewer dashboard interface visual theme`) using `grep -wE` whole-word matching. Emits `design_gate=<none|walkthrough>` + `design_gate_confidence=<low|high>` based on hit count (0/1/≥2).
+- **T02 — Degradation script** (`scripts/intake/design-gate-degradation.sh`): two-mode helper. `--probe-only` returns the M023-shipping probe verdict (env override `M023_SHIPPED_PROBE_OVERRIDE=stub|live` plus disk-probe fallback) plus the FR-7 byte-pinned guidance message; branch-mode (`--branch=manual|skip`) mutates the proposal frontmatter (`design_skipped`, `design_authored_manually`, `pending_design_authored_manually`, `pending_approval`, `proceeded_at`).
+- **T03 — Wiring**: `scripts/intake/proposal-emit.sh` now invokes the classifier (sec 5b) to populate `design_gate` + `design_gate_confidence`, plus a recommended-command guard (sec 5c) that prevents an orphan `orchestrator:design` recommendation pre-M023. `scripts/intake/approval-gate.sh` accepts the new `manual` and `skip` verbs, delegating to `design-gate-degradation.sh` after validating `design_gate=walkthrough` and `m023_shipped=false`. `templates/intake-proposal.md` gains the `pending_design_authored_manually` transient frontmatter key.
+- **T04 — Phase suite + closeout**: 3 phase tests (`tests/test-design-gate-{degradation,skip,manual}.sh`) and 4 verify scripts (`m024-p07-{no-orphan-design-cmd,write-confinement,evaluate-md,suite}.sh`) bring the P07 verify count to 13 PASS lines through the suite. `commands/evaluate.md` Pre-M023 section was flipped from "stubbed" to "wired in P07" with FR-7 message and manual/skip verb table. D025 row appended to `.orchestrator/DECISIONS.md`.
+
+## Key Decisions
+
+- **D025 (closed-enum semantics)**: `pending_design_authored_manually` joins the M020/MEM031 schema-authority registry as a transient frontmatter key. First manual-branch invocation sets it true and halts; follow-up invocations (DESIGN.md authored externally) flip it to permanent `design_authored_manually=true` + `pending_approval=true`.
+- **Invoke-time probe (no caching)**: The M023-shipping probe runs at invocation time per #DQ-2 option b — env override first, disk probe fallback. Prevents stale-cache issues during M023 development.
+- **FR-7 byte-pinning**: The pre-M023 guidance message is byte-stable across three sites — degradation script source, evaluate.md, and probe-only stderr emission. The `m024-p07-pinned-message.sh` verifier enforces this.
+- **No-orphan guard**: `proposal-emit.sh`'s recommended-command logic explicitly guards against emitting `orchestrator:design` before M023 ships; the verifier asserts no orphan reference outside the explicit post-M023 marker block.
+
+## Patterns Established
+
+- **Two-mode pure-leaf script**: A single script can be a pure decision emitter (probe-only) AND a frontmatter mutator (branch-mode), gated by mutually-exclusive flag groups, with the only mutator path operating on a dedicated `--proposal` path under SB-3 write-confinement.
+- **Env-override matrix testing**: `M023_SHIPPED_PROBE_OVERRIDE` closed-enum with synthetic-ROOT positive disk-probe coverage — gives full state-space coverage without depending on the real M023 ship state.
+- **Idempotent manual-branch follow-up**: The first invocation halts pending external authoring; re-invocations after DESIGN.md exists complete the flip without duplicate side effects.
+- **DESIGN_AXES_DONE skip flag**: Mirrors the PARA/SPEC/QA deep-classifier pattern — once the design axis is resolved by the leaf classifier, downstream classifiers skip it.
+- **P07 phase-suite shape**: 3 phase tests + 10 per-claim verifies + 1 aggregating suite script with parallel-array tracker (MEM002) — 13 PASS lines total.
+
+## Verification Results
+
+P07 verification suite: **13/13 PASS**. Regression checks: M024/P03 suite (3 PASS) and M024/P06 suite still green. No external modifications detected during phase transition.
+
+## Forward Bindings
+
+- `recommended_command` no longer mentions `orchestrator:design` outside the explicit post-M023 marker block — when M023 ships, the `m023_shipped=true` branch in the recommended-command logic activates and the no-orphan verifier's marker block is removed in the same commit.
+- `design-gate-classify.sh` token table is intentionally narrow; M023 is free to extend it (the rule table in the script header is the canonical reference).
+- `pending_design_authored_manually` is a transient frontmatter key; M020 schema authority will graduate or retire it as part of milestone consolidation.

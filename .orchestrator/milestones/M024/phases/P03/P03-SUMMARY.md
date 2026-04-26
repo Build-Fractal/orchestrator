@@ -1,0 +1,71 @@
+---
+schema_version: "1.0"
+type: phase-summary
+id: "P03"
+parent: "M024"
+milestone: "M024"
+provides:
+  - "scripts/intake/paragraph-classify.sh; scripts/intake/approval-gate.sh; scripts/intake/route-to-specify.sh; scripts/intake/route-to-dispatch.sh; commands/evaluate.md (Input Shapes section, 5 shapes); 8 scripts/verify/m024-p03-*.sh; tests/test-paragraph-intake.sh; tests/test-approval-gate.sh"
+requires:
+  - "P01 (templates/intake-proposal.md, scripts/intake/proposal-emit.sh, scripts/intake/shape-detect.sh, scripts/intake/intake-id-allocate.sh); M014/extended (scripts/specify/specify.sh + commands/specify.md three-pass contract — probed at invoke-time per #DQ-2 option b)"
+affects:
+  - "P04 (extends approval-gate.sh with four-condition fast-path), P05 (consumes approval-gate post-Q&A), P06 (replaces revise pass-through with full re-emit), P07 (paragraph-axes-done pattern reusable for design-gate)"
+key_files:
+  - "scripts/intake/paragraph-classify.sh, scripts/intake/approval-gate.sh, scripts/intake/route-to-specify.sh, scripts/intake/route-to-dispatch.sh, scripts/intake/proposal-emit.sh, commands/evaluate.md, scripts/verify/m024-p03-suite.sh, tests/test-paragraph-intake.sh, tests/test-approval-gate.sh"
+key_decisions:
+  - "Invoke-time M014 shipping probe on route-to-specify (#DQ-2 option b — degrade visibly with STUB stderr); paragraph-axes-done flag pattern in proposal-emit; revise verb is P03-surface-only (full re-emit lands P05); write-confinement regex tightened to exclude doc-string false-positives"
+patterns_established:
+  - "In-place frontmatter mutation via sed -i.bak (BSD/GNU portable); idempotency guard pattern (gate rejects pending_approval=false); invoke-time probe pattern for handshakes (re-run probe rather than trusting plan-phase check); pure-decision-emitter shape (route scripts write nothing, only stdout/stderr)"
+drill_down_paths:
+  - ".orchestrator/milestones/M024/phases/P03/tasks/T01-SUMMARY.md, .orchestrator/milestones/M024/phases/P03/tasks/T02-SUMMARY.md, .orchestrator/milestones/M024/phases/P03/tasks/T03-SUMMARY.md, .orchestrator/milestones/M024/phases/P03/tasks/T04-SUMMARY.md"
+duration: "11m"
+verification_result: "pass"
+completed_at: "2026-04-26T01:33:39Z"
+observability_surfaces:
+  - "none"
+---
+
+## Summary
+
+P03 closes the headline UX of M024: paragraph-shaped inputs run through a deep classifier, the operator sees an approve/cancel/revise gate, and approval routes to either `orchestrator:specify` (Tier B/C) or `orchestrator:dispatch` (Tier A) via two single-purpose route scripts. The M024→M014 handshake direction (per AD-4 direction `b`) is wired live against shipped M014/extended; an invoke-time probe degrades cleanly per #DQ-2 option `b` if M014 ever regresses on a future checkout.
+
+## What was built
+
+- **`scripts/intake/paragraph-classify.sh`** — replaces P01 paragraph stubs with a deterministic three-tier classifier (A: ≤30 words; B: 31–80 words; C: milestone/phase lexical markers OR ≥3 FR-bullets). Pure stdout emitter, four key=value lines.
+- **Edits to `scripts/intake/proposal-emit.sh`** — paragraph branch now wires the deep classifier; rationale/evidence loop skips `scope_tier` and `decomposition` when paragraph axes were overridden so P01 stubs no longer appear on those rationale slots.
+- **`scripts/intake/approval-gate.sh`** — three-verb operator gate (`approve | cancel | revise`). `approve`/`cancel` mutate `pending_approval`/`approved_at`/`cancelled_at` in-place via the BSD/GNU-portable `sed -i.bak` idiom; `revise` is P03 surface-only (full re-emit lands in P05 per spec). Idempotency guard rejects already-finalized proposals (exit 1).
+- **`scripts/intake/route-to-specify.sh`** — M024→M014 handshake. Re-runs M014 shipping probe (`scripts/specify/specify.sh` exists + `commands/specify.md` carries `Pass.1` marker) at every invoke; emits `STUB:` stderr message on probe failure (#DQ-2 option `b`). On success: `invoke=orchestrator:specify --input-from <proposal>`. Pure decision emitter — writes nothing.
+- **`scripts/intake/route-to-dispatch.sh`** — Tier A route. On `auto_proceeded=true` proposals (P04 fast-path branch), mutates `proceeded_at: <ISO8601>` and emits `auto_proceed=1`. Otherwise pure decision emitter: `invoke=orchestrator:dispatch --proposal <proposal>`.
+- **`commands/evaluate.md`** — added `## Input Shapes` section covering all five FR-1 shapes; legacy spec-on-disk path preserved verbatim per FR-6.
+- **Tests + verifies**: `tests/test-paragraph-intake.sh`, `tests/test-approval-gate.sh`; `scripts/verify/m024-p03-*.sh` (paragraph-classify, approval-gate, approval-gate-verbs, route-to-specify, route-to-dispatch, evaluate-md, write-confinement, suite — 8 verify scripts total).
+
+## Key decisions / patterns
+
+- **Invoke-time probe on the M024→M014 handshake** — the route-to-specify script re-runs the probe at every invocation rather than trusting a plan-phase-time check. This is #DQ-2 option `b` operationalized: a future checkout that regenerates without M014/extended degrades visibly with a `STUB:` stderr line and exit 1, never silently producing a broken handshake.
+- **In-place frontmatter mutation via `sed -i.bak`** — confirmed as the BSD/GNU portable idiom for proposal-bound mutations (P01/T04 established it; P03/T02 + T03 reuse it). All mutations are confined to the named `--proposal <path>` (verified by `m024-p03-write-confinement.sh`).
+- **Paragraph-axes-done flag pattern** — the proposal-emit rationale loop now checks a `PARA_AXES_DONE` flag and skips `scope_tier` / `decomposition` when paragraph branch overrode them. This pattern generalizes for P04/P07 when fast-path / design-gate axes get their own deep classifiers.
+- **Write-confinement regex tightening** — payload-pinned `^[^#]*>[^&]` over-matched on `<doc-string>` argument descriptions. T04 tightened it to require whitespace before `>` and exclude `>&[12]` / `>/dev/null`. SB-3 intent preserved; test fragility reduced.
+- **Verb-shape vs idempotency contract** — `approve`/`cancel` are one-shot; `revise` is pass-through (no mutation in P03). Operator can't double-finalize a proposal.
+
+## Verification
+
+`bash scripts/verify/m024-p03-suite.sh` — 10 PASS lines:
+- `PASS: test-paragraph-intake.sh`
+- `PASS: test-approval-gate.sh`
+- `PASS: m024-p03-paragraph-classify`
+- `PASS: m024-p03-approval-gate`
+- `PASS: m024-p03-approval-gate-verbs`
+- `PASS: m024-p03-route-to-specify`
+- `PASS: m024-p03-route-to-dispatch`
+- `PASS: m024-p03-evaluate-md`
+- `PASS: m024-p03-write-confinement`
+- `PASS: M024/P03 suite — paragraph + approval-gate + route + evaluate-md`
+
+P01 verifies still pass after the `proposal-emit.sh` paragraph-branch edits — confirmed by re-running the P01 emit + write-confinement scripts during P03/T01.
+
+## Downstream notes
+
+- **P04 fast-path** extends `approval-gate.sh` with the four-condition check (Tier A + Quick + no-conversus + no-design). The `auto_proceeded=true` plumbing in `route-to-dispatch.sh` (mutates `proceeded_at`, emits `auto_proceed=1`) is already wired in P03 — P04 only needs to flip `auto_proceeded` from `false` to `true` on eligible proposals.
+- **P05 empty + Q&A** consumes the approval-gate as-is for the post-Q&A approval step.
+- **P06 revision flow** replaces the P03 surface-only `revise` verb with full re-emit + axis-rederive + version-suffix scheme.
+- **P07 design-gate degradation** — when wired, the P03 paragraph-axes-done pattern can be reused for the design-gate axis override.

@@ -1,0 +1,31 @@
+## What Was Built
+
+P06 replaces P03's surface-only `revise` verb with a full revision flow. The verb in `approval-gate.sh` now invokes a real `scripts/intake/revise.sh` driver that re-emits the proposal in place — preserving the prior version as `proposal-v<N>.md`, recomputing dependent axes from operator-supplied overrides, and protecting operator state on emitter failure. Four tasks shipped in sequence: T01 (axis-rederive), T02 (revise.sh + emitter `--axes-from`), T03 (approval-gate wiring + `--no-apply` test-only backcompat shim), T04 (phase tests + write-confinement + evaluate.md update + suite tracker).
+
+## Key Decisions
+
+- **Re-encode the scope_tier→decomposition→recommended_command rule table inside `axis-rederive.sh`** rather than extracting a shared lib. Third call site (alongside `paragraph-classify.sh` and `spec-shape-classify.sh`) is below the lib-extraction threshold; a future cleanup phase can collapse them.
+- **Revise-namespace + apply-last precedence** — `--axes-from` values land in `<axis>_revise` and are applied AFTER paragraph + spec deep classifiers, so operator revisions beat deep-classifier output. Original payload sketch wrote into `<axis>_override` and was silently overwritten; rename fixes that.
+- **Stable intake_id preservation (#Q-6)** — `revise.sh` moves the emitted proposal back to the original path and prunes the counter-allocated sibling dir. Keeps `intake_id` sticky across revisions without changing `id-allocate.sh` semantics.
+- **FR-14 idempotency via tmp-marker file** (mktemp + grep DIFF) instead of a subshell variable, to survive bash 3.2 here-doc loop scope.
+- **Pre-archive body extraction** — read `## Original Input` + `## Q&A` from the live proposal BEFORE `mv → archive_path`, so the re-emit path can replay the original input contract.
+- **Archive-restore-on-emit-failure** — `mv proposal-v<N>.md` back to `proposal.md` before exit 1, protecting operator state per the FR-12 "never half-revised" contract.
+- **Test-only `--no-apply` backcompat shim on approval-gate** — preserves the P03 stdout shape so prior-phase verifies pass with one-line deltas to `m024-p03-approval-gate-verbs.sh` and `tests/test-approval-gate.sh`. Deliberately undocumented in `commands/evaluate.md` per T03 constraints.
+
+## Patterns Established
+
+- **Pure decision-emitter shape** (no file writes; no `>`, `cp`, `mv`, `mkdir`, `touch`, `sed -i`) — reused from P03 route-* scripts in `axis-rederive.sh`. Closed-enum first-failing-condition-wins validation with actionable error messages naming the supported set; `note=axis is independent — no dependents` stderr advisory pattern for no-op success.
+- **Revise-namespace + apply-last** for axes-from operator overrides (operator > deep-classifier > P01 stub).
+- **Stable-id preservation via emit-then-relocate** — intake_id stays sticky across revisions even though `id-allocate.sh` is counter-driven.
+- **Tmp-marker file pattern** for boolean signaling out of bash 3.2 here-doc loop scopes.
+- **Test-only backcompat shim** — hidden `--no-apply` flag preserves prior stdout shape when wiring a stubbed verb to its real implementation. Ergonomic alternative to behavioral forks or script versioning.
+- **Phase-suite dual-use of MEM002 parallel-array tracker** — `m024-p06-suite.sh` runs both the cross-cutting `tests/*.sh` phase tests and the per-task `scripts/verify/*.sh` single-purpose verifies through one `run_one` indirection; PASS/FAIL summary captures every entry in a single `SUMMARY: N/N` line per AD-19 single-script-file shape.
+
+## Verification
+
+10/10 phase suite gates green (`scripts/verify/m024-p06-suite.sh`). All P01–P05 suites still green (no regression). Two phase-level integration tests pass: `tests/test-revision-flow.sh` (Tier B → C revise via approval-gate, v1 archive, dependent rederives, approval reset, body preservation) and `tests/test-revision-version-preservation.sh` (two consecutive revises + FR-14 idempotent no-op on third). Task-level verification ran after each of T01–T04; T03 reported DONE_WITH_CONCERNS for a scope-widening edit to `proposal-emit.sh` that was within the named P06 write-set per the payload's Files To Touch (concern is observational, not correctness — advanced per US3 AS6).
+
+## Concerns / Observations
+
+- T03 surfaced a T02 placement gap: `REVISE_AXES_DONE` rationale-skip branch was inside the per-axis loop, but the paragraph branch unconditionally swapped `rationale_scope_tier` / `rationale_decomposition` BEFORE the loop ran, masking the placeholder so revise.sh's post-process sed found nothing on paragraph re-emits. Fixed in T03 by hoisting the REVISE_AXES_DONE branch above PARA/SPEC/QA gates and guarding the paragraph branch's pre-loop swaps. Pattern reusable: when a deep classifier branch sets values that a downstream loop must placeholder, the deep classifier must respect the same `*_AXES_DONE` flag the loop honors.
+- Future cleanup opportunity: collapse `axis-rederive.sh`, `paragraph-classify.sh`, and `spec-shape-classify.sh` rule tables into `scripts/intake/lib/axis-rules.sh` once a fourth caller emerges.

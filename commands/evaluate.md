@@ -6,6 +6,41 @@ description: "Use when starting a new project to classify scope as Tier A, B, or
 
 Classify a feature's scope into Tier A, B, or C and activate the corresponding orchestrator workflow. This is typically the first orchestrator command run for a new feature.
 
+## Input Shapes
+
+`orchestrator:evaluate` accepts any of five input shapes, detected mechanically by `scripts/intake/shape-detect.sh` (M024/P01) before tier classification runs. Every invocation emits a single reviewable proposal at `.orchestrator/intake/<id>/proposal.md` covering all six routing axes; the recommended downstream command and approval-gate behavior depend on the input shape and the resulting tier.
+
+**Legacy spec-on-disk callers**: see `## Spec Discovery` below — the spec-on-disk path is unchanged and produces byte-compatible today-shape evaluation output per FR-6. The new proposal artifact is additionally emitted alongside it.
+
+| Input shape | Detection rule (see `shape-detect.sh`)                                                | Recommended downstream                              | Approval gate                          |
+|-------------|---------------------------------------------------------------------------------------|-----------------------------------------------------|----------------------------------------|
+| `spec`      | `--spec-path <p>` points at a `type: feature-spec` file                               | `orchestrator:roadmap` (legacy path) + proposal.md  | Operator-approve unless degenerate     |
+| `paragraph` | Word-count 11–80 with no fragment markers (default catch-all)                         | Tier A → `orchestrator:dispatch`; Tier B/C → `orchestrator:specify` (see `paragraph-classify.sh`) | Operator-approve (revise / cancel possible) |
+| `fragment`  | Structural marker (`##` heading, Given/When/Then triple, FR-bullet) OR word-count ≥81 | `orchestrator:specify` (P05+ wires deep classifier) | Operator-approve                       |
+| `idea`      | Word-count ≤10                                                                        | Tier A → `orchestrator:dispatch` (P05+ wires deep classifier) | Operator-approve unless degenerate     |
+| `empty_qa`  | No `--input` and no `--spec-path`; operator answers up to 5 Q&A turns                 | `scripts/intake/qa-loop.sh` then proposal with `## Q&A` transcript embedded | Operator-approve (short-circuit forces `low_confidence: true` so fast-path is blocked) |
+
+For every non-degenerate shape, the operator is prompted via `scripts/intake/approval-gate.sh` with three verbs:
+
+- `approve` — invoke the recommended downstream command (`scripts/intake/route-to-specify.sh` or `scripts/intake/route-to-dispatch.sh`).
+- `cancel` — record `cancelled_at` to the proposal and halt.
+- `revise <axis>=<value>` — wired in P06: full re-emit via `scripts/intake/revise.sh` (prior `proposal.md` archived as `proposal-v<N>.md`, dependent axes re-derived, approval state reset). FR-12.
+
+The degenerate fast-path (Tier A + Quick + no-conversus + no-design) auto-proceeds to `orchestrator:dispatch` without an approval prompt — wired in P06.
+
+### Pre-M023 design-gate degradation
+
+Wired in P07 (this section is wired in P07). When the design-gate axis classifier (`scripts/intake/design-gate-classify.sh`) emits `design_gate=walkthrough` and the invoke-time M023-shipping probe at `scripts/intake/design-gate-degradation.sh` returns `m023_shipped=false`, the router emits the exact byte-pinned string `design walkthrough lands in M023; author DESIGN.md manually or skip` to stderr (FR-7 byte-stable for `grep -F`) and offers two operator branches via the approval-gate verb table:
+
+| Verb     | Behavior                                                                                              |
+|----------|-------------------------------------------------------------------------------------------------------|
+| `manual` | Halts the workflow with a pointer to the expected `DESIGN.md` path. Operator authors `DESIGN.md`, then re-runs `evaluate`; on follow-up the proposal flips `design_authored_manually: true` and resets `pending_approval: true` so the operator must still approve before downstream runs. |
+| `skip`   | Records `design_skipped: true` and proceeds without a design step.                                    |
+
+The `recommended_command` slot in pre-M023 proposals stays at the tier-derived fallback (`orchestrator:dispatch` for Tier A, `orchestrator:specify` for Tier B/C) — the post-M023 design command is never named in pre-M023 active code paths (verified by `scripts/verify/m024-p07-no-orphan-design-cmd.sh`).
+
+Post-M023 (when `commands/design.md` ships with a `Pass.<N>` marker), the probe flips and the recommended_command points at `orchestrator:design`; the `manual` and `skip` verbs become operator-opt-out branches rather than M023-not-yet-shipped fallbacks.
+
 ## Prerequisites
 
 ### 1. Extension Availability Check

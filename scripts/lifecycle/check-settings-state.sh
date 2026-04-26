@@ -61,7 +61,7 @@ case "$state" in
   MISSING)
     if [[ "$has_pipeline" = "true" ]]; then
       # Generate from project introspection
-      gen_output=$(bash "$GENERATE_SCRIPT" "$PROJECT_ROOT" 2>&1) || {
+      gen_output=$(bash "$GENERATE_SCRIPT" --project-root "$PROJECT_ROOT" 2>&1) || {
         # Fallback to template
         if [[ -f "$TEMPLATE" ]]; then
           mkdir -p "$PROJECT_ROOT/.claude"
@@ -72,7 +72,7 @@ case "$state" in
         echo "SETTINGS:ERROR — generate-permissions.sh failed and no template available" >&2
         exit 1
       }
-      echo "$gen_output" | bash "$WRITE_SCRIPT" "$PROJECT_ROOT" 2>&1 || {
+      echo "$gen_output" | bash "$WRITE_SCRIPT" --project-root "$PROJECT_ROOT" 2>&1 || {
         echo "SETTINGS:ERROR — write-permissions.sh failed" >&2
         exit 1
       }
@@ -90,13 +90,13 @@ case "$state" in
   ORCHESTRATOR)
     if [[ "$has_pipeline" = "true" ]]; then
       # Regenerate to catch toolchain changes
-      gen_output=$(bash "$GENERATE_SCRIPT" "$PROJECT_ROOT" 2>&1) || {
+      gen_output=$(bash "$GENERATE_SCRIPT" --project-root "$PROJECT_ROOT" 2>&1) || {
         log_path="$(log_failure regen-failed "$gen_output")"
         echo "SETTINGS:ORCHESTRATOR — regeneration failed, keeping existing (see $log_path)" >&2
         echo "SETTINGS:ORCHESTRATOR — regeneration failed, keeping existing"
         exit 0
       }
-      write_output=$(echo "$gen_output" | bash "$WRITE_SCRIPT" "$PROJECT_ROOT" 2>&1) || {
+      write_output=$(echo "$gen_output" | bash "$WRITE_SCRIPT" --project-root "$PROJECT_ROOT" 2>&1) || {
         log_path="$(log_failure write-failed "$write_output")"
         echo "SETTINGS:ORCHESTRATOR — write failed, keeping existing (see $log_path)" >&2
         echo "SETTINGS:ORCHESTRATOR — write failed, keeping existing"
@@ -112,13 +112,13 @@ case "$state" in
   USER_AUTHORED)
     if [[ "$has_pipeline" = "true" ]]; then
       # Merge orchestrator patterns into existing
-      gen_output=$(bash "$GENERATE_SCRIPT" "$PROJECT_ROOT" 2>&1) || {
+      gen_output=$(bash "$GENERATE_SCRIPT" --project-root "$PROJECT_ROOT" 2>&1) || {
         log_path="$(log_failure user-authored-gen-failed "$gen_output")"
         echo "SETTINGS:USER_AUTHORED — generation failed, keeping existing (see $log_path)" >&2
         echo "SETTINGS:USER_AUTHORED — generation failed, keeping existing"
         exit 0
       }
-      merge_output=$(echo "$gen_output" | bash "$WRITE_SCRIPT" "$PROJECT_ROOT" --merge 2>&1) || {
+      merge_output=$(echo "$gen_output" | bash "$WRITE_SCRIPT" --project-root "$PROJECT_ROOT" --merge 2>&1) || {
         log_path="$(log_failure user-authored-merge-failed "$merge_output")"
         echo "SETTINGS:USER_AUTHORED — merge failed, keeping existing (see $log_path)" >&2
         echo "SETTINGS:USER_AUTHORED — merge failed, keeping existing"
@@ -134,7 +134,7 @@ esac
 
 # Run drift check if available
 if [[ -x "$CHECK_SCRIPT" ]]; then
-  drift_output=$(bash "$CHECK_SCRIPT" "$PROJECT_ROOT" 2>&1) || true
+  drift_output=$(bash "$CHECK_SCRIPT" --project-root "$PROJECT_ROOT" 2>&1) || true
   echo "$drift_output"
 fi
 

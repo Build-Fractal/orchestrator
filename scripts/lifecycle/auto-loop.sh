@@ -20,7 +20,7 @@
 #     [--verification_result=<pass|fail|skipped>] [--duration_s=N] \
 #     [--model=<id>] [--tokens-input=N] [--tokens-output=N] \
 #     [--tokens-cache-read=N] [--cost=<amount>] [--cache-hit-rate=<rate>] \
-#     [--output-file=<path>]
+#     [--attempt=N] [--output-file=<path>]
 #   auto-loop.sh <milestone-dir> --step=V --phase=P## --task=T## [--output-file=<path>]
 #   auto-loop.sh <milestone-dir> --step=X [--output-file=<path>]
 #
@@ -111,6 +111,7 @@ TOKENS_OUTPUT=""
 TOKENS_CACHE_READ=""
 COST_ESTIMATED=""
 CACHE_HIT_RATE=""
+ATTEMPT=""
 OUTPUT_FILE=""
 
 while [[ $# -gt 0 ]]; do
@@ -127,6 +128,7 @@ while [[ $# -gt 0 ]]; do
     --tokens-cache-read=*) TOKENS_CACHE_READ="${1#--tokens-cache-read=}" ;;
     --cost=*)             COST_ESTIMATED="${1#--cost=}" ;;
     --cache-hit-rate=*)   CACHE_HIT_RATE="${1#--cache-hit-rate=}" ;;
+    --attempt=*)          ATTEMPT="${1#--attempt=}" ;;
     --output-file=*)      OUTPUT_FILE="${1#--output-file=}" ;;
     --output-file)        OUTPUT_FILE="$2"; shift ;;
     *)
@@ -222,6 +224,9 @@ if [[ "$STEP" = "G" ]]; then
   fi
   if [[ -n "$CACHE_HIT_RATE" ]]; then
     record_args+=("--cache-hit-rate=$CACHE_HIT_RATE")
+  fi
+  if [[ -n "$ATTEMPT" ]]; then
+    record_args+=("--attempt=$ATTEMPT")
   fi
 
   bash "$RECORD_RESULT" "${record_args[@]}" >/dev/null 2>&1

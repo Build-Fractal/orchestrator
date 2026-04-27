@@ -1,0 +1,8 @@
+intensity=Standard
+confidence=high
+reasoning=Standard recommended: scope is moderate, risk is medium, complexity is moderate, environment has 1/5 capabilities.
+scope=moderate
+risk_level=medium
+complexity=moderate
+risk_signals=none
+cap_score=1

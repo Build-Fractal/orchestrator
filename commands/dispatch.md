@@ -91,6 +91,34 @@ git worktree add .worktrees/<milestone-id>-<phase-id>-<task-id> HEAD
 ```
 This prevents concurrent task executions from conflicting. Clean up the worktree after task completion.
 
+## Predictive Surface (M027/P02)
+
+Before invoking the dispatch (subagent or sequential), surface a one-block predictive view showing the estimated cost at each intensity tier (Quick / Standard / Full), the recommended tier, and a one-keystroke override prompt. The surface is rendered by:
+
+```bash
+bash scripts/dispatch/predictive-surface.sh --description "<task-description>" --intensity <recommended-tier>
+```
+
+### Suppression Matrix
+
+The predictive surface is suppressed (zero stdout, dispatch output remains byte-identical to pre-M027 `orchestrator:dispatch`) when ANY of:
+
+1. The `--yes` flag is passed to `orchestrator:dispatch`.
+2. `ORCHESTRATOR_AUTO=1` is set in the environment (set by `orchestrator:auto`).
+3. The `--no-predict` flag is passed to `orchestrator:dispatch` (operator-override per #Q-16 resolution).
+4. The config knob `predictive_cost_surface` resolves to `false`. Resolution chain: env `ORCH_PREDICTIVE_COST_SURFACE` then local config then project config then defaults. Default is `true`.
+5. The recommended intensity is `quick` (predictive surface is not surfaced for the cheapest tier — the minimum information-theoretic value of the surface is at Standard or higher).
+
+Otherwise, render the surface.
+
+### Operator Override (CON-10)
+
+The surface ends with a one-line override prompt: `override: press 1=quick 2=standard 3=full, or Enter to accept recommended (or pass --no-predict to skip)`. The dispatch flow captures the operator's keystroke and adjusts the intensity tier accordingly before constructing the dispatch payload. Override is one keystroke; coercion is never the design goal (per AD-4 strategic positioning).
+
+### Read-Only
+
+The predictive surface helper is a read-only consumer of `scripts/engine/intensity-recommend.sh` and `scripts/lib/pricing.sh` — it never writes to `execution-log.jsonl`, never writes to config, never invokes an LLM (FR-12 / CON-1, FR-21 / CON-6).
+
 ## Execution Recording
 
 After dispatching, record the execution using `record-result.sh`. Do NOT use inline echo to append to the execution log.
@@ -155,6 +183,7 @@ When running in Claude Code (detected via `CLAUDE_CODE` environment variable by 
 - `scripts/state/read-roadmap.sh` — parses roadmap for tier and dependencies
 - `scripts/state/read-config.sh` — resolves configuration values
 - `scripts/lifecycle/record-result.sh` — execution log recording (append-only JSONL)
+- `scripts/dispatch/predictive-surface.sh` — dispatch-time predictive surface helper (M027/P02). Sources or forks `scripts/engine/intensity-recommend.sh` for the per-tier cost-annotation block. Read-only.
 
 ## Referenced Templates
 

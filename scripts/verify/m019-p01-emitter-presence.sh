@@ -102,12 +102,33 @@ pb_count="$(count_records payload_breakdown)"
 du_count="$(count_records dispatch_usage)"
 uc_count="$(count_records unit_close)"
 
+# M018/P00/T01: dispatch_usage now emits at TWO points per full pipeline run:
+#   - emission_point="build-context"     (co-located with payload_breakdown)
+#   - emission_point="dispatch-interface" (post-adapter happy/failure path)
+# The fixture pipeline exercises both, so dispatch_usage-count=2 is expected.
+# Each emission_point must appear exactly once.
+count_emission_point() {
+  local n
+  n="$(grep -c "\"emission_point\":\"$1\"" "$LOG" 2>/dev/null || printf '0')"
+  printf '%s' "$n" | tr -d '\n\r '
+}
+ep_bc="$(count_emission_point build-context)"
+ep_di="$(count_emission_point dispatch-interface)"
+
 [ "$pb_count" -eq 1 ] || {
   printf 'FAIL: m019-p01-emitter-presence.sh payload_breakdown-count=%s expected=1\n' "$pb_count"
   fail_count=$(( fail_count + 1 ))
 }
-[ "$du_count" -eq 1 ] || {
-  printf 'FAIL: m019-p01-emitter-presence.sh dispatch_usage-count=%s expected=1\n' "$du_count"
+[ "$du_count" -eq 2 ] || {
+  printf 'FAIL: m019-p01-emitter-presence.sh dispatch_usage-count=%s expected=2 (build-context + dispatch-interface)\n' "$du_count"
+  fail_count=$(( fail_count + 1 ))
+}
+[ "$ep_bc" -eq 1 ] || {
+  printf 'FAIL: m019-p01-emitter-presence.sh emission_point=build-context count=%s expected=1\n' "$ep_bc"
+  fail_count=$(( fail_count + 1 ))
+}
+[ "$ep_di" -eq 1 ] || {
+  printf 'FAIL: m019-p01-emitter-presence.sh emission_point=dispatch-interface count=%s expected=1\n' "$ep_di"
   fail_count=$(( fail_count + 1 ))
 }
 [ "$uc_count" -eq 1 ] || {
@@ -126,5 +147,5 @@ if [ "$fail_count" -gt 0 ]; then
   exit 1
 fi
 
-printf 'PASS: m019-p01-emitter-presence.sh 1 payload_breakdown + 1 dispatch_usage + 1 unit_close, schema green\n'
+printf 'PASS: m019-p01-emitter-presence.sh 1 payload_breakdown + 2 dispatch_usage (build-context + dispatch-interface) + 1 unit_close, schema green\n'
 exit 0

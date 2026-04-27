@@ -1115,6 +1115,87 @@ EOF_PB_NAMES
     printf 'build-context.sh: payload_breakdown append failed on %s\n' "$log_file" >&2
     return 0
   }
+
+  # M018/P00/T01: co-located dispatch_usage emission. Real production
+  # dispatches construct payloads via build-context.sh but hand them to the
+  # runtime's native dispatch (e.g., Claude Code's Agent tool) without
+  # routing through dispatch-interface.sh. The result was a 1.2% parity
+  # ratio between dispatch_usage and payload_breakdown (169 vs 2 in the
+  # historical log per .orchestrator/scratch/m018-telemetry-probe-report.txt).
+  # By emitting a co-located dispatch_usage here -- with
+  # emission_point="build-context" to disambiguate -- we close the parity
+  # gap by construction. The emit is bail-safe: a failure here never
+  # affects build-context exit code.
+  _bc_emit_dispatch_usage_colocated "$payload_chars" "$payload_tokens" "$model" "$log_file" "$ts" "$log_dir" || true
+  return 0
+}
+
+# ============================================================================
+# M018/P00/T01: dispatch_usage co-located emitter
+# ----------------------------------------------------------------------------
+# Emits a `dispatch_usage` record adjacent to the payload_breakdown record
+# above. Uses the same payload-token count (bytes/tokens were already
+# computed for payload_breakdown so we pass them through). Output tokens
+# are unknown at build-context time -> 0. The "emission_point":"build-context"
+# field disambiguates from full-pipeline dispatches that pass through
+# dispatch-interface.sh (which stamps "emission_point":"dispatch-interface").
+# CON-5 additivity: emission_point is additive; pre-M018 records remain
+# valid; downstream rollups can group by the field.
+# ============================================================================
+_bc_emit_dispatch_usage_colocated() {
+  local payload_chars="$1"
+  local input_tokens="$2"
+  local model="$3"
+  local log_file="$4"
+  local ts="$5"
+  local log_dir="$6"
+
+  if [ "${ORCH_M019_EMIT:-1}" = "0" ]; then
+    return 0
+  fi
+
+  # Source pricing helpers if not already present (idempotent guard).
+  if ! type pricing_estimate_cost_usd >/dev/null 2>&1; then
+    if [ -r "$PROJECT_ROOT/scripts/lib/pricing.sh" ]; then
+      . "$PROJECT_ROOT/scripts/lib/pricing.sh" || return 0
+    else
+      return 0
+    fi
+  fi
+
+  local output_tokens cost_usd warning pricing_version unit_id escaped_warning
+  output_tokens=0
+  unit_id="${MILESTONE_ID}/${PHASE_ID}/${TASK_ID}"
+
+  local _bc_cost_tmp
+  _bc_cost_tmp="$(mktemp 2>/dev/null || printf '/tmp/bc_cost_%d' "$$")"
+  pricing_estimate_cost_usd "$input_tokens" "$output_tokens" "$model" > "$_bc_cost_tmp" 2>/dev/null || true
+  cost_usd="$(tr -d '[:space:]' < "$_bc_cost_tmp")"
+  rm -f "$_bc_cost_tmp" 2>/dev/null || true
+  warning="$(pricing_warning_reason)"
+  pricing_version="$(pricing_last_updated)"
+
+  escaped_warning="$(printf '%s' "$warning" | sed 's/\\/\\\\/g; s/"/\\"/g')"
+
+  if [ -n "$cost_usd" ] && [ -z "$warning" ]; then
+    printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":%s,"pricing_version":"%s","model":"%s","source":"estimate","emission_point":"build-context","timestamp":"%s"}\n' \
+      "$unit_id" "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" \
+      "$input_tokens" "$output_tokens" "$cost_usd" \
+      "$pricing_version" "$model" "$ts" \
+      >> "$log_file" 2>/dev/null || {
+      printf 'build-context.sh: dispatch_usage co-located append failed on %s\n' "$log_file" >&2
+      return 0
+    }
+  else
+    printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":null,"pricing_version":"%s","pricing_warning":"%s","model":"%s","source":"estimate","emission_point":"build-context","timestamp":"%s"}\n' \
+      "$unit_id" "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" \
+      "$input_tokens" "$output_tokens" \
+      "$pricing_version" "$escaped_warning" "$model" "$ts" \
+      >> "$log_file" 2>/dev/null || {
+      printf 'build-context.sh: dispatch_usage co-located append failed on %s\n' "$log_file" >&2
+      return 0
+    }
+  fi
   return 0
 }
 

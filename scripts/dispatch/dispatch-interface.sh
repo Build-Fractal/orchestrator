@@ -215,7 +215,9 @@ _di_emit_dispatch_usage() {
 
   if [ -n "$cost_usd" ] && [ -z "$warning" ]; then
     # Happy path — numeric cost, no warning field.
-    printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"%s","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":%s,"pricing_version":"%s","model":"%s","source":"estimate","timestamp":"%s"}\n' \
+    # M018/P00/T01: emission_point="dispatch-interface" disambiguates from
+    # build-context co-located emissions (CON-5 additive field).
+    printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"%s","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":%s,"pricing_version":"%s","model":"%s","source":"estimate","emission_point":"dispatch-interface","timestamp":"%s"}\n' \
       "$UNIT_ID" "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" "$BACKEND" \
       "$input_tokens" "$output_tokens" "$cost_usd" \
       "$pricing_version" "$model" "$ts" \
@@ -225,7 +227,9 @@ _di_emit_dispatch_usage() {
     }
   else
     # Degradation path — cost=null JSON literal, pricing_warning present.
-    printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"%s","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":null,"pricing_version":"%s","pricing_warning":"%s","model":"%s","source":"estimate","timestamp":"%s"}\n' \
+    # M018/P00/T01: emission_point="dispatch-interface" disambiguates from
+    # build-context co-located emissions (CON-5 additive field).
+    printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"%s","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":null,"pricing_version":"%s","pricing_warning":"%s","model":"%s","source":"estimate","emission_point":"dispatch-interface","timestamp":"%s"}\n' \
       "$UNIT_ID" "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" "$BACKEND" \
       "$input_tokens" "$output_tokens" \
       "$pricing_version" "$escaped_warning" "$model" "$ts" \

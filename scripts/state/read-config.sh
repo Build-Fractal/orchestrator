@@ -14,7 +14,7 @@
 set -euo pipefail
 
 # Valid config keys
-VALID_KEYS="default_tier verification_commands context_verbosity git_isolation dispatch_budget duration_budget budget_enforcement session_weight_limit auto_proceed"
+VALID_KEYS="default_tier verification_commands context_verbosity git_isolation dispatch_budget duration_budget budget_enforcement session_weight_limit auto_proceed efficiency_footer predictive_cost_surface"
 
 # Defaults for file paths
 DEFAULTS_FILE=""

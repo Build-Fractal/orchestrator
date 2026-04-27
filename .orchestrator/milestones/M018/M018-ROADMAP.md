@@ -19,7 +19,7 @@ updated_at: "2026-04-27T18:51:02Z"
     - Produces: patched `dispatch_usage` emitter (parity ≥ 95% with `payload_breakdown` across a 20-dispatch sample); `scripts/diagnostics/m018-section-distribution.sh` (per-section size distribution + per-tier achievable-savings ceilings with CIs); spec amendment pinning SC-9 threshold (`--amend` to `specs/030-context-compression-layer/spec.md`)
     - Consumes: existing M019 emitter extension point; existing telemetry probe report at `.orchestrator/scratch/m018-telemetry-probe-report.txt`
 
-- [ ] **P01**: Grammar Contract + Conversus Gate — "Operator views `references/compression-grammar.md`; the lint script reports clean; the conversus `--strict` gate report under `.orchestrator/milestones/M018/phases/P01/conversus/` shows PASS verdict before phase close."
+- [x] **P01**: Grammar Contract + Conversus Gate — "Operator views `references/compression-grammar.md`; the lint script reports clean; the conversus `--strict` gate report under `.orchestrator/milestones/M018/phases/P01/conversus/` shows PASS verdict before phase close."
   - Risk: high
   - Depends: P00
   - Boundary Map:

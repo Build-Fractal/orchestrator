@@ -19,7 +19,7 @@ updated_at: "2026-04-26T21:50:08Z"
     - Produces: `scripts/diagnostics/metrics-rollup.sh` (sourceable library + CLI), `scripts/verify/m027-rollup-schema.sh`, aggregation-precedence contract (FR-18), source-filter contract (FR-3), Goodhart output-pairing contract (FR-4), copy-then-aggregate FS-race semantics (FR-19), input-schema validation (FR-17), corrupt-line tolerance (FR-14), pricing-warning surface (FR-11), perf-bound regression gate (CON-12/SC-13)
     - Consumes: M019 Tier 1 JSONL records (`payload_breakdown`, `dispatch_usage`, `unit_close`), `scripts/lib/pricing.sh`, `scripts/verify/m019-schema.sh`, char-quartile token approximation (M019 AD-1)
 
-- [ ] **P01**: `orchestrator:cost` retrospective + predictive command — "Invoking `orchestrator:cost` on Claude Code, Codex CLI, or Cursor prints the active-milestone rollup; `orchestrator:cost --estimate \"<task>\"` prints a per-tier (Quick/Standard/Full) cost+quality table with the recommended tier marked in <100ms and zero LLM tokens; `intensity-recommend.sh` output now carries per-tier cost annotations (text default, opt-in `--format json`)."
+- [x] **P01**: `orchestrator:cost` retrospective + predictive command — "Invoking `orchestrator:cost` on Claude Code, Codex CLI, or Cursor prints the active-milestone rollup; `orchestrator:cost --estimate \"<task>\"` prints a per-tier (Quick/Standard/Full) cost+quality table with the recommended tier marked in <100ms and zero LLM tokens; `intensity-recommend.sh` output now carries per-tier cost annotations (text default, opt-in `--format json`)."
   - Risk: medium
   - Depends: P00
   - Boundary Map:

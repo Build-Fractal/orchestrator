@@ -120,6 +120,39 @@ If no execution log exists or it is empty, report: "No telemetry data available 
 
 If `scripts/telemetry/aggregate-metrics.sh` is unavailable, skip the telemetry section and report: "Telemetry aggregation unavailable (aggregate-metrics.sh not found)."
 
+## Efficiency Footer
+
+After the telemetry block, render a one-block efficiency footer summarizing milestone-to-date cost + paired quality metrics from the M019 Tier 1 JSONL stream. The footer is governed by two suppression conditions; under EITHER, render NOTHING for this section and proceed directly to `## Next Action`.
+
+### Suppression Conditions
+
+The efficiency footer is suppressed (zero output for this section, output remains byte-identical to pre-M027 `orchestrator:status`) when ANY of:
+
+1. The `--quiet` flag is passed to `orchestrator:status`.
+2. The config knob `efficiency_footer` resolves to `false`. Resolution chain: env `ORCH_EFFICIENCY_FOOTER` -> local config -> project config -> defaults. Default is `true`.
+
+Otherwise, render the footer.
+
+### Render
+
+Invoke the helper:
+
+```bash
+bash scripts/diagnostics/efficiency-footer.sh --milestone <active-milestone-id>
+```
+
+When no active milestone exists, fall back to the project-granularity rollup:
+
+```bash
+bash scripts/diagnostics/efficiency-footer.sh --project
+```
+
+The helper handles both forms — passing `--quiet` propagates the suppression to the helper. Helper output is a one-block efficiency footer (≤ 6 lines) prefixed with the literal title `Efficiency (Tier 1 rollup)`. When the JSONL stream is empty or absent, the helper emits a single-line `Efficiency: no Tier 1 records yet` (US-3 AS-3) — never an error, never a crash (CON-5 carry-forward).
+
+### Read-Only
+
+The efficiency footer is a read-only consumer of `execution-log.jsonl` — it never writes to or rewrites the log (FR-12 / CON-1). The helper is bash-only; zero LLM tokens (FR-21 / CON-6).
+
 ## Next Action
 
 Based on the current state, recommend the next orchestrator command:
@@ -169,3 +202,4 @@ Status is inherently idempotent — it only reads from disk and computes derived
 - `scripts/state/read-config.sh` — resolves configuration values (budgets, enforcement)
 - `references/state-machine.md` — state descriptions, transitions, and derivation rules
 - `scripts/telemetry/aggregate-metrics.sh` — computes aggregate telemetry metrics from execution log
+- `scripts/diagnostics/efficiency-footer.sh` — efficiency footer helper (M027/P02). Sources or forks `scripts/diagnostics/metrics-rollup.sh` for milestone-to-date paired cost+quality aggregates. Read-only.

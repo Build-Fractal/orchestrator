@@ -1,0 +1,50 @@
+## Next Action
+
+Based on the current state, recommend the next orchestrator command:
+
+| Current State | Recommended Action |
+|---------------|--------------------|
+| `pre-planning` | Run `speckit.orchestrator.evaluate` to classify the project tier. |
+| `discussing` | Run `speckit.orchestrator.discuss` to finalize the context draft. |
+| `planning` | Run `speckit.orchestrator.roadmap` or `speckit.orchestrator.plan-phase` to generate the next plan. |
+| `replanning` | Review and regenerate the stale phase plan via `speckit.orchestrator.plan-phase`. |
+| `executing` | Run `speckit.orchestrator.dispatch` to execute the next task. |
+| `summarizing` | Run `speckit.orchestrator.verify` and write the phase summary. |
+| `validating` | Validate milestone success criteria across all phases. |
+| `completing` | Write the milestone summary using `write-summary.sh`, then compress knowledge. |
+| `complete` | Milestone complete. Consider `speckit.orchestrator.consolidate` for knowledge compression. |
+
+## Concurrent Safety
+
+The status command is read-only — it never modifies state files (FR-053):
+
+- Safe to run from a second terminal while autonomous mode runs in another.
+- Safe to run while another agent is executing a dispatched task.
+- Does not acquire locks, write files, or update the execution log.
+- All information is derived from existing files on disk.
+
+## Idempotency
+
+Status is inherently idempotent — it only reads from disk and computes derived values. Running it any number of times produces the same output for the same disk state. No special handling needed.
+
+## Error Handling
+
+- If the milestone directory doesn't exist, report: "No milestone directory found. Run speckit.orchestrator.evaluate to start."
+- If the roadmap is missing, report progress as "No roadmap generated yet" and recommend evaluate.
+- If `scripts/state/derive-phase.sh` is unavailable, report: "State derivation script not found. Orchestrator may not be properly installed."
+- If `execution-log.jsonl` is malformed, skip the execution history section and report: "⚠ Execution log is malformed. History unavailable."
+
+## Gotchas
+
+- **Status is strictly read-only**: It never acquires locks, writes files, or updates logs. Safe to run concurrently with auto mode or dispatched tasks in another terminal.
+- **Lock staleness uses PID checking (`kill -0`)**: False positives are possible if the OS has reused a PID. CI runtime liveness checks (GitHub API `run_id` lookup) are deferred to US7.
+- **Malformed execution log skips history section**: If `execution-log.jsonl` contains invalid JSON lines, the execution history and budget status sections are omitted rather than failing the command.
+
+## Reference Files
+
+- `scripts/state/derive-phase.sh` — derives current orchestrator state from disk
+- `scripts/state/read-roadmap.sh` — parses roadmap for phase list and active phase
+- `scripts/state/read-config.sh` — resolves configuration values (budgets, enforcement)
+- `references/state-machine.md` — state descriptions, transitions, and derivation rules
+- `scripts/telemetry/aggregate-metrics.sh` — computes aggregate telemetry metrics from execution log
+- `scripts/diagnostics/efficiency-footer.sh` — efficiency footer helper (M027/P02). Sources or forks `scripts/diagnostics/metrics-rollup.sh` for milestone-to-date paired cost+quality aggregates. Read-only.

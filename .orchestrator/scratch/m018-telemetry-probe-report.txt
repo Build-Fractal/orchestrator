@@ -1,0 +1,49 @@
+=== M018 Telemetry Probe ===
+Records found: payload_breakdown=169  dispatch_usage=2  unit_close=197
+
+=== Payload size distribution (payload_tokens_estimate) ===
+  count=169  total_tokens=2838666  mean=16797
+  min=8985  p25=12506  p50=16213  p75=19843  p90=22863  p95=24534  max=30358
+
+=== Section-token aggregates (sum across all dispatches) ===
+  section                      total_tokens        n pct_of_total
+  ---------------------------- ------------ -------- ------------
+  Knowledge                         1275251      169        45.9%
+  Task Plan                          666925      169        24.0%
+  Upstream Context                   501176      169        18.1%
+  First-Turn Completeness            140220      169         5.1%
+  Scope                              106052      169         3.8%
+  Constraints                         79748      169         2.9%
+  State Context                        5155      169         0.2%
+  Decisions                            1859      169         0.1%
+  TOTAL                             2776386
+
+=== Per-milestone payload-token totals ===
+  milestone     total_tok dispatch     mean_tok
+  ---------- ------------ -------- ------------
+  M012             327447       22        14884
+  M013             339736       25        13589
+  M014             375764       25        15031
+  M019              81206        7        11601
+  M020             642151       31        20715
+  M024             540550       29        18640
+  M026             187730       14        13409
+  M027             344082       16        21505
+
+=== Largest single dispatches (top 10 by payload_tokens_estimate) ===
+     30358 tok    121435 chars  M027/P03/T02-config-drift-and-doctor-md
+     29938 tok    119753 chars  M027/P03/T04-verifier-suite
+     29419 tok    117677 chars  M027/P03/T01-anomaly-helper
+     26910 tok    107640 chars  M020/P05/T03-consolidate-cluster-extension
+     26487 tok    105949 chars  M027/P03/T03-run-doctor-integration
+     26486 tok    105947 chars  M020/P05/T01-cluster-helper
+     26486 tok    105947 chars  M020/P05/T01-cluster-helper
+     24888 tok     99552 chars  M020/P05/T04-integration-test
+     24534 tok     98139 chars  M020/P05/T02-feature-vector-extension
+     24134 tok     96539 chars  M020/P03/T02-graduate-cluster-extension
+
+=== Dispatch usage (estimated cost) ===
+  dispatches=2  total_in_tok=12020  total_out_tok=0  total_cost_usd=0.1803
+  mean per dispatch: in=6010  out=0  cost=$0.0902
+
+Probe complete.

@@ -1,0 +1,83 @@
+mode: red-blue
+target: /Users/brettkellgren/Sites/spec-kit-orchestrator/references/compression-grammar.md
+output: /Users/brettkellgren/Sites/spec-kit-orchestrator/.orchestrator/milestones/M018/phases/P01/conversus
+iterations: 1
+agents:
+- name: blue-advocate
+  prompt: "You are the Blue Advocate. Your charter is to defend that\n`references/compression-grammar.md`\
+    \ is sufficient as-shipped to\ngate downstream tier implementations (P02\u2013\
+    P05) of the M018\nContext Compression Layer.\n\nSpecifically, argue:\n\n1. The\
+    \ four `## Tier:` sections (filter, tier1, tier2, tier3)\n   each carry an `applies-to:`\
+    \ block enumerating artifact classes\n   and a `preserves:` block enumerating\
+    \ byte-pattern regexes\n   that prevent parse-regression at the tier boundary.\
+    \ Cite\n   block names verbatim.\n\n2. The marker grammar `<!-- compressed:tierN\
+    \ ... -->` is\n   unambiguous \u2014 its kvpair vocabulary is fully enumerated\
+    \ and\n   downstream tools can deterministically tokenize it without\n   backtracking.\n\
+    \n3. The preserved-pattern vocabulary covers the byte classes\n   that would corrupt\
+    \ downstream parsers: frontmatter\n   delimiters, code fences, file paths, MEM\
+    \ IDs, command names,\n   URLs, JSONL records, and scaffold-placeholder markers.\n\
+    \   Quote the relevant `preserves:` regexes verbatim.\n\n4. The per-tier modeling\
+    \ assumptions in the SC-9 section\n   compose plausibly to \u2265 34.7% aggregate\
+    \ payload-token\n   reduction under the P00 probe's 80% CI lower bounds (filter\n\
+    \   \u2248 13%, tier1 \u2248 6.3%, tier2 \u2248 25.5%, tier3 \u2248 12.2%). Cite\n\
+    \   the probe-output values verbatim.\n\nYou concede specific points to the red\
+    \ advocate where the\ncontract clearly does not address red's critique \u2014\
+    \ unconceded\npoints become disputes for the arbiter.\n\nYou do NOT argue that\
+    \ \"later tiers will fix this\" when the gap\nis in the contract document itself.\
+    \ You DO argue when red is\nspeculatively inventing problems that the contract\
+    \ actually\nprevents via its `preserves:` vocabulary or marker grammar.\n"
+  role: blue
+- name: red-advocate
+  prompt: "You are the Red Advocate. Your charter is to argue that the\ncompression-grammar\
+    \ contract has at least one fatal flaw that\nwould let parse-regression slip past\
+    \ the gate once tier code\nlands in P02\u2013P05.\n\nPress on at least one of\
+    \ the following dispute classes (cite\nthe exact section heading, regex, or block\
+    \ name supporting\neach):\n\n(a) **Preservation gap** \u2014 a `preserves:` block\
+    \ is missing or\n    under-specifies a byte class such that a tier could\n   \
+    \ corrupt it. Examples: nested code fences whose inner\n    delimiter is not preserved\
+    \ verbatim; JSONL records inside\n    markdown fenced blocks; multi-line scaffold-placeholder\n\
+    \    markers (`<TODO: ... >` spanning lines); MEM IDs that\n    appear inside\
+    \ summarized prose without explicit\n    preservation;\n\n(b) **Marker-grammar\
+    \ ambiguity** \u2014 the `<!-- compressed:tierN\n    ... -->` comment grammar\
+    \ is ambiguous in some kvpair value\n    tokenization edge case (commas inside\
+    \ quoted values,\n    multi-line values, nested HTML comments, escaping rules);\n\
+    \n(c) **Applies-to/preserves mismatch** \u2014 a tier's `applies-to:`\n    block\
+    \ names a class the corresponding `preserves:` block\n    cannot defend. Example:\
+    \ tier3 summarizes Knowledge sections\n    whose entries contain MEM IDs, but\
+    \ the tier3 `preserves:`\n    block does not name MEM IDs verbatim \u2014 so summarization\n\
+    \    could lose them across the boundary;\n\n(d) **SC-9 composition fragility**\
+    \ \u2014 the per-tier modeling\n    assumptions are presented as additive but\
+    \ tier overlap is\n    hand-waved rather than derived from the probe. Example:\n\
+    \    filter drops tokens that tier3 would also have summarized,\n    so the aggregate\
+    \ \u2265 34.7% is double-counting. Or: tier2's\n    head-drop interacts with tier3's\
+    \ per-section budget in a\n    way the probe did not measure.\n\nYou raise specific\
+    \ disputes citing the exact section, quote,\nor interplay of requirements that\
+    \ supports the critique. You\ndo NOT manufacture disputes where the contract clearly\n\
+    addresses the byte class or marker rule. You DO press disputes\neven when the\
+    \ blue advocate concedes partial counter-evidence\n\u2014 partial concession means\
+    \ the arbiter must decide.\n\nYour charter is preservation of Constitution Principle\
+    \ II\n(Evidence Before Claims): if the contract's claims about\nparse-regression\
+    \ safety cannot stand on the `preserves:`\nvocabulary the contract itself enumerates,\
+    \ the arbiter should\nBLOCK and route the contract back through revision before\n\
+    tier code starts in P02.\n"
+  role: red
+arbiter:
+  name: arbiter
+  prompt: "The arbiter reads disputes from both advocates, weighs them\nagainst the\
+    \ orchestrator constitution (Principle II Evidence\nBefore Claims, Principle III\
+    \ Design Before Code, Principle XV\nSurgical Precision), and emits a PASS or BLOCK\
+    \ verdict. A BLOCK\nverdict names the dispute(s) that tipped the decision and\
+    \ the\nconstitution principle each dispute violates. Ties resolve in\nfavor of\
+    \ BLOCK \u2014 the contract remains in review until disputes\nare addressed.\n\
+    \nThe arbiter does NOT re-litigate the advocate round; it weighs\nthe presented\
+    \ disputes. An advocate who fails to present a\ndispute forfeits the point regardless\
+    \ of independent merit.\n\nFor this gate specifically: the bar is whether the\
+    \ contract is\nadversarially-defensible enough to commit P02\u2013P05 implementation\n\
+    work against. A BLOCK does not mean the contract is unsalvageable\n\u2014 it means\
+    \ a specific preservation-gap, marker ambiguity,\napplies-to/preserves mismatch,\
+    \ or SC-9 composition flaw must be\nfixed in the contract document before tier\
+    \ code starts.\n"
+  docs:
+  - /Users/brettkellgren/Sites/spec-kit-orchestrator/.orchestrator/memory/constitution.md
+  grounding: /Users/brettkellgren/Sites/spec-kit-orchestrator/.orchestrator/memory/constitution.md
+  trigger: disputes_remain

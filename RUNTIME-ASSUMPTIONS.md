@@ -57,6 +57,8 @@ Each entry lives under a `## FR-N: <short-name>` heading with four required subs
 
 ### M018/P01: compression-grammar runtime expectations
 
+Contract artifact: `references/compression-grammar.md` (v1.0.1, Reviewed).
+
 - **Claude Code assumption**: Tier 3 auto-compact (FR-8) routes summarization through `scripts/dispatch/dispatch-interface.sh` invoking the runtime's native model. Under Claude Code, this is Anthropic's API via the orchestrator's existing dispatch path; quality of the summary is gated by the eval harness (US-7 / FR-12) before Tier 3 dispatches advance `unit_close`. Filter, Tier 1, and Tier 2 are zero-LLM and runtime-agnostic.
 - **Codex/Cursor fallback**: zero-LLM tiers (filter / Tier 1 / Tier 2) are byte-identical across all three runtimes (FR-13). Tier 3 routes through the same `dispatch-interface.sh` and calls the runtime's native model; the in-band marker `<!-- compressed:tier3 model=<model> ... -->` carries the runtime-specific model name verbatim, and `dispatch_usage` records carry the runtime-specific pricing. Behavior diverges only in the model identity and pricing — the contract (preservation, marker, additive emitter fields) is identical.
 - **Milestone / phase**: M018/P01 (grammar contract authored). Tier code lands across M018/P02–P05; multi-runtime parity audit (US-8) lands in M018/P07 and feeds M009.

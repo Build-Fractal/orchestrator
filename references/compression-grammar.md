@@ -1,8 +1,8 @@
 ---
 schema_version: "1.0"
 type: compression-grammar
-version: "1.0.0"
-status: "Draft"
+version: "1.0.1"
+status: "Reviewed"
 last_revised: "2026-04-27"
 ---
 
@@ -123,13 +123,13 @@ implicitly. Tier-specific extensions are listed under each tier section below.
 | Pattern                      | Regex                                                          | Example bytes                                                                         |
 |------------------------------|----------------------------------------------------------------|---------------------------------------------------------------------------------------|
 | YAML frontmatter delimiters  | `^---$` ... `^---$`                                            | `---\nschema_version: "1.0"\n---`                                                     |
-| Code fences                  | `` ^```[a-zA-Z0-9_-]*$ `` ... `` ^```$ ``                      | `` ```bash\necho hi\n``` ``                                                           |
+| Code fences                  | `` ^`{3,}[a-zA-Z0-9_-]*$ `` ... matching closing run of `` ` `` | `` ```bash\necho hi\n``` `` (and 4+-backtick nested variants)                         |
 | Absolute file paths          | `/[A-Za-z0-9_./-]+\.(sh|md|yml|yaml|jsonl?|py|txt)`            | `/Users/x/scripts/dispatch/build-context.sh`                                          |
 | Repo-relative script paths   | `scripts/[A-Za-z0-9_./-]+\.sh`                                 | `scripts/util/with-env.sh`                                                            |
 | MEM IDs                      | `\bMEM[0-9]{3}\b`                                              | `MEM020`                                                                              |
 | Command names                | `orchestrator:[a-z-]+`                                         | `orchestrator:dispatch`                                                               |
 | URLs                         | `https?://[^\s)]+`                                             | `https://example.com/path?q=1`                                                        |
-| JSONL records                | a complete `{...}` line in any `.jsonl` file                   | `{"record_type":"payload_breakdown","tokens":1234}`                                   |
+| JSONL records                | a complete `{...}` line in any `.jsonl` file OR inside a fenced code block (any language tag) where the line begins with `{` and ends with `}` | `{"record_type":"payload_breakdown","tokens":1234}`                                   |
 | Scaffold-placeholder markers | `&lt;TODO:[^&gt;]+&gt;` (rendered: angle-bracket TODO marker)  | `&lt;TODO: derive section budget&gt;`                                                 |
 | In-band compression markers  | `<!-- compressed:tier[0-9]+ [^>]*-->`                          | `<!-- compressed:tier2 head-dropped=4096 protected_tail_ratio=0.3 -->`                |
 
@@ -397,10 +397,23 @@ dispatch.
 
 ## Open Questions
 
-No open questions at v1.0.0 author time. Conversus gate findings (if any) are appended below by the operator after T03.
+The first conversus `--strict` gate (2026-04-27) returned BLOCK with two P0 mitigations (MIT-01 nested code fences, MIT-02 JSONL-inside-fenced-code) which were addressed in v1.0.1 above. Four P1 mitigations and one P2 mitigation are deferred to a follow-up cycle (M018 D-row TBD; non-gating per arbiter):
+
+- **MIT-03 (P1)** — extend the file-extension list in absolute / repo-relative path regexes to cover `csv`, `log`, `json`, `xml`, `sql`.
+- **MIT-04 (P1)** — define quoted-string escape rules in the marker grammar (currently formally incomplete for kvpair values containing `"`).
+- **MIT-05 (P2)** — extend scaffold-placeholder marker regex to match multi-line `&lt;TODO:&gt;` patterns.
+- **MIT-06 (P1, disputed)** — empirical tier3-on-MEM-heavy validation (THREAT-02): probe whether tier3 summarization preserves MEM IDs verbatim across the boundary on Knowledge sections containing dense MEM cross-references.
+- **MIT-07 (P1, disputed)** — re-run P00 probe with explicit tier2 → tier3 sequential simulation (THREAT-10): confirm the aggregate-ceiling composition is not optimistic about non-overlap between tier2 head-drop and tier3 summarization.
+
+The second conversus gate (2026-04-27) returned PASS (`surviving_disputes=0`), but the deliberation surfaced three additional non-gating findings deferred here as P02-entry-gate items — they shape downstream phase plans but do not block P01 closure:
+
+- **MIT-08 (P02 entry gate, THREAT-04)** — LLM preservation trust boundary. Tier3's byte-identical preservation contract is detection-only at the tier boundary; the contract does not specify an enforcement mechanism on LLM outputs. P02 establishes the preservation-contract self-check pattern; that pattern MUST include a density pre-check (refuse tier3 invocation when input density exceeds threshold) plus deterministic fallback to tier2 passthrough on any self-check failure. Re-evaluate before P06 ships tier3.
+- **MIT-09 (P02 entry gate, THREAT-08)** — SC-9 threshold operational fragility. The 34.7% floor depends on payload-distribution assumptions outside the contract's control. P02 ships an aggregate-savings self-check that emits a `compression_underperformance` JSONL record when the running mean falls below the floor — operational signal, not a hard gate.
+- **MIT-10 (P02, THREAT-09)** — preservation-contract self-check algorithmic specification. P02 codifies the self-check as a regex-driven pattern walker (one pass per preserved-pattern row) before/after each tier transformation; a byte-mismatch on any preserved span triggers passthrough plus `tier_preservation_violation` emission. Specification lives with the P02 implementation, not in this contract.
 
 ---
 
 ## Version History
 
 - **1.0.0** (2026-04-27) — Initial draft authored under M018/P01/T01. Frontmatter `status: Draft`. Conversus gate (T03) advances to `Reviewed` on PASS.
+- **1.0.1** (2026-04-27) — P0 mitigations applied per first conversus gate's BLOCK verdict: code-fence regex extended to match 3+ backticks (MIT-01); JSONL preservation extended to cover JSON inside fenced code blocks (MIT-02). P1/P2 mitigations deferred to follow-up cycle (see Open Questions).

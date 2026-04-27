@@ -1,0 +1,40 @@
+feat(m018/p01/t03): close P01 — conversus gate PASS, grammar reviewed
+
+Apply MIT-01 + MIT-02 P0 fixes to references/compression-grammar.md
+(v1.0.0 → v1.0.1):
+- MIT-01: extend code-fence regex to also match 4+-backtick nested fences
+  (was: exactly 3 backticks).
+- MIT-02: extend JSONL preservation to also match brace-shaped lines
+  inside fenced code blocks (any language tag), not just .jsonl files.
+
+Re-run conversus --strict gate against compression-grammar v1.0.1 with
+CONVERSUS_PROVIDER=claude-code per user policy memory. Verdict: PASS
+(surviving_disputes=0). Three new non-gating findings (THREAT-04/08/09)
+captured as MIT-08/09/10 P02-entry-gate items in Open Questions; P1/P2
+mitigations from first BLOCK round (MIT-03/04/05/06/07) deferred via
+the same OQ section.
+
+Advance grammar status: Draft → Reviewed (per spec acceptance scenario 3).
+
+Ship scripts/verify/m018-p01-conversus-pass.sh (frontmatter verdict-PASS
+assertion, AD-19 single-script-file shape).
+
+Write .orchestrator/milestones/M018/phases/P01/P01-SUMMARY.md (16-field
+phase frontmatter; closure summary; gate result; calibrated threshold
+defense; risk-mitigation traceability; P02 hand-off).
+
+P01-PLAN.md artifact line for gate-result.md relaxed from a
+double-quote-escaped pattern (parser-incompatible) to the literal PASS
+string — the verifier m018-p01-conversus-pass.sh already enforces
+verdict-PASS at the frontmatter parse level.
+
+RUNTIME-ASSUMPTIONS.md M018/P01 entry now names the contract path
+(references/compression-grammar.md) so the must-have key-link resolves.
+
+bash scripts/verify/check-must-haves.sh .orchestrator/milestones/M018/phases/P01/
+all 6 truths PASS, all 13 artifacts PASS, all 6 key-links PASS.
+
+Phase: M018/P01
+Closes: US-1, FR-1, FR-18, FR-19
+
+Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>

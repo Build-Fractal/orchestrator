@@ -1,0 +1,32 @@
+=== M018 Section Distribution Probe ===
+Records analyzed: payload_breakdown=172
+Bootstrap iterations: 1000  seed: 42
+
+=== Per-section distribution (tokens) ===
+  section                        n       mean        p50        p95        max
+  -------------------------- ----- ---------- ---------- ---------- ----------
+  Knowledge                    172       7591       6962      10115      10115
+  Task Plan                    172       3925       3608       6719       7967
+  Upstream Context             172       2914       3448       6924      12164
+  First-Turn Completeness      172        826        785       1186       1464
+  Scope                        172        623        545       1007       1067
+  Constraints                  172        474        576        576        576
+  State Context                172         30         29         35         37
+  Decisions                    172         11         11         11         11
+
+  Mean total payload (sum of section means): 16394 tok
+
+=== Per-tier achievable savings (80% CI: low=p10, high=p90) ===
+  tier            low_tok   mean_tok   high_tok    low_pct   mean_pct   high_pct
+  ------------ ---------- ---------- ---------- ---------- ---------- ----------
+  filter             2126       2215       2314     12.55%     13.08%     13.67%
+  tier1              1057       1069       1084      6.24%      6.31%      6.40%
+  tier2              4290       4318       4349     25.33%     25.49%     25.68%
+  tier3              2049       2069       2093     12.10%     12.22%     12.36%
+
+=== Aggregate savings_ceiling (non-overlap-adjusted) ===
+  low_pct=34.73%  mean_pct=35.08%  high_pct=35.39%
+  low_tok=5883  mean_tok=5941  high_tok=5994
+  (Standard+ intensity assumed for T3; Quick caps at filter+tier1+tier2.)
+
+Probe complete.

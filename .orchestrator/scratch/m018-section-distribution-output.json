@@ -1,0 +1,204 @@
+{
+  "schema_version": "1.0",
+  "type": "m018_section_distribution",
+  "records_analyzed": 172,
+  "bootstrap_iterations": 1000,
+  "seed": 42,
+  "per_section": [
+    {
+      "section": "Knowledge",
+      "n": 172,
+      "mean": 7590.67,
+      "p50": 6962,
+      "p95": 10115,
+      "max": 10115
+    },
+    {
+      "section": "Task Plan",
+      "n": 172,
+      "mean": 3925.44,
+      "p50": 3608,
+      "p95": 6719,
+      "max": 7967
+    },
+    {
+      "section": "Upstream Context",
+      "n": 172,
+      "mean": 2914.04,
+      "p50": 3448,
+      "p95": 6924,
+      "max": 12164
+    },
+    {
+      "section": "First-Turn Completeness",
+      "n": 172,
+      "mean": 826.25,
+      "p50": 785,
+      "p95": 1186,
+      "max": 1464
+    },
+    {
+      "section": "Scope",
+      "n": 172,
+      "mean": 622.67,
+      "p50": 545,
+      "p95": 1007,
+      "max": 1067
+    },
+    {
+      "section": "Constraints",
+      "n": 172,
+      "mean": 473.70,
+      "p50": 576,
+      "p95": 576,
+      "max": 576
+    },
+    {
+      "section": "State Context",
+      "n": 172,
+      "mean": 30.48,
+      "p50": 29,
+      "p95": 35,
+      "max": 37
+    },
+    {
+      "section": "Decisions",
+      "n": 172,
+      "mean": 11.00,
+      "p50": 11,
+      "p95": 11,
+      "max": 11
+    }
+  ],
+  "per_tier_list": [
+    {
+      "tier": "filter",
+      "low_pct": 12.5505,
+      "mean_pct": 13.0790,
+      "high_pct": 13.6651,
+      "low_tokens": 2125.68,
+      "mean_tokens": 2215.19,
+      "high_tokens": 2314.45
+    },
+    {
+      "tier": "tier1",
+      "low_pct": 6.2401,
+      "mean_pct": 6.3134,
+      "high_pct": 6.3980,
+      "low_tokens": 1056.88,
+      "mean_tokens": 1069.30,
+      "high_tokens": 1083.63
+    },
+    {
+      "tier": "tier2",
+      "low_pct": 25.3294,
+      "mean_pct": 25.4939,
+      "high_pct": 25.6779,
+      "low_tokens": 4290.04,
+      "mean_tokens": 4317.89,
+      "high_tokens": 4349.07
+    },
+    {
+      "tier": "tier3",
+      "low_pct": 12.0963,
+      "mean_pct": 12.2152,
+      "high_pct": 12.3603,
+      "low_tokens": 2048.75,
+      "mean_tokens": 2068.89,
+      "high_tokens": 2093.46
+    }
+  ],
+  "per_tier": {
+    "filter": {
+      "tier": "filter",
+      "low_pct": 12.5505,
+      "mean_pct": 13.0790,
+      "high_pct": 13.6651,
+      "low_tokens": 2125.68,
+      "mean_tokens": 2215.19,
+      "high_tokens": 2314.45
+    },
+    "tier1": {
+      "tier": "tier1",
+      "low_pct": 6.2401,
+      "mean_pct": 6.3134,
+      "high_pct": 6.3980,
+      "low_tokens": 1056.88,
+      "mean_tokens": 1069.30,
+      "high_tokens": 1083.63
+    },
+    "tier2": {
+      "tier": "tier2",
+      "low_pct": 25.3294,
+      "mean_pct": 25.4939,
+      "high_pct": 25.6779,
+      "low_tokens": 4290.04,
+      "mean_tokens": 4317.89,
+      "high_tokens": 4349.07
+    },
+    "tier3": {
+      "tier": "tier3",
+      "low_pct": 12.0963,
+      "mean_pct": 12.2152,
+      "high_pct": 12.3603,
+      "low_tokens": 2048.75,
+      "mean_tokens": 2068.89,
+      "high_tokens": 2093.46
+    }
+  },
+  "aggregate_ceiling": {
+    "tier": "aggregate",
+    "low_pct": 34.7342,
+    "mean_pct": 35.0786,
+    "high_pct": 35.3912,
+    "low_tokens": 5882.92,
+    "mean_tokens": 5941.26,
+    "high_tokens": 5994.20
+  },
+  "savings_ceiling": {
+    "tier": "aggregate",
+    "low_pct": 34.7342,
+    "mean_pct": 35.0786,
+    "high_pct": 35.3912,
+    "low_tokens": 5882.92,
+    "mean_tokens": 5941.26,
+    "high_tokens": 5994.20
+  },
+  "model_assumptions": {
+    "filter": {
+      "target_section": "Knowledge",
+      "mean_drop": 0.30,
+      "prior": {
+        "distribution": "Beta",
+        "alpha": 2,
+        "beta": 5
+      },
+      "reference": "FR-3"
+    },
+    "tier1": {
+      "target_sections": [
+        "Task Plan",
+        "Upstream Context"
+      ],
+      "toolresult_prevalence": 0.30,
+      "toolresult_drop": 0.50,
+      "reference": "FR-5"
+    },
+    "tier2": {
+      "head_drop": 0.40,
+      "tail_threshold_tokens": 1500,
+      "reference": "FR-6"
+    },
+    "tier3": {
+      "target_sections": [
+        "Knowledge",
+        "Task Plan",
+        "Upstream Context"
+      ],
+      "summarize_ratio": 0.40,
+      "budget_threshold_tokens": 2000,
+      "reference": "FR-7",
+      "intensity_gated": "Standard+"
+    }
+  }
+}

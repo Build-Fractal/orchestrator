@@ -2,7 +2,7 @@
 schema_version: "1.0"
 type: runtime-assumptions-registry
 created_at: "2026-04-22"
-last_updated: "2026-04-22"
+last_updated: "2026-04-27"
 ---
 
 # Runtime Assumptions Registry
@@ -54,6 +54,13 @@ Each entry lives under a `## FR-N: <short-name>` heading with four required subs
 
   The splitter caps proposed decompositions at 4 sub-specs (prompt-enforced); the manifest lands at `.orchestrator/specify/decomposition/<source-id>/manifest.md` (interim path — M024 Universal Intake milestone migrates to `.orchestrator/intake/<id>/decomposition.md` when shipped; manifest schema is write-forward-compatible).
 - **M009 obligation**: re-implement the LLM-assisted splitter under Codex CLI (via Codex's API or external LLM round-trip) and Cursor, or document CC-only as permanent fallback if the LLM round-trip value under those runtimes proves low for the engineering cost.
+
+### M018/P01: compression-grammar runtime expectations
+
+- **Claude Code assumption**: Tier 3 auto-compact (FR-8) routes summarization through `scripts/dispatch/dispatch-interface.sh` invoking the runtime's native model. Under Claude Code, this is Anthropic's API via the orchestrator's existing dispatch path; quality of the summary is gated by the eval harness (US-7 / FR-12) before Tier 3 dispatches advance `unit_close`. Filter, Tier 1, and Tier 2 are zero-LLM and runtime-agnostic.
+- **Codex/Cursor fallback**: zero-LLM tiers (filter / Tier 1 / Tier 2) are byte-identical across all three runtimes (FR-13). Tier 3 routes through the same `dispatch-interface.sh` and calls the runtime's native model; the in-band marker `<!-- compressed:tier3 model=<model> ... -->` carries the runtime-specific model name verbatim, and `dispatch_usage` records carry the runtime-specific pricing. Behavior diverges only in the model identity and pricing — the contract (preservation, marker, additive emitter fields) is identical.
+- **Milestone / phase**: M018/P01 (grammar contract authored). Tier code lands across M018/P02–P05; multi-runtime parity audit (US-8) lands in M018/P07 and feeds M009.
+- **M009 obligation**: confirm zero-LLM tier outputs diff-clean across CC / Codex CLI / Cursor on a fixture milestone; confirm Tier 3 outputs differ only in model identity and pricing (in-band marker schema unchanged); accept multi-runtime Tier 3 model divergence as permanent (each runtime calls its own native model — this is correct behavior, not a parity bug).
 
 <!-- Future entries land below this line as new CC-only paths are introduced.
      Append-only per D016. Do not reorder or delete existing entries. -->

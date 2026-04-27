@@ -2,9 +2,12 @@
 # scripts/verify/m027-p00-input-schema.sh — M027/P00 FR-17.
 #
 # Runs the rollup against tests/fixtures/m027-p00/missing-fields.jsonl.
+# The fixture contains lines that are missing one of the FR-17 required
+# fields: estimated_cost_usd, record_type, or granularity.
 # Asserts:
 #   - exit 0
-#   - stderr contains exactly 2 `WARN: input-schema` lines
+#   - stderr contains exactly 2 `WARN: input-schema` lines (one for the
+#     missing-estimated_cost_usd row, one for the missing-granularity row)
 #   - the rollup aggregated only the 6 valid records (not 8) — verified
 #     by summing the DISPATCHES column at --granularity task.
 #

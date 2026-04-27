@@ -7,6 +7,11 @@
 # captures are byte-identical (no new modifications). Also asserts no new
 # files appeared under .orchestrator/milestones/.
 #
+# The semantic invariant verified here is the same one expressed by
+# `git diff --quiet` — the rollup must not modify any tracked file. We
+# use porcelain status rather than `git diff --quiet` because porcelain
+# also catches new untracked files under .orchestrator/milestones/.
+#
 # Bash 3.2 compatible. MEM004 carve-out — pipes/$()/awk permitted.
 
 set -u

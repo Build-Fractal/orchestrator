@@ -63,10 +63,17 @@ Build a deterministic fixture suite under `tests/fixtures/m027-p00/` that the pe
 ## Verification
 
 ```bash
-bash scripts/verify/check-must-haves.sh .orchestrator/milestones/M027/phases/P00
+test -f tests/fixtures/m027-p00/estimate-only.jsonl
+test -f tests/fixtures/m027-p00/mixed-source-aggregate.jsonl
+test -f tests/fixtures/m027-p00/corrupt-line.jsonl
+test -f tests/fixtures/m027-p00/missing-fields.jsonl
+test -f tests/fixtures/m027-p00/pricing-warning.jsonl
+test -f tests/fixtures/m027-p00/pre-m019-mixed.jsonl
+test -x tests/fixtures/m027-p00/perf-10mb.jsonl.gen.sh
+test -f tests/fixtures/m027-p00/README.md
 ```
 
-The fixture suite is exercised mechanically by T03's per-contract verifier scripts; this task's verification is structural (file presence + line counts + executable bit).
+Task-scope verification is structural (file presence + executable bit). The fixture suite is exercised mechanically by T03's per-contract verifier scripts; phase-level `check-must-haves.sh` runs at the phase boundary in T04.
 
 ## Inputs
 

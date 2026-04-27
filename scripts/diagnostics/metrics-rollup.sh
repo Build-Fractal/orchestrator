@@ -19,6 +19,19 @@
 # emitter-internal library; the AD-19 single-script-file shape rule
 # applies only to Check: commands at task / phase plan level.
 #
+# Upstream contracts:
+#   - The JSONL record schema this engine consumes is defined and
+#     validated by `scripts/verify/m019-schema.sh` (M019 Tier 1).
+#     This engine extracts a minimal field set (record_type, source,
+#     granularity, milestone, phase, task, estimated_cost_usd,
+#     payload_tokens_estimate, verification_pass_rate, deviation_count,
+#     retry_count, pricing_warning) without invoking the validator
+#     per-record — that would explode runtime cost; instead we tag and
+#     skip malformed lines.
+#   - The `pricing_warning` field surfaced via FR-11 is set by the
+#     M019 emitter using `scripts/lib/pricing.sh` semantics. M027 P00
+#     consumes the field but does not source pricing.sh at runtime.
+#
 # Public API (sourceable):
 #   metrics_rollup_snapshot SOURCE_LOG TMP_OUT
 #   metrics_rollup_normalize TMP_LOG NORMALIZED_OUT

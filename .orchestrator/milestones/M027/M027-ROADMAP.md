@@ -33,7 +33,7 @@ updated_at: "2026-04-26T21:50:08Z"
     - Produces: efficiency footer hook in `commands/status.md` and supporting script, `config.efficiency_footer` knob (default `true`), `config.predictive_cost_surface` knob (default `true`), dispatch-time predictive confirmation surface in interactive `orchestrator:dispatch` path, suppression semantics for `--quiet`/`--yes`/`orchestrator:auto`, byte-identity invariant cases for the P00 verifier (SC-3 status-quiet, SC-17 dispatch-yes)
     - Consumes: P00 rollup engine (footer summary), P01 predictive estimator (dispatch-time surface), P01 cost annotations (intensity-recommend output), existing `orchestrator:status` and `orchestrator:dispatch` command surfaces
 
-- [ ] **P03**: Anomaly detection + config-check — "`orchestrator:doctor` against a fixture milestone with one ≥3× cost outlier among 9 sibling dispatches flags exactly one anomaly with paired cost+quality data; against a 4-dispatch milestone (below sample floor) it prints \"insufficient sample\" and skips the check; `orchestrator:doctor --config-check` flags drift in `efficiency_footer` and `predictive_cost_surface` config across team environments."
+- [x] **P03**: Anomaly detection + config-check — "`orchestrator:doctor` against a fixture milestone with one ≥3× cost outlier among 9 sibling dispatches flags exactly one anomaly with paired cost+quality data; against a 4-dispatch milestone (below sample floor) it prints \"insufficient sample\" and skips the check; `orchestrator:doctor --config-check` flags drift in `efficiency_footer` and `predictive_cost_surface` config across team environments."
   - Risk: low
   - Depends: P00, P02
   - Boundary Map:

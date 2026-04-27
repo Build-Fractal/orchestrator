@@ -154,106 +154,130 @@ metrics_rollup_normalize() {
     return 0
   fi
 
-  : > "$out"
-  local lineno=0
-  local corrupt=0
-  local validation_skipped=0
-  local warnings=0
+  # Single awk pass over the JSONL — replaces the per-line bash+sed loop that
+  # forked O(7) subprocesses per record. MEM004 carve-out applies (emitter-
+  # internal). On a 10 MB / 36k-record fixture this is the difference between
+  # multiple minutes (subprocess fork storm) and well under the 5 s perf bound
+  # (CON-12 / SC-13). Field-extraction semantics match the original sed-based
+  # helpers: extract the value of "<key>": "<string>" or "<key>": <number>;
+  # treat explicit `null` as the literal sentinel "null" for estimated_cost_usd
+  # and as empty for the other numeric fields. Behavior parity with the prior
+  # implementation is exercised by the 14 P00 verifiers.
+  awk -v tmp_log="$tmp_log" -v out="$out" '
+    function field_str(line, key,    re, m, val) {
+      re = "\"" key "\"[[:space:]]*:[[:space:]]*\"[^\"]*\"";
+      if (match(line, re)) {
+        m = substr(line, RSTART, RLENGTH);
+        # Strip "key" : " prefix and trailing ".
+        sub("^\"" key "\"[[:space:]]*:[[:space:]]*\"", "", m);
+        sub("\"$", "", m);
+        return m;
+      }
+      return "";
+    }
+    function field_num(line, key,    re, m) {
+      re = "\"" key "\"[[:space:]]*:[[:space:]]*-?[0-9]+(\\.[0-9]+)?";
+      if (match(line, re)) {
+        m = substr(line, RSTART, RLENGTH);
+        sub("^\"" key "\"[[:space:]]*:[[:space:]]*", "", m);
+        return m;
+      }
+      return "";
+    }
+    function field_present(line, key,    re) {
+      re = "\"" key "\"[[:space:]]*:";
+      return (match(line, re) > 0);
+    }
+    function field_is_null(line, key,    re) {
+      re = "\"" key "\"[[:space:]]*:[[:space:]]*null";
+      return (match(line, re) > 0);
+    }
+    function is_jsonish(line) {
+      # Mirrors the bash case-glob: must start with { and end with }.
+      if (length(line) < 2) return 0;
+      if (substr(line, 1, 1) != "{") return 0;
+      if (substr(line, length(line), 1) != "}") return 0;
+      return 1;
+    }
+    BEGIN {
+      corrupt = 0; validation_skipped = 0; warnings = 0;
+      # Truncate output file.
+      printf "" > out;
+    }
+    {
+      lineno++;
+      line = $0;
+      # Strip trailing CR if present.
+      if (length(line) > 0 && substr(line, length(line), 1) == "\r") {
+        line = substr(line, 1, length(line) - 1);
+      }
+      if (length(line) == 0) next;
+      if (!is_jsonish(line)) {
+        printf "WARN: corrupt JSONL line %d in %s\n", lineno, tmp_log | "cat 1>&2";
+        corrupt++;
+        next;
+      }
+      # Pre-M019 lines (no record_type) silently skipped (SC-10 carry-forward).
+      if (!field_present(line, "record_type")) next;
 
-  local line record_type source_v granularity milestone phase task
-  local cost tokens pass_rate dev_count retry_count pricing_warning
-  while IFS= read -r line || [ -n "$line" ]; do
-    lineno=$((lineno + 1))
-    # Strip trailing CR if present
-    line="${line%$'\r'}"
-    # Skip empty lines.
-    if [ -z "$line" ]; then
-      continue
-    fi
-    # JSON-ish sanity: tolerate corrupt lines.
-    if ! _metrics_rollup_is_jsonish "$line"; then
-      printf 'WARN: corrupt JSONL line %d in %s\n' "$lineno" "$tmp_log" >&2
-      corrupt=$((corrupt + 1))
-      continue
-    fi
+      record_type = field_str(line, "record_type");
+      source_v    = field_str(line, "source");
+      granularity = field_str(line, "granularity");
+      milestone   = field_str(line, "milestone");
+      phase       = field_str(line, "phase");
+      task        = field_str(line, "task");
 
-    # Pre-M019 lines (no record_type) are silently skipped (SC-10 carry-forward).
-    if ! _metrics_rollup_field_present "$line" "record_type"; then
-      continue
-    fi
+      if (field_is_null(line, "estimated_cost_usd")) {
+        cost = "null";
+      } else {
+        cost = field_num(line, "estimated_cost_usd");
+      }
+      tokens          = field_num(line, "payload_tokens_estimate");
+      pass_rate       = field_num(line, "verification_pass_rate");
+      dev_count       = field_num(line, "deviation_count");
+      retry_count     = field_num(line, "retry_count");
+      pricing_warning = field_str(line, "pricing_warning");
 
-    record_type="$(_metrics_rollup_field_str "$line" "record_type")"
-    source_v="$(_metrics_rollup_field_str "$line" "source")"
-    granularity="$(_metrics_rollup_field_str "$line" "granularity")"
-    milestone="$(_metrics_rollup_field_str "$line" "milestone")"
-    phase="$(_metrics_rollup_field_str "$line" "phase")"
-    task="$(_metrics_rollup_field_str "$line" "task")"
+      # FR-17 input-schema validation.
+      if (record_type == "unit_close") {
+        if (granularity == "" || !field_present(line, "estimated_cost_usd")) {
+          printf "WARN: input-schema line %d: unit_close missing granularity or estimated_cost_usd\n", lineno | "cat 1>&2";
+          validation_skipped++;
+          next;
+        }
+      } else if (record_type == "payload_breakdown") {
+        if (tokens == "") {
+          printf "WARN: input-schema line %d: payload_breakdown missing payload_tokens_estimate\n", lineno | "cat 1>&2";
+          validation_skipped++;
+          next;
+        }
+      } else if (record_type == "dispatch_usage") {
+        if (source_v == "") {
+          printf "WARN: input-schema line %d: dispatch_usage missing source\n", lineno | "cat 1>&2";
+          validation_skipped++;
+          next;
+        }
+      } else {
+        printf "WARN: input-schema line %d: unknown record_type \"%s\"\n", lineno, record_type | "cat 1>&2";
+        validation_skipped++;
+        next;
+      }
 
-    # Cost and tokens may be null; track presence separately.
-    if _metrics_rollup_field_is_null "$line" "estimated_cost_usd"; then
-      cost="null"
-    else
-      cost="$(_metrics_rollup_field_num "$line" "estimated_cost_usd")"
-    fi
-    tokens="$(_metrics_rollup_field_num "$line" "payload_tokens_estimate")"
-    pass_rate="$(_metrics_rollup_field_num "$line" "verification_pass_rate")"
-    dev_count="$(_metrics_rollup_field_num "$line" "deviation_count")"
-    retry_count="$(_metrics_rollup_field_num "$line" "retry_count")"
-    pricing_warning="$(_metrics_rollup_field_str "$line" "pricing_warning")"
+      if (source_v == "") source_v = "estimate";
 
-    # Validation per FR-17:
-    # - unit_close MUST carry granularity, estimated_cost_usd field (may be null),
-    #   verification_pass_rate, deviation_count, retry_count.
-    # - payload_breakdown MUST carry payload_tokens_estimate.
-    # - dispatch_usage MUST carry source.
-    case "$record_type" in
-      unit_close)
-        if [ -z "$granularity" ] || ! _metrics_rollup_field_present "$line" "estimated_cost_usd"; then
-          printf 'WARN: input-schema line %d: unit_close missing granularity or estimated_cost_usd\n' "$lineno" >&2
-          validation_skipped=$((validation_skipped + 1))
-          continue
-        fi
-        ;;
-      payload_breakdown)
-        if [ -z "$tokens" ]; then
-          printf 'WARN: input-schema line %d: payload_breakdown missing payload_tokens_estimate\n' "$lineno" >&2
-          validation_skipped=$((validation_skipped + 1))
-          continue
-        fi
-        ;;
-      dispatch_usage)
-        if [ -z "$source_v" ]; then
-          printf 'WARN: input-schema line %d: dispatch_usage missing source\n' "$lineno" >&2
-          validation_skipped=$((validation_skipped + 1))
-          continue
-        fi
-        ;;
-      *)
-        printf 'WARN: input-schema line %d: unknown record_type "%s"\n' "$lineno" "$record_type" >&2
-        validation_skipped=$((validation_skipped + 1))
-        continue
-        ;;
-    esac
+      if (pricing_warning != "" || cost == "null") warnings++;
 
-    # Default source if absent (records without explicit source default to estimate).
-    if [ -z "$source_v" ]; then
-      source_v="estimate"
-    fi
-
-    # Track pricing warnings (FR-11) for the surface count.
-    if [ -n "$pricing_warning" ] || [ "$cost" = "null" ]; then
-      warnings=$((warnings + 1))
-    fi
-
-    # Emit projection row (pipe-delimited).
-    printf '%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\n' \
-      "$record_type" "$source_v" "$granularity" "$milestone" "$phase" "$task" \
-      "$cost" "$tokens" "$pass_rate" "$dev_count" "$retry_count" "$pricing_warning" \
-      >> "$out"
-  done < "$tmp_log"
-
-  printf 'NORMALIZE_COUNTS corrupt=%d validation_skipped=%d warnings=%d\n' \
-    "$corrupt" "$validation_skipped" "$warnings" >&2
+      printf "%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\n",
+        record_type, source_v, granularity, milestone, phase, task,
+        cost, tokens, pass_rate, dev_count, retry_count, pricing_warning >> out;
+    }
+    END {
+      close(out);
+      close("cat 1>&2");
+      printf "NORMALIZE_COUNTS corrupt=%d validation_skipped=%d warnings=%d\n", corrupt, validation_skipped, warnings | "cat 1>&2";
+      close("cat 1>&2");
+    }
+  ' "$tmp_log"
 }
 
 # --- Aggregate (FR-18 precedence + filters) -------------------------------
@@ -321,6 +345,20 @@ metrics_rollup_aggregate() {
     }
     function tonum(x) { return (x == "" || x == "null") ? 0 : x + 0; }
     function isnumset(x) { return (x != "" && x != "null"); }
+    function qsort(arr, lo, hi,    pivot, i, j, t) {
+      if (lo >= hi) return;
+      pivot = arr[int((lo + hi) / 2)];
+      i = lo - 1;
+      j = hi + 1;
+      while (1) {
+        do { i++ } while (arr[i] < pivot);
+        do { j-- } while (arr[j] > pivot);
+        if (i >= j) break;
+        t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+      }
+      qsort(arr, lo, j);
+      qsort(arr, j + 1, hi);
+    }
     BEGIN {
       target_rank = gran_rank(f_gran);
       if (target_rank == 0) target_rank = 3;
@@ -439,21 +477,19 @@ metrics_rollup_aggregate() {
         if (chosen_bucket == "") continue;
 
         bk = chosen_bucket;
-        # Compute mean / p50 / p95.
+        # Compute mean / p50 / p95 via quicksort (O(n log n)) — bubble sort
+        # was O(n²) and timed out on 10MB / 36k-record fixtures (CON-12).
         n = bk_costs_n[bk];
         if (n > 0) {
-          # Bubble sort (small N, fine for our scale).
-          for (i = 0; i < n; i++) for (j = i+1; j < n; j++) {
-            if (bk_costs[bk, j] < bk_costs[bk, i]) {
-              tmp = bk_costs[bk, i]; bk_costs[bk, i] = bk_costs[bk, j]; bk_costs[bk, j] = tmp;
-            }
-          }
+          delete sort_arr;
+          for (i = 0; i < n; i++) sort_arr[i] = bk_costs[bk, i];
+          qsort(sort_arr, 0, n - 1);
           p50_idx = int(n * 0.5);
           if (p50_idx >= n) p50_idx = n - 1;
           p95_idx = int(n * 0.95);
           if (p95_idx >= n) p95_idx = n - 1;
-          p50 = bk_costs[bk, p50_idx];
-          p95 = bk_costs[bk, p95_idx];
+          p50 = sort_arr[p50_idx];
+          p95 = sort_arr[p95_idx];
         } else {
           p50 = 0;
           p95 = 0;

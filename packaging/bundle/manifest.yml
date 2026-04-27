@@ -7,6 +7,7 @@ skill_spec: "packaging/SKILL.md"
 skills:
   - orchestrator-auto.md
   - orchestrator-consolidate.md
+  - orchestrator-cost.md
   - orchestrator-discuss.md
   - orchestrator-dispatch.md
   - orchestrator-doctor.md

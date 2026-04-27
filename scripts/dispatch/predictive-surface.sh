@@ -10,7 +10,10 @@
 # exit 0 -- load-bearing CON-3/SC-17 byte-identity contract.
 #
 # Read-only (FR-12/CON-1): never writes to execution-log.jsonl or config.
-# Zero-LLM-token (FR-21/CON-6): bash + invocation of intensity-recommend.sh only.
+# Zero-LLM-token (FR-21/CON-6): bash + invocation of intensity-recommend.sh only
+# (which transitively sources scripts/engine/cost-estimate.sh for the per-tier
+# Goodhart-paired renderer; predictive-surface never invokes cost-estimate.sh
+# directly -- the P01 cost-annotation hook is the single attach point).
 # Bash 3.2 (CON-7): parallel scalars only; no associative arrays; no herestring redirect.
 # CON-10 (operator-override preserved): one-line override prompt on last line.
 #

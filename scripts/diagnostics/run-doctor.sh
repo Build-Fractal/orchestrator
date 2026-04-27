@@ -11,11 +11,15 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 FORMAT="text"
+CONFIG_CHECK=0
+NO_ANOMALY=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --root) PROJECT_ROOT="$2"; shift 2 ;;
     --format) FORMAT="$2"; shift 2 ;;
+    --config-check) CONFIG_CHECK=1; shift ;;
+    --no-anomaly) NO_ANOMALY=1; shift ;;
     *) echo "run-doctor.sh: unknown option: $1" >&2; exit 1 ;;
   esac
 done
@@ -110,6 +114,18 @@ run_check "Recipe Conformance" "$SCRIPT_DIR/check-recipe.sh" "--root $PROJECT_RO
 run_check "Task Plan Shape" "$SCRIPT_DIR/check-plans.sh" "--root $PROJECT_ROOT" "1"
 run_check "Documentation Completeness" "$SCRIPT_DIR/check-docs.sh" "--root $PROJECT_ROOT" "0"
 run_check "Runtime Instruction Drift" "$SCRIPT_DIR/check-docs.sh" "--check drift --root $PROJECT_ROOT" "1"
+
+# M027/P03/T03 — Anomaly Detection (advisory; FR-8: never blocks autonomous mode).
+if [ "$NO_ANOMALY" -eq 1 ]; then
+  run_check "Anomaly Detection" "$SCRIPT_DIR/check-anomalies.sh" "--no-anomaly" "1"
+else
+  run_check "Anomaly Detection" "$SCRIPT_DIR/check-anomalies.sh" "" "1"
+fi
+
+# M027/P03/T03 — Config Drift (advisory; opt-in via --config-check; FR-16).
+if [ "$CONFIG_CHECK" -eq 1 ]; then
+  run_check "Config Drift" "$SCRIPT_DIR/check-config-drift.sh" "" "1"
+fi
 
 # Graph health checks (requires knowledge.db from M007)
 if [ -f "$PROJECT_ROOT/knowledge.db" ]; then

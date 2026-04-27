@@ -43,6 +43,15 @@ _SH_INCREMENT_HITS="${_SH_PROJECT_ROOT}/knowledge/increment-hits.sh"
 _SH_READ_ROADMAP="${_SH_PROJECT_ROOT}/state/read-roadmap.sh"
 _SH_READ_CONFIG="${_SH_PROJECT_ROOT}/state/read-config.sh"
 
+# M018/P02/T02: knowledge-aware status filter library. Sourced unconditionally
+# (the library is pure — function defs only). When build-context.sh has
+# already sourced it, the lib's idempotent (function redeclaration is a no-op
+# in bash), so this is safe.
+_SH_REPO_ROOT="$(cd "${_SH_PROJECT_ROOT}/.." && pwd)"
+if [ -r "${_SH_REPO_ROOT}/scripts/lib/knowledge-filter.sh" ]; then
+  . "${_SH_REPO_ROOT}/scripts/lib/knowledge-filter.sh"
+fi
+
 # _sh_resolve_milestone_dir <orch_root> <milestone>
 # Prints the milestone directory path. Supports both .orchestrator
 # layout and fixture layout where orch_root IS the milestone dir.
@@ -347,7 +356,52 @@ handle_knowledge() {
     printf 'No knowledge entries in scope.\n'
   else
     printf '<!-- %s knowledge entries resolved from index -->\n\n' "$entry_count"
-    printf '%s\n' "$resolved"
+    # M018/P02/T02: apply knowledge-aware status filter (FR-3) when enabled.
+    _sh_apply_knowledge_filter "$resolved"
+  fi
+}
+
+# _sh_apply_knowledge_filter <stream>
+# M018/P02/T02 — pipes the resolved knowledge stream through the status
+# filter when compression+filter are both enabled. Falls through unchanged
+# when the library isn't loaded (defensive — handlers must remain bail-safe).
+# Writes filter stats to TMPDIR_BUILD/_filter_stats.txt so the caller's
+# emitter can pick them up. When TMPDIR_BUILD is unset (handler invoked
+# outside build-context.sh), uses a process-local mktemp.
+_sh_apply_knowledge_filter() {
+  local stream="$1"
+  if ! type kf_filter_stream >/dev/null 2>&1; then
+    printf '%s\n' "$stream"
+    return 0
+  fi
+  local enabled filter_enabled
+  enabled="$(kf_get_compression_enabled "$_SH_REPO_ROOT" 2>/dev/null || printf 'true')"
+  filter_enabled="$(kf_get_knowledge_filter_enabled "$_SH_REPO_ROOT" 2>/dev/null || printf 'true')"
+  if [ "$enabled" != "true" ] || [ "$filter_enabled" != "true" ]; then
+    printf '%s\n' "$stream"
+    return 0
+  fi
+  local tmpdir drop_list_file stats_file out_file
+  if [ -n "${TMPDIR_BUILD:-}" ] && [ -d "${TMPDIR_BUILD}" ]; then
+    tmpdir="$TMPDIR_BUILD"
+  else
+    tmpdir="$(mktemp -d 2>/dev/null || printf '/tmp/_sh_kf_%d' "$$")"
+    mkdir -p "$tmpdir" 2>/dev/null || true
+  fi
+  drop_list_file="$tmpdir/_drop_list.txt"
+  stats_file="$tmpdir/_filter_stats.txt"
+  out_file="$tmpdir/_filter_out.md"
+  kf_read_drop_list "$_SH_REPO_ROOT" > "$drop_list_file"
+  printf '%s\n' "$stream" | kf_filter_stream "$drop_list_file" "$stats_file" > "$out_file"
+  local fm_count
+  fm_count="$(grep -cE '^---$' "$out_file" 2>/dev/null || true)"
+  if [ -z "$fm_count" ]; then
+    fm_count=0
+  fi
+  if [ "$fm_count" -eq 0 ]; then
+    printf '(no qualifying knowledge entries)\n'
+  else
+    cat "$out_file"
   fi
 }
 
@@ -378,7 +432,8 @@ _sh_emit_flat_knowledge() {
   if [ -z "$entries" ]; then
     printf 'No knowledge entries in scope.\n'
   else
-    printf '%s\n' "$entries"
+    # M018/P02/T02: apply knowledge-aware status filter on the flat stream too.
+    _sh_apply_knowledge_filter "$entries"
   fi
 }
 

@@ -46,3 +46,19 @@ autonomy:
   generate_on_init: true        # Run generate-permissions.sh during evaluate scaffold (FR-7)
   deny_patterns: []             # Extra Bash/Read patterns to append to the baseline deny list
   extra_allow: []               # Extra Bash/Read patterns to append to the baseline allow list
+
+# Context Compression Layer (M018)
+# Master toggle (FR-15): when `enabled: false`, the entire compression
+# pipeline short-circuits and dispatch payloads are byte-identical to the
+# pre-M018 baseline. Per-tier toggles let operators enable individual
+# stages independently.
+compression:
+  enabled: true                 # Master toggle. false → entire pipeline disabled.
+  knowledge_filter:
+    enabled: true               # FR-3: knowledge-aware status filter toggle.
+    # Knowledge entries whose YAML frontmatter `status:` field matches any
+    # value below are excluded from dispatch payloads. Missing `status:` →
+    # RETAINED (fail-open per A-1 + grammar contract `## Tier: filter`).
+    drop_list:
+      - superseded
+      - experimental

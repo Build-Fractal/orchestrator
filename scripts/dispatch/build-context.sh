@@ -39,6 +39,22 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 . "$PROJECT_ROOT/scripts/lib/payload-transforms.sh"
 . "$PROJECT_ROOT/scripts/lib/manifest-builder.sh"
 
+# M018/P02/T02: knowledge-aware status filter library. Reads
+# compression.knowledge_filter.drop_list and excludes entries whose
+# `status:` frontmatter matches the drop-list. Sourced unconditionally —
+# the library is pure (function defs only, no side effects at source time).
+. "$PROJECT_ROOT/scripts/lib/knowledge-filter.sh"
+
+# M018/P02/T02: source preservation-check library defensively so downstream
+# tier wiring (P03/P04/P06) inherits a working source path with no further
+# wiring. The filter operates on whole-entry granularity per grammar contract
+# `## Tier: filter` failure semantics, so no caller wires pres_check_section
+# in P02. The `|| true` keeps build-context bail-safe when the library is
+# absent (e.g., on a partial install).
+if [ -r "$PROJECT_ROOT/scripts/lib/preservation-check.sh" ]; then
+  . "$PROJECT_ROOT/scripts/lib/preservation-check.sh" || true
+fi
+
 # Pre-refactor helper scripts still used by the planning branch
 SCOPE_FILTER="$SCRIPT_DIR/scope-filter.sh"
 READ_ROADMAP="$PROJECT_ROOT/scripts/state/read-roadmap.sh"
@@ -154,6 +170,15 @@ CONTEXT_VERBOSITY="$(config_read context_verbosity standard)"
 DURATION_BUDGET="$(config_read duration_budget 2h)"
 DISPATCH_BUDGET="$(config_read dispatch_budget 3)"
 BUDGET_ENFORCEMENT="$(config_read budget_enforcement warn)"
+
+# M018/P02/T02: compression config (FR-15 master toggle + FR-3 filter toggle).
+# read-config.sh does not support dotted keys; the kf_* helpers parse the
+# compression: block directly via awk. Default is enabled when the config or
+# block is missing — pre-M018 projects opt in by adding the block (templates
+# ship the block enabled by default).
+COMPRESSION_ENABLED="$(kf_get_compression_enabled "$PROJECT_ROOT")"
+KNOWLEDGE_FILTER_ENABLED="$(kf_get_knowledge_filter_enabled "$PROJECT_ROOT")"
+export COMPRESSION_ENABLED KNOWLEDGE_FILTER_ENABLED
 
 # --- Read tier from roadmap (used by planning branch + computed state handler) ---
 TIER="$(bash "$READ_ROADMAP" "$ROADMAP" tier 2>/dev/null || echo unknown)"
@@ -460,7 +485,8 @@ $related_ids"
     entry_count="$(echo "$all_ids" | grep -c 'MEM' 2>/dev/null || echo 0)"
     echo "<!-- $entry_count knowledge entries resolved from index -->"
     echo ""
-    echo "$resolved"
+    # M018/P02/T02: apply knowledge-aware status filter (FR-3).
+    _bc_apply_knowledge_filter "$resolved"
   fi
 }
 
@@ -477,7 +503,39 @@ _bc_gather_knowledge_flat() {
   if [ -z "$entries" ]; then
     echo "No knowledge entries in scope."
   else
-    echo "$entries"
+    # M018/P02/T02: apply knowledge-aware status filter (FR-3).
+    _bc_apply_knowledge_filter "$entries"
+  fi
+}
+
+# M018/P02/T02: shared filter wrapper used by both planning knowledge paths
+# and (via the same library) by handle_knowledge in section-handlers.sh.
+# Stages the resolved-entries stream through kf_filter_stream when the
+# compression layer is enabled. When the filter drops every entry, emits
+# the literal "(no qualifying knowledge entries)" sentinel (spec
+# acceptance scenario 5) so the section header still parses cleanly.
+_bc_apply_knowledge_filter() {
+  local stream="$1"
+  if [ "$COMPRESSION_ENABLED" != "true" ] || [ "$KNOWLEDGE_FILTER_ENABLED" != "true" ]; then
+    printf '%s\n' "$stream"
+    return 0
+  fi
+  local drop_list_file stats_file out_file
+  drop_list_file="$TMPDIR_BUILD/_drop_list.txt"
+  stats_file="$TMPDIR_BUILD/_filter_stats.txt"
+  out_file="$TMPDIR_BUILD/_filter_out.md"
+  kf_read_drop_list "$PROJECT_ROOT" > "$drop_list_file"
+  printf '%s\n' "$stream" | kf_filter_stream "$drop_list_file" "$stats_file" > "$out_file"
+  # Detect empty-after-filter: no `^---$` frontmatter delimiters in output.
+  local fm_count
+  fm_count="$(grep -cE '^---$' "$out_file" 2>/dev/null || true)"
+  if [ -z "$fm_count" ]; then
+    fm_count=0
+  fi
+  if [ "$fm_count" -eq 0 ]; then
+    printf '(no qualifying knowledge entries)\n'
+  else
+    cat "$out_file"
   fi
 }
 
@@ -1106,11 +1164,32 @@ EOF_PB_NAMES
     return 0
   }
 
-  printf '{"record_type":"payload_breakdown","unitId":"%s/%s/%s","milestone":"%s","phase":"%s","task":"%s","payload_chars":%d,"payload_tokens_estimate":%d,"token_estimate_method":"char-quartile","section_tokens":{%s},"model":"%s","source":"estimate","timestamp":"%s"}\n' \
+  # M018/P02/T02 (CON-5): additive `filter_dropped_tokens` field. Reads the
+  # stats file emitted by kf_filter_stream when the filter ran; defaults to 0
+  # when the filter was disabled, the planning branch skipped knowledge
+  # gather, or the stats file is missing.
+  local filter_dropped_tokens=0
+  local _bc_pb_stats_file="$TMPDIR_BUILD/_filter_stats.txt"
+  if [ -f "$_bc_pb_stats_file" ]; then
+    filter_dropped_tokens="$(awk '{
+      for (i = 1; i <= NF; i++) {
+        if ($i ~ /^dropped_tokens=/) {
+          sub("dropped_tokens=", "", $i)
+          print $i
+          exit
+        }
+      }
+    }' "$_bc_pb_stats_file")"
+    if [ -z "$filter_dropped_tokens" ]; then
+      filter_dropped_tokens=0
+    fi
+  fi
+
+  printf '{"record_type":"payload_breakdown","unitId":"%s/%s/%s","milestone":"%s","phase":"%s","task":"%s","payload_chars":%d,"payload_tokens_estimate":%d,"token_estimate_method":"char-quartile","section_tokens":{%s},"filter_dropped_tokens":%d,"model":"%s","source":"estimate","timestamp":"%s"}\n' \
     "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" \
     "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" \
     "$payload_chars" "$payload_tokens" \
-    "$section_tokens_json" "$model" "$ts" \
+    "$section_tokens_json" "$filter_dropped_tokens" "$model" "$ts" \
     >> "$log_file" 2>/dev/null || {
     printf 'build-context.sh: payload_breakdown append failed on %s\n' "$log_file" >&2
     return 0
@@ -1199,6 +1278,72 @@ _bc_emit_dispatch_usage_colocated() {
   return 0
 }
 
+# ============================================================================
+# M018/P02/T02: payload_filter emitter
+# ----------------------------------------------------------------------------
+# Emits exactly one `payload_filter` JSONL record per build-context.sh
+# invocation when the knowledge filter dropped at least one entry. The
+# record names the dropped IDs and their token cost so downstream rollups
+# can audit filter activity. Schema (CON-5 additive — brand-new
+# record_type, ignored cleanly by pre-M018 jq filters):
+#   {"record_type":"payload_filter","filter":"knowledge_status",
+#    "drop_list":[...],"dropped_count":N,"dropped_tokens":N,
+#    "dropped_ids":[...],"source":"runtime","unitId":"M/P/T",
+#    "milestone":"M","phase":"P","task":"T","timestamp":"..."}
+# ============================================================================
+_bc_emit_payload_filter() {
+  if [ "${ORCH_M019_EMIT:-1}" = "0" ]; then
+    return 0
+  fi
+  local stats_file="$TMPDIR_BUILD/_filter_stats.txt"
+  if [ ! -f "$stats_file" ]; then
+    return 0
+  fi
+  local dropped_count dropped_tokens dropped_ids
+  dropped_count="$(awk '{ for (i=1;i<=NF;i++) if ($i ~ /^dropped_count=/) { sub("dropped_count=","",$i); print $i; exit } }' "$stats_file")"
+  dropped_tokens="$(awk '{ for (i=1;i<=NF;i++) if ($i ~ /^dropped_tokens=/) { sub("dropped_tokens=","",$i); print $i; exit } }' "$stats_file")"
+  dropped_ids="$(awk '{ for (i=1;i<=NF;i++) if ($i ~ /^dropped_ids=/) { sub("dropped_ids=","",$i); print $i; exit } }' "$stats_file")"
+  if [ -z "$dropped_count" ]; then
+    dropped_count=0
+  fi
+  if [ -z "$dropped_tokens" ]; then
+    dropped_tokens=0
+  fi
+  if [ "$dropped_count" -eq 0 ]; then
+    return 0
+  fi
+
+  local log_dir log_file ts
+  log_dir="$ORCH_ROOT/milestones/$MILESTONE_ID"
+  if [ ! -d "$log_dir" ] && [ -d "$ORCH_ROOT/phases" ]; then
+    log_dir="$ORCH_ROOT"
+  fi
+  log_file="$log_dir/execution-log.jsonl"
+  ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+  # Build dropped_ids JSON array from comma-separated string.
+  local ids_json="[]"
+  if [ -n "$dropped_ids" ]; then
+    ids_json="[\"$(printf '%s' "$dropped_ids" | sed 's/,/","/g')\"]"
+  fi
+
+  # Build drop_list JSON array from drop-list file written by the filter.
+  local drop_list_file="$TMPDIR_BUILD/_drop_list.txt"
+  local drop_json="[]"
+  if [ -f "$drop_list_file" ]; then
+    drop_json="$(awk 'BEGIN { first = 1; printf "[" } /^[[:space:]]*$/ { next } { v = $0; gsub(/^[[:space:]]+|[[:space:]]+$/, "", v); if (v == "") next; if (first == 1) { printf "\"%s\"", v; first = 0 } else { printf ",\"%s\"", v } } END { printf "]" }' "$drop_list_file")"
+  fi
+
+  mkdir -p "$log_dir" 2>/dev/null || return 0
+  printf '{"record_type":"payload_filter","filter":"knowledge_status","drop_list":%s,"dropped_count":%d,"dropped_tokens":%d,"dropped_ids":%s,"source":"runtime","unitId":"%s/%s/%s","milestone":"%s","phase":"%s","task":"%s","timestamp":"%s"}\n' \
+    "$drop_json" "$dropped_count" "$dropped_tokens" "$ids_json" \
+    "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" \
+    "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" \
+    "$ts" \
+    >> "$log_file" 2>/dev/null || true
+  return 0
+}
+
 # Capture the assembled payload into a temp file so we can measure its byte
 # size AND still emit it to stdout byte-identically (SC-6). Zero-token: no new
 # content is added to the payload; only a post-emit observation is made.
@@ -1206,4 +1351,5 @@ PAYLOAD_CAPTURE="$TMPDIR_BUILD/_payload_capture.txt"
 _bc_assemble_manifest_and_emit "$SECTION_COUNT" "$SECTION_NAMES_PIPE" "$SECTION_PRIORITIES_PIPE" "$FRONTMATTER" "$TITLE" > "$PAYLOAD_CAPTURE"
 cat "$PAYLOAD_CAPTURE"
 _bc_emit_payload_breakdown "$PAYLOAD_CAPTURE" || true
+_bc_emit_payload_filter || true
 exit 0

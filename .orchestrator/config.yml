@@ -33,3 +33,19 @@ comments:
     ambiguous: 1.0       # always routes through conversus.
   reply_on_apply: false  # OQ #C-8 v1 conservative pin.
   fetch_schedule: manual # OQ #C-2 v1 conservative pin (alternatives: post-verify, cron).
+
+# M018 — Context Compression Layer
+# Master toggle (FR-15): when `enabled: false`, the entire compression
+# pipeline short-circuits and dispatch payloads are byte-identical to the
+# pre-M018 baseline. Per-tier toggles let operators enable individual
+# stages independently.
+compression:
+  enabled: true
+  knowledge_filter:
+    enabled: true
+    # FR-3: knowledge entries whose YAML frontmatter `status:` field
+    # matches any value in this list are excluded from the dispatch
+    # payload. Missing `status:` → RETAINED (fail-open per A-1).
+    drop_list:
+      - superseded
+      - experimental

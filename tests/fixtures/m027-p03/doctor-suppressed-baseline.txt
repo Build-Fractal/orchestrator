@@ -1,0 +1,6 @@
+## Referenced Scripts
+
+- `scripts/diagnostics/run-doctor.sh` — diagnostic orchestrator.
+- `scripts/diagnostics/check-docs.sh` — documentation completeness + runtime instruction drift (`--check drift`).
+- `scripts/diagnostics/check-anomalies.sh` — anomaly-detection helper (M027/P03/T01).
+- `scripts/diagnostics/check-config-drift.sh` — config-drift helper (M027/P03/T02).

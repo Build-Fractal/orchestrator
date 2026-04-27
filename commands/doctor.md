@@ -42,7 +42,7 @@ The anomaly check is suppressed (zero stdout, exit 0) under any of:
 
 Anomaly detection uses a per-milestone moving median as the baseline. The baseline normalizes whatever historical data is present, including systematic errors — a milestone that consistently runs slow normalizes the slowness as expected. Findings are advisory and never block autonomous mode (FR-8). When `estimated_cost_usd` is null in the underlying records (current default in pre-Tier-3 data), the multiplier is applied to `duration_s` as a fallback surrogate; the per-row diagnostic surfaces `cost=(unavailable; fallback=duration)` so operators see the substitution. Corruption-recovery — re-baselining after recovering from a known systematic error — is deferred (Tier 3 backend-actuals work).
 
-Helper: `scripts/diagnostics/check-anomalies.sh` (sourceable + CLI). Default invocation scopes to the active milestone via `scripts/state/find-active-milestone.sh`.
+Helper: `scripts/diagnostics/check-anomalies.sh` (sourceable + CLI). Default invocation scopes to the active milestone via `scripts/state/find-active-milestone.sh`. The helper transitively wraps `scripts/diagnostics/metrics-rollup.sh` (M027/P00) for the per-milestone aggregate it baselines against.
 
 ## Config Drift
 

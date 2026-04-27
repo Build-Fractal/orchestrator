@@ -1,0 +1,40 @@
+P03 delivered the anomaly-detection surface and `doctor --config-check` integration, completing M027's user-visible surfaces. All gates green; M027 ready for milestone validation.
+
+## What was built
+
+- **T01 — anomaly-detection helper.** `scripts/diagnostics/check-anomalies.sh` (209 lines, sourceable + CLI). Single-pass awk median + Goodhart-paired anomaly rendering against `metrics-rollup.sh` output. 5-condition suppression matrix wired (`--no-anomaly`, `ORCHESTRATOR_AUTO`, `anomaly_check_enabled: false`, `--yes`, sample-size-floor structural carve-out). Cost-shift detection handles the rollup's `(N missing)` annotation (column-shift). When `estimated_cost_usd` is null, helper falls back to `duration_s` and surfaces `cost=(unavailable; fallback=duration)` per row (CON-5 never-abort). Four anomaly knobs added to `read-config.sh` VALID_KEYS in one edit (multi-key co-location pattern from P02/T01): `anomaly_cost_multiplier=3.0`, `anomaly_retry_threshold=2`, `anomaly_pass_rate_threshold=0.5`, `anomaly_check_enabled=true` — defaults pinned by sampling M012–M026 logs (~110 datapoints, p95 ≈13000s).
+
+- **T02 — config-drift helper + `commands/doctor.md` integration.** `scripts/diagnostics/check-config-drift.sh` (168 lines) audits the six M027 knobs across env/local/project/defaults; collapses the `null` sentinel that `read-config.sh` emits for unset-but-registered keys to `(unset)` (T01-flagged quirk). `commands/doctor.md` gained two new sections (`## Anomaly Detection` + `## Config Drift`) between `## Runtime Instruction Drift` and `## Usage`; pre-edit canonical sections preserved in pre-edit order. `tests/fixtures/m027-p03/doctor-suppressed-baseline.txt` locks the post-`## Referenced Scripts` tail; `tests/fixtures/m027-p03/anomaly-fixture.jsonl` (M999 sentinel milestone, T09 outlier exercises cost+retry+pass-rate flagging on the same row).
+
+- **T03 — `run-doctor.sh` integration.** Added `--config-check` and `--no-anomaly` flag handling + two new advisory `run_check` invocations between `Runtime Instruction Drift` and `Graph Health`. FR-8 advisory (never blocks); FR-16 opt-in (`Config Drift` only renders when `--config-check` set). MEM012 honored — pre-existing run_check sequence preserved verbatim; new rows inserted at stable attach point.
+
+- **T04 — verifier suite.** `scripts/verify/m027-p03-suite.sh` orchestrates 11 per-contract verifiers (anomaly-shape, config-drift-shape, doctor-md-shape, doctor-byte-identity, suppression-matrix, run-doctor-integration, anomaly-latency, anomaly-goodhart-pairing, zero-llm-token, read-only, bash32-compat). T01/T02/T03 scoped prechecks deleted (third+ occurrence of T04-subsumes-prechecks pattern). bash32-compat extended to extract only fenced bash/sh code blocks from `.md` files before applying the forbidden-construct regex (so prose discussion of bash syntax does not false-positive on doctor.md's marker syntax description).
+
+## Cross-phase contracts inherited and applied
+
+- **5-condition suppression matrix** (P02 contract) extended with sample-size-floor structural carve-out (analogous to P02's quick-tier carve-out). All 5 paths gated by `m027-p03-suppression-matrix.sh`.
+- **Document-shaped phase-task pattern** (P02/T02 contract) applied verbatim to `commands/doctor.md` — attach point + verbatim-tail baseline fixture + canonical-section-order assertion.
+- **Latency outer-vs-inner split** (P01/T04 → P02/T04 → P03/T04 contract): hard-fail at 250ms inner; outer informational with `WARN: RELAX-CANDIDATE` annotation forwarded by suite.
+- **Comment-hygiene-for-verifier-regex** carried forward to all P03 helpers.
+- **Multi-key co-location pattern** (P02/T01) — T01 added 4 anomaly knobs to VALID_KEYS in one edit.
+- **`predictive_cost_surface` knob pattern** extended — anomaly knobs follow same env override + read-config + recognized-falsy-token shape.
+
+## Resolved open questions
+
+- **#Q-1** — anomaly threshold defaults pinned by sampling M012–M026 logs. `cost_multiplier=3.0`, `retry_threshold=2`, `pass_rate_threshold=0.5`, `sample_floor=5`. Cost field semantics defined: when `estimated_cost_usd` is null, helper falls back to `duration_s` (load-bearing surrogate until Tier 3 ships).
+- **#Q-5** — doctor anomaly perf. Measured `metrics-rollup.sh` at ~56ms wall-clock on largest existing log (M013, 26.6KB / 110+ records); anomaly check adds ~120ms upper bound. Latency verifier: 250ms hard-fail inner / 500ms RELAX-CANDIDATE outer.
+- **#Q-10** — anomaly baseline disclaimer text pinned verbatim in `commands/doctor.md` `## Anomaly Detection`, asserted by `m027-p03-doctor-md-shape.sh`. Addresses the median-normalizes-systematic-errors trap, the duration fallback, and explicitly defers corruption-recovery to Tier 3.
+- **#Q-11** explicitly deferred beyond M027 (no `source: runtime` records exist in current data).
+
+## Verification
+
+- `bash scripts/verify/m027-p03-suite.sh` → exit 0, **11/11 gates PASS**
+- `bash scripts/verify/check-must-haves.sh .orchestrator/milestones/M027/phases/P03` → exit 0 (11 truths + 21 artifacts + 19 key-links PASS)
+- One observational `WARN: RELAX-CANDIDATE` on the latency verifier (`inner=101-113ms target=100ms hard_fail=250ms outer=101-113ms`) — well within the 250ms hard-fail; `check-anomalies.sh` has no fast-path env-vars to bypass the inner `metrics-rollup.sh` fork (helper genuinely needs the rollup output to baseline against). Same pattern as P01/P02 latency verifiers.
+
+## Lessons carried forward to M027 milestone summary + future work
+
+- **T04-subsumes-prechecks pattern** is now fully canonical (M027/P00, P01, P02, P03 — four occurrences). Plan-phase agents should always generate per-task scoped prechecks for tasks shipping structural changes; T04 deletes them once canonical phase-level verifiers ship.
+- **Document-shaped phase-task pattern** is the canonical way to integrate helpers into runtime-rendered command documents (commands/<cmd>.md). Attach point + verbatim-tail baseline fixture + canonical-section-order assertion = byte-identity contract enforceable in CI.
+- **Markdown-aware bash32-compat scanner** — when `.md` files are in the scan-set, extract only fenced bash/sh code blocks before applying forbidden-construct regex; prose discussion of bash syntax does not false-positive.
+- **Verifier-author-vs-helper-author boundary**: when a phase-plan key-link asserts a transitive reference and adding it the literal way would invalidate a baseline fixture, the cleanest fix is a one-sentence transitive-reference note inside an existing section (rather than a new bullet that breaks the fixture).

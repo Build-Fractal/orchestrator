@@ -1,0 +1,36 @@
+P02 delivered the user-visible surfaces for `orchestrator:cost`: a retrospective efficiency footer attached to `orchestrator:status`, and a dispatch-time predictive cost surface attached to `orchestrator:dispatch`. Both surfaces are bash-only, read-only (FR-12 / CON-1), zero-LLM-token (FR-21 / CON-6), bash 3.2 compatible (CON-7), and respect a documented suppression matrix that lets operators silence them without losing fidelity of the underlying telemetry.
+
+## What was built
+
+- **T01 — efficiency footer helper.** `scripts/diagnostics/efficiency-footer.sh` (170 lines, sourceable + CLI). Renders ≤6 lines from `metrics-rollup.sh` (cost, verification pass-rate, dispatch count, optional pricing-degradation annotation). `--quiet` / `ORCH_EFFICIENCY_FOOTER=false` / `efficiency_footer: false` config knob each suppress to zero stdout, exit 0 — the load-bearing CON-3 / SC-3 byte-identity contract. Empty-log path emits the `Efficiency: no Tier 1 records yet` literal per US-3 AS-3. `read-config.sh` extended in the same task with both M027/P02 `VALID_KEYS` (`efficiency_footer` + `predictive_cost_surface`) to avoid two passes over the same file.
+
+- **T02 — `commands/status.md` integration + baseline fixture.** Single `## Efficiency Footer` section inserted between `## Telemetry Metrics` and `## Next Action`, plus one new bullet under `## Reference Files`. Pre-edit canonical sections preserved in pre-edit order. `tests/fixtures/m027-p02/status-quiet-baseline.txt` (50 lines) captures the verbatim post-`## Next Action` tail; T04's byte-identity verifier diffs the live tail against it, so any accidental drift in the suppressed-mode document tail fails CI.
+
+- **T03 — `scripts/dispatch/predictive-surface.sh` helper + `commands/dispatch.md` integration.** Sourceable bash 3.2 library + CLI thin-wraps the P01 `intensity-recommend.sh --format text` cost-annotation hook by pre-setting `INTENSITY_RECOMMEND_FAST_PATH=1` + the module-scope `_CE_RECOMMENDED` slot — same no-recursion pattern P01/T02 used, now applied at the dispatch boundary. Implements the **5-condition suppression matrix** (`--yes`, `ORCHESTRATOR_AUTO`, `--no-predict`, `predictive_cost_surface: false`, `intensity = quick`); each path short-circuits to zero stdout / exit 0 before any I/O. Operator override is rendered as a one-line informational prompt (CON-10); the helper does NOT read stdin — the runtime captures keystrokes. `commands/dispatch.md` gained one new `## Predictive Surface (M027/P02)` section between `## Dispatch Strategy` and `## Execution Recording`; canonical section order preserved.
+
+- **T04 — verifier suite.** `scripts/verify/m027-p02-suite.sh` orchestrates 11 per-contract verifiers (efficiency-footer-shape, status-md-shape, status-quiet-byte-identity, predictive-surface-shape, suppression-matrix, dispatch-md-shape, predictive-surface-latency, predictive-goodhart-pairing, zero-llm-token, read-only, bash32-compat). T01/T02/T03 scoped prechecks deleted, subsumed by canonical phase-level verifiers — third occurrence of the M027/P00+P01+P02 T04-subsumes-prechecks pattern.
+
+## Cross-phase contracts P02 pinned (for P03 to consume)
+
+- **5-condition suppression matrix** is load-bearing and mechanically gated by `m027-p02-suppression-matrix.sh`; P03's anomaly-detection surface should follow the same matrix shape.
+- **Document-shaped phase-task pattern** (T02): when integrating a helper into a runtime-rendered command document, edit the markdown at a stable attach point + ship a verbatim-tail baseline fixture; T04 ships the byte-identity verifier. Rendering byte-identity is enforced upstream by the agent's contract-honoring of the documented suppression knob.
+- **Latency outer-vs-inner split** carried forward verbatim from P01/T04: hard-fail at 250ms on the inner library measurement (with `INTENSITY_RECOMMEND_FAST_PATH=1` + `_CE_RECOMMENDED=standard` pre-set, bypassing the inner intensity-recommend re-fork — the surface author's actual budget). Outer wall-clock reported informationally with `WARN: RELAX-CANDIDATE` annotation.
+- **Comment-hygiene-for-verifier-regex** (M027/P00+P01+P02): doc-comments use the safe phrasing "no associative arrays / no herestring redirect" rather than spelling literal bash-4 forbidden tokens, so `m027-p02-bash32-compat.sh` does not false-positive against doc comments.
+- **Operator-override-as-informational-prompt** (CON-10): helpers render override prompts but do NOT read stdin; runtime layer handles capture.
+
+## Resolved open questions
+
+- **#Q-16** — repeat-dispatch throttling. Pinned in P02-PLAN as **always-on with `--no-predict` operator-override flag** (no session-cache, no hidden state). Rationale: AD-4 strategic positioning is visibility-first; throttling adds hidden state that disagrees with the user-visible config. Enforced by `m027-p02-suppression-matrix.sh`, which exercises `--no-predict` as one of the 5 paths.
+
+## Verification
+
+- `bash scripts/verify/m027-p02-suite.sh` → exit 0, **11/11 gates PASS**
+- `bash scripts/verify/check-must-haves.sh .orchestrator/milestones/M027/phases/P02` → exit 0 (12 Truth Check invocations + 17 artifact assertions + 21 key-link assertions PASS)
+- D026 + D027 cross-phase contracts from P01 honored end-to-end
+- One observational `WARN: RELAX-CANDIDATE` on the latency verifier (`inner=112ms target=100ms hard_fail=250ms outer=109ms`) — well within the 250ms hard-fail; identical pattern to P01/T04.
+
+## Lessons carried forward to P03
+
+- **Parser-shape lesson, third occurrence prevention.** Each task's `Verification` fenced bash block must reference ONLY artifacts the task itself produces. The T04-subsumes-prechecks pattern is the structural answer; plan-phase agents must verify each task's verification block before finalizing.
+- **Document-shaped phase-task pattern.** When P03 integrates `doctor --config-check` anomaly surfaces into `commands/doctor.md`, follow the T02 attach-point + tail-fixture + canonical-section-order pattern.
+- **Suppression-matrix discipline.** P03 anomaly thresholds need an analogous knob shape (env override + config knob + recognized-falsy tokens) so the doctor surface has the same operator visibility/override guarantees as the cost surfaces.

@@ -1,6 +1,8 @@
-# Proposal: M027 — Roadmap Visibility & CLI UX
+# Proposal: M029 — Roadmap Visibility & CLI UX
 
-**Captured**: 2026-04-27
+> **ID note**: originally drafted as M027; renumbered to M029 after discovering M027 ("Cost+Quality Observability Surfaces", closed 2026-04-27) had already shipped much of finding F6's surface area. F6 has been trimmed accordingly — most of the cost-data plumbing is already on disk via `orchestrator:cost`, the efficiency footer, and the dispatch-time predictive surface.
+
+**Captured**: 2026-04-27 (renumbered + trimmed 2026-04-28)
 **Shape**: Milestone (3 phases)
 **Source**: Sweep of `~/Sites/conversus-oss` (`engine/cli/context.py`, `engine/cli/progress.py`, `engine/cli/render.py`, `docs/user-guide/`) for adoptable UX patterns
 
@@ -68,48 +70,34 @@ The orchestrator pulls *patterns* from conversus, not *capabilities*.
 
 **Adoption**: `orchestrator:context` skill — prints resolved root, runtime, capability profile, intensity defaults, active milestone, lock state. One screen, no I/O writes.
 
-### F6. Token + cost transparency (orchestrator-specific, no conversus precedent)
+### F6. Token + cost transparency in the tree (thin layer over existing M027 surfaces)
 
-**Why this is in M027**: M018 (Context Compression Layer, currently active) emits per-dispatch token data through additive `payload_breakdown` fields in the M019 Tier 1 JSONL stream — `tier1_savings_tokens`, `tier1_invocations`, `tier2_savings_tokens`, `payload_filter`, `filter_dropped_tokens`. M019 Tier 2+3 (committed forward milestone) layers cost rollup on top. The data is *on disk*; today nothing surfaces it to the user during or between auto runs. M027 is the natural home for that surfacing — the same render that shows "where am I" should show "what have I spent and what did I save."
+**State after M027 (closed 2026-04-27)**: cost+quality observability already shipped — `orchestrator:cost` (retrospective + `--estimate` predictive), efficiency footer in `orchestrator:status` (`scripts/diagnostics/efficiency-footer.sh`), dispatch-time predictive surface in `orchestrator:dispatch` (`scripts/dispatch/predictive-surface.sh`), anomaly detection + `doctor --config-check`, `metrics-rollup.sh` rollup engine. Operator suppression matrix is reusable. Six config knobs in `read-config.sh` VALID_KEYS (efficiency_footer, predictive_cost_surface, etc.). All read-only and Goodhart-paired (every cost surface ships paired quality data).
 
-**What the data already gives us** (from `.orchestrator/milestones/M###/execution-log.jsonl`, after M018 P01–P05 land):
-- Per-dispatch input/output/cached token counts (M019 Tier 1 — shipped)
-- Per-dispatch compression savings: tier1 (cache reuse + paging) + tier2 (head-drop) + filter (knowledge-aware drop)
-- Per-dispatch payload_breakdown showing what was kept vs dropped vs cached
-- Cumulative milestone totals (M019 Tier 2 — pending; before M027, compute on-the-fly from JSONL)
-- Cost-per-dispatch and cost rollup (M019 Tier 3 — pending; gracefully degrade if absent)
+**What's left for M029**: pure composition. The tree renderer and headline block invoke the existing surfaces and embed their output. No aggregator, no static cost table, no degradation tiers — M027's `metrics-rollup.sh` already handles missing-data cases.
 
-**Adoption shape** — three surfaces, all read-only over existing data:
+**Three small surfaces**:
 
-1. **Headline block** (P01) gains a one-line cost summary:
-   ```
-   Cost: $1.42 spent | $0.18 saved by compression (11%) | est. $2.10 remaining
-   ```
-   When M019 Tier 3 cost data is absent, fall back to token totals only ("142k in / 38k out / 89k cached | 16k saved by compression").
+1. **Headline block** (P01) — call `bash scripts/diagnostics/efficiency-footer.sh --milestone M###` and inline the result. Already accounts for the suppression matrix; renders nothing in `--quiet` / auto modes (per CON-3/SC-3/SC-17). One line, one shell call.
 
-2. **`orchestrator:where` tree** (P02) shows per-phase/per-task token totals as a right-aligned trailing column:
-   ```
-   ├─ ✓ P02  Knowledge-aware filter             PASS       [42k / $0.31]
-   ├─ ▶ P03  Tier-1 microcompact                executing  [28k so far]
-   │   ├─ ✓ T01  tier1 paging                   [9k]
-   │   ├─ ✓ T02  cache-prune                    [4k]
-   │   └─ ▶ T03  verifiers and summary          [15k so far]
-   ```
-   Per-task numbers come straight from JSONL events keyed by task ID.
+2. **`orchestrator:where` tree** (P02) — per-row column comes from `bash scripts/diagnostics/metrics-rollup.sh --scope task --task-id <id>`. The rollup engine already aggregates JSONL records and handles tier1/tier2/filter savings. Render is a pure column-join.
 
-3. **Live-tail mode** (P03) updates the cumulative number as each `dispatch_completed` event appends. Shows compression savings as they accrue ("✓ T03 verifiers — 15k tokens, saved 3k via tier1 cache reuse"). The user *sees* compression earning its keep in real time, which incidentally validates the M018 investment.
+3. **Live-tail mode** (P03) — tails `execution-log.jsonl` for `dispatch_usage` / `payload_breakdown` records (M019 Tier 1 schema). When a record's `tier1_savings_tokens + tier2_savings_tokens > 5%` of dispatch tokens, emit a savings marker (`▽ saved Nk via tier1 cache reuse`). Users see compression earning its keep in real time. This is the only piece M027 didn't already cover (M027's surfaces are at-rest).
 
-**Cost source resolution** (graceful degradation):
-- Tier A: M019 Tier 3 cost-rollup field present → display dollars
-- Tier B: token counts present, no cost field → display tokens; show est. dollars only in headline (using a per-model `cost-per-1k-tokens.yml` table shipped with the orchestrator)
-- Tier C: neither present (e.g., older milestones) → omit cost column silently; render without it
+**Sample render** with M027 surfaces folded in:
+```
+Cost: $1.42 spent · $0.18 saved by compression (11%) · est. $2.10 remaining   [efficiency-footer.sh]
+   ├─ ✓ P02  Knowledge-aware filter             PASS         [42k / $0.31]    [metrics-rollup.sh --scope phase]
+   ├─ ▶ P03  Tier-1 microcompact                executing    [28k so far]
+   │   └─ ▶ T03  verifiers and summary          [15k so far]  ▽ 4k saved      [metrics-rollup.sh --scope task]
+```
 
-**Compression delta framing** (the "saved" number) — important for adoption:
-- Show `saved_tokens / (saved_tokens + actual_tokens) = compression_ratio` as a single percentage in the headline ("11%")
-- Per-dispatch detail in the tree only when `--verbose` or when compression saved >5% of that dispatch (otherwise noise)
-- Compression savings get their own color/marker in the live-tail (e.g., `▽ saved 3k`) so users can see when M018's work is paying off vs not
+**M029-original-scope contributions**:
+- The `▽` compression-savings marker in live-tail (new, no M027 equivalent)
+- Tree shape that displays M027 numbers spatially within the milestone hierarchy
+- Live-tail update cadence (M027 surfaces are at-rest only)
 
-**Why this is small**: every input is already on disk after M018+M019 Tier 1. M027 doesn't run any new emitters, doesn't compute new metrics — it's pure rendering. The new code is one bash function that aggregates JSONL token fields per task/phase/milestone, plus three places that consume it (headline, tree, live-tail).
+That's it. F6 collapses from "build new infrastructure" to "compose existing M027 surfaces inside the tree."
 
 ## Headline feature: `orchestrator:where`
 
@@ -144,9 +132,10 @@ Symbols: `▓░` (progress), `▶` (current), `◇` (pending), `✓` (done), `�
 - `scripts/lifecycle/lock-manager.sh status` — lock owner + operation
 - `scripts/diagnostics/efficiency-footer.sh` — budget rollup
 - `.orchestrator/integrations/github.json` (M013 sidecar) — issue + project mappings
-- `payload_breakdown` fields in JSONL events (M018 P01-P05 — `tier1_savings_tokens`, `tier1_invocations`, `tier2_savings_tokens`, `payload_filter`, `filter_dropped_tokens`) — token + savings data for F6
-- M019 Tier 2+3 cost rollup (if shipped) — dollar amounts; gracefully degrades to token-only display when absent
-- `templates/cost-per-1k-tokens.yml` (NEW — small static table for fallback dollar estimation when M019 Tier 3 absent)
+- `scripts/diagnostics/efficiency-footer.sh` (M027) — at-rest efficiency footer; embed in headline
+- `scripts/diagnostics/metrics-rollup.sh` (M027) — rollup engine for token + cost per scope; embed in tree column
+- `scripts/dispatch/predictive-surface.sh` (M027) — dispatch-time predictive cost; reuse for preflight summary
+- `payload_breakdown` fields in JSONL events (M018 P01-P05 + M019 Tier 1) — for live-tail savings marker
 
 ### M013 GitHub coupling — what makes this earn its weight
 
@@ -158,15 +147,15 @@ This delivers a single mental model: the developer's terminal view matches what'
 
 | Phase | Goal | Key artifact | Verifies |
 |---|---|---|---|
-| P01 | Foundation: invocation-context resolver + headline status with cost line | `scripts/state/detect-invocation-context.sh`. Headline block in `orchestrator:status` including F6 cost line. `orchestrator:context` debug skill. `--format=json` on status. JSONL aggregator helper (`scripts/diagnostics/aggregate-tokens.sh`) — sums tier1/tier2/filter savings + raw token counts per scope (task/phase/milestone). | TTY/non-TTY/CI all render correctly. JSON output validates against schema. Cost line gracefully degrades when M019 Tier 3 absent. |
-| P02 | `orchestrator:where` at-rest renderer with token/cost column | New skill + `scripts/diagnostics/render-position.sh`. Reads roadmap + execution log + lock + telemetry. M013 sidecar fold-in (no API calls). Per-row token/cost column from P01's aggregator. Compression-savings marker (`▽`) on rows where savings >5% of dispatch. | Tree renders correctly for milestones in all states. Token totals match JSONL ground truth. Older milestones (no M018/M019 data) render without cost column without warnings. |
-| P03 | Live-tail mode + auto preflight + verifiers + summary | `orchestrator:where --live` tails JSONL and updates cumulative cost in real time; compression savings get distinct marker as they accrue. `orchestrator:auto` opt-in preflight summary includes cost estimate from prior phases via aggregator. `--refresh-github` flag for sidecar refresh. Verifiers + summary. | Live tail updates within 1s of JSONL append. Preflight cost estimate matches actual ±15%. |
+| P01 | Foundation: invocation-context resolver + headline status with embedded efficiency footer | `scripts/state/detect-invocation-context.sh`. Headline block in `orchestrator:status` invokes existing `efficiency-footer.sh` (M027) inline. `orchestrator:context` debug skill. `--format=json` on status. | TTY/non-TTY/CI all render correctly. JSON output validates against schema. Suppression matrix from M027 still respected. |
+| P02 | `orchestrator:where` at-rest renderer with token/cost column from `metrics-rollup.sh` | New skill + `scripts/diagnostics/render-position.sh`. Reads roadmap + execution log + lock + telemetry. M013 sidecar fold-in (no API calls). Per-row column shells out to `metrics-rollup.sh --scope task` (M027). | Tree renders correctly for milestones in all states. Column matches `orchestrator:cost` ground truth. Older milestones (predating M019 Tier 1) render without column without warnings. |
+| P03 | Live-tail mode + auto preflight + verifiers + summary | `orchestrator:where --live` tails JSONL; emits `▽ saved Nk` marker on `dispatch_usage` records where compression >5% (the one piece not covered by M027's at-rest surfaces). `orchestrator:auto` opt-in preflight invokes existing `predictive-surface.sh` (M027). `--refresh-github` flag for sidecar refresh. Verifiers + summary. | Live tail updates within 1s of JSONL append. Preflight cost estimate matches `predictive-surface.sh` output exactly. |
 
 ## Dependencies & sequencing
 
-**Requires**: M013 (GitHub integration — shipped) for sidecar fold-in. M019 Tier 1 (observability emitter — shipped) for JSONL stream. M018 (Context Compression Layer — currently active) for `payload_breakdown` token/savings fields used by F6.
+**Requires** (all shipped): M013 (GitHub integration) for sidecar fold-in. M019 Tier 1+2+3 (observability emitter + cost rollup) for JSONL stream + per-scope aggregation. M027 (Cost+Quality Observability Surfaces) for `efficiency-footer.sh`, `metrics-rollup.sh`, `predictive-surface.sh`. M018 (Context Compression Layer — currently active) for `payload_breakdown` savings fields used by the live-tail marker.
 
-**Optional dependency**: M019 Tier 2+3 (cost rollup) — if shipped before M027, F6 displays dollars natively. If not, F6 falls back to tokens + a static cost table for headline-only dollar estimation. Either way M027 ships; M019 T2/3 only enriches the display.
+By the time M029 starts, every dependency is on disk. F6 is pure composition.
 
 **Independent of**: M026, M024, M014 ext, M020, M018, M023.
 
@@ -186,9 +175,8 @@ This delivers a single mental model: the developer's terminal view matches what'
 2. **Live-tail mechanism**: `inotify`/`fswatch` vs polling `tail -f` JSONL? Polling is portable to all 3 runtimes (Mac/Linux/Windows-via-WSL). `inotify` is Linux-only.
 3. **GitHub refresh frequency**: should at-rest renders ever auto-refresh the sidecar, or only on explicit `--refresh-github`? Recommendation: never auto-refresh (avoid surprise API calls); always explicit.
 4. **Roadmap grouping**: when a feature has multiple milestones (e.g., 030-context-compression-layer might span M018 + future M0XX), should `where` show the cross-milestone view or only the active one? Recommendation: active milestone only; full feature view is a separate render.
-5. **Headline block content**: minimum useful set? Suggested fields: milestone ID + name, current phase index, percent complete, lock status, last-dispatch recency, last-verify result, **cost-line (spent / saved / est. remaining)**. Anything else feels like leakage from `status`.
-6. **Compression-savings display threshold**: per-row `▽` marker appears when savings >5% of that dispatch. Tunable? Recommendation: keep static at 5% — user-configurable thresholds add complexity for marginal value.
-7. **Static cost table** (`templates/cost-per-1k-tokens.yml`): per-model rates need to be kept current as Anthropic publishes pricing changes. How? Recommendation: ship a baseline table, document a `scripts/util/refresh-cost-table.sh` that pulls from a known source, and recommend re-running quarterly. Out-of-date rates only affect fallback display, not ground-truth M019 T3 numbers.
+5. **Headline block content**: minimum useful set? Suggested fields: milestone ID + name, current phase index, percent complete, lock status, last-dispatch recency, last-verify result, plus the existing `efficiency-footer.sh` line embedded verbatim. Anything else feels like leakage from `status`.
+6. **Compression-savings display threshold**: live-tail `▽` marker appears when savings >5% of that dispatch. Tunable? Recommendation: keep static at 5% — user-configurable thresholds add complexity for marginal value. Reuses M027's anomaly_cost_multiplier knob convention if a knob is wanted later.
 
 ## Source evidence (file paths)
 

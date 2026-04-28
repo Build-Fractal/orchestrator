@@ -1,6 +1,6 @@
 # Future-Milestone Proposals
 
-Captured 2026-04-27. Source: session reviewing `~/Sites/conversus-oss` for adoptable patterns and a fresh sweep of `orchestrator:auto` interruption screenshots.
+Captured 2026-04-27, refreshed 2026-04-28 after a milestone-status reconciliation pass against `.orchestrator/milestone-summary.md`.
 
 These docs are inputs for `orchestrator:specify` (and downstream `orchestrator:evaluate` / `orchestrator:roadmap`) when each milestone enters the planning queue. They are *not* themselves specs — they are briefs intended to give specify enough context to produce a tight spec without re-doing the analysis.
 
@@ -9,46 +9,55 @@ These docs are inputs for `orchestrator:specify` (and downstream `orchestrator:e
 | ID | Title | Shape | Standalone? |
 |---|---|---|---|
 | `constitution-amendment-inclusion-criteria.md` | Inclusion-criteria gate + governance log + distribution-surface integrity | Constitution PR (~50 LOC + 1 new doc) | Yes — no milestone needed |
-| `M026-autonomous-hardening-v3.md` | Hook portability + 4 new shape classes + investigation-pattern wrappers | Milestone (5 phases) or 2 quick PRs | Some phases standalone |
-| `M027-roadmap-visibility-and-cli-ux.md` | `orchestrator:where` tree renderer + invocation-context resolver + headline status + M013 GitHub coupling | Milestone (3 phases) | No — coherent feature |
+| `M028-autonomous-hardening-v3.md` | Hook portability + 4 new shape classes + investigation-pattern wrappers | Milestone (5 phases) or 2 quick PRs | Some phases standalone |
+| `M029-roadmap-visibility-and-cli-ux.md` | `orchestrator:where` tree + invocation-context resolver + headline status (embeds M027 surfaces) | Milestone (3 phases) | No — coherent feature |
+| `M030-adaptive-model-selection.md` | Task-character classifier + model routing table + verifier-fail escalation; surface savings via M027 | Milestone (4 phases) or 2-3 quick PRs depending on classifier complexity | Yes — independent feature |
+
+## Reality check vs CLAUDE.md (2026-04-28)
+
+`CLAUDE.md`'s "Forward Roadmap" paragraph is stale. Authoritative source is `.orchestrator/milestone-summary.md`. Several milestones listed there as "next up" or "in queue" are actually closed:
+
+| Milestone | CLAUDE.md said | Actually |
+|---|---|---|
+| M014 (extended) | "next up" | Closed 2026-04-25 |
+| M020 | in forward queue | Closed 2026-04-25 |
+| M024 | in forward queue | Closed |
+| M019 Tier 2+3 | in forward queue | Closed |
+| M026 (in CLAUDE.md not yet listed) | — | Closed 2026-04-25 (Conversus-OSS Migration) |
+| M027 (in CLAUDE.md not yet listed) | — | Closed 2026-04-27 (Cost+Quality Observability Surfaces) |
+
+A separate small PR should refresh `CLAUDE.md` from `milestone-summary.md` to prevent future drift confusion. Out of scope for these proposal commits.
 
 ## Sequencing recommendation
 
-Current forward queue (per `CLAUDE.md`, revised 2026-04-22 per D016):
-
-> M014 (extended) → M020 → M024 → M019 Tier 2+3 → M018 → M023 → M009 (extended) → M010 (adjusted)
-
-Proposed insertion points:
+Forward queue, after the staleness correction:
 
 ```
-[constitution-amendment]   ← any time, single PR, no dependencies
-M014 (extended)
-M026 (autonomous hardening v3)   ← INSERT HERE — see rationale below
-M020
-M024
-M019 Tier 2+3
-M018  ← currently active
-M023
-M027 (roadmap visibility + CLI UX)   ← INSERT HERE
+[constitution-amendment]    ← any time, single PR, no dependencies
+M018  ← currently active (Context Compression Layer)
+M028 (autonomous hardening v3)        ← INSERT — stabilizes autonomous runs
+M030 (adaptive model selection)       ← INSERT — makes runs cheaper
+M023 (design layer)
+M029 (roadmap visibility + CLI UX)    ← INSERT — launch polish
 M009 (extended)
 M010 (adjusted)
 ```
 
-### Why M026 before M024
+### Why M028 first (after M018 finishes)
 
-M024 (universal intake & routing) will run under `orchestrator:auto` against arbitrary input and is intended to be exercised in *downstream consumer projects*. The screenshots that motivated M026 reveal the M021 shape guard fails-open in projects outside the orchestrator repo (script path resolution via `$CLAUDE_PROJECT_DIR`). Without M026's hook-portability fix, M024's autonomous runs will be interrupted by the same shapes M021 already classified — wasting the M021 investment. Hook portability is the load-bearing item; it's worth doing before any further autonomous-run-heavy milestone.
+The 7 auto-interruption screenshots from 2026-04-25/26 reveal the M021 shape guard fails-open in *consumer* projects (script path resolved via `$CLAUDE_PROJECT_DIR` lands outside the orchestrator repo). Any future autonomous-run-heavy milestone (M030's shadow mode, M023's design-agent dispatching, M009's runtime-parity audit) re-incurs the same prompt interruptions M021 already classified. Hook portability is the load-bearing fix.
 
-If empirical replay (P01 of M026) shows only 1-2 screenshots actually leak past the existing classifier when the hook *is* portable, M026 can collapse into 2 quick PRs (hook portability + corpus extension) and not block M024 at all.
+### Why M030 right after M028
 
-### Why M027 after M023 (and after M018 + M019 T1)
+M030 (adaptive model selection) needs M027's cost+quality observability for empirical validation — and M027 is already shipped. M030's shadow-mode validation phase needs autonomous runs to be uninterrupted (M028). Land M028 → land M030 → reap accumulated savings on every subsequent milestone (M023 design dispatching, M009 audits, M010 Managed Agents). Earlier M030 ships, more compounding savings.
 
-M027 is launch-polish — it makes the orchestrator's autonomous execution legible to humans (and to the M013 GitHub board). It's not blocking; it's the kind of feature that materially improves first-impression adoption *at launch*. M023 (design layer) is currently the last pre-launch gate before M009. M027 fits naturally between them: M023 produces design contracts, M027 makes the runtime visible. Both feed into M009's runtime-parity audit.
+### Why M029 between M023 and M009
 
-**Data-source dependency**: M027 surfaces token + cost data that M018 (Context Compression Layer) emits as additive `payload_breakdown` fields and M019 Tier 1 ships through JSONL. Both are in place by the time M027 lands in the proposed sequence. M019 Tier 2+3 (cost rollup) is *optional* — if it lands before M027, dollars display natively; if not, M027 falls back to token totals plus a static cost table for headline estimates. Either way M027 ships and provides spend transparency.
+M029 is launch-polish — `orchestrator:where` and the headline status block. It composes existing M027 cost surfaces into the work-hierarchy tree (no new infrastructure, just new rendering). It wants to ship *with* the launch experience, not before. M023 produces design contracts; M029 makes the runtime visible; M009 audits parity. Natural order.
 
 ### Why constitution amendment any time
 
-The amendment is doc-only and self-contained. It introduces a *gate* for future principle additions — landing it before any large milestone reduces the chance that future milestones accrete weak principles. Cheapest, earliest land.
+Doc-only, self-contained. The inclusion-criteria gate is forward-only (grandfathers I-XV). Cheapest, earliest land. No dependencies.
 
 ## Active-milestone safety note
 
@@ -63,7 +72,11 @@ The proposals can be committed at any time without affecting M018's autonomous r
 
 ## Source material
 
-- Session transcript: 2026-04-27 (no archive — content captured in proposal docs)
+- Session transcripts: 2026-04-27 (initial capture), 2026-04-28 (renumber + M030 add)
 - Conversus reference: `~/Sites/conversus-oss` (CONSTITUTION.md, engine/cli/, docs/user-guide/)
-- Auto-interruption screenshots: 7 screenshots dated 2026-04-25 to 2026-04-26 — patterns extracted into `M026-autonomous-hardening-v3.md` §3
-- Existing infrastructure to extend: M021 corpus (`tests/fixtures/m021-prompt-corpus.txt`), classifier (`scripts/verify/lib/shape-classifier.sh`), hook (`scripts/hooks/pre-bash-shape-guard.sh`), antipattern register (`ANTIPATTERNS.md` AP-001 through AP-009)
+- Auto-interruption screenshots: 7 screenshots dated 2026-04-25 to 2026-04-26 — patterns extracted into `M028-autonomous-hardening-v3.md` §3
+- Existing infrastructure to extend:
+  - M021 corpus (`tests/fixtures/m021-prompt-corpus.txt`), classifier (`scripts/verify/lib/shape-classifier.sh`), hook (`scripts/hooks/pre-bash-shape-guard.sh`), antipattern register (`ANTIPATTERNS.md` AP-001 through AP-009) — for M028
+  - M027 cost surfaces (`scripts/diagnostics/efficiency-footer.sh`, `metrics-rollup.sh`, `scripts/dispatch/predictive-surface.sh`, `check-anomalies.sh`) — for M029 + M030
+  - M013 GitHub sidecar (`.orchestrator/integrations/github.json`) — for M029
+  - M019 Tier 1+2+3 JSONL emitters — for M030's routing decisions and M029's tree column

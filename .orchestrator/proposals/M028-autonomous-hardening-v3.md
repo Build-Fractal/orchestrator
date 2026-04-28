@@ -1,6 +1,8 @@
-# Proposal: M026 — Autonomous Hardening v3
+# Proposal: M028 — Autonomous Hardening v3
 
-**Captured**: 2026-04-27
+> **ID note**: originally drafted as M026; renumbered to M028 after discovering M026 ("Conversus-OSS Migration", closed 2026-04-25) and M027 ("Cost+Quality Observability Surfaces", closed 2026-04-27) had already taken those IDs. No scope conflict — only the number changed.
+
+**Captured**: 2026-04-27 (renumbered 2026-04-28)
 **Shape**: Milestone (5 phases) — collapsible to 2 quick PRs depending on P01 baseline
 **Predecessors**: M016 (autonomous hardening v1, shipped), M021 (autonomous hardening v2, shipped)
 **Source**: Fresh sweep of 7 `orchestrator:auto` interruption screenshots (2026-04-25 to 2026-04-26) plus inspection of existing M021 infrastructure

@@ -12,6 +12,7 @@ These docs are inputs for `orchestrator:specify` (and downstream `orchestrator:e
 | `M028-autonomous-hardening-v3.md` | Hook portability + 4 new shape classes + investigation-pattern wrappers | Milestone (5 phases) or 2 quick PRs | Some phases standalone |
 | `M029-roadmap-visibility-and-cli-ux.md` | `orchestrator:where` tree + invocation-context resolver + headline status (embeds M027 surfaces) | Milestone (3 phases) | No — coherent feature |
 | `M030-adaptive-model-selection.md` | Task-character classifier + model routing table + verifier-fail escalation; surface savings via M027 | Milestone (4 phases) or 2-3 quick PRs depending on classifier complexity | Yes — independent feature |
+| `M031-right-sized-entry.md` | Knowledge + compression unconditional across all intensities; Tier A+ middle flow (research → plan → build); universal `orchestrator <task>` entry; evaluate.md drift reconciliation | Milestone (4 phases + optional P00 baseline) | No — coherent feature |
 
 ## Reality check vs CLAUDE.md (2026-04-28)
 
@@ -37,6 +38,7 @@ Forward queue, after the staleness correction:
 M018  ← currently active (Context Compression Layer)
 M028 (autonomous hardening v3)        ← INSERT — stabilizes autonomous runs
 M030 (adaptive model selection)       ← INSERT — makes runs cheaper
+M031 (right-sized entry)              ← INSERT — restores knowledge promise + tightens UX
 M023 (design layer)
 M029 (roadmap visibility + CLI UX)    ← INSERT — launch polish
 M009 (extended)
@@ -50,6 +52,14 @@ The 7 auto-interruption screenshots from 2026-04-25/26 reveal the M021 shape gua
 ### Why M030 right after M028
 
 M030 (adaptive model selection) needs M027's cost+quality observability for empirical validation — and M027 is already shipped. M030's shadow-mode validation phase needs autonomous runs to be uninterrupted (M028). Land M028 → land M030 → reap accumulated savings on every subsequent milestone (M023 design dispatching, M009 audits, M010 Managed Agents). Earlier M030 ships, more compounding savings.
+
+### Why M031 right after M030
+
+M031 closes a load-bearing gap — Quick intensity today skips the knowledge graph entirely (`commands/dispatch.md:21`), violating the orchestrator's core promise that every dispatch runs on knowledge-rich context. The smaller the task, the more the knowledge layer should bite, and today it's exactly inverted. M031 also adds a Tier A+ middle flow (research → plan → build, no ceremony) and a universal `orchestrator <task>` entry that lowers adoption friction for users with small tasks.
+
+M031 composes with M030: M030 routes the dispatching agent to a cheap model; M031 ensures that cheap agent has knowledge access. Together they're the thrift-and-ergonomics pair — small tasks become both fast/cheap *and* knowledge-rich. Constitution amendment Change 5 (clarification of Principle I) lands with M031 to prevent re-derivation of the wrong "skip-to-save-tokens" logic in future work.
+
+Earlier M031 ships, sooner adoption barrier drops. Best for launch.
 
 ### Why M029 between M023 and M009
 
@@ -80,3 +90,5 @@ The proposals can be committed at any time without affecting M018's autonomous r
   - M027 cost surfaces (`scripts/diagnostics/efficiency-footer.sh`, `metrics-rollup.sh`, `scripts/dispatch/predictive-surface.sh`, `check-anomalies.sh`) — for M029 + M030
   - M013 GitHub sidecar (`.orchestrator/integrations/github.json`) — for M029
   - M019 Tier 1+2+3 JSONL emitters — for M030's routing decisions and M029's tree column
+  - M020 knowledge layer (graph schema, indexer, traversal) — for M031's `--profile=quick` traversal contract
+  - M024 intake (`scripts/intake/`, `commands/evaluate.md` input-shape table) — for M031's Tier A+ classifier extension and `orchestrator:do` routing

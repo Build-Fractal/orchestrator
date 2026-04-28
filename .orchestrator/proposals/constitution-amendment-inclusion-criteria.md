@@ -74,6 +74,24 @@ Document the existing reality: operators MAY restrict the orchestrator's tool su
 
 Not a constitutional principle (per inclusion criteria — too narrow). Lives in `references/`.
 
+### Change 5 — Clarification to Principle I (Context Minimization)
+
+**Captured 2026-04-28** while drafting M031 (Right-Sized Entry). Existing implementations conflated two different things under "minimization": minimizing *payload bytes shipped to an agent* vs minimizing *total tokens spent on a task*. They are not the same; sometimes they are inversely related.
+
+**Concrete instance**: `commands/dispatch.md:21` had Quick intensity skip `build-context.sh` "to save tokens" — yielding zero knowledge injection. The actual cost: agents either fly blind (lower-quality output, re-dispatch cost) or rediscover via grep/read (5-15k tokens of exploration). Either way total task tokens go *up*, not down. The optimization optimized the wrong sub-metric.
+
+**Proposed clarification** to Principle I:
+
+> Minimize **total task tokens** by delivering the right context efficiently — not by sending less context. The knowledge graph is the orchestrator's compression mechanism; bypassing it to "save tokens" typically increases total tokens spent because the agent recovers context the expensive way (exploration tokens) or produces lower-quality output that requires re-dispatch. Context minimization means *minimum sufficient context, delivered via the cheapest pipeline available*.
+
+**Falsifiable scope** (per inclusion criteria, Change 1): a future PR that proposes any execution path bypassing the knowledge graph + compression pipeline must justify that bypass with empirical token data showing total task tokens go down, not just payload size. Without that data the PR fails the principle.
+
+**Mechanical verification capability**: feasible — a verifier could compare JSONL token totals on fixtures with-knowledge vs without-knowledge for any path that introduces a bypass. M027's existing rollup engine does most of the math.
+
+**Distinctness**: doesn't restate VII (Knowledge Compounds) — VII says knowledge accumulates; this clarifies how knowledge is *delivered*. Together they imply: knowledge layer is the load-bearing context delivery mechanism, full stop.
+
+This is a clarification of intent, not a new principle. Lives in Principle I's body. Existing wording stays; one paragraph appended.
+
 ## Out of scope
 
 - Renumbering existing principles. Keep I-XV stable to preserve cross-references in `ANTIPATTERNS.md` ("Principle Violated: IX") and `knowledge/` entries.

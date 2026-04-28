@@ -16,6 +16,9 @@
 #
 # Export surface:
 #   - kf_get_compression_enabled <project_root>
+#   - kf_get_tier2_enabled <project_root>          (M018/P04/T01)
+#   - kf_get_tier2_section_budget_tokens <project_root>
+#   - kf_get_tier2_protected_tail_ratio <project_root>
 #       Echoes 'true' or 'false'. Defaults 'true' when key missing.
 #       Honors ORCH_OVERRIDE_COMPRESSION_ENABLED env var (highest precedence).
 #   - kf_get_knowledge_filter_enabled <project_root>
@@ -78,10 +81,12 @@ kf_read_compression_scalar() {
       in_kf = 0
       in_up = 0
       in_t1 = 0
+      in_t2 = 0
       base_indent = -1
       kf_indent = -1
       up_indent = -1
       t1_indent = -1
+      t2_indent = -1
     }
     # Track exit from compression: block when we see a non-indented key.
     /^[A-Za-z_][A-Za-z0-9_-]*:[[:space:]]*/ {
@@ -90,6 +95,7 @@ kf_read_compression_scalar() {
         in_kf = 0
         in_up = 0
         in_t1 = 0
+        in_t2 = 0
         base_indent = -1
         kf_indent = -1
         up_indent = -1
@@ -114,6 +120,7 @@ kf_read_compression_scalar() {
         in_kf = 0
         in_up = 0
         in_t1 = 0
+        in_t2 = 0
         next
       }
       if (base_indent < 0) base_indent = ind
@@ -136,6 +143,7 @@ kf_read_compression_scalar() {
           in_kf = 1
           in_up = 0
           in_t1 = 0
+          in_t2 = 0
           kf_indent = -1
           # value is empty (block header), skip
           next
@@ -143,18 +151,28 @@ kf_read_compression_scalar() {
           in_up = 1
           in_kf = 0
           in_t1 = 0
+          in_t2 = 0
           up_indent = -1
           next
         } else if (kname == "tier1") {
           in_t1 = 1
           in_kf = 0
           in_up = 0
+          in_t2 = 0
           t1_indent = -1
+          next
+        } else if (kname == "tier2") {
+          in_t2 = 1
+          in_kf = 0
+          in_up = 0
+          in_t1 = 0
+          t2_indent = -1
           next
         } else {
           in_kf = 0
           in_up = 0
           in_t1 = 0
+          in_t2 = 0
         }
         if (kname == want) {
           print rest
@@ -221,6 +239,26 @@ kf_read_compression_scalar() {
               exit 0
             }
           }
+        } else if (in_t2 == 1) {
+          if (t2_indent < 0) t2_indent = ind
+          if (ind == t2_indent) {
+            line = $0
+            sub(/^[[:space:]]+/, "", line)
+            kpos = index(line, ":")
+            if (kpos == 0) next
+            kname = substr(line, 1, kpos - 1)
+            rest = substr(line, kpos + 1)
+            sub(/^[[:space:]]+/, "", rest)
+            sub(/[[:space:]]*#.*$/, "", rest)
+            sub(/[[:space:]]+$/, "", rest)
+            gsub(/^"|"$/, "", rest)
+            gsub(/^'\''|'\''$/, "", rest)
+            full = "tier2." kname
+            if (full == want) {
+              print rest
+              exit 0
+            }
+          }
         }
       } else if (ind < base_indent) {
         # Exited compression: block by dedent.
@@ -228,6 +266,7 @@ kf_read_compression_scalar() {
         in_kf = 0
         in_up = 0
         in_t1 = 0
+        in_t2 = 0
       }
     }
   ' "$cfg"
@@ -374,6 +413,47 @@ kf_get_tier1_cache_dir() {
   val="$(kf_read_compression_scalar "$cfg" tier1.cache_dir)"
   if [ -z "$val" ]; then
     printf '.orchestrator/cache/tool-results/\n'
+  else
+    printf '%s\n' "$val"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# kf_get_tier2_<key> <project_root>  ->  scalar
+# M018/P04/T01: Tier 2 snip config accessors. Each returns the scalar value
+# from compression.tier2.<key> or the documented default when absent.
+# ---------------------------------------------------------------------------
+kf_get_tier2_enabled() {
+  local project_root="${1:-}"
+  local cfg val
+  cfg="$(kf_resolve_config_path "$project_root")"
+  val="$(kf_read_compression_scalar "$cfg" tier2.enabled)"
+  if [ "$val" = "false" ]; then
+    printf 'false\n'
+  else
+    printf 'true\n'
+  fi
+}
+
+kf_get_tier2_section_budget_tokens() {
+  local project_root="${1:-}"
+  local cfg val
+  cfg="$(kf_resolve_config_path "$project_root")"
+  val="$(kf_read_compression_scalar "$cfg" tier2.section_budget_tokens)"
+  if [ -z "$val" ]; then
+    printf '1500\n'
+  else
+    printf '%s\n' "$val"
+  fi
+}
+
+kf_get_tier2_protected_tail_ratio() {
+  local project_root="${1:-}"
+  local cfg val
+  cfg="$(kf_resolve_config_path "$project_root")"
+  val="$(kf_read_compression_scalar "$cfg" tier2.protected_tail_ratio)"
+  if [ -z "$val" ]; then
+    printf '0.3\n'
   else
     printf '%s\n' "$val"
   fi

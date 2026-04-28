@@ -73,3 +73,17 @@ compression:
     inline_threshold_tokens: 1500
     preview_lines: 5
     cache_dir: .orchestrator/cache/tool-results/
+  # M018/P04 — Tier 2 snip (head-drop with protected tail ratio).
+  # When an in-scope section body's body-token count exceeds
+  # `section_budget_tokens`, the leading bytes are head-dropped while the
+  # trailing `protected_tail_ratio` of pre-snip section bytes survives
+  # byte-identical. An in-band marker
+  # `<!-- compressed:tier2 head_dropped=N protected_tail_ratio=R -->` names
+  # the snip. The cut is line-aligned and refuses to split frontmatter,
+  # 4+-backtick code fences, or other multi-line preserved spans
+  # (cross-tier vocabulary in `scripts/lib/preservation-check.sh`). In-scope
+  # sections: `## Knowledge`, `## Task Plan`, `## Upstream Context`.
+  tier2:
+    enabled: true
+    section_budget_tokens: 1500
+    protected_tail_ratio: 0.3

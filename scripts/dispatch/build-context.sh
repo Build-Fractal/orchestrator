@@ -196,6 +196,14 @@ case "$TIER1_CACHE_DIR" in
   *)  TIER1_CACHE_DIR="$PROJECT_ROOT/$TIER1_CACHE_DIR" ;;
 esac
 export TIER1_ENABLED TIER1_INLINE_THRESHOLD_TOKENS TIER1_PREVIEW_LINES TIER1_CACHE_DIR
+# M018/P04/T01: Tier 2 snip config. Defaults: enabled=true,
+# section_budget_tokens=1500, protected_tail_ratio=0.3. Master
+# `compression.enabled` toggle (FR-15) gates this tier; per-tier
+# `compression.tier2.enabled` short-circuits Tier 2 alone.
+TIER2_ENABLED="$(kf_get_tier2_enabled "$PROJECT_ROOT")"
+TIER2_SECTION_BUDGET_TOKENS="$(kf_get_tier2_section_budget_tokens "$PROJECT_ROOT")"
+TIER2_PROTECTED_TAIL_RATIO="$(kf_get_tier2_protected_tail_ratio "$PROJECT_ROOT")"
+export TIER2_ENABLED TIER2_SECTION_BUDGET_TOKENS TIER2_PROTECTED_TAIL_RATIO
 
 # --- Read tier from roadmap (used by planning branch + computed state handler) ---
 TIER="$(bash "$READ_ROADMAP" "$ROADMAP" tier 2>/dev/null || echo unknown)"
@@ -749,6 +757,272 @@ _bc_apply_tier1() {
       # Restore pre-paging body; clear stats so emitter writes 0/0.
       cp "$pre_file" "$capture_file"
       printf 'savings_tokens=0 invocations=0\n' > "$stats_file"
+      return 0
+    fi
+  fi
+
+  # Atomic in-place replace.
+  mv "$out_file" "$capture_file"
+  return 0
+}
+
+# M018/P04/T01: Tier 2 snip — section head-drop with protected tail.
+#
+# Argument 1: path to the captured payload file (already through Tier 1, prior
+# to _bc_emit_payload_breakdown). The function rewrites the file in place
+# when head-drop fires; otherwise leaves it untouched.
+#
+# Side-effect outputs:
+#   - Writes a stats line to $TMPDIR_BUILD/_tier2_stats.txt of the form:
+#       savings_tokens=<N>
+#     The caller (_bc_emit_payload_breakdown) reads this file to populate
+#     the additive `tier2_savings_tokens` field.
+#
+# Short-circuits (passthrough; stats file written with savings_tokens=0):
+#   - $COMPRESSION_ENABLED != "true"
+#   - $TIER2_ENABLED != "true"
+#   - The capture file contains zero in-scope `^## ` sections.
+#   - Every in-scope section's body token-count is at or below
+#     $TIER2_SECTION_BUDGET_TOKENS.
+#
+# Boundary-refusal: when the line-aligned cut would land inside a multi-line
+# preserved span (frontmatter `^---$` pair or `^`{3,}[a-zA-Z0-9_-]*$`
+# code-fence pair at matching backtick-count), the cut retreats above the
+# span; if no safe boundary exists at or above the naive cut byte and below
+# the protected tail, the section passes through unmodified plus a
+# tier_preservation_violation JSONL emit (tier=tier2, pattern=spanning
+# vocabulary label).
+#
+# Preservation self-check:
+#   - After head-drop, runs pres_check_section "tier2" <pre> <post> tier2
+#     against the rewritten payload. On failure, restores the pre-snip
+#     payload byte-identical and emits tier_preservation_violation via
+#     pres_emit_violation.
+#
+# AP-009 compliance: no compound chains > 2; no plain subshells; no
+# $(...|...). Awk does the heavy lifting in a single invocation.
+# MEM004 carve-out: dispatch-internal helper, like _bc_apply_tier1.
+_bc_apply_tier2() {
+  local capture_file="$1"
+  if [ "$COMPRESSION_ENABLED" != "true" ] || [ "$TIER2_ENABLED" != "true" ]; then
+    return 0
+  fi
+  if [ ! -f "$capture_file" ]; then
+    return 0
+  fi
+
+  local pre_file out_file stats_file
+  pre_file="$TMPDIR_BUILD/_tier2_pre.txt"
+  out_file="$TMPDIR_BUILD/_tier2_out.txt"
+  stats_file="$TMPDIR_BUILD/_tier2_stats.txt"
+  cp "$capture_file" "$pre_file"
+
+  # Single awk pass:
+  #   - Stream the input line by line.
+  #   - Buffer each in-scope section's body (between its `## <Section>`
+  #     heading and the next `## ` heading or EOF).
+  #   - Track multi-line preserved spans line-by-line so each buffered line
+  #     carries a "safe-to-cut-above-this-line" flag.
+  #   - At section close, decide whether to head-drop:
+  #       body_tokens > budget? compute naive cut, retreat to safe boundary,
+  #       emit `## <Section>\n<!-- compressed:tier2 ... -->\n<tail>` or pass
+  #       through verbatim plus emit a violation marker for the bash caller
+  #       to pick up (via $TMPDIR_BUILD/_tier2_violations.txt).
+  #
+  # Inputs threaded as awk variables:
+  #   budget   — section_budget_tokens
+  #   ratio    — protected_tail_ratio (e.g. 0.3)
+  #   stf      — stats_file
+  #   vlf      — violations_file
+  awk -v budget="$TIER2_SECTION_BUDGET_TOKENS" \
+      -v ratio="$TIER2_PROTECTED_TAIL_RATIO" \
+      -v stf="$stats_file" \
+      -v vlf="$TMPDIR_BUILD/_tier2_violations.txt" \
+      '
+      function tok(c) { return int((c + 3) / 4) }
+      function in_scope(name) {
+        return (name == "Knowledge" || name == "Task Plan" || name == "Upstream Context")
+      }
+      function flush_section(   body_chars, body_tokens, cut_byte, i, cum, cut_line, j, drop_chars, drop_tokens, head_safe) {
+        if (!in_scope(sec_name)) {
+          # Out-of-scope: emit as captured.
+          printf "%s", sec_raw
+          sec_name=""; sec_raw=""; body_n=0
+          return
+        }
+        body_chars = 0
+        for (i = 1; i <= body_n; i++) {
+          # +1 for the newline that joins back at emit time.
+          body_chars += length(body_lines[i]) + 1
+        }
+        body_tokens = tok(body_chars)
+        if (body_tokens <= budget + 0) {
+          # Under budget — pass through verbatim.
+          printf "%s", sec_raw
+          sec_name=""; sec_raw=""; body_n=0
+          return
+        }
+        # Naive cut byte = floor(body_chars * (1 - ratio)).
+        cut_byte = int(body_chars * (1.0 - (ratio + 0)))
+        # Walk forward in body lines accumulating until we cross cut_byte.
+        cum = 0
+        cut_line = body_n
+        for (i = 1; i <= body_n; i++) {
+          if (cum + length(body_lines[i]) + 1 > cut_byte) {
+            cut_line = i
+            break
+          }
+          cum += length(body_lines[i]) + 1
+        }
+        # Retreat: walk DOWN from cut_line toward line 1 until body_unsafe[i] == 0.
+        head_safe = 0
+        for (j = cut_line; j >= 1; j--) {
+          if (body_unsafe[j] != 1) {
+            head_safe = j
+            break
+          }
+        }
+        if (head_safe == 0) {
+          # No safe boundary found — pass through unmodified, log violation.
+          printf "%s", sec_raw
+          if (body_unsafe[cut_line] == 1) {
+            printf "section=%s pattern=%s\n", sec_name, body_unsafe_label[cut_line] >> vlf
+          } else {
+            printf "section=%s pattern=%s\n", sec_name, "unknown" >> vlf
+          }
+          close(vlf)
+          sec_name=""; sec_raw=""; body_n=0
+          return
+        }
+        # Compute drop_chars = cumulative bytes of lines [1..head_safe-1].
+        drop_chars = 0
+        for (i = 1; i < head_safe; i++) {
+          drop_chars += length(body_lines[i]) + 1
+        }
+        if (drop_chars == 0) {
+          # Cut at line 1 means nothing actually dropped — pass through.
+          printf "%s", sec_raw
+          sec_name=""; sec_raw=""; body_n=0
+          return
+        }
+        drop_tokens = tok(drop_chars)
+        # Emit: heading line + marker + post-cut body.
+        printf "%s\n", sec_heading
+        printf "<!-- compressed:tier2 head_dropped=%d protected_tail_ratio=%.2f -->\n", drop_tokens, ratio + 0
+        for (i = head_safe; i <= body_n; i++) {
+          printf "%s", body_lines[i]
+          if (i < body_n) {
+            printf "\n"
+          }
+        }
+        # If sec_raw ended with a newline, mirror that.
+        if (substr(sec_raw, length(sec_raw), 1) == "\n") {
+          printf "\n"
+        }
+        savings_tok += drop_tokens
+        sec_name=""; sec_raw=""; body_n=0
+      }
+      function open_section(line) {
+        if (match(line, /^## [A-Za-z][^\n]*$/)) {
+          sec_heading = line
+          sub(/^## /, "", line)
+          if (line ~ /^Knowledge( |$)/)             { sec_name = "Knowledge" }
+          else if (line ~ /^Task Plan( |$)/)        { sec_name = "Task Plan" }
+          else if (line ~ /^Upstream Context( |$)/) { sec_name = "Upstream Context" }
+          else                                      { sec_name = "OTHER" }
+          sec_raw = sec_heading "\n"
+          body_n = 0
+          # Reset multi-line span trackers — sections are independent.
+          fm_open = 0
+          fence_open_ticks = 0
+        }
+      }
+      BEGIN { sec_name=""; sec_raw=""; body_n=0; savings_tok=0; fm_open=0; fence_open_ticks=0 }
+      /^## / {
+        if (sec_name != "") { flush_section() }
+        open_section($0)
+        next
+      }
+      sec_name == "" {
+        # Pre-first-section bytes (manifest, frontmatter) — emit verbatim.
+        print
+        next
+      }
+      {
+        # Body line of current section.
+        body_n += 1
+        body_lines[body_n] = $0
+        # Compute "is this line INSIDE a multi-line span at the START of the
+        # line?" — that is the unsafe flag the cut-retreat walker reads.
+        body_unsafe[body_n] = (fm_open == 1 || fence_open_ticks > 0) ? 1 : 0
+        body_unsafe_label[body_n] = (fm_open == 1) ? "yaml-frontmatter-delim" : (fence_open_ticks > 0 ? "code-fence" : "")
+        # Update span state AFTER recording the flag (so the line that opens
+        # a span is itself safe — the cut may land at the OPENER, but a cut
+        # below the opener falls inside the span and is unsafe).
+        if ($0 == "---") {
+          if (fm_open == 0) { fm_open = 1 } else { fm_open = 0 }
+        } else if (match($0, /^`{3,}[a-zA-Z0-9_-]*$/)) {
+          # Count backticks at start.
+          ticks = 0
+          for (k = 1; k <= length($0); k++) {
+            if (substr($0, k, 1) == "`") { ticks += 1 } else { break }
+          }
+          if (fence_open_ticks == 0) {
+            fence_open_ticks = ticks
+          } else if (ticks == fence_open_ticks) {
+            # Matching closer — close.
+            fence_open_ticks = 0
+          }
+          # Mismatched ticks inside an open fence — leave fence_open_ticks
+          # unchanged (the inner line is just content of the outer fence).
+        }
+        # sec_raw mirrors the captured bytes for the verbatim-passthrough path.
+        sec_raw = sec_raw $0 "\n"
+        next
+      }
+      END {
+        if (sec_name != "") { flush_section() }
+        printf "savings_tokens=%d\n", savings_tok > stf
+        close(stf)
+      }
+      ' "$pre_file" > "$out_file"
+
+  # Pick up any boundary-refusal violations the awk pass logged.
+  if [ -f "$TMPDIR_BUILD/_tier2_violations.txt" ]; then
+    if type pres_emit_violation >/dev/null 2>&1; then
+      local _t2_log _vline _vsec _vpat
+      _t2_log="$ORCH_ROOT/milestones/$MILESTONE_ID/execution-log.jsonl"
+      if [ ! -d "$ORCH_ROOT/milestones/$MILESTONE_ID" ] && [ -d "$ORCH_ROOT/phases" ]; then
+        _t2_log="$ORCH_ROOT/execution-log.jsonl"
+      fi
+      while IFS= read -r _vline; do
+        # _vline shape: `section=<name> pattern=<label>`.
+        _vsec="$(printf '%s' "$_vline" | sed -n 's/^section=\([^ ]*\).*$/\1/p')"
+        _vpat="$(printf '%s' "$_vline" | sed -n 's/.* pattern=\(.*\)$/\1/p')"
+        pres_emit_violation "tier2" "$_vsec" "$_vpat" "$_t2_log" 2>/dev/null || true
+      done < "$TMPDIR_BUILD/_tier2_violations.txt"
+    fi
+    rm -f "$TMPDIR_BUILD/_tier2_violations.txt" 2>/dev/null || true
+  fi
+
+  # Preservation self-check on the rewritten payload as a whole. Strict
+  # tier2 multiplicity — every preserved-pattern occurrence in the pre
+  # payload must occur in the post payload (the head-drop of an in-scope
+  # section legitimately removes content; the boundary-refusal detector
+  # is the guarantee that the removed content carried zero preserved
+  # patterns. If the self-check disagrees, the snip is undone.)
+  if type pres_check_section >/dev/null 2>&1; then
+    if ! pres_check_section "tier2" "$pre_file" "$out_file" tier2 >/dev/null 2>&1; then
+      if type pres_emit_violation >/dev/null 2>&1; then
+        local _t2_log2
+        _t2_log2="$ORCH_ROOT/milestones/$MILESTONE_ID/execution-log.jsonl"
+        if [ ! -d "$ORCH_ROOT/milestones/$MILESTONE_ID" ] && [ -d "$ORCH_ROOT/phases" ]; then
+          _t2_log2="$ORCH_ROOT/execution-log.jsonl"
+        fi
+        pres_emit_violation "tier2" "payload" "cross-tier" "$_t2_log2" 2>/dev/null || true
+      fi
+      cp "$pre_file" "$capture_file"
+      printf 'savings_tokens=0\n' > "$stats_file"
       return 0
     fi
   fi
@@ -1433,12 +1707,32 @@ EOF_PB_NAMES
     if [ -z "$tier1_invocations" ];   then tier1_invocations=0; fi
   fi
 
-  printf '{"record_type":"payload_breakdown","unitId":"%s/%s/%s","milestone":"%s","phase":"%s","task":"%s","payload_chars":%d,"payload_tokens_estimate":%d,"token_estimate_method":"char-quartile","section_tokens":{%s},"filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier1_invocations":%d,"model":"%s","source":"estimate","timestamp":"%s"}\n' \
+  # M018/P04/T01 (CON-5): additive `tier2_savings_tokens` field. Reads
+  # $TMPDIR_BUILD/_tier2_stats.txt written by _bc_apply_tier2. Defaults to 0
+  # when tier2 was disabled, the file is absent, or no in-scope section
+  # exceeded the budget.
+  local tier2_savings_tokens=0
+  local _bc_pb_t2_stats="$TMPDIR_BUILD/_tier2_stats.txt"
+  if [ -f "$_bc_pb_t2_stats" ]; then
+    tier2_savings_tokens="$(awk '{
+      for (i = 1; i <= NF; i++) {
+        if ($i ~ /^savings_tokens=/) {
+          sub("savings_tokens=", "", $i)
+          print $i
+          exit
+        }
+      }
+    }' "$_bc_pb_t2_stats")"
+    if [ -z "$tier2_savings_tokens" ]; then tier2_savings_tokens=0; fi
+  fi
+
+  printf '{"record_type":"payload_breakdown","unitId":"%s/%s/%s","milestone":"%s","phase":"%s","task":"%s","payload_chars":%d,"payload_tokens_estimate":%d,"token_estimate_method":"char-quartile","section_tokens":{%s},"filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier1_invocations":%d,"tier2_savings_tokens":%d,"model":"%s","source":"estimate","timestamp":"%s"}\n' \
     "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" \
     "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" \
     "$payload_chars" "$payload_tokens" \
     "$section_tokens_json" "$filter_dropped_tokens" \
     "$tier1_savings_tokens" "$tier1_invocations" \
+    "$tier2_savings_tokens" \
     "$model" "$ts" \
     >> "$log_file" 2>/dev/null || {
     printf 'build-context.sh: payload_breakdown append failed on %s\n' "$log_file" >&2
@@ -1721,6 +2015,12 @@ _bc_assemble_manifest_and_emit "$SECTION_COUNT" "$SECTION_NAMES_PIPE" "$SECTION_
 # `compression.enabled: false` (P02 byte-identity contract) or when
 # `compression.tier1.enabled: false`.
 _bc_apply_tier1 "$PAYLOAD_CAPTURE" || true
+# M018/P04/T01: Tier 2 snip runs against the post-tier1 captured payload BEFORE
+# the receiving agent sees the bytes (cat below) and BEFORE the breakdown
+# emitter samples it (so emitter section sizes reflect post-tier2 reality).
+# Short-circuits when `compression.enabled: false` (P02 byte-identity contract)
+# or when `compression.tier2.enabled: false` (per-tier disable).
+_bc_apply_tier2 "$PAYLOAD_CAPTURE" || true
 cat "$PAYLOAD_CAPTURE"
 _bc_emit_payload_breakdown "$PAYLOAD_CAPTURE" || true
 _bc_emit_payload_filter || true

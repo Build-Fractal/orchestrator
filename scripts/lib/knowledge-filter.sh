@@ -76,16 +76,20 @@ kf_read_compression_scalar() {
     BEGIN {
       in_compression = 0
       in_kf = 0
+      in_up = 0
       base_indent = -1
       kf_indent = -1
+      up_indent = -1
     }
     # Track exit from compression: block when we see a non-indented key.
     /^[A-Za-z_][A-Za-z0-9_-]*:[[:space:]]*/ {
       if ($0 !~ /^compression:/) {
         in_compression = 0
         in_kf = 0
+        in_up = 0
         base_indent = -1
         kf_indent = -1
+        up_indent = -1
       }
     }
     /^compression:[[:space:]]*$/ {
@@ -104,6 +108,7 @@ kf_read_compression_scalar() {
       if (ind == 0 && $0 ~ /^[A-Za-z_]/) {
         in_compression = 0
         in_kf = 0
+        in_up = 0
         next
       }
       if (base_indent < 0) base_indent = ind
@@ -124,11 +129,18 @@ kf_read_compression_scalar() {
         gsub(/^'\''|'\''$/, "", rest)
         if (kname == "knowledge_filter") {
           in_kf = 1
+          in_up = 0
           kf_indent = -1
           # value is empty (block header), skip
           next
+        } else if (kname == "underperformance") {
+          in_up = 1
+          in_kf = 0
+          up_indent = -1
+          next
         } else {
           in_kf = 0
+          in_up = 0
         }
         if (kname == want) {
           print rest
@@ -155,11 +167,32 @@ kf_read_compression_scalar() {
               exit 0
             }
           }
+        } else if (in_up == 1) {
+          if (up_indent < 0) up_indent = ind
+          if (ind == up_indent) {
+            line = $0
+            sub(/^[[:space:]]+/, "", line)
+            kpos = index(line, ":")
+            if (kpos == 0) next
+            kname = substr(line, 1, kpos - 1)
+            rest = substr(line, kpos + 1)
+            sub(/^[[:space:]]+/, "", rest)
+            sub(/[[:space:]]*#.*$/, "", rest)
+            sub(/[[:space:]]+$/, "", rest)
+            gsub(/^"|"$/, "", rest)
+            gsub(/^'\''|'\''$/, "", rest)
+            full = "underperformance." kname
+            if (full == want) {
+              print rest
+              exit 0
+            }
+          }
         }
       } else if (ind < base_indent) {
         # Exited compression: block by dedent.
         in_compression = 0
         in_kf = 0
+        in_up = 0
       }
     }
   ' "$cfg"
@@ -201,6 +234,60 @@ kf_get_knowledge_filter_enabled() {
     printf 'false\n'
   else
     printf 'true\n'
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# kf_get_underperformance_<key> <project_root>  ->  scalar
+# M018/P02/T03 (MIT-09): aggregate-savings underperformance self-check
+# config accessors. Each returns the scalar value from
+# compression.underperformance.<key> or the documented default when absent.
+# ---------------------------------------------------------------------------
+kf_get_underperformance_enabled() {
+  local project_root="${1:-}"
+  local cfg val
+  cfg="$(kf_resolve_config_path "$project_root")"
+  val="$(kf_read_compression_scalar "$cfg" underperformance.enabled)"
+  if [ "$val" = "false" ]; then
+    printf 'false\n'
+  else
+    printf 'true\n'
+  fi
+}
+
+kf_get_underperformance_window_size() {
+  local project_root="${1:-}"
+  local cfg val
+  cfg="$(kf_resolve_config_path "$project_root")"
+  val="$(kf_read_compression_scalar "$cfg" underperformance.window_size)"
+  if [ -z "$val" ]; then
+    printf '30\n'
+  else
+    printf '%s\n' "$val"
+  fi
+}
+
+kf_get_underperformance_floor_pct() {
+  local project_root="${1:-}"
+  local cfg val
+  cfg="$(kf_resolve_config_path "$project_root")"
+  val="$(kf_read_compression_scalar "$cfg" underperformance.floor_pct)"
+  if [ -z "$val" ]; then
+    printf '34.7\n'
+  else
+    printf '%s\n' "$val"
+  fi
+}
+
+kf_get_underperformance_min_sample_size() {
+  local project_root="${1:-}"
+  local cfg val
+  cfg="$(kf_resolve_config_path "$project_root")"
+  val="$(kf_read_compression_scalar "$cfg" underperformance.min_sample_size)"
+  if [ -z "$val" ]; then
+    printf '10\n'
+  else
+    printf '%s\n' "$val"
   fi
 }
 

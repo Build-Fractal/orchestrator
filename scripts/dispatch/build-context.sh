@@ -1344,6 +1344,122 @@ _bc_emit_payload_filter() {
   return 0
 }
 
+# M018/P02/T03: compression_underperformance self-check.
+# MIT-09 (P01 carryover): operational signal — never blocks dispatch.
+# Emits compression_underperformance JSONL when running mean reduction over
+# the last $window_size payload_breakdown records falls below
+# $floor_pct (default 34.7, SC-9 calibrated floor per P00 80% CI lower bound).
+# Sample-size guard: skips emission when count < $min_sample_size (default 10)
+# so the check doesn't fire spuriously on a fresh log.
+# Reduction math: (sum of tier savings) / (payload_tokens + sum of tier savings).
+_bc_emit_compression_underperformance() {
+  if [ "${ORCH_M019_EMIT:-1}" = "0" ]; then
+    return 0
+  fi
+
+  local enabled window_size floor_pct min_sample_size
+  enabled="$(kf_get_underperformance_enabled "$PROJECT_ROOT")"
+  if [ "$enabled" != "true" ]; then
+    return 0
+  fi
+  window_size="$(kf_get_underperformance_window_size "$PROJECT_ROOT")"
+  floor_pct="$(kf_get_underperformance_floor_pct "$PROJECT_ROOT")"
+  min_sample_size="$(kf_get_underperformance_min_sample_size "$PROJECT_ROOT")"
+
+  local log_dir log_file
+  log_dir="$ORCH_ROOT/milestones/$MILESTONE_ID"
+  if [ ! -d "$log_dir" ] && [ -d "$ORCH_ROOT/phases" ]; then
+    log_dir="$ORCH_ROOT"
+  fi
+  log_file="$log_dir/execution-log.jsonl"
+  if [ ! -f "$log_file" ]; then
+    return 0
+  fi
+
+  # Compute running mean reduction over the last $window_size payload_breakdown
+  # records. Use awk: it has the floating-point math we need and runs in one
+  # process (AP-009 safe — single command).
+  local stats
+  stats="$(awk -v win="$window_size" -v floor="$floor_pct" -v min="$min_sample_size" '
+    BEGIN { rec_count = 0 }
+    /"record_type":"payload_breakdown"/ {
+      pte = 0; fdt = 0; t1 = 0; t2 = 0; t3 = 0
+      # Substring offsets are length-of-key-prefix (e.g. `"key":` is 26 chars
+      # for payload_tokens_estimate; `RSTART+26` starts at the digit run).
+      if (match($0, /"payload_tokens_estimate":[0-9]+/)) {
+        v = substr($0, RSTART+26, RLENGTH-26)
+        pte = v + 0
+      }
+      if (match($0, /"filter_dropped_tokens":[0-9]+/)) {
+        v = substr($0, RSTART+24, RLENGTH-24)
+        fdt = v + 0
+      }
+      if (match($0, /"tier1_savings_tokens":[0-9]+/)) {
+        v = substr($0, RSTART+23, RLENGTH-23)
+        t1 = v + 0
+      }
+      if (match($0, /"tier2_savings_tokens":[0-9]+/)) {
+        v = substr($0, RSTART+23, RLENGTH-23)
+        t2 = v + 0
+      }
+      if (match($0, /"tier3_compression_savings_tokens":[0-9]+/)) {
+        v = substr($0, RSTART+35, RLENGTH-35)
+        t3 = v + 0
+      }
+      saved = fdt + t1 + t2 + t3
+      pre = pte + saved
+      if (pre > 0) {
+        pct = (saved * 100.0) / pre
+        rec_count++
+        rec_pct[rec_count] = pct
+      }
+    }
+    END {
+      if (rec_count < min) {
+        printf "INSUFFICIENT %d %d\n", rec_count, min
+        exit 0
+      }
+      start = rec_count - win + 1
+      if (start < 1) start = 1
+      actual_window = rec_count - start + 1
+      total = 0
+      for (i = start; i <= rec_count; i++) total += rec_pct[i]
+      mean = total / actual_window
+      printf "MEAN %.2f %d %.2f\n", mean, actual_window, floor
+    }
+  ' "$log_file")"
+
+  # Parse stats line.
+  local marker mean_pct sample_size floor_seen
+  marker="$(printf '%s\n' "$stats" | awk '{print $1}')"
+  if [ "$marker" != "MEAN" ]; then
+    return 0
+  fi
+  mean_pct="$(printf '%s\n' "$stats" | awk '{print $2}')"
+  sample_size="$(printf '%s\n' "$stats" | awk '{print $3}')"
+  floor_seen="$(printf '%s\n' "$stats" | awk '{print $4}')"
+
+  # Compare mean_pct < floor_pct using awk (bash 3.2 has no float comparison).
+  local under
+  under="$(awk -v m="$mean_pct" -v f="$floor_seen" 'BEGIN { print (m < f) ? "1" : "0" }')"
+  if [ "$under" != "1" ]; then
+    return 0
+  fi
+
+  # Compute shortfall.
+  local shortfall
+  shortfall="$(awk -v m="$mean_pct" -v f="$floor_seen" 'BEGIN { printf "%.2f", f - m }')"
+
+  local ts
+  ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  printf '{"record_type":"compression_underperformance","milestone":"%s","phase":"%s","task":"%s","running_mean_pct":%s,"floor_pct":%s,"window_size":%d,"sample_size":%d,"shortfall_pct":%s,"timestamp":"%s"}\n' \
+    "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" \
+    "$mean_pct" "$floor_seen" "$window_size" "$sample_size" \
+    "$shortfall" "$ts" \
+    >> "$log_file" 2>/dev/null || true
+  return 0
+}
+
 # Capture the assembled payload into a temp file so we can measure its byte
 # size AND still emit it to stdout byte-identically (SC-6). Zero-token: no new
 # content is added to the payload; only a post-emit observation is made.
@@ -1352,4 +1468,5 @@ _bc_assemble_manifest_and_emit "$SECTION_COUNT" "$SECTION_NAMES_PIPE" "$SECTION_
 cat "$PAYLOAD_CAPTURE"
 _bc_emit_payload_breakdown "$PAYLOAD_CAPTURE" || true
 _bc_emit_payload_filter || true
+_bc_emit_compression_underperformance || true
 exit 0

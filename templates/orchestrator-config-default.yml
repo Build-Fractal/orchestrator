@@ -62,3 +62,15 @@ compression:
     drop_list:
       - superseded
       - experimental
+  # M018/P02/T03 (MIT-09): aggregate-savings underperformance self-check.
+  # Operational signal — emits a `compression_underperformance` JSONL record
+  # when the running mean payload-token reduction across the last
+  # `window_size` `payload_breakdown` records falls below `floor_pct` (the
+  # SC-9 calibrated 34.7% floor from P00's 80% CI lower bound). Never blocks
+  # dispatch. `min_sample_size` guards against spurious alarms while P02 is
+  # the only shipping tier (tier1/tier2/tier3 land in P03/P04/P06).
+  underperformance:
+    enabled: true                 # Self-check toggle.
+    window_size: 30               # Last N payload_breakdown records considered.
+    floor_pct: 34.7               # SC-9 calibrated floor.
+    min_sample_size: 10           # Skip when count < min_sample_size.

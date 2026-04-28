@@ -2,10 +2,10 @@
 
 > **ID note**: originally drafted as M026; renumbered to M028 after discovering M026 ("Conversus-OSS Migration", closed 2026-04-25) and M027 ("Cost+Quality Observability Surfaces", closed 2026-04-27) had already taken those IDs. No scope conflict — only the number changed.
 
-**Captured**: 2026-04-27 (renumbered 2026-04-28)
+**Captured**: 2026-04-27 (renumbered 2026-04-28; Finding F appended 2026-04-28 during M018 close)
 **Shape**: Milestone (5 phases) — collapsible to 2 quick PRs depending on P01 baseline
-**Predecessors**: M016 (autonomous hardening v1, shipped), M021 (autonomous hardening v2, shipped)
-**Source**: Fresh sweep of 7 `orchestrator:auto` interruption screenshots (2026-04-25 to 2026-04-26) plus inspection of existing M021 infrastructure
+**Predecessors**: M016 (autonomous hardening v1, shipped), M021 (autonomous hardening v2, shipped), M025 (installer coexistence — Finding F is its follow-up)
+**Source**: Fresh sweep of 7 `orchestrator:auto` interruption screenshots (2026-04-25 to 2026-04-26) plus inspection of existing M021 infrastructure; Finding F surfaced post-M018 close (operator-reported `orchestrator-post-verify: command not found` Stop-hook failure)
 
 ## Goal
 
@@ -75,6 +75,29 @@ Each gets:
 
 **Where it fires today**: per-step result files cleanup in `auto-loop.sh` (or its callers) — needs traced during P01.
 
+### Finding F: M025 hook-shim regression — bare command names + dedup leak
+
+**Captured**: 2026-04-28 during M018 close (operator: "non-blocking but worth investigating after mark-complete.sh lands"). Sibling-class to Finding A; both are M025 hook-coexistence work that didn't carry far enough.
+
+**Evidence**: Stop-hook fires `orchestrator-post-verify: command not found` at session end on the orchestrator's *own* repo. `~/.claude/settings.json` contains 5 duplicate `Stop` wrappers and 7 duplicate `PreToolUse` Bash wrappers naming `orchestrator-post-verify` / `orchestrator-before-commit` — neither on PATH; neither carries the `_orchestrator_managed: true` flag the M025 merge helper expects for its uninstall cascade.
+
+**Root causes** (three distinct bugs, one symptom):
+
+1. **Adapter emits bare command names not on PATH**. `scripts/dispatch/adapters/runtime/claude-code.sh:170-189` emits `"command": "orchestrator-post-verify"` and `"command": "orchestrator-before-commit"` as bare names. The actual scripts live at `scripts/lifecycle/before-commit.sh` and `scripts/lifecycle/after-verify-sync.sh` (per `packaging/bundle/hooks/{post,before}-*.json`), but no shim is installed and the adapter doesn't reference these paths. Claude Code's hook runner resolves the bare name via the user's `PATH` and finds nothing.
+2. **Merge helper accumulates duplicates on repeated install**. `scripts/util/settings-merge.sh` has uninstall-cascade logic (line 270+) but no install-side dedup keyed on the `_orchestrator_managed` tag. Each `install-claude-code.sh` rerun appends another wrapper.
+3. **`_orchestrator_managed: true` flag does not survive the merge for some pre-existing dupes.** All 12 dupes in the operator's `~/.claude/settings.json` lack the flag, so even M025's uninstall path can't differentiate them from user-authored hooks. Either an older merge helper stripped the flag, or the flag was never written for those entries — to be confirmed via P01 replay against a snapshotted pre-install fixture.
+
+**Fix shape** (folds into Finding A's P02 scope cleanly because both touch the same installer + adapter surface):
+
+- **Adapter**: emit absolute bash invocations (`"command": "bash <runtime-stable-hooks-dir>/before-commit.sh"`) targeting the same `~/.claude/orchestrator-hooks/` location Finding A specifies. The adapter stops being a source of bare names; the script payload travels with the install.
+- **Installer**: copy `scripts/lifecycle/{before-commit,after-verify-sync}.sh` into the runtime-stable hooks dir alongside the M021 shape-guard hook (Finding A). One copy operation, one settings.json write, both classes of hooks land at once.
+- **Merge helper**: add an install-side dedup pass keyed on `(event, matcher, command)` × `_orchestrator_managed: true`. Each install run is now idempotent — second run is a no-op, not an append. Pinned-sha round-trip gate (per M025/P01's reversibility pattern) extends to the `install → install → uninstall` triple to prove idempotency at the canonical-bytes level.
+- **Backfill**: a `packaging/install/repair-claude-code.sh` (or `install-claude-code.sh --repair`) command that detects flag-less orphaned entries matching known M025 patterns and removes them. The operator-side cleanup I did manually for M018 close becomes a one-liner: `bash packaging/install/install-claude-code.sh --repair`.
+
+**Cross-reference**: M025/P01 explicitly named M009 as the downstream consumer for the "orchestrator owns only its own hook entries under `_orchestrator_managed` tag" invariant. Per the 2026-04-28 reordering (M009 deferred post-launch), M028 is the new home — same invariant, earlier shipping.
+
+**Impact**: every `install-claude-code.sh` rerun today doubles broken-hook noise. M028's other findings are useless if installs themselves don't dedup.
+
 ### Finding E: Agent-emitted *investigation* patterns, not orchestrator script output
 
 **Evidence**: Screenshots 1, 4, 5, 6 — these are exploratory grep/cat/node-eval that an agent ran mid-task to inspect files. Not orchestrator script output.
@@ -93,7 +116,7 @@ Each gets:
 | Phase | Goal | Key artifact | Verifies |
 |---|---|---|---|
 | P01 | Empirical baseline | 7 new corpus entries (one per screenshot) appended to `tests/fixtures/m021-prompt-corpus.txt`. Replay shows current pass/fail. Decision: collapse to 2 PRs or proceed with full milestone. | Each screenshot has a known classification verdict. |
-| P02 | Hook portability | Installer copies hook + classifier into `~/.claude/orchestrator-hooks/`. Hook self-locates via `$0`. End-to-end test: fresh bbt-companion-style fixture, run autonomous loop, all 4 downstream-project screenshots reject. | Cross-project replay passes. |
+| P02 | Hook portability + M025 follow-up | Installer copies hook + classifier + lifecycle hooks (`before-commit.sh`, `after-verify-sync.sh`) into `~/.claude/orchestrator-hooks/`. Shape-guard hook self-locates via `$0`. Adapter emits absolute `bash <hooks-dir>/<name>.sh` instead of bare command names (Finding F). Merge helper gains install-side dedup keyed on `(event, matcher, command)` × `_orchestrator_managed`. `--repair` flag added to clean flag-less M025-pattern orphans. End-to-end test: fresh bbt-companion-style fixture, run autonomous loop, all 4 downstream-project screenshots reject; Stop hook fires successfully (post-verify runs); install run twice produces byte-identical settings.json. | Cross-project replay passes; install idempotency pinned-sha gate; `--repair` round-trips a flag-less-orphan fixture. |
 | P03 | Classifier extension | AP-010, AP-011, AP-012, AP-013 added to register, classifier, reject_lookup, corpus. M021 corpus still passes (no regressions). New corpus entries reject as expected. | Replay corpus 100% expected verdict. |
 | P04 | Investigation pattern wrappers + dispatch.md catalog | `grep-files.sh`, `cleanup-stale-results.sh`, `node-eval.sh` ship with tests. `commands/dispatch.md` and PAYLOAD template have "Investigation patterns" examples. ANTIPATTERNS.md has §"Investigation patterns" cross-ref. | Antipattern lint passes against updated dispatch.md + template. |
 | P05 | Cross-project replay + verifiers + summary | Verifier suite under `scripts/verify/m026/`. Fresh-fixture autonomous run produces zero prompts on combined M021+M026 corpus. Summary file. | All P01-P04 verifiers pass; downstream replay clean. |
@@ -137,3 +160,10 @@ Total ~1 day of work instead of a 5-phase milestone. P01 is the gating data.
 - `packaging/install/install-claude-code.sh:213-238` (installer hook-merge — extend to copy script payload)
 - `commands/dispatch.md` (add Investigation patterns section)
 - 7 source screenshots: 2026-04-25 8:33 PM / 8:50 PM / 10:04 PM, 2026-04-26 12:21 AM / 9:53 AM / 12:22 PM / 2:33 PM (paths in user message, not in repo)
+- **Finding F sources** (added 2026-04-28 during M018 close):
+  - `scripts/dispatch/adapters/runtime/claude-code.sh:170-189` (bare-command-name emission — the M025 follow-up bug)
+  - `scripts/util/settings-merge.sh:270-310` (uninstall cascade exists; install-side dedup missing)
+  - `packaging/bundle/hooks/before-commit.json`, `packaging/bundle/hooks/post-verify.json` (the actual hook commands the adapter should be referencing)
+  - `scripts/lifecycle/before-commit.sh`, `scripts/lifecycle/after-verify-sync.sh` (the lifecycle scripts that need to be copied alongside `pre-bash-shape-guard.sh`)
+  - `~/.claude/settings.json.bak-m018-cleanup-2026-04-28` (operator-side backup capturing the duplicated-orphan state for P01 replay; lives outside the repo)
+  - `.orchestrator/milestones/M025/M025-SUMMARY.md` `affects:` field — explicitly names this carve-out as a future-milestone concern

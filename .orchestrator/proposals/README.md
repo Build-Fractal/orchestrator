@@ -9,7 +9,7 @@ These docs are inputs for `orchestrator:specify` (and downstream `orchestrator:e
 | ID | Title | Shape | Standalone? |
 |---|---|---|---|
 | `constitution-amendment-inclusion-criteria.md` | Inclusion-criteria gate + governance log + distribution-surface integrity | Constitution PR (~50 LOC + 1 new doc) | Yes — no milestone needed |
-| `M028-autonomous-hardening-v3.md` | Hook portability + 4 new shape classes + investigation-pattern wrappers | Milestone (5 phases) or 2 quick PRs | Some phases standalone |
+| `M028-autonomous-hardening-v3.md` | Hook portability + 4 new shape classes + investigation-pattern wrappers + M025 hook-shim follow-up (bare command names, install dedup, `--repair`) | Milestone (5 phases) or 2 quick PRs | Some phases standalone |
 | `M029-roadmap-visibility-and-cli-ux.md` | `orchestrator:where` tree + invocation-context resolver + headline status (embeds M027 surfaces) | Milestone (3 phases) | No — coherent feature |
 | `M030-adaptive-model-selection.md` | Task-character classifier + model routing table + verifier-fail escalation; surface savings via M027 | Milestone (4 phases) or 2-3 quick PRs depending on classifier complexity | Yes — independent feature |
 | `M031-right-sized-entry.md` | Knowledge + compression unconditional across all intensities; Tier A+ middle flow (research → plan → build); universal `orchestrator <task>` entry; evaluate.md drift reconciliation | Milestone (4 phases + optional P00 baseline) | No — coherent feature |
@@ -49,6 +49,8 @@ M010 (Managed Agents + Codex Cloud)   ← DEFERRED — aspirational, demand-driv
 ### Why M028 first (after M018 finishes)
 
 The 7 auto-interruption screenshots from 2026-04-25/26 reveal the M021 shape guard fails-open in *consumer* projects (script path resolved via `$CLAUDE_PROJECT_DIR` lands outside the orchestrator repo). Any future autonomous-run-heavy milestone (M030's shadow mode, M023's design-agent dispatching, M009's runtime-parity audit) re-incurs the same prompt interruptions M021 already classified. Hook portability is the load-bearing fix.
+
+The M018 close (2026-04-28) surfaced a sibling problem — Finding F in M028 — where the M025 runtime adapter emits bare command names (`orchestrator-post-verify`, `orchestrator-before-commit`) that aren't on PATH, and the merge helper has no install-side dedup so `~/.claude/settings.json` accumulates broken duplicates on every install rerun. Same hook-coexistence surface as Finding A; folded into P02. This raises M028's load-bearing-ness — its absence breaks Stop hooks even on the orchestrator's own repo, not just downstream consumers.
 
 ### Why M030 right after M028
 

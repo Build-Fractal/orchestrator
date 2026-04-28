@@ -181,6 +181,22 @@ COMPRESSION_ENABLED="$(kf_get_compression_enabled "$PROJECT_ROOT")"
 KNOWLEDGE_FILTER_ENABLED="$(kf_get_knowledge_filter_enabled "$PROJECT_ROOT")"
 export COMPRESSION_ENABLED KNOWLEDGE_FILTER_ENABLED
 
+# M018/P03/T01: Tier 1 microcompact config. Defaults: enabled=true,
+# inline_threshold_tokens=1500, preview_lines=5,
+# cache_dir=.orchestrator/cache/tool-results/. Resolution honors the master
+# `compression.enabled` toggle (FR-15) — when that is false the entire
+# pipeline short-circuits regardless of per-tier toggles.
+TIER1_ENABLED="$(kf_get_tier1_enabled "$PROJECT_ROOT")"
+TIER1_INLINE_THRESHOLD_TOKENS="$(kf_get_tier1_inline_threshold_tokens "$PROJECT_ROOT")"
+TIER1_PREVIEW_LINES="$(kf_get_tier1_preview_lines "$PROJECT_ROOT")"
+TIER1_CACHE_DIR="$(kf_get_tier1_cache_dir "$PROJECT_ROOT")"
+# Resolve cache_dir relative to PROJECT_ROOT when not absolute.
+case "$TIER1_CACHE_DIR" in
+  /*) : ;;  # absolute, leave alone
+  *)  TIER1_CACHE_DIR="$PROJECT_ROOT/$TIER1_CACHE_DIR" ;;
+esac
+export TIER1_ENABLED TIER1_INLINE_THRESHOLD_TOKENS TIER1_PREVIEW_LINES TIER1_CACHE_DIR
+
 # --- Read tier from roadmap (used by planning branch + computed state handler) ---
 TIER="$(bash "$READ_ROADMAP" "$ROADMAP" tier 2>/dev/null || echo unknown)"
 
@@ -538,6 +554,208 @@ _bc_apply_knowledge_filter() {
   else
     cat "$out_file"
   fi
+}
+
+# ============================================================================
+# M018/P03/T01: Tier 1 microcompact — tool-result paging + cache reuse.
+# ============================================================================
+# Argument 1: path to the captured payload file (already assembled, prior
+# to _bc_emit_payload_breakdown). The function rewrites the file in place
+# when paging fires; otherwise leaves it untouched.
+#
+# Side-effect outputs:
+#   - Writes paged tool-result bodies to $TIER1_CACHE_DIR/<sha256> (one
+#     file per unique command+input, full-fidelity body).
+#   - Writes a stats line to $TMPDIR_BUILD/_tier1_stats.txt of the form:
+#       savings_tokens=<N> invocations=<N>
+#     The caller (_bc_emit_payload_breakdown) reads this file to populate
+#     the additive `tier1_savings_tokens` + `tier1_invocations` fields.
+#
+# Short-circuits (passthrough; stats file not written; no cache writes):
+#   - $COMPRESSION_ENABLED != "true"           (FR-15 master toggle)
+#   - $TIER1_ENABLED != "true"                  (per-tier toggle)
+#   - The capture file contains zero `^<tool-result command=` opens.
+#   - mkdir -p $TIER1_CACHE_DIR fails (one-line stderr warning emitted).
+#
+# Preservation self-check:
+#   - After paging, runs pres_check_section "tier1" against the post-paging
+#     file. On failure, restores the pre-paging file and emits
+#     `tier_preservation_violation` via pres_emit_violation.
+#
+# AP-009 compliance: no compound chains > 2; no plain subshells; no
+# $(...|...). Awk does the heavy lifting in a single invocation.
+# MEM004 carve-out: dispatch-internal helper, like _bc_apply_knowledge_filter.
+_bc_apply_tier1() {
+  local capture_file="$1"
+  if [ "$COMPRESSION_ENABLED" != "true" ] || [ "$TIER1_ENABLED" != "true" ]; then
+    return 0
+  fi
+  if [ ! -f "$capture_file" ]; then
+    return 0
+  fi
+  # Quick gate: any tool-result blocks at all? grep -c on no-match exits 1
+  # but still prints "0" on stdout — defensive zero-fallback per MEM (pitfall
+  # flagged in T01 dispatch payload).
+  local _tr_count
+  _tr_count="$(grep -c '^<tool-result command=' "$capture_file" 2>/dev/null || true)"
+  if [ -z "$_tr_count" ]; then
+    _tr_count=0
+  fi
+  if [ "$_tr_count" = "0" ]; then
+    return 0
+  fi
+
+  if ! mkdir -p "$TIER1_CACHE_DIR" 2>/dev/null; then
+    printf 'build-context.sh: tier1 disabled — cache_dir unwritable: %s\n' "$TIER1_CACHE_DIR" >&2
+    return 0
+  fi
+
+  local pre_file out_file stats_file
+  pre_file="$TMPDIR_BUILD/_tier1_pre.txt"
+  out_file="$TMPDIR_BUILD/_tier1_out.txt"
+  stats_file="$TMPDIR_BUILD/_tier1_stats.txt"
+  cp "$capture_file" "$pre_file"
+
+  # Single awk pass: scan the file, accumulate command + input + body for
+  # every <tool-result ...>...</tool-result> block, hash + write the cache,
+  # and emit the transformed payload to $out_file. Running totals to
+  # $stats_file. Inputs threaded as awk variables:
+  #   th     — inline_threshold_tokens
+  #   pl     — preview_lines
+  #   cdir   — TIER1_CACHE_DIR (with trailing slash)
+  #   stf    — stats_file
+  # Token estimation mirrors chars_to_tokens_quartile from
+  # scripts/lib/pricing.sh: int((chars + 3) / 4).
+  awk -v th="$TIER1_INLINE_THRESHOLD_TOKENS" \
+      -v pl="$TIER1_PREVIEW_LINES" \
+      -v cdir="$TIER1_CACHE_DIR" \
+      -v stf="$stats_file" \
+      '
+      function tok(c) { return int((c + 3) / 4) }
+      function sha256(s,   tmpf, cmd, h) {
+        # Stage payload to temp file (avoids shell-escaping issues with
+        # arbitrary command/input bytes) and shell out for the digest.
+        tmpf = stf "._sha_in"
+        printf "%s", s > tmpf
+        close(tmpf)
+        cmd = "shasum -a 256 \"" tmpf "\" | cut -c1-64"
+        cmd | getline h
+        close(cmd)
+        return h
+      }
+      function flush_block(   body_chars, body_tok, key, path, preview, n, lines, i, prev_chars, _t) {
+        if (cmd_only) {
+          printf "%s", raw
+          raw=""; in_block=0; saw_input=0; saw_body=0
+          cmd_only=0
+          return
+        }
+        body_chars = length(body_buf)
+        body_tok = tok(body_chars)
+        if (body_tok <= th + 0) {
+          printf "%s", raw
+          raw=""; in_block=0; saw_input=0; saw_body=0
+          body_buf=""; input_buf=""; saved_cmd=""
+          return
+        }
+        # Page it. SHA-256 over command + 0x1F + input.
+        key = sha256(saved_cmd "\x1F" input_buf)
+        # cdir already terminates with "/" when sourced from config (the
+        # default does); guard for the edge where it does not.
+        if (substr(cdir, length(cdir)) == "/") {
+          path = cdir key
+        } else {
+          path = cdir "/" key
+        }
+        # Write the cache file iff missing (preserve mtime on reuse).
+        if ((getline _t < path) < 0) {
+          close(path)
+          printf "%s", body_buf > path
+          close(path)
+        } else {
+          close(path)
+        }
+        # Build preview: first pl lines of body.
+        n = split(body_buf, lines, "\n")
+        preview = ""
+        for (i = 1; i <= n && i <= pl + 0; i++) {
+          if (preview == "") {
+            preview = lines[i]
+          } else {
+            preview = preview "\n" lines[i]
+          }
+        }
+        prev_chars = length(preview)
+        # Emit the paged tag. Output ends with newline so subsequent payload
+        # bytes flow normally.
+        printf "<tool-result file=\"%s\" preview-lines=\"%d\" command=\"%s\" original-body-tokens=\"%d\">\n%s\n</tool-result>\n", \
+               path, pl + 0, saved_cmd, body_tok, preview
+        savings_tok += body_tok - tok(prev_chars)
+        inv_total += 1
+        raw=""; in_block=0; saw_input=0; saw_body=0
+        body_buf=""; input_buf=""; saved_cmd=""
+      }
+      BEGIN { in_block=0; saw_input=0; saw_body=0; cmd_only=0; raw=""; savings_tok=0; inv_total=0 }
+      /^<tool-result command=/ {
+        line=$0
+        match(line, /command="[^"]*"/)
+        if (RSTART > 0) {
+          # substr(..., RSTART+9, RLENGTH-10): drop `command="` (9 chars)
+          # and the trailing `"` (1 char).
+          saved_cmd = substr(line, RSTART + 9, RLENGTH - 10)
+        } else {
+          saved_cmd = ""
+        }
+        in_block=1; saw_input=0; saw_body=0; cmd_only=1
+        body_buf=""; input_buf=""
+        raw=line "\n"
+        next
+      }
+      in_block && /^<tool-result-input>/  { saw_input=1; raw=raw $0 "\n"; next }
+      in_block && /^<\/tool-result-input>/ { saw_input=0; raw=raw $0 "\n"; next }
+      in_block && saw_input==1            { input_buf = input_buf $0 "\n"; raw=raw $0 "\n"; next }
+      in_block && /^<tool-result-body>/   { saw_body=1; cmd_only=0; raw=raw $0 "\n"; next }
+      in_block && /^<\/tool-result-body>/ { saw_body=0; raw=raw $0 "\n"; next }
+      in_block && saw_body==1             { body_buf = body_buf $0 "\n"; raw=raw $0 "\n"; next }
+      in_block && /^<\/tool-result>/      { raw=raw $0 "\n"; flush_block(); next }
+      in_block                            { raw=raw $0 "\n"; next }
+      { print }
+      END {
+        printf "savings_tokens=%d invocations=%d\n", savings_tok, inv_total > stf
+        close(stf)
+        # Best-effort cleanup of the staging file used by sha256().
+        cleanf = stf "._sha_in"
+        ("rm -f \"" cleanf "\"") | getline _ign
+      }
+      ' "$pre_file" > "$out_file"
+
+  # Preservation self-check: pres_check_section <section> <pre> <post> tier1.
+  # Strict-multiplicity tier1 semantics. Tier 1 paging legitimately removes
+  # tool-result-body content that may itself contain code-fences, JSONL
+  # records, or other preserved patterns; under strict tier1/tier2
+  # semantics, those would be expected to mismatch. The grammar treats
+  # tool-result paging as the failure-semantics carve-out: any match-count
+  # delta on a paged block triggers passthrough + a violation record.
+  if type pres_check_section >/dev/null 2>&1; then
+    if ! pres_check_section "tier1" "$pre_file" "$out_file" tier1 >/dev/null 2>&1; then
+      if type pres_emit_violation >/dev/null 2>&1; then
+        local _t1_log
+        _t1_log="$ORCH_ROOT/milestones/$MILESTONE_ID/execution-log.jsonl"
+        if [ ! -d "$ORCH_ROOT/milestones/$MILESTONE_ID" ] && [ -d "$ORCH_ROOT/phases" ]; then
+          _t1_log="$ORCH_ROOT/execution-log.jsonl"
+        fi
+        pres_emit_violation "tier1" "payload" "cross-tier" "$_t1_log" 2>/dev/null || true
+      fi
+      # Restore pre-paging body; clear stats so emitter writes 0/0.
+      cp "$pre_file" "$capture_file"
+      printf 'savings_tokens=0 invocations=0\n' > "$stats_file"
+      return 0
+    fi
+  fi
+
+  # Atomic in-place replace.
+  mv "$out_file" "$capture_file"
+  return 0
 }
 
 _bc_gather_decisions() {
@@ -1186,11 +1404,42 @@ EOF_PB_NAMES
     fi
   fi
 
-  printf '{"record_type":"payload_breakdown","unitId":"%s/%s/%s","milestone":"%s","phase":"%s","task":"%s","payload_chars":%d,"payload_tokens_estimate":%d,"token_estimate_method":"char-quartile","section_tokens":{%s},"filter_dropped_tokens":%d,"model":"%s","source":"estimate","timestamp":"%s"}\n' \
+  # M018/P03/T01 (CON-5): additive `tier1_savings_tokens` + `tier1_invocations`
+  # fields. Reads $TMPDIR_BUILD/_tier1_stats.txt written by _bc_apply_tier1.
+  # Defaults to 0 when tier1 was disabled, the file is absent, or the section
+  # contained no oversized tool-result blocks.
+  local tier1_savings_tokens=0 tier1_invocations=0
+  local _bc_pb_t1_stats="$TMPDIR_BUILD/_tier1_stats.txt"
+  if [ -f "$_bc_pb_t1_stats" ]; then
+    tier1_savings_tokens="$(awk '{
+      for (i = 1; i <= NF; i++) {
+        if ($i ~ /^savings_tokens=/) {
+          sub("savings_tokens=", "", $i)
+          print $i
+          exit
+        }
+      }
+    }' "$_bc_pb_t1_stats")"
+    tier1_invocations="$(awk '{
+      for (i = 1; i <= NF; i++) {
+        if ($i ~ /^invocations=/) {
+          sub("invocations=", "", $i)
+          print $i
+          exit
+        }
+      }
+    }' "$_bc_pb_t1_stats")"
+    if [ -z "$tier1_savings_tokens" ]; then tier1_savings_tokens=0; fi
+    if [ -z "$tier1_invocations" ];   then tier1_invocations=0; fi
+  fi
+
+  printf '{"record_type":"payload_breakdown","unitId":"%s/%s/%s","milestone":"%s","phase":"%s","task":"%s","payload_chars":%d,"payload_tokens_estimate":%d,"token_estimate_method":"char-quartile","section_tokens":{%s},"filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier1_invocations":%d,"model":"%s","source":"estimate","timestamp":"%s"}\n' \
     "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" \
     "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" \
     "$payload_chars" "$payload_tokens" \
-    "$section_tokens_json" "$filter_dropped_tokens" "$model" "$ts" \
+    "$section_tokens_json" "$filter_dropped_tokens" \
+    "$tier1_savings_tokens" "$tier1_invocations" \
+    "$model" "$ts" \
     >> "$log_file" 2>/dev/null || {
     printf 'build-context.sh: payload_breakdown append failed on %s\n' "$log_file" >&2
     return 0
@@ -1466,6 +1715,12 @@ _bc_emit_compression_underperformance() {
 # content is added to the payload; only a post-emit observation is made.
 PAYLOAD_CAPTURE="$TMPDIR_BUILD/_payload_capture.txt"
 _bc_assemble_manifest_and_emit "$SECTION_COUNT" "$SECTION_NAMES_PIPE" "$SECTION_PRIORITIES_PIPE" "$FRONTMATTER" "$TITLE" > "$PAYLOAD_CAPTURE"
+# M018/P03/T01: Tier 1 microcompact runs against the captured payload BEFORE
+# cat so the receiving agent sees paged bytes, and before the breakdown
+# emitter so payload sizing reflects post-tier1 reality. Short-circuits when
+# `compression.enabled: false` (P02 byte-identity contract) or when
+# `compression.tier1.enabled: false`.
+_bc_apply_tier1 "$PAYLOAD_CAPTURE" || true
 cat "$PAYLOAD_CAPTURE"
 _bc_emit_payload_breakdown "$PAYLOAD_CAPTURE" || true
 _bc_emit_payload_filter || true

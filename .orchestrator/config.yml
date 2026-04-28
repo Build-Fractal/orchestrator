@@ -60,3 +60,16 @@ compression:
     window_size: 30
     floor_pct: 34.7
     min_sample_size: 10
+  # M018/P03 — Tier 1 microcompact (tool-result paging + cache reuse).
+  # When a tool-result block's body exceeds `inline_threshold_tokens`, the
+  # body is replaced inline with a `<tool-result file="..." preview-lines="...">`
+  # reference and the original is persisted to `cache_dir/<sha256>`. Cache
+  # lookups key on SHA-256(command + 0x1F + input) so identical tool calls
+  # across dispatches reuse the same file. `preview_lines` is the number of
+  # leading body lines retained in-band so the receiving agent has a
+  # zero-fetch summary.
+  tier1:
+    enabled: true
+    inline_threshold_tokens: 1500
+    preview_lines: 5
+    cache_dir: .orchestrator/cache/tool-results/

@@ -19,6 +19,12 @@
 #   - kf_get_tier2_enabled <project_root>          (M018/P04/T01)
 #   - kf_get_tier2_section_budget_tokens <project_root>
 #   - kf_get_tier2_protected_tail_ratio <project_root>
+#   - kf_get_tier3_enabled <project_root>          (M018/P06/T01)
+#   - kf_get_tier3_intensity_floor <project_root>
+#   - kf_get_tier3_section_budget_tokens <project_root>
+#   - kf_get_tier3_originals_dir <project_root>
+#   - kf_get_tier3_output_max_ratio <project_root>
+#   - kf_get_tier3_density_floor <project_root>
 #       Echoes 'true' or 'false'. Defaults 'true' when key missing.
 #       Honors ORCH_OVERRIDE_COMPRESSION_ENABLED env var (highest precedence).
 #   - kf_get_knowledge_filter_enabled <project_root>
@@ -82,11 +88,13 @@ kf_read_compression_scalar() {
       in_up = 0
       in_t1 = 0
       in_t2 = 0
+      in_ef = 0
       base_indent = -1
       kf_indent = -1
       up_indent = -1
       t1_indent = -1
       t2_indent = -1
+      ef_indent = -1
     }
     # Track exit from compression: block when we see a non-indented key.
     /^[A-Za-z_][A-Za-z0-9_-]*:[[:space:]]*/ {
@@ -96,10 +104,12 @@ kf_read_compression_scalar() {
         in_up = 0
         in_t1 = 0
         in_t2 = 0
+        in_ef = 0
         base_indent = -1
         kf_indent = -1
         up_indent = -1
         t1_indent = -1
+        ef_indent = -1
       }
     }
     /^compression:[[:space:]]*$/ {
@@ -121,6 +131,7 @@ kf_read_compression_scalar() {
         in_up = 0
         in_t1 = 0
         in_t2 = 0
+        in_ef = 0
         next
       }
       if (base_indent < 0) base_indent = ind
@@ -144,6 +155,7 @@ kf_read_compression_scalar() {
           in_up = 0
           in_t1 = 0
           in_t2 = 0
+          in_ef = 0
           kf_indent = -1
           # value is empty (block header), skip
           next
@@ -152,6 +164,7 @@ kf_read_compression_scalar() {
           in_kf = 0
           in_t1 = 0
           in_t2 = 0
+          in_ef = 0
           up_indent = -1
           next
         } else if (kname == "tier1") {
@@ -159,6 +172,7 @@ kf_read_compression_scalar() {
           in_kf = 0
           in_up = 0
           in_t2 = 0
+          in_ef = 0
           t1_indent = -1
           next
         } else if (kname == "tier2") {
@@ -166,13 +180,23 @@ kf_read_compression_scalar() {
           in_kf = 0
           in_up = 0
           in_t1 = 0
+          in_ef = 0
           t2_indent = -1
+          next
+        } else if (kname == "efficiency_footer") {
+          in_ef = 1
+          in_kf = 0
+          in_up = 0
+          in_t1 = 0
+          in_t2 = 0
+          ef_indent = -1
           next
         } else {
           in_kf = 0
           in_up = 0
           in_t1 = 0
           in_t2 = 0
+          in_ef = 0
         }
         if (kname == want) {
           print rest
@@ -259,6 +283,26 @@ kf_read_compression_scalar() {
               exit 0
             }
           }
+        } else if (in_ef == 1) {
+          if (ef_indent < 0) ef_indent = ind
+          if (ind == ef_indent) {
+            line = $0
+            sub(/^[[:space:]]+/, "", line)
+            kpos = index(line, ":")
+            if (kpos == 0) next
+            kname = substr(line, 1, kpos - 1)
+            rest = substr(line, kpos + 1)
+            sub(/^[[:space:]]+/, "", rest)
+            sub(/[[:space:]]*#.*$/, "", rest)
+            sub(/[[:space:]]+$/, "", rest)
+            gsub(/^"|"$/, "", rest)
+            gsub(/^'\''|'\''$/, "", rest)
+            full = "efficiency_footer." kname
+            if (full == want) {
+              print rest
+              exit 0
+            }
+          }
         }
       } else if (ind < base_indent) {
         # Exited compression: block by dedent.
@@ -267,6 +311,7 @@ kf_read_compression_scalar() {
         in_up = 0
         in_t1 = 0
         in_t2 = 0
+        in_ef = 0
       }
     }
   ' "$cfg"
@@ -454,6 +499,118 @@ kf_get_tier2_protected_tail_ratio() {
   val="$(kf_read_compression_scalar "$cfg" tier2.protected_tail_ratio)"
   if [ -z "$val" ]; then
     printf '0.3\n'
+  else
+    printf '%s\n' "$val"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# kf_get_tier3_<key> <project_root>  ->  scalar
+# M018/P06/T01: Tier 3 auto-compact config accessors. Each returns the scalar
+# value from compression.tier3.<key> or the documented default when absent.
+# ---------------------------------------------------------------------------
+kf_get_tier3_enabled() {
+  local project_root="${1:-}"
+  local cfg val
+  cfg="$(kf_resolve_config_path "$project_root")"
+  val="$(kf_read_compression_scalar "$cfg" tier3.enabled)"
+  if [ "$val" = "false" ]; then
+    printf 'false\n'
+  else
+    printf 'true\n'
+  fi
+}
+
+kf_get_tier3_intensity_floor() {
+  local project_root="${1:-}"
+  local cfg val
+  cfg="$(kf_resolve_config_path "$project_root")"
+  val="$(kf_read_compression_scalar "$cfg" tier3.intensity_floor)"
+  case "$val" in
+    quick|standard|full) printf '%s\n' "$val" ;;
+    *) printf 'standard\n' ;;
+  esac
+}
+
+kf_get_tier3_section_budget_tokens() {
+  local project_root="${1:-}"
+  local cfg val
+  cfg="$(kf_resolve_config_path "$project_root")"
+  val="$(kf_read_compression_scalar "$cfg" tier3.section_budget_tokens)"
+  if [ -z "$val" ]; then
+    printf '2500\n'
+  else
+    printf '%s\n' "$val"
+  fi
+}
+
+kf_get_tier3_originals_dir() {
+  local project_root="${1:-}"
+  local cfg val
+  cfg="$(kf_resolve_config_path "$project_root")"
+  val="$(kf_read_compression_scalar "$cfg" tier3.originals_dir)"
+  if [ -z "$val" ]; then
+    printf '.orchestrator/cache/tier3-originals/\n'
+  else
+    printf '%s\n' "$val"
+  fi
+}
+
+kf_get_tier3_output_max_ratio() {
+  local project_root="${1:-}"
+  local cfg val
+  cfg="$(kf_resolve_config_path "$project_root")"
+  val="$(kf_read_compression_scalar "$cfg" tier3.output_max_ratio)"
+  if [ -z "$val" ]; then
+    printf '0.80\n'
+  else
+    printf '%s\n' "$val"
+  fi
+}
+
+kf_get_tier3_density_floor() {
+  local project_root="${1:-}"
+  local cfg val
+  cfg="$(kf_resolve_config_path "$project_root")"
+  val="$(kf_read_compression_scalar "$cfg" tier3.density_floor)"
+  if [ -z "$val" ]; then
+    printf '1.5\n'
+  else
+    printf '%s\n' "$val"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# kf_get_efficiency_footer_compression_enabled <project_root> -> 'true'|'false'
+# M018/P05/T02: gates the one-line compression tail in efficiency-footer.sh
+# (independent of the parent `efficiency_footer` knob — parent suppresses
+# the whole footer; this knob suppresses only the compression line).
+# Defaults true when key absent. Mirrors the kf_get_*_enabled shape.
+# ---------------------------------------------------------------------------
+kf_get_efficiency_footer_compression_enabled() {
+  local project_root="${1:-}"
+  local cfg val
+  cfg="$(kf_resolve_config_path "$project_root")"
+  val="$(kf_read_compression_scalar "$cfg" efficiency_footer.enabled)"
+  if [ "$val" = "false" ]; then
+    printf 'false\n'
+  else
+    printf 'true\n'
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# kf_get_compression_regression_floor <project_root>  ->  scalar
+# M018/P05/T02: SC-9 P00-calibrated savings-ratio floor consumed by
+# check-anomalies.sh `compression-regression` reason. Defaults 0.347.
+# ---------------------------------------------------------------------------
+kf_get_compression_regression_floor() {
+  local project_root="${1:-}"
+  local cfg val
+  cfg="$(kf_resolve_config_path "$project_root")"
+  val="$(kf_read_compression_scalar "$cfg" regression_floor)"
+  if [ -z "$val" ]; then
+    printf '0.347\n'
   else
     printf '%s\n' "$val"
   fi

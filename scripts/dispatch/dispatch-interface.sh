@@ -130,6 +130,50 @@ ${suggested_action}
 EOF
 }
 
+# --- M018/P05/T01: dispatch_usage savings-field rollup ---
+# Reads the same-unitId payload_breakdown record(s) from the in-flight log
+# file and emits six integers on stdout (one per line, in order):
+#   filter_dropped_tokens, tier1_savings_tokens, tier2_savings_tokens,
+#   tier1_invocations, tier3_compression_savings_tokens, tier3_invocations
+# (Last two fields appended by M018/P06/T02 — CON-5 additive carry-forward.)
+# Records lacking a field contribute 0. Multiple matching records sum.
+# Bail-safe: missing log file or zero matches emits "0\n0\n0\n0\n0\n0\n".
+# MEM004 emitter-internal carve-out — pipes/awk/$() permitted in body.
+_di_rollup_savings_fields() {
+  local log_file="$1"
+  local unit_id="$2"
+  if [ -z "$log_file" ] || [ ! -f "$log_file" ] || [ -z "$unit_id" ]; then
+    printf '0\n0\n0\n0\n0\n0\n'
+    return 0
+  fi
+  awk -v uid="$unit_id" '
+    BEGIN { fdrop = 0; t1s = 0; t2s = 0; t1i = 0; t3s = 0; t3i = 0 }
+    /"record_type":"payload_breakdown"/ {
+      if (index($0, "\"unitId\":\"" uid "\"") == 0) next
+      if (match($0, /"filter_dropped_tokens":[0-9]+/)) {
+        v = substr($0, RSTART, RLENGTH); sub(/.*:/, "", v); fdrop += v + 0
+      }
+      if (match($0, /"tier1_savings_tokens":[0-9]+/)) {
+        v = substr($0, RSTART, RLENGTH); sub(/.*:/, "", v); t1s += v + 0
+      }
+      if (match($0, /"tier2_savings_tokens":[0-9]+/)) {
+        v = substr($0, RSTART, RLENGTH); sub(/.*:/, "", v); t2s += v + 0
+      }
+      if (match($0, /"tier1_invocations":[0-9]+/)) {
+        v = substr($0, RSTART, RLENGTH); sub(/.*:/, "", v); t1i += v + 0
+      }
+      # M018/P06/T02 — additive tier3 fields.
+      if (match($0, /"tier3_compression_savings_tokens":[0-9]+/)) {
+        v = substr($0, RSTART, RLENGTH); sub(/.*:/, "", v); t3s += v + 0
+      }
+      if (match($0, /"tier3_invocations":[0-9]+/)) {
+        v = substr($0, RSTART, RLENGTH); sub(/.*:/, "", v); t3i += v + 0
+      }
+    }
+    END { printf "%d\n%d\n%d\n%d\n%d\n%d\n", fdrop, t1s, t2s, t1i, t3s, t3i }
+  ' "$log_file" 2>/dev/null || printf '0\n0\n0\n0\n0\n0\n'
+}
+
 # --- M019/P01/T03: dispatch_usage JSONL emitter ---
 # Emits exactly one `dispatch_usage` record per dispatch invocation after
 # BACKEND is resolved. Called from the happy-path end AND each post-BACKEND
@@ -204,6 +248,25 @@ _di_emit_dispatch_usage() {
   fi
   log_file="$log_dir/execution-log.jsonl"
 
+  # M018/P05/T01: roll up the same-unitId payload_breakdown savings fields.
+  # Reads from the in-flight log; missing log / zero matches → all zeros.
+  # M018/P06/T02: extended with tier3_compression_savings_tokens / tier3_invocations.
+  local _di_savings _di_filter_dropped _di_tier1_savings _di_tier2_savings _di_tier1_invocs
+  local _di_tier3_savings _di_tier3_invocs
+  _di_savings="$(_di_rollup_savings_fields "$log_file" "$UNIT_ID")"
+  _di_filter_dropped="$(printf '%s\n' "$_di_savings" | sed -n '1p')"
+  _di_tier1_savings="$(printf '%s\n' "$_di_savings" | sed -n '2p')"
+  _di_tier2_savings="$(printf '%s\n' "$_di_savings" | sed -n '3p')"
+  _di_tier1_invocs="$(printf '%s\n' "$_di_savings" | sed -n '4p')"
+  _di_tier3_savings="$(printf '%s\n' "$_di_savings" | sed -n '5p')"
+  _di_tier3_invocs="$(printf '%s\n' "$_di_savings" | sed -n '6p')"
+  [ -n "$_di_filter_dropped" ] || _di_filter_dropped=0
+  [ -n "$_di_tier1_savings" ] || _di_tier1_savings=0
+  [ -n "$_di_tier2_savings" ] || _di_tier2_savings=0
+  [ -n "$_di_tier1_invocs" ] || _di_tier1_invocs=0
+  [ -n "$_di_tier3_savings" ] || _di_tier3_savings=0
+  [ -n "$_di_tier3_invocs" ] || _di_tier3_invocs=0
+
   mkdir -p "$log_dir" 2>/dev/null || {
     printf 'dispatch-interface.sh: dispatch_usage emit skipped (mkdir failed on %s)\n' "$log_dir" >&2
     return 0
@@ -217,10 +280,13 @@ _di_emit_dispatch_usage() {
     # Happy path — numeric cost, no warning field.
     # M018/P00/T01: emission_point="dispatch-interface" disambiguates from
     # build-context co-located emissions (CON-5 additive field).
-    printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"%s","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":%s,"pricing_version":"%s","model":"%s","source":"estimate","emission_point":"dispatch-interface","timestamp":"%s"}\n' \
+    printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"%s","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":%s,"pricing_version":"%s","filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier2_savings_tokens":%d,"tier1_invocations":%d,"tier3_compression_savings_tokens":%d,"tier3_invocations":%d,"model":"%s","source":"estimate","emission_point":"dispatch-interface","timestamp":"%s"}\n' \
       "$UNIT_ID" "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" "$BACKEND" \
       "$input_tokens" "$output_tokens" "$cost_usd" \
-      "$pricing_version" "$model" "$ts" \
+      "$pricing_version" \
+      "$_di_filter_dropped" "$_di_tier1_savings" "$_di_tier2_savings" "$_di_tier1_invocs" \
+      "$_di_tier3_savings" "$_di_tier3_invocs" \
+      "$model" "$ts" \
       >> "$log_file" 2>/dev/null || {
       printf 'dispatch-interface.sh: dispatch_usage append failed on %s\n' "$log_file" >&2
       return 0
@@ -229,10 +295,13 @@ _di_emit_dispatch_usage() {
     # Degradation path — cost=null JSON literal, pricing_warning present.
     # M018/P00/T01: emission_point="dispatch-interface" disambiguates from
     # build-context co-located emissions (CON-5 additive field).
-    printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"%s","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":null,"pricing_version":"%s","pricing_warning":"%s","model":"%s","source":"estimate","emission_point":"dispatch-interface","timestamp":"%s"}\n' \
+    printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"%s","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":null,"pricing_version":"%s","filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier2_savings_tokens":%d,"tier1_invocations":%d,"tier3_compression_savings_tokens":%d,"tier3_invocations":%d,"pricing_warning":"%s","model":"%s","source":"estimate","emission_point":"dispatch-interface","timestamp":"%s"}\n' \
       "$UNIT_ID" "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" "$BACKEND" \
       "$input_tokens" "$output_tokens" \
-      "$pricing_version" "$escaped_warning" "$model" "$ts" \
+      "$pricing_version" \
+      "$_di_filter_dropped" "$_di_tier1_savings" "$_di_tier2_savings" "$_di_tier1_invocs" \
+      "$_di_tier3_savings" "$_di_tier3_invocs" \
+      "$escaped_warning" "$model" "$ts" \
       >> "$log_file" 2>/dev/null || {
       printf 'dispatch-interface.sh: dispatch_usage append failed on %s\n' "$log_file" >&2
       return 0

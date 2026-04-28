@@ -154,6 +154,13 @@ _metrics_rollup_is_jsonish() {
 #  10: deviation_count (int or "")
 #  11: retry_count (int or "")
 #  12: pricing_warning (string or "")
+#  17: tier3_savings_tokens    (int or "" — M018/P06/T02)
+#  18: tier3_invocations       (int or "" — M018/P06/T02)
+#  13: filter_dropped_tokens   (int or "" — M018/P05/T02; sourced from
+#                              payload_breakdown / dispatch_usage / unit_close)
+#  14: tier1_savings_tokens    (int or "" — M018/P05/T02)
+#  15: tier2_savings_tokens    (int or "" — M018/P05/T02)
+#  16: tier1_invocations       (int or "" — M018/P05/T02)
 metrics_rollup_normalize() {
   local tmp_log="$1"
   local out="$2"
@@ -250,6 +257,18 @@ metrics_rollup_normalize() {
       dev_count       = field_num(line, "deviation_count");
       retry_count     = field_num(line, "retry_count");
       pricing_warning = field_str(line, "pricing_warning");
+      # M018/P05/T02 — additive savings fields. Empty when absent (CON-5
+      # absent-as-zero downstream). Sourced from payload_breakdown / unit_close
+      # / dispatch_usage uniformly; the aggregate stage scopes the savings
+      # accumulators to payload_breakdown rows only (avoids double-counting
+      # the rolled-up copies T01 added to dispatch_usage / unit_close).
+      filter_dropped  = field_num(line, "filter_dropped_tokens");
+      tier1_savings   = field_num(line, "tier1_savings_tokens");
+      tier2_savings   = field_num(line, "tier2_savings_tokens");
+      tier1_invocs    = field_num(line, "tier1_invocations");
+      # M018/P06/T02 — additive tier3 projections (cols 17-18).
+      tier3_savings   = field_num(line, "tier3_compression_savings_tokens");
+      tier3_invocs    = field_num(line, "tier3_invocations");
 
       # FR-17 input-schema validation.
       if (record_type == "unit_close") {
@@ -280,9 +299,11 @@ metrics_rollup_normalize() {
 
       if (pricing_warning != "" || cost == "null") warnings++;
 
-      printf "%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\n",
+      printf "%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\n",
         record_type, source_v, granularity, milestone, phase, task,
-        cost, tokens, pass_rate, dev_count, retry_count, pricing_warning >> out;
+        cost, tokens, pass_rate, dev_count, retry_count, pricing_warning,
+        filter_dropped, tier1_savings, tier2_savings, tier1_invocs,
+        tier3_savings, tier3_invocs >> out;
     }
     END {
       close(out);
@@ -379,6 +400,14 @@ metrics_rollup_aggregate() {
     {
       rt = $1; src = $2; gran = $3; ms = $4; ph = $5; tk = $6;
       cost = $7; toks = $8; pr = $9; dev = $10; rt2 = $11; pw = $12;
+      # M018/P05/T02 — additive savings projections (cols 13-16). Empty when
+      # absent. Sourced primarily from payload_breakdown rows; the per-scope
+      # accumulator below intentionally restricts to rt == "payload_breakdown"
+      # so the rolled-up copies T01 added to dispatch_usage / unit_close are
+      # not double-counted.
+      fdrop = $13; t1s = $14; t2s = $15; t1i = $16;
+      # M018/P06/T02 — additive tier3 projections (cols 17-18).
+      t3s = $17; t3i = $18;
 
       # Only unit_close rows feed the rollup table (FR-4 pairing).
       if (rt != "unit_close") {
@@ -394,6 +423,19 @@ metrics_rollup_aggregate() {
           # cheap. Use a separate keyed map.
           tk_key = ms "/" ph "/" tk;
           tokens_aux[tk_key] += tonum(toks);
+          # M018/P05/T02 — accumulate savings into a scope-keyed map at the
+          # TARGET granularity (mirrors the scope_key() shape used by the
+          # END emit). payload_breakdown rows have granularity="dispatch"
+          # (see dispatch-interface emitter); we collapse them into the
+          # the f_gran scope here so any granularity request lands.
+          skey_pb = scope_key(f_gran, ms, ph, tk);
+          if (isnumset(fdrop)) scope_filter_dropped[skey_pb] += tonum(fdrop);
+          if (isnumset(t1s))   scope_tier1_savings[skey_pb]  += tonum(t1s);
+          if (isnumset(t2s))   scope_tier2_savings[skey_pb]  += tonum(t2s);
+          if (isnumset(t1i))   scope_tier1_invocs[skey_pb]   += tonum(t1i);
+          # M018/P06/T02 — additive tier3 accumulators.
+          if (isnumset(t3s))   scope_tier3_savings[skey_pb]  += tonum(t3s);
+          if (isnumset(t3i))   scope_tier3_invocs[skey_pb]   += tonum(t3i);
         }
         next;
       }
@@ -519,12 +561,24 @@ metrics_rollup_aggregate() {
         cost_cell = bk_cost[bk];
         warn_n = bk_warn[bk];
 
-        # Output: granularity|scope|dispatches|cost|tokens|p50|p95|pass_rate|deviations|retries|warnings|source
-        printf "%s|%s|%d|%.8f|%d|%.8f|%.8f|%s|%d|%d|%d|%s\n",
+        # Output: granularity|scope|dispatches|cost|tokens|p50|p95|pass_rate|deviations|retries|warnings|source|filter_dropped|tier1_savings|tier2_savings|tier1_invocs|tier3_savings|tier3_invocs
+        # M018/P05/T02 — savings columns appended (CON-5 carry-forward to
+        # rollup column-index contract). Per-scope sums are sourced from
+        # payload_breakdown rows only; missing fields render as 0 integers.
+        # M018/P06/T02 — tier3 columns appended at the END (after the four
+        # P05 columns); columns 1-12 + 13-16 stay byte-identical for back-
+        # compat consumers.
+        printf "%s|%s|%d|%.8f|%d|%.8f|%.8f|%s|%d|%d|%d|%s|%d|%d|%d|%d|%d|%d\n",
           f_gran, skey, bk_disp[bk], cost_cell, bk_toks[bk],
           p50, p95,
           (pass_rate < 0 ? "unknown" : sprintf("%.4f", pass_rate)),
-          bk_dev[bk], bk_retry[bk], warn_n, bk_source[bk];
+          bk_dev[bk], bk_retry[bk], warn_n, bk_source[bk],
+          (skey in scope_filter_dropped ? scope_filter_dropped[skey] : 0),
+          (skey in scope_tier1_savings  ? scope_tier1_savings[skey]  : 0),
+          (skey in scope_tier2_savings  ? scope_tier2_savings[skey]  : 0),
+          (skey in scope_tier1_invocs   ? scope_tier1_invocs[skey]   : 0),
+          (skey in scope_tier3_savings  ? scope_tier3_savings[skey]  : 0),
+          (skey in scope_tier3_invocs   ? scope_tier3_invocs[skey]   : 0);
       }
     }
   ' "$normalized"
@@ -538,11 +592,21 @@ metrics_rollup_render() {
   fi
 
   # Header — fixed column set; cost columns ALWAYS paired with quality cols.
-  printf 'GRANULARITY  SCOPE                    DISPATCHES  EST_COST_USD          TOKENS_EST  P50_COST              P95_COST              PASS_RATE  DEVIATIONS  RETRIES  WARNINGS  SOURCE\n'
+  # M018/P05/T02 — four savings columns appended AFTER the existing 12 so
+  # consumer column indices (1=GRANULARITY ... 12=SOURCE) stay back-compat.
+  # M018/P06/T02 — two tier3 columns (TIER3_SAVINGS / TIER3_INVOCS) appended
+  # at indices 17-18; columns 1-12 and 13-16 stay byte-identical.
+  # Source: payload_breakdown JSONL records emitted by
+  # scripts/dispatch/build-context.sh (see _bc_emit_payload_breakdown there).
+  printf 'GRANULARITY  SCOPE                    DISPATCHES  EST_COST_USD          TOKENS_EST  P50_COST              P95_COST              PASS_RATE  DEVIATIONS  RETRIES  WARNINGS  SOURCE  FILTER_DROPPED  TIER1_SAVINGS  TIER2_SAVINGS  TIER1_INVOCS  TIER3_SAVINGS  TIER3_INVOCS\n'
 
   local row gran scope disp cost tokens p50 p95 pass dev retry warn src
+  local filter_dropped tier1_savings tier2_savings tier1_invocs
+  local tier3_savings tier3_invocs
   local cost_disp p50_disp p95_disp
-  while IFS='|' read -r gran scope disp cost tokens p50 p95 pass dev retry warn src; do
+  while IFS='|' read -r gran scope disp cost tokens p50 p95 pass dev retry warn src \
+      filter_dropped tier1_savings tier2_savings tier1_invocs \
+      tier3_savings tier3_invocs; do
     if [ -z "$gran" ]; then
       continue
     fi
@@ -554,11 +618,22 @@ metrics_rollup_render() {
     fi
     p50_disp=$(printf '%.8f' "$p50")
     p95_disp=$(printf '%.8f' "$p95")
+    # M018/P05/T02 — defensive defaulting on the four new columns. Empty/
+    # absent renders as `0` integer; mirrors the cost_disp posture.
+    if [ -z "$filter_dropped" ]; then filter_dropped=0; fi
+    if [ -z "$tier1_savings" ];  then tier1_savings=0;  fi
+    if [ -z "$tier2_savings" ];  then tier2_savings=0;  fi
+    if [ -z "$tier1_invocs" ];   then tier1_invocs=0;   fi
+    # M018/P06/T02 — defensive defaulting on tier3 columns.
+    if [ -z "$tier3_savings" ];  then tier3_savings=0;  fi
+    if [ -z "$tier3_invocs" ];   then tier3_invocs=0;   fi
     # FR-4 pairing — if pass_rate is "unknown" we still print the column
     # rather than dropping cost. quality=unknown signals degenerate input.
-    printf '%-11s  %-22s  %-10s  %-20s  %-10s  %-20s  %-20s  %-9s  %-10s  %-7s  %-8s  %s\n' \
+    printf '%-11s  %-22s  %-10s  %-20s  %-10s  %-20s  %-20s  %-9s  %-10s  %-7s  %-8s  %-6s  %14d  %13d  %13d  %12d  %13d  %12d\n' \
       "$gran" "$scope" "$disp" "$cost_disp" "$tokens" "$p50_disp" "$p95_disp" \
-      "$pass" "$dev" "$retry" "$warn" "$src"
+      "$pass" "$dev" "$retry" "$warn" "$src" \
+      "$filter_dropped" "$tier1_savings" "$tier2_savings" "$tier1_invocs" \
+      "$tier3_savings" "$tier3_invocs"
   done < "$rows"
 }
 

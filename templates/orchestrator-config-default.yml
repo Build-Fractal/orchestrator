@@ -101,3 +101,34 @@ compression:
     enabled: true                 # Per-tier toggle (master `enabled:` above also gates).
     section_budget_tokens: 1500   # Section body token-count cap before head-drop fires.
     protected_tail_ratio: 0.3     # Fraction of pre-snip body bytes preserved verbatim at the tail.
+  # M018/P06 — Tier 3 auto-compact (LLM-routed section summarization).
+  # Routes the largest oversized section (post-Tier 1 + Tier 2) through a
+  # summarization prompt via dispatch-interface.sh (or the
+  # scripts/dispatch/lib/tier3-llm-call.sh shim). Originals persist to
+  # `originals_dir` keyed by sha256 of the pre-call section bytes for
+  # audit + eval-harness replay. Output exceeding `output_max_ratio` of
+  # input bytes is discarded (passthrough). MIT-08 density pre-check skips
+  # the LLM call when input_tokens / section_budget_tokens < density_floor.
+  # Failure-passthrough (FR-9) on every error path: dispatch-interface
+  # non-zero, empty output, preservation breach -> tier3_failed JSONL +
+  # zero stats. FR-14 intensity gate: Quick skips T3.
+  tier3:
+    enabled: true                 # Per-tier toggle (master `enabled:` above also gates).
+    intensity_floor: standard     # quick | standard | full — Quick skips T3 (FR-14).
+    section_budget_tokens: 2500   # Sections above this token-count cap are eligible for T3.
+    originals_dir: .orchestrator/cache/tier3-originals/  # Relative path resolved against PROJECT_ROOT.
+    output_max_ratio: 0.80        # Discard summaries exceeding 80% of input bytes.
+    density_floor: 1.5            # MIT-08: skip T3 when input_tokens/budget < floor.
+  # M018/P05/T02 — operator-facing surface knobs.
+  # `efficiency_footer.enabled` toggles the one-line "compression: <pct>%
+  # reduction over baseline (filter+tier1+tier2 / payload_tokens)" tail
+  # appended to the M027/P02 efficiency footer. Independent of the parent
+  # `efficiency_footer` knob — the parent suppresses the whole footer; this
+  # knob suppresses only the compression line. Default true.
+  # `regression_floor` is the savings ratio below which `check-anomalies.sh`
+  # fires `compression-regression`. Pinned to the SC-9 P00-calibrated 34.7%
+  # floor; configurable so future calibration updates do not require code
+  # changes.
+  efficiency_footer:
+    enabled: true                 # M018/P05/T02 — compression line in efficiency footer.
+  regression_floor: 0.347         # M018/P05/T02 — SC-9 P00-calibrated savings-ratio floor.

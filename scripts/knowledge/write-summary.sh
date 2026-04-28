@@ -260,6 +260,65 @@ _ws_parse_duration_seconds() {
   esac
 }
 
+# --- M018/P05/T01: unit_close savings-field rollup ---
+# Sibling: build-context.sh writes payload_breakdown JSONL records that the
+# rollup helper aggregates by milestone/phase/task scope at unit_close
+# emit-time. See scripts/dispatch/build-context.sh:_bc_emit_payload_breakdown.
+# Reads the in-scope payload_breakdown record(s) from the log file and
+# emits six integers on stdout (one per line, in order):
+#   filter_dropped_tokens, tier1_savings_tokens, tier2_savings_tokens,
+#   tier1_invocations, tier3_compression_savings_tokens, tier3_invocations
+# (Last two appended by M018/P06/T02 — CON-5 additive carry-forward.)
+# Scope match by granularity:
+#   task: milestone == M && phase == P && task == T
+#   phase: milestone == M && phase == P
+#   milestone: milestone == M
+# Records lacking a field contribute 0. Bail-safe: missing log → all zeros.
+# MEM004 emitter-internal carve-out — pipes/awk/$() permitted in body.
+_ws_rollup_savings_fields() {
+  local log_file="$1"
+  local granularity="$2"
+  local milestone="$3"
+  local phase="$4"
+  local task="$5"
+  if [ -z "$log_file" ] || [ ! -f "$log_file" ]; then
+    printf '0\n0\n0\n0\n0\n0\n'
+    return 0
+  fi
+  awk -v g="$granularity" -v m="$milestone" -v p="$phase" -v t="$task" '
+    BEGIN { fdrop = 0; t1s = 0; t2s = 0; t1i = 0; t3s = 0; t3i = 0 }
+    /"record_type":"payload_breakdown"/ {
+      if (m != "" && index($0, "\"milestone\":\"" m "\"") == 0) next
+      if (g == "phase" || g == "task") {
+        if (p != "" && index($0, "\"phase\":\"" p "\"") == 0) next
+      }
+      if (g == "task") {
+        if (t != "" && index($0, "\"task\":\"" t "\"") == 0) next
+      }
+      if (match($0, /"filter_dropped_tokens":[0-9]+/)) {
+        v = substr($0, RSTART, RLENGTH); sub(/.*:/, "", v); fdrop += v + 0
+      }
+      if (match($0, /"tier1_savings_tokens":[0-9]+/)) {
+        v = substr($0, RSTART, RLENGTH); sub(/.*:/, "", v); t1s += v + 0
+      }
+      if (match($0, /"tier2_savings_tokens":[0-9]+/)) {
+        v = substr($0, RSTART, RLENGTH); sub(/.*:/, "", v); t2s += v + 0
+      }
+      if (match($0, /"tier1_invocations":[0-9]+/)) {
+        v = substr($0, RSTART, RLENGTH); sub(/.*:/, "", v); t1i += v + 0
+      }
+      # M018/P06/T02 — additive tier3 fields.
+      if (match($0, /"tier3_compression_savings_tokens":[0-9]+/)) {
+        v = substr($0, RSTART, RLENGTH); sub(/.*:/, "", v); t3s += v + 0
+      }
+      if (match($0, /"tier3_invocations":[0-9]+/)) {
+        v = substr($0, RSTART, RLENGTH); sub(/.*:/, "", v); t3i += v + 0
+      }
+    }
+    END { printf "%d\n%d\n%d\n%d\n%d\n%d\n", fdrop, t1s, t2s, t1i, t3s, t3i }
+  ' "$log_file" 2>/dev/null || printf '0\n0\n0\n0\n0\n0\n'
+}
+
 _ws_emit_unit_close() {
   # args: granularity milestone phase task duration_s outcome completed_at
   local granularity="$1"
@@ -431,12 +490,33 @@ _ws_emit_unit_close() {
 
   mkdir -p "$log_dir" 2>/dev/null || return 0
 
-  printf '{"record_type":"unit_close","granularity":"%s","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","duration_s":%d,"outcome":"%s","completed_at":"%s","estimated_cost_usd":%s,"pricing_version":"%s","verification_pass_rate":%s,"deviation_count":%d,"retry_count":%d,"source":"%s","timestamp":"%s"}\n' \
+  # M018/P05/T01: roll up the in-scope payload_breakdown savings fields.
+  # M018/P06/T02: extended with tier3_compression_savings_tokens / tier3_invocations
+  # under the same granularity-aware scope.
+  local _ws_savings _ws_filter_dropped _ws_tier1_savings _ws_tier2_savings _ws_tier1_invocs
+  local _ws_tier3_savings _ws_tier3_invocs
+  _ws_savings="$(_ws_rollup_savings_fields "$log_file" "$granularity" "$milestone_arg" "$phase_arg" "$task_arg")"
+  _ws_filter_dropped="$(printf '%s\n' "$_ws_savings" | sed -n '1p')"
+  _ws_tier1_savings="$(printf '%s\n' "$_ws_savings" | sed -n '2p')"
+  _ws_tier2_savings="$(printf '%s\n' "$_ws_savings" | sed -n '3p')"
+  _ws_tier1_invocs="$(printf '%s\n' "$_ws_savings" | sed -n '4p')"
+  _ws_tier3_savings="$(printf '%s\n' "$_ws_savings" | sed -n '5p')"
+  _ws_tier3_invocs="$(printf '%s\n' "$_ws_savings" | sed -n '6p')"
+  [ -n "$_ws_filter_dropped" ] || _ws_filter_dropped=0
+  [ -n "$_ws_tier1_savings" ] || _ws_tier1_savings=0
+  [ -n "$_ws_tier2_savings" ] || _ws_tier2_savings=0
+  [ -n "$_ws_tier1_invocs" ] || _ws_tier1_invocs=0
+  [ -n "$_ws_tier3_savings" ] || _ws_tier3_savings=0
+  [ -n "$_ws_tier3_invocs" ] || _ws_tier3_invocs=0
+
+  printf '{"record_type":"unit_close","granularity":"%s","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","duration_s":%d,"outcome":"%s","completed_at":"%s","estimated_cost_usd":%s,"pricing_version":"%s","verification_pass_rate":%s,"deviation_count":%d,"retry_count":%d,"filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier2_savings_tokens":%d,"tier1_invocations":%d,"tier3_compression_savings_tokens":%d,"tier3_invocations":%d,"source":"%s","timestamp":"%s"}\n' \
     "$granularity" "$unit_id" \
     "$milestone_arg" "$phase_arg" "$task_arg" \
     "$duration_s" "$outcome" "$completed_at_arg" \
     "$cost_field" "$pricing_version" \
     "$pass_rate" "$deviation_count" "$retry_count" \
+    "$_ws_filter_dropped" "$_ws_tier1_savings" "$_ws_tier2_savings" "$_ws_tier1_invocs" \
+    "$_ws_tier3_savings" "$_ws_tier3_invocs" \
     "$src" "$ts" \
     >> "$log_file" 2>/dev/null || true
 

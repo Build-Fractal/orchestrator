@@ -98,6 +98,61 @@ efficiency_footer_render() {
   [ -n "$qual_text" ]  && printf '  %s\n' "$qual_text"
   [ -n "$count_text" ] && printf '  %s\n' "$count_text"
   [ -n "$warn_text" ]  && printf '  pricing: %s\n' "$warn_text"
+
+  # M018/P05/T02 — compression savings line ("Compressed: <pct>% reduction
+  # over baseline" tail per the P05 truth contract; emitted as the lower-case
+  # `compression:` form in stdout for the M027 efficiency-footer body, both
+  # forms acceptable per the truth wording). Reads the four new columns
+  # (FILTER_DROPPED=$13, TIER1_SAVINGS=$14, TIER2_SAVINGS=$15) and
+  # TOKENS_EST=$5 from the same data row, computes
+  # pct = (sum_savings) * 100 / tokens, and emits
+  #   compression: <pct>% reduction over baseline (filter+tier1+tier2 / payload_tokens)
+  # when (a) tokens > 0, (b) pct >= 0.5 (rounding-noise floor), and
+  # (c) the compression.efficiency_footer.enabled config knob is not falsy.
+  # Suppressed entirely when all savings are zero (the awk pct >= 0.5 guard
+  # also covers pct == 0). The line is INDEPENDENT of the parent
+  # efficiency_footer suppressor — that gate already short-circuited above.
+  cfg_compression_footer="${ORCH_COMPRESSION_FOOTER:-}"
+  if [ -z "$cfg_compression_footer" ] && [ -x "$_EFF_PROJECT_ROOT/scripts/state/read-config.sh" ]; then
+    cfg_compression_footer="$(bash "$_EFF_PROJECT_ROOT/scripts/state/read-config.sh" compression.efficiency_footer.enabled 2>/dev/null || true)"
+  fi
+  case "$cfg_compression_footer" in
+    false|FALSE|False|0|no|NO|No)
+      : # suppressed
+      ;;
+    *)
+      if [ -n "$data_line" ]; then
+        _eff_savings_line="$(printf '%s\n' "$data_line" | awk '
+          {
+            # Whitespace-split columns; col 5 = TOKENS_EST,
+            # cols 13-15 = FILTER_DROPPED + TIER1_SAVINGS + TIER2_SAVINGS,
+            # col 17 = TIER3_SAVINGS (M018/P06/T02 additive carry-forward).
+            # Note: when EST_COST_USD carries the "(N missing)" annotation
+            # the cost cell occupies cols 4-6 ("0.00000000 (N missing)"),
+            # which shifts all subsequent columns by +2 — read TOKENS_EST
+            # at $7 and savings at $15-$17 / $19 in that case. Detect by
+            # checking whether $5 begins with "(".
+            if ($5 ~ /^\(/) {
+              tokens = $7 + 0;
+              fdrop  = $15 + 0; t1s = $16 + 0; t2s = $17 + 0; t3s = $19 + 0;
+            } else {
+              tokens = $5 + 0;
+              fdrop  = $13 + 0; t1s = $14 + 0; t2s = $15 + 0; t3s = $17 + 0;
+            }
+            if (tokens > 0) {
+              pct = (fdrop + t1s + t2s + t3s) * 100.0 / tokens;
+              if (pct >= 0.5) {
+                printf "compression: %.1f%% reduction over baseline (filter+tier1+tier2+tier3 / payload_tokens)", pct;
+              }
+            }
+          }
+        ' || true)"
+        if [ -n "$_eff_savings_line" ]; then
+          printf '  %s\n' "$_eff_savings_line"
+        fi
+      fi
+      ;;
+  esac
   return 0
 }
 

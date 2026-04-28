@@ -46,9 +46,13 @@ _CHECK_ANOMALIES_SH_SOURCED=1
 _CA_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 _CA_PROJECT_ROOT="$(cd "$_CA_SCRIPT_DIR/../.." && pwd)"
 
-# check_anomalies_render <milestone-or-empty> <suppress-flag> <multiplier> <retry-thresh> <pass-rate-thresh> <sample-floor>
+# check_anomalies_render <milestone-or-empty> <suppress-flag> <multiplier> <retry-thresh> <pass-rate-thresh> <sample-floor> [compression-floor]
 #   When <suppress-flag> = 1, emits zero stdout (and returns 0).
 #   When <milestone-or-empty> = empty, falls back to project-granularity rollup.
+#   compression-floor (M018/P05/T02) defaults to 0.347 (SC-9 P00-calibrated)
+#     when the seventh arg is empty/absent. Below this savings-ratio per task,
+#     the row carries a `compression-regression` reason composed with the
+#     existing cost-spike / retry-spike / low-pass-rate reasons.
 #   Always returns exit 0 (never aborts; degraded inputs surface as text).
 check_anomalies_render() {
   local milestone="$1"
@@ -57,6 +61,7 @@ check_anomalies_render() {
   local retry_thresh="$4"
   local pass_thresh="$5"
   local floor="$6"
+  local compression_floor="${7:-0.347}"
   if [ "$suppress" = "1" ]; then
     return 0
   fi
@@ -93,23 +98,40 @@ check_anomalies_render() {
   #   - Emit at most 8 flagged rows so the total block stays <=12 lines
   #     including the title and a possible summary line.
   local awk_out
-  awk_out="$(printf '%s\n' "$rollup_out" | awk -v mult_s="$mult" -v rt_s="$retry_thresh" -v pt_s="$pass_thresh" '
-    BEGIN { mult = mult_s + 0; rt = rt_s + 0; pt = pt_s + 0; }
+  awk_out="$(printf '%s\n' "$rollup_out" | awk -v mult_s="$mult" -v rt_s="$retry_thresh" -v pt_s="$pass_thresh" -v cf_s="$compression_floor" '
+    BEGIN { mult = mult_s + 0; rt = rt_s + 0; pt = pt_s + 0; cfloor = cf_s + 0; }
     /^task[[:space:]]/ {
       n++;
       scope=$2;
       # Detect "(N missing)" pattern in the EST_COST_USD column.
+      # M018/P05/T02 — the four new savings columns are appended AFTER the
+      # existing 12, so they shift by the same +2 when the cost cell carries
+      # the "(N missing)" annotation. TOKENS_EST is col 5 normally / col 7
+      # when shifted; FILTER_DROPPED is col 13 / col 15; TIER1_SAVINGS col
+      # 14 / 16; TIER2_SAVINGS col 15 / 17.
       if ($5 ~ /^\(/) {
         cost_unavail[n]=1;
         cost[n]=0;
         # Columns 5-6 are the "(N missing)" tokens, so shift by 2.
         pass_rate[n]=$10+0;
         retries[n]=$12+0;
+        tokens[n]=$7+0;
+        fdrop[n]=$15+0;
+        t1s[n]=$16+0;
+        t2s[n]=$17+0;
+        # M018/P06/T02 — tier3_savings at col 19 (shifted) / col 17 (normal).
+        t3s[n]=$19+0;
       } else {
         cost_unavail[n]=0;
         cost[n]=$4+0;
         pass_rate[n]=$8+0;
         retries[n]=$10+0;
+        tokens[n]=$5+0;
+        fdrop[n]=$13+0;
+        t1s[n]=$14+0;
+        t2s[n]=$15+0;
+        # M018/P06/T02 — tier3_savings at col 17 (normal layout).
+        t3s[n]=$17+0;
       }
       scopes[n]=scope;
     }
@@ -128,6 +150,26 @@ check_anomalies_render() {
         if (median > 0 && cost[i] >= mult * median) reasons = reasons " cost-spike";
         if (retries[i] > rt) reasons = reasons " retry-spike";
         if (pass_rate[i] < pt) reasons = reasons " low-pass-rate";
+        # M018/P05/T02 — compression-regression reason. Composes additively
+        # with the existing reasons. Guarded against div-by-zero (degraded
+        # tokens=0 path → no flag fires); guarded against pre-P05 records
+        # (savings cols all zero → ratio 0 < cfloor → would flag every row,
+        # so we ALSO require that at least ONE savings token is non-zero
+        # OR that any record in scope advertised the new fields. The
+        # simpler invariant: skip the compression flag when ALL THREE
+        # savings sums are zero — that distinguishes "compression ran and
+        # underperformed" from "compression did not run at all", which is
+        # the operational signal we want).
+        sav_ratio = -1;
+        if (tokens[i] > 0) {
+          # M018/P06/T02 — fold tier3_savings into sav_total. The
+          # compression-regression flag composes additively (no new reason).
+          sav_total = fdrop[i] + t1s[i] + t2s[i] + t3s[i];
+          sav_ratio = sav_total / tokens[i];
+          if (sav_total > 0 && sav_ratio < cfloor) {
+            reasons = reasons " compression-regression";
+          }
+        }
         if (reasons != "") {
           flagged++;
           if (shown < cap) {
@@ -136,7 +178,11 @@ check_anomalies_render() {
             } else {
               cost_token = sprintf("cost=%.4f", cost[i]);
             }
-            printf "FLAGGED %s %s pass_rate=%.2f retry_count=%d reasons=%s\n", scopes[i], cost_token, pass_rate[i], retries[i], reasons;
+            if (reasons ~ /compression-regression/ && sav_ratio >= 0) {
+              printf "FLAGGED %s %s pass_rate=%.2f retry_count=%d savings_ratio=%.3f reasons=%s\n", scopes[i], cost_token, pass_rate[i], retries[i], sav_ratio, reasons;
+            } else {
+              printf "FLAGGED %s %s pass_rate=%.2f retry_count=%d reasons=%s\n", scopes[i], cost_token, pass_rate[i], retries[i], reasons;
+            }
             shown++;
           }
         }
@@ -216,6 +262,16 @@ if [ "${BASH_SOURCE[0]:-$0}" = "$0" ]; then
   FLOOR="$FLOOR_OVERRIDE"
   if [ -z "$FLOOR" ]; then FLOOR="5"; fi
 
+  # M018/P05/T02 — compression-regression floor (savings ratio). Resolves
+  # via read-config.sh `compression.regression_floor` (which delegates to
+  # kf_get_compression_regression_floor). Defaults to 0.347 — SC-9 P00
+  # calibration. Mirror of the MULT / RETRY_THRESH / PASS_THRESH shape above.
+  COMPRESSION_FLOOR=""
+  if [ -x "$_CA_PROJECT_ROOT/scripts/state/read-config.sh" ]; then
+    COMPRESSION_FLOOR="$(bash "$_CA_PROJECT_ROOT/scripts/state/read-config.sh" compression.regression_floor 2>/dev/null || true)"
+  fi
+  if [ -z "$COMPRESSION_FLOOR" ] || [ "$COMPRESSION_FLOOR" = "null" ]; then COMPRESSION_FLOOR="0.347"; fi
+
   # Resolve active milestone if neither --milestone nor --project given.
   # find-active-milestone.sh emits "M### <state> <tier>"; take the first token.
   if [ -z "$MILESTONE" ] && [ "$PROJECT_FALLBACK" -eq 0 ]; then
@@ -228,6 +284,6 @@ if [ "${BASH_SOURCE[0]:-$0}" = "$0" ]; then
   # project-granularity rollup.
   if [ "$PROJECT_FALLBACK" -eq 1 ]; then MILESTONE=""; fi
 
-  check_anomalies_render "$MILESTONE" "$SUPPRESS" "$MULT" "$RETRY_THRESH" "$PASS_THRESH" "$FLOOR"
+  check_anomalies_render "$MILESTONE" "$SUPPRESS" "$MULT" "$RETRY_THRESH" "$PASS_THRESH" "$FLOOR" "$COMPRESSION_FLOOR"
   exit 0
 fi

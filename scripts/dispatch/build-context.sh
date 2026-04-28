@@ -205,6 +205,24 @@ TIER2_SECTION_BUDGET_TOKENS="$(kf_get_tier2_section_budget_tokens "$PROJECT_ROOT
 TIER2_PROTECTED_TAIL_RATIO="$(kf_get_tier2_protected_tail_ratio "$PROJECT_ROOT")"
 export TIER2_ENABLED TIER2_SECTION_BUDGET_TOKENS TIER2_PROTECTED_TAIL_RATIO
 
+# M018/P06/T01: Tier 3 auto-compact config. Defaults: enabled=true,
+# intensity_floor=standard, section_budget_tokens=2500,
+# originals_dir=.orchestrator/cache/tier3-originals/, output_max_ratio=0.80,
+# density_floor=1.5. Master `compression.enabled` toggle (FR-15) gates this
+# tier; per-tier `compression.tier3.enabled` short-circuits Tier 3 alone.
+TIER3_ENABLED="$(kf_get_tier3_enabled "$PROJECT_ROOT")"
+TIER3_INTENSITY_FLOOR="$(kf_get_tier3_intensity_floor "$PROJECT_ROOT")"
+TIER3_SECTION_BUDGET_TOKENS="$(kf_get_tier3_section_budget_tokens "$PROJECT_ROOT")"
+TIER3_ORIGINALS_DIR="$(kf_get_tier3_originals_dir "$PROJECT_ROOT")"
+TIER3_OUTPUT_MAX_RATIO="$(kf_get_tier3_output_max_ratio "$PROJECT_ROOT")"
+TIER3_DENSITY_FLOOR="$(kf_get_tier3_density_floor "$PROJECT_ROOT")"
+case "$TIER3_ORIGINALS_DIR" in
+  /*) : ;;
+  *)  TIER3_ORIGINALS_DIR="$PROJECT_ROOT/$TIER3_ORIGINALS_DIR" ;;
+esac
+export TIER3_ENABLED TIER3_INTENSITY_FLOOR TIER3_SECTION_BUDGET_TOKENS \
+       TIER3_ORIGINALS_DIR TIER3_OUTPUT_MAX_RATIO TIER3_DENSITY_FLOOR
+
 # --- Read tier from roadmap (used by planning branch + computed state handler) ---
 TIER="$(bash "$READ_ROADMAP" "$ROADMAP" tier 2>/dev/null || echo unknown)"
 
@@ -1032,6 +1050,280 @@ _bc_apply_tier2() {
   return 0
 }
 
+# M018/P06/T01: Tier 3 auto-compact — LLM-routed section summarization.
+#
+# Argument 1: path to the captured payload file (already through Tier 1 + Tier 2,
+# prior to _bc_emit_payload_breakdown). The function rewrites the file in place
+# when summarization fires; otherwise leaves it untouched.
+#
+# Side-effect outputs:
+#   - Writes a stats line to $TMPDIR_BUILD/_tier3_stats.txt of the form:
+#       savings_tokens=<N> invocations=<M>
+#     The caller (T02-widened _bc_emit_payload_breakdown) reads this file
+#     to populate the additive `tier3_compression_savings_tokens` and
+#     `tier3_invocations` fields.
+#   - Persists the original (post-Tier 2) section to
+#     $TIER3_ORIGINALS_DIR/<sha256>.txt for audit + eval-harness replay.
+#
+# Short-circuits (passthrough; stats file written with savings_tokens=0
+# invocations=0):
+#   - $COMPRESSION_ENABLED != "true"
+#   - $TIER3_ENABLED != "true"
+#   - Resolved intensity is below $TIER3_INTENSITY_FLOOR (FR-14: Quick skips T3).
+#   - The capture file contains zero in-scope `^## ` sections exceeding
+#     $TIER3_SECTION_BUDGET_TOKENS.
+#   - MIT-08 density pre-check fails (input_tokens / section_budget <
+#     $TIER3_DENSITY_FLOOR — too sparse to compress meaningfully).
+#
+# Failure-passthrough (FR-9; emits tier3_failed JSONL record + zero stats):
+#   - dispatch-interface.sh / shim non-zero exit (timeout, rate limit, error).
+#   - Output bytes empty or smaller than the in-band marker length.
+#   - Output / input ratio > $TIER3_OUTPUT_MAX_RATIO (emits tier3_no_savings).
+#   - pres_check_section "tier3" returns non-zero (preservation breach).
+#
+# MEM004 carve-out: dispatch-internal helper, like _bc_apply_tier1 / _bc_apply_tier2.
+_bc_apply_tier3() {
+  local capture_file="$1"
+  local stats_file="$TMPDIR_BUILD/_tier3_stats.txt"
+
+  # Always write a zero-stats line first so the emitter never reads a missing
+  # file (defensive: even early-return paths leave stats in a known shape).
+  printf 'savings_tokens=0 invocations=0\n' > "$stats_file"
+
+  # Master toggle short-circuit.
+  if [ "${COMPRESSION_ENABLED:-true}" != "true" ]; then
+    return 0
+  fi
+  # Per-tier toggle short-circuit.
+  if [ "${TIER3_ENABLED:-true}" != "true" ]; then
+    return 0
+  fi
+  if [ ! -f "$capture_file" ]; then
+    return 0
+  fi
+
+  # Intensity gate (FR-14). TIER3_INTENSITY_FLOOR resolved at top-of-file.
+  # Resolved intensity comes from the engine's metadata file when present
+  # (written by scripts/engine/intensity-gate.sh upstream of dispatch);
+  # default to Standard so a fresh dispatch with no metadata enables T3.
+  local resolved_intensity="Standard"
+  if [ -n "${INTENSITY_METADATA_FILE:-}" ] && [ -f "${INTENSITY_METADATA_FILE:-}" ]; then
+    resolved_intensity="$(grep -E '^intensity:' "$INTENSITY_METADATA_FILE" 2>/dev/null \
+      | head -1 | sed -E 's/^intensity:[[:space:]]*"?([^"]*)"?[[:space:]]*$/\1/')"
+    if [ -z "$resolved_intensity" ]; then resolved_intensity="Standard"; fi
+  fi
+  case "$TIER3_INTENSITY_FLOOR" in
+    quick) ;;  # Floor=quick means T3 always runs.
+    standard)
+      case "$resolved_intensity" in
+        Quick)
+          _bc_emit_tier3_event tier3_skipped "intensity=quick"
+          return 0
+          ;;
+      esac
+      ;;
+    full)
+      case "$resolved_intensity" in
+        Quick|Standard)
+          _bc_emit_tier3_event tier3_skipped "intensity=$resolved_intensity"
+          return 0
+          ;;
+      esac
+      ;;
+  esac
+
+  # Find the largest oversized `^## ` section after Tier 1 + Tier 2.
+  # Single-pass awk emits "<line_start> <line_end> <byte_size> <header>" for
+  # the largest section whose body exceeds TIER3_SECTION_BUDGET_TOKENS.
+  local target_info
+  target_info="$(awk -v budget="$TIER3_SECTION_BUDGET_TOKENS" '
+    function tok(c) { return int((c + 3) / 4) }
+    BEGIN { cur_start=0; cur_chars=0; cur_header=""; max_chars=0; max_start=0; max_end=0; max_header="" }
+    /^## / {
+      if (cur_start > 0 && tok(cur_chars) > budget && cur_chars > max_chars) {
+        max_start = cur_start; max_end = NR - 1
+        max_chars = cur_chars; max_header = cur_header
+      }
+      cur_start = NR; cur_chars = length($0) + 1; cur_header = $0
+      next
+    }
+    cur_start > 0 { cur_chars += length($0) + 1 }
+    END {
+      if (cur_start > 0 && tok(cur_chars) > budget && cur_chars > max_chars) {
+        max_start = cur_start; max_end = NR
+        max_chars = cur_chars; max_header = cur_header
+      }
+      if (max_start > 0) printf "%d %d %d %s\n", max_start, max_end, max_chars, max_header
+    }
+  ' "$capture_file")"
+
+  if [ -z "$target_info" ]; then
+    return 0   # No oversized section.
+  fi
+
+  local _line_start _line_end _section_chars _section_header
+  _line_start="$(printf '%s\n' "$target_info" | awk '{print $1}')"
+  _line_end="$(printf '%s\n' "$target_info" | awk '{print $2}')"
+  _section_chars="$(printf '%s\n' "$target_info" | awk '{print $3}')"
+  _section_header="$(printf '%s\n' "$target_info" | awk '{ for (i=4; i<=NF; i++) printf "%s%s", $i, (i==NF?"":" ") }')"
+
+  local _section_tokens
+  _section_tokens=$(( (_section_chars + 3) / 4 ))
+
+  # MIT-08 density pre-check. density = input_tokens / budget; below floor
+  # means the section is too sparse to compress without paying excess LLM
+  # cost. awk computes the ratio in real arithmetic.
+  local _density_ok
+  _density_ok="$(awk -v t="$_section_tokens" -v b="$TIER3_SECTION_BUDGET_TOKENS" -v f="$TIER3_DENSITY_FLOOR" '
+    BEGIN { ratio = (b > 0) ? (t * 1.0 / b) : 0; print (ratio >= f) ? "1" : "0" }
+  ')"
+  if [ "$_density_ok" != "1" ]; then
+    _bc_emit_tier3_event tier3_skipped "reason=density-floor density=$_section_tokens/$TIER3_SECTION_BUDGET_TOKENS floor=$TIER3_DENSITY_FLOOR"
+    return 0
+  fi
+
+  # Stage the section to a pre-file; persist the original to the originals dir.
+  local pre_file out_file rendered_prompt summary_out
+  pre_file="$TMPDIR_BUILD/_tier3_pre.txt"
+  out_file="$TMPDIR_BUILD/_tier3_out.txt"
+  rendered_prompt="$TMPDIR_BUILD/_tier3_prompt.txt"
+  summary_out="$TMPDIR_BUILD/_tier3_summary.txt"
+
+  awk -v s="$_line_start" -v e="$_line_end" 'NR>=s && NR<=e' "$capture_file" > "$pre_file"
+
+  if ! mkdir -p "$TIER3_ORIGINALS_DIR" 2>/dev/null; then
+    printf 'build-context.sh: tier3 disabled — originals_dir unwritable: %s\n' "$TIER3_ORIGINALS_DIR" >&2
+    _bc_emit_tier3_event tier3_failed "reason=originals-dir-unwritable"
+    return 0
+  fi
+
+  local _orig_hash _orig_path _pre_body
+  _pre_body="$(cat "$pre_file")"
+  _orig_hash="$(printf '%s\x1F%s' "$_section_header" "$_pre_body" | shasum -a 256 | cut -c1-64)"
+  case "$TIER3_ORIGINALS_DIR" in
+    */) _orig_path="${TIER3_ORIGINALS_DIR}${_orig_hash}.txt" ;;
+    *)  _orig_path="${TIER3_ORIGINALS_DIR}/${_orig_hash}.txt" ;;
+  esac
+  if [ ! -f "$_orig_path" ]; then
+    cp "$pre_file" "$_orig_path" 2>/dev/null || true
+  fi
+
+  # Render the prompt: template body + appended section bytes.
+  local _tpl="$PROJECT_ROOT/templates/compression-tier3-prompt.md"
+  if [ ! -f "$_tpl" ]; then
+    _bc_emit_tier3_event tier3_failed "reason=prompt-template-missing path=$_tpl"
+    return 0
+  fi
+  if ! cat "$_tpl" "$pre_file" > "$rendered_prompt" 2>/dev/null; then
+    _bc_emit_tier3_event tier3_failed "reason=prompt-render-failed"
+    return 0
+  fi
+
+  # Token budget for the LLM output: input_tokens * output_max_ratio.
+  local _summary_budget
+  _summary_budget="$(awk -v t="$_section_tokens" -v r="$TIER3_OUTPUT_MAX_RATIO" '
+    BEGIN { print int(t * r) }
+  ')"
+
+  # Invoke dispatch-interface.sh (or the tier3-llm-call.sh shim if present).
+  local _llm_caller="$PROJECT_ROOT/scripts/dispatch/dispatch-interface.sh"
+  if [ -x "$PROJECT_ROOT/scripts/dispatch/lib/tier3-llm-call.sh" ]; then
+    _llm_caller="$PROJECT_ROOT/scripts/dispatch/lib/tier3-llm-call.sh"
+  fi
+  if ! bash "$_llm_caller" \
+        --prompt-file "$rendered_prompt" \
+        --capture-output "$summary_out" \
+        --max-output-tokens "$_summary_budget" \
+        --timeout-seconds 60 >/dev/null 2>&1; then
+    _bc_emit_tier3_event tier3_failed "reason=llm-call-nonzero"
+    return 0
+  fi
+
+  if [ ! -s "$summary_out" ]; then
+    _bc_emit_tier3_event tier3_failed "reason=llm-empty-output"
+    return 0
+  fi
+
+  # Output-size guard. discard if larger than ratio * input.
+  local _summary_chars _summary_tokens _ratio_ok
+  _summary_chars="$(wc -c < "$summary_out" | tr -d ' ')"
+  _summary_tokens=$(( (_summary_chars + 3) / 4 ))
+  _ratio_ok="$(awk -v sc="$_summary_chars" -v ic="$_section_chars" -v r="$TIER3_OUTPUT_MAX_RATIO" '
+    BEGIN { ratio = (ic > 0) ? (sc * 1.0 / ic) : 1.0; print (ratio <= r) ? "1" : "0" }
+  ')"
+  if [ "$_ratio_ok" != "1" ]; then
+    _bc_emit_tier3_event tier3_no_savings "reason=output-exceeds-max-ratio summary_chars=$_summary_chars input_chars=$_section_chars"
+    return 0
+  fi
+
+  # Substitute the in-band marker placeholders in the LLM output.
+  local _model="${ORCH_MODEL:-unknown}"
+  sed -i.bak \
+    -e "s|<MODEL>|$_model|" \
+    -e "s|<N>|$_section_tokens|" \
+    -e "s|<M>|$_summary_tokens|" \
+    "$summary_out" 2>/dev/null || true
+  rm -f "${summary_out}.bak" 2>/dev/null || true
+
+  # Splice the summary back into the capture file.
+  awk -v s="$_line_start" -v e="$_line_end" -v sf="$summary_out" '
+    NR == s {
+      while ((getline ln < sf) > 0) print ln
+      close(sf)
+      next
+    }
+    NR > s && NR <= e { next }
+    { print }
+  ' "$capture_file" > "$out_file"
+
+  # Preservation self-check.
+  if type pres_check_section >/dev/null 2>&1; then
+    if ! pres_check_section "tier3" "$pre_file" "$out_file" tier3 >/dev/null 2>&1; then
+      if type pres_emit_violation >/dev/null 2>&1; then
+        local _t3_log
+        _t3_log="$ORCH_ROOT/milestones/$MILESTONE_ID/execution-log.jsonl"
+        if [ ! -d "$ORCH_ROOT/milestones/$MILESTONE_ID" ] && [ -d "$ORCH_ROOT/phases" ]; then
+          _t3_log="$ORCH_ROOT/execution-log.jsonl"
+        fi
+        pres_emit_violation "tier3" "$_section_header" "preservation-breach" "$_t3_log" 2>/dev/null || true
+      fi
+      _bc_emit_tier3_event tier3_failed "reason=preservation-breach"
+      return 0
+    fi
+  fi
+
+  # Atomic in-place replace.
+  mv "$out_file" "$capture_file"
+
+  # Compute savings + write stats.
+  local _savings_tokens
+  _savings_tokens=$(( _section_tokens - _summary_tokens ))
+  if [ "$_savings_tokens" -lt 0 ]; then _savings_tokens=0; fi
+  printf 'savings_tokens=%d invocations=1\n' "$_savings_tokens" > "$stats_file"
+  return 0
+}
+
+# T3 event emitter — appends a JSONL record to the active execution log naming
+# the tier3 reason / status. Bail-safe per FR-9. MEM004 carve-out (single-pass
+# JSONL write inside a dispatch-internal helper).
+_bc_emit_tier3_event() {
+  local record_type="$1"
+  local reason="$2"
+  local log_dir log_file ts unit_id
+  log_dir="$ORCH_ROOT/milestones/$MILESTONE_ID"
+  if [ ! -d "$log_dir" ] && [ -d "$ORCH_ROOT/phases" ]; then
+    log_dir="$ORCH_ROOT"
+  fi
+  log_file="$log_dir/execution-log.jsonl"
+  ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  unit_id="${MILESTONE_ID}/${PHASE_ID}/${TASK_ID}"
+  mkdir -p "$log_dir" 2>/dev/null || return 0
+  printf '{"record_type":"%s","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","reason":"%s","timestamp":"%s"}\n' \
+    "$record_type" "$unit_id" "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" "$reason" "$ts" \
+    >> "$log_file" 2>/dev/null || true
+  return 0
+}
+
 _bc_gather_decisions() {
   local entries=""
   if [ "$CONTEXT_VERBOSITY" != "minimal" ]; then
@@ -1726,13 +2018,46 @@ EOF_PB_NAMES
     if [ -z "$tier2_savings_tokens" ]; then tier2_savings_tokens=0; fi
   fi
 
-  printf '{"record_type":"payload_breakdown","unitId":"%s/%s/%s","milestone":"%s","phase":"%s","task":"%s","payload_chars":%d,"payload_tokens_estimate":%d,"token_estimate_method":"char-quartile","section_tokens":{%s},"filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier1_invocations":%d,"tier2_savings_tokens":%d,"model":"%s","source":"estimate","timestamp":"%s"}\n' \
+  # M018/P06/T02 (CON-5): additive `tier3_compression_savings_tokens` +
+  # `tier3_invocations` fields. Reads $TMPDIR_BUILD/_tier3_stats.txt written
+  # by _bc_apply_tier3 (T01). Defaults to 0 when tier3 was disabled, the
+  # file is absent, the section did not exceed budget, MIT-08 density
+  # pre-check failed, intensity gate fired, or the LLM call failed
+  # (FR-9 failure-passthrough — every short-circuit path leaves the stats
+  # file at savings_tokens=0 invocations=0).
+  local tier3_compression_savings_tokens=0 tier3_invocations=0
+  local _bc_pb_t3_stats="$TMPDIR_BUILD/_tier3_stats.txt"
+  if [ -f "$_bc_pb_t3_stats" ]; then
+    tier3_compression_savings_tokens="$(awk '{
+      for (i = 1; i <= NF; i++) {
+        if ($i ~ /^savings_tokens=/) {
+          sub("savings_tokens=", "", $i)
+          print $i
+          exit
+        }
+      }
+    }' "$_bc_pb_t3_stats")"
+    tier3_invocations="$(awk '{
+      for (i = 1; i <= NF; i++) {
+        if ($i ~ /^invocations=/) {
+          sub("invocations=", "", $i)
+          print $i
+          exit
+        }
+      }
+    }' "$_bc_pb_t3_stats")"
+    if [ -z "$tier3_compression_savings_tokens" ]; then tier3_compression_savings_tokens=0; fi
+    if [ -z "$tier3_invocations" ];                  then tier3_invocations=0; fi
+  fi
+
+  printf '{"record_type":"payload_breakdown","unitId":"%s/%s/%s","milestone":"%s","phase":"%s","task":"%s","payload_chars":%d,"payload_tokens_estimate":%d,"token_estimate_method":"char-quartile","section_tokens":{%s},"filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier1_invocations":%d,"tier2_savings_tokens":%d,"tier3_compression_savings_tokens":%d,"tier3_invocations":%d,"model":"%s","source":"estimate","timestamp":"%s"}\n' \
     "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" \
     "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" \
     "$payload_chars" "$payload_tokens" \
     "$section_tokens_json" "$filter_dropped_tokens" \
     "$tier1_savings_tokens" "$tier1_invocations" \
     "$tier2_savings_tokens" \
+    "$tier3_compression_savings_tokens" "$tier3_invocations" \
     "$model" "$ts" \
     >> "$log_file" 2>/dev/null || {
     printf 'build-context.sh: payload_breakdown append failed on %s\n' "$log_file" >&2
@@ -2021,6 +2346,13 @@ _bc_apply_tier1 "$PAYLOAD_CAPTURE" || true
 # Short-circuits when `compression.enabled: false` (P02 byte-identity contract)
 # or when `compression.tier2.enabled: false` (per-tier disable).
 _bc_apply_tier2 "$PAYLOAD_CAPTURE" || true
+# M018/P06/T01: Tier 3 auto-compact (LLM-routed) runs against the post-tier2
+# captured payload. Failure-passthrough on every error path (FR-9); never
+# crashes the dispatch. Short-circuits on the master `compression.enabled`
+# toggle, on `compression.tier3.enabled: false`, on intensity-floor mismatch
+# (FR-14: Quick skips T3), on density pre-check (MIT-08), or when no oversized
+# section exists.
+_bc_apply_tier3 "$PAYLOAD_CAPTURE" || true
 cat "$PAYLOAD_CAPTURE"
 _bc_emit_payload_breakdown "$PAYLOAD_CAPTURE" || true
 _bc_emit_payload_filter || true

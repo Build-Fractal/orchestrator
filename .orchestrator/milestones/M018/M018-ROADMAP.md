@@ -26,42 +26,42 @@ updated_at: "2026-04-27T18:51:02Z"
     - Produces: `references/compression-grammar.md` (versioned tier-by-tier contract); `scripts/verify/compression-grammar-lint.sh`; `references/RUNTIME-ASSUMPTIONS.md` entries for compression-grammar runtime expectations; conversus gate report under `.orchestrator/milestones/M018/phases/P01/conversus/`
     - Consumes: SC-9 calibrated threshold from P00 spec amendment; conversus adapter `scripts/dispatch/adapters/tool/conversus.sh` (DEP-4)
 
-- [ ] **P02**: Knowledge-Aware Filter — "A dispatched task receives a context payload that excludes knowledge entries marked `status: superseded` or `status: experimental`; a `payload_filter` JSONL record appears in `execution-log.jsonl`; the existing `payload_breakdown` record carries a new `filter_dropped_tokens` field."
+- [x] **P02**: Knowledge-Aware Filter — "A dispatched task receives a context payload that excludes knowledge entries marked `status: superseded` or `status: experimental`; a `payload_filter` JSONL record appears in `execution-log.jsonl`; the existing `payload_breakdown` record carries a new `filter_dropped_tokens` field."
   - Risk: medium
   - Depends: P01
   - Boundary Map:
     - Produces: filter implementation in `scripts/dispatch/build-context.sh` (knowledge-status read + drop-list filter before payload assembly); `compression.knowledge_filter.drop_list` config key in `.orchestrator/config.yml` (default `["superseded", "experimental"]`); `payload_filter` JSONL record schema (additive emitter extension); `payload_breakdown.filter_dropped_tokens` field (additive); preservation-contract self-check pattern (re-used by T1/T2/T3)
     - Consumes: M020 `status:` field on knowledge entries (read-only — A-1); `references/compression-grammar.md` filter-tier rules (P01)
 
-- [ ] **P03**: Tier 1 Microcompact — "A dispatched task whose tool result exceeds the configured inline threshold receives an inline reference (`file_path + preview`) instead; the original persists to `.orchestrator/cache/tool-results/`; cache lookups key on SHA-256(command + input) and reuse references across dispatches; `tier1_savings_tokens` and `tier1_invocations` appear in `payload_breakdown`; `cache-prune.sh --max-age 7d` evicts entries past retention."
+- [x] **P03**: Tier 1 Microcompact — "A dispatched task whose tool result exceeds the configured inline threshold receives an inline reference (`file_path + preview`) instead; the original persists to `.orchestrator/cache/tool-results/`; cache lookups key on SHA-256(command + input) and reuse references across dispatches; `tier1_savings_tokens` and `tier1_invocations` appear in `payload_breakdown`; `cache-prune.sh --max-age 7d` evicts entries past retention."
   - Risk: medium
   - Depends: P02
   - Boundary Map:
     - Produces: T1 implementation in `build-context.sh` (tool-result paging + cache lookup/reuse); `.orchestrator/cache/tool-results/` directory tree (SHA-256-keyed); `tier1_savings_tokens` + `tier1_invocations` fields in `payload_breakdown` (additive); `tier_preservation_violation` JSONL record schema (additive emitter extension, shared with T2/T3); `scripts/util/cache-prune.sh --max-age <duration>`
     - Consumes: `references/compression-grammar.md` tier-1 rules (P01); preservation-contract self-check pattern (P02); `payload_breakdown` schema (extend)
 
-- [ ] **P04**: Tier 2 Snip — "A dispatched task whose section body exceeds the configured budget gets head-dropped while the configured tail ratio is preserved byte-identical; an in-band marker `<!-- compressed:tier2 ... -->` names the snip; preserved-pattern boundaries (e.g., code fences, JSON blocks) refuse the snip and pass through unmodified; `tier2_savings_tokens` appears in `payload_breakdown`."
+- [x] **P04**: Tier 2 Snip — "A dispatched task whose section body exceeds the configured budget gets head-dropped while the configured tail ratio is preserved byte-identical; an in-band marker `<!-- compressed:tier2 ... -->` names the snip; preserved-pattern boundaries (e.g., code fences, JSON blocks) refuse the snip and pass through unmodified; `tier2_savings_tokens` appears in `payload_breakdown`."
   - Risk: medium
   - Depends: P03
   - Boundary Map:
     - Produces: T2 implementation in `build-context.sh` (section head-drop with tail-ratio preservation + boundary detection); `tier2_savings_tokens` field in `payload_breakdown` (additive); in-band marker emitter for tier-2 (`<!-- compressed:tier2 ... -->`)
     - Consumes: `references/compression-grammar.md` tier-2 rules (P01); preservation-contract self-check pattern (P02); cache-prune integration (P03 — T2 has no cache but reuses prune utility for any spillover artifacts); `payload_breakdown` schema
 
-- [ ] **P05**: Surfaces + Eval Harness — "Operator runs `orchestrator:cost` and sees `filter_dropped_tokens`, `tier1_savings_tokens`, `tier2_savings_tokens` columns rolled up across the milestone. `orchestrator:status` efficiency footer shows compression savings inline. `orchestrator:doctor` anomaly check flags compression regressions against historical baseline. `scripts/diagnostics/compression-eval.sh` reads historical telemetry, segments compressed vs uncompressed cohorts, and reports outcome-rate deltas (verification pass rate, retry count, deviation count) with confidence intervals; `--tier <N>` filters by tier."
+- [x] **P05**: Surfaces + Eval Harness — "Operator runs `orchestrator:cost` and sees `filter_dropped_tokens`, `tier1_savings_tokens`, `tier2_savings_tokens` columns rolled up across the milestone. `orchestrator:status` efficiency footer shows compression savings inline. `orchestrator:doctor` anomaly check flags compression regressions against historical baseline. `scripts/diagnostics/compression-eval.sh` reads historical telemetry, segments compressed vs uncompressed cohorts, and reports outcome-rate deltas (verification pass rate, retry count, deviation count) with confidence intervals; `--tier <N>` filters by tier."
   - Risk: medium
   - Depends: P02, P03, P04
   - Boundary Map:
     - Produces: `dispatch_usage` and `unit_close` schema extensions (FR-10 additive savings + invocation fields); `orchestrator:cost` rollup extension (savings-field columns); `orchestrator:status` efficiency footer extension; `orchestrator:doctor` anomaly check extension (compression-regression detection vs baseline); `scripts/diagnostics/compression-eval.sh` (cohort segmentation + outcome-rate delta with CIs; `--tier <N>` filter)
     - Consumes: M019 emitter schema (DEP-3 extension point); M027 `orchestrator:cost`, `orchestrator:status`, `orchestrator:doctor` surfaces (DEP-2 extension points); P02 `payload_filter` + `filter_dropped_tokens`; P03 `tier1_savings_tokens` + `tier1_invocations`; P04 `tier2_savings_tokens`
 
-- [ ] **P06**: Tier 3 Auto-Compact — "At Standard intensity, an oversized section gets routed through `dispatch-interface.sh` with `templates/compression-tier3-prompt.md`; the original persists to `.orchestrator/cache/tier3-originals/`; `tier3_compression_savings_tokens` and `tier3_invocations` appear in `payload_breakdown`. An LLM-call failure passes Tier 2's output through unchanged and emits a `tier3_failed` JSONL record (never crashes the dispatch). T3's `unit_close: pass` is gated by `compression-eval.sh` showing no statistically significant outcome-rate regression vs the uncompressed cohort."
+- [x] **P06**: Tier 3 Auto-Compact — "At Standard intensity, an oversized section gets routed through `dispatch-interface.sh` with `templates/compression-tier3-prompt.md`; the original persists to `.orchestrator/cache/tier3-originals/`; `tier3_compression_savings_tokens` and `tier3_invocations` appear in `payload_breakdown`. An LLM-call failure passes Tier 2's output through unchanged and emits a `tier3_failed` JSONL record (never crashes the dispatch). T3's `unit_close: pass` is gated by `compression-eval.sh` showing no statistically significant outcome-rate regression vs the uncompressed cohort."
   - Risk: high
   - Depends: P05
   - Boundary Map:
     - Produces: T3 implementation in `build-context.sh` (dispatch-interface.sh-routed summarization with intensity gate + failure-passthrough); `templates/compression-tier3-prompt.md`; `.orchestrator/cache/tier3-originals/` directory tree; `tier3_compression_savings_tokens` + `tier3_invocations` fields in `payload_breakdown` (additive); `tier3_failed` JSONL record schema (additive); intensity-gate wiring (Quick skips T3)
     - Consumes: `references/compression-grammar.md` tier-3 rules (P01); `scripts/dispatch/dispatch-interface.sh` (DEP-7); `scripts/engine/intensity-gate.sh` (DEP-5); `compression-eval.sh` from P05 (verification-ladder gate per RISK-3); cache-prune utility (P03)
 
-- [ ] **P07**: Multi-Runtime Parity — "All zero-LLM tiers (filter, T1, T2) produce byte-identical compressed payloads under Claude Code, Codex CLI, and Cursor for a fixture corpus; the parity test fixture confirms this mechanically. T3 routes through `dispatch-interface.sh` correctly under each runtime. `references/RUNTIME-ASSUMPTIONS.md` records any unavoidable divergences with rationale."
+- [x] **P07**: Multi-Runtime Parity — "All zero-LLM tiers (filter, T1, T2) produce byte-identical compressed payloads under Claude Code, Codex CLI, and Cursor for a fixture corpus; the parity test fixture confirms this mechanically. T3 routes through `dispatch-interface.sh` correctly under each runtime. `references/RUNTIME-ASSUMPTIONS.md` records any unavoidable divergences with rationale."
   - Risk: low
   - Depends: P06
   - Boundary Map:

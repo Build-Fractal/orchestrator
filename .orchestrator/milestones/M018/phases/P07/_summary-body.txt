@@ -1,0 +1,192 @@
+P07 lands the **multi-runtime parity audit** for the M018 compression
+pipeline. The phase ships zero-production-code surfaces — only
+diagnostic surfaces, fixtures, verifiers, and a registry document —
+and proves the pipeline behaves identically (or, where divergence is
+inherent to the multi-runtime model, predictably) under every
+supported runtime: `claude-code`, `codex`, `cursor`.
+
+After P07, the M018 compression pipeline carries a hermetic byte-equality
+proof for the bash-only tiers (knowledge-aware filter + Tier 1
+microcompact + Tier 2 snip) across all three runtimes, plus a Tier 3
+routing-parity proof under a deterministic stub. Inherent runtime
+divergences (Tier 3 native-model name + pricing; `claude` CLI PATH
+presence) are documented in `references/RUNTIME-ASSUMPTIONS.md` for
+the M009 launch-gate runtime-parity audit to consume.
+
+The phase ships:
+
+- **`tests/compression-runtime-parity/` fixture corpus** (T01) — four
+  fixture trees under `fixtures/{filter-mixed-status,
+  tier1-oversized-tool-result, tier2-oversized-section,
+  tier3-oversized-section}/`, each with `config.yml`,
+  `input/payload-input.txt`, and a fixture-local README; the filter
+  fixture also ships a small `knowledge/` subtree (MEM-FXT-A graduated,
+  MEM-FXT-B experimental, MEM-FXT-C superseded, MEM-FXT-D graduated)
+  exercising the knowledge-aware filter's mixed-status path. Corpus
+  README at `tests/compression-runtime-parity/README.md` documents the
+  byte-equality contract.
+
+- **`scripts/diagnostics/m018-runtime-parity.sh`** (T01) — zero-LLM
+  parity runner. Iterates fixtures × runtimes, stages a hermetic
+  orch_root via the helper, exports
+  `ORCH_BACKEND` + `INTENSITY_METADATA_FILE=intensity:Quick` (forces T3
+  short-circuit), invokes `scripts/dispatch/build-context.sh`, captures
+  the post-pipeline payload, computes SHA-256, and prints
+  per-(fixture,runtime) `runtime-parity` lines + per-fixture
+  `parity ... result=match|divergence` summaries + a final
+  `regression_flag:` advisory line. Always exits 0 (FR-12). Snapshots
+  the project's `knowledge/` tree + `KNOWLEDGE-INDEX.md` before the
+  first invocation and restores between every (fixture, runtime) pair
+  so build-context's `increment-hits.sh` side-effect cannot perturb
+  cross-runtime byte-equality.
+
+- **`scripts/diagnostics/m018-runtime-parity-tier3.sh`** (T02) — Tier 3
+  routing parity runner. Uses
+  `tests/compression-runtime-parity/_stubs/tier3-stub-llm.sh` as the
+  deterministic LLM provider via `ORCH_TIER3_LLM_BIN`, runs build-context
+  with the `tier3-oversized-section` fixture under each runtime, and
+  asserts the stub fired exactly once per runtime (`stub_invocations=1`).
+  `--fail-stub` mode exercises FR-9 failure-passthrough: the stub
+  exits non-zero and the runner asserts Tier 2's bytes pass through
+  unchanged (`passthrough=ok` per runtime). Always exits 0.
+
+- **`tests/compression-runtime-parity/_stubs/tier3-stub-llm.sh`** (T02) —
+  deterministic four-flag stub for hermetic T3 invocations. Honors
+  `--prompt`, `--input`, `--output`, `--stub-fail` flags; in success
+  mode emits a fixed compressed body to the output path; in
+  `--stub-fail` mode exits non-zero so the helper's failure-passthrough
+  path fires. Stub README documents the contract.
+
+- **`scripts/verify/_helpers/m018-p07-build-fixture.sh`** (T01) —
+  fixture-staging helper mirroring the P06 helper shape. Takes
+  `<runtime> <fixture>` positional args; idempotent clean-stage; emits
+  the staged orch_root path on stdout; copies fixture `config.yml` +
+  `knowledge/` tree to the stage; folds `payload-input.txt` verbatim
+  into the staged `T01-PLAN.md` body so build-context's
+  `handle_task_plan` injects the bytes into the `## Task Plan` section.
+
+- **`references/RUNTIME-ASSUMPTIONS.md`** (T03) — registry document
+  consumed by the M009 launch-gate runtime-parity audit. The
+  `# Compression (M018)` block names two inherent-by-design divergences
+  (`RA-M018-01` Tier 3 model + pricing per runtime; `RA-M018-02`
+  `claude` CLI PATH presence), each with rationale and an M009
+  audit-row link placeholder. The bash-only tier parity sub-block
+  records the P07 close-state result: `regression_flag: none`, no
+  divergence observed.
+
+- **Three P07-private truth verifiers** (T03) under
+  `scripts/verify/m018-p07-*.sh`:
+    - `m018-p07-zero-llm-parity.sh` — drives the zero-LLM runner; 16
+      assertions covering per-(fixture, runtime) SHA-256 lines,
+      per-fixture parity match, and the final `regression_flag: none`
+      result. Documented-divergence carve-out: accepts
+      `regression_flag: divergence` iff a documenting RA-M018-NN row
+      exists in `references/RUNTIME-ASSUMPTIONS.md`.
+    - `m018-p07-tier3-routing.sh` — drives the T3 routing runner; 14
+      assertions covering both success and `--fail-stub` modes (per-runtime
+      routed lines, summary, regression flag, FR-9 failure-passthrough).
+    - `m018-p07-runtime-assumptions-and-dual-write.sh` — 11 assertions
+      covering RUNTIME-ASSUMPTIONS.md presence + `# Compression (M018)`
+      block header + at least one RA-M018-NN row, plus the CLAUDE.md /
+      AGENTS.md `orchestrator:recent-changes` block (both name `M018/P07`
+      and `runtime-parity`).
+
+- **CLAUDE.md / AGENTS.md `orchestrator:recent-changes` dual-write**
+  (T03) via `scripts/util/dual-write-runtime-md.sh --marker recent-changes
+  --append-entry "..."`. Both runtime instruction files name `M018/P07`
+  and `runtime-parity`.
+
+## Risk-mitigation traceability
+
+- **CON-1 / Constitution Principle VI (canonical files byte-identical
+  to pre-M018)** — P07 modifies only CLAUDE.md (recent-changes block,
+  via the marker-bounded dual-write helper) and AGENTS.md (the marker
+  region). All other production code (`scripts/dispatch/build-context.sh`,
+  `scripts/lib/knowledge-filter.sh`, the dispatch tree, etc.) is
+  untouched. The fixture corpus + verifiers + RUNTIME-ASSUMPTIONS.md +
+  diagnostic runners are net-new files outside the canonical surface.
+
+- **CON-5 (additive emitters)** — no emitter schema changes in P07.
+  The `runtime_parity` JSONL record_type that T01's runner appends to
+  the staged-fixture execution-log.jsonl is additive (new record_type
+  values are CON-5-compliant; pre-M018 readers ignore unknown
+  record_types).
+
+- **FR-9 (Tier 3 failure-passthrough)** — exercised end-to-end by the
+  T02 routing runner's `--fail-stub` mode under every runtime. Runner
+  asserts `passthrough=ok` per runtime; the dispatch never crashes
+  from a Tier 3 fault even when the LLM provider exits non-zero.
+
+- **FR-12 (read-only diagnostic surfaces)** — both runners always exit
+  0; divergence surfaces via `regression_flag:` advisory lines, never
+  via non-zero exit. Verifiers honor the same contract.
+
+- **FR-13 (multi-runtime native-model T3 routing)** — the routing
+  runner proves T3 routes through `scripts/dispatch/lib/tier3-llm-call.sh`
+  under every runtime (`stub_invocations=1` per runtime in success
+  mode); the inherent native-model + pricing divergence is documented
+  in `references/RUNTIME-ASSUMPTIONS.md` `RA-M018-01`.
+
+- **AD-19 / AP-009 single-script-file Check shape** — every truth
+  verifier exposes its truth via a single bash invocation; verifiers
+  use `pass()`/`fail()` per MEM002 and `printf 'PASS:' / 'FAIL:'`
+  line-prefix per MEM001; runner-internal MEM004 carve-out applies
+  inside the diagnostic bodies but the Check line itself remains
+  single-script-file.
+
+- **Bash 3.2 (MEM001)** — verifiers use parallel indexed arrays + simple
+  for-loops; no `declare -A`, no `mapfile`, no `read -ra`. AGENTS.md
+  dual-write via the canonical helper (never edited directly).
+
+## Followups for downstream phases
+
+- **M009 launch-gate handoff** — `references/RUNTIME-ASSUMPTIONS.md`
+  is the consumption surface for the M009 runtime-parity audit. P07
+  uses placeholder M009 audit-row IDs (`M009-RP-01`, `M009-RP-02`);
+  M009 will assign real audit-row IDs at audit time. The verifier
+  asserts the column header exists and at least one RA-M018-NN row is
+  present, not specific row IDs. Future divergences observed under
+  later phases or milestones should land as new RA-M018-NN rows in the
+  bash-only tier parity sub-block.
+
+- **Documented-divergence carve-out** — the P07 verifiers accept
+  `regression_flag: divergence` iff the corresponding RA-M018-NN row
+  exists in `references/RUNTIME-ASSUMPTIONS.md`. This honors the spec
+  framing: divergences are documented, not suppressed; the verifier
+  asserts the documentation discipline.
+
+- **Knowledge-state snapshot/restore** — the zero-LLM parity runner
+  carries an in-runner snapshot of `knowledge/` + `KNOWLEDGE-INDEX.md`
+  before the first invocation and restores between (fixture, runtime)
+  pairs because `build-context.sh`'s `PROJECT_ROOT` is hardcoded to
+  the orchestrator repo. A future phase could plumb a `PROJECT_ROOT`
+  override through build-context to remove the snapshot/restore
+  surface, but P07 leaves the canonical script untouched per CON-1.
+
+- **Tier 3 fixture coverage** — the corpus ships one Tier 3 fixture
+  (`tier3-oversized-section`); future routing-parity work could add
+  fixtures exercising the density-floor short-circuit, the
+  preservation-breach failure path, and the `output_max_ratio`
+  no-savings path. The runner auto-discovers fixtures, so adding new
+  ones requires no runner change.
+
+## Verification result
+
+All three P07 truths PASS. Each verifier exits 0 with `PASS:` lines per
+assertion:
+
+- `m018-p07-zero-llm-parity.sh` — PASS (16 assertions: runner exists +
+  `bash -n` clean + per-(fixture, runtime) `runtime-parity sha256=`
+  lines × 9 + per-fixture `parity result=match runtimes=3` × 3 + final
+  `regression_flag: none`).
+- `m018-p07-tier3-routing.sh` — PASS (14 assertions: runner +
+  `bash -n` + stub `-x` + success-mode `tier3-routing routed
+  stub_invocations=1` × 3 + `tier3-routing-parity result=all-routed` +
+  `regression_flag: none` + `--fail-stub` exit 0 + per-runtime
+  `passthrough=ok` × 3).
+- `m018-p07-runtime-assumptions-and-dual-write.sh` — PASS (11
+  assertions: RUNTIME-ASSUMPTIONS.md + `# Compression (M018)` header +
+  RA-M018-NN row + CLAUDE.md / AGENTS.md `recent-changes` regions +
+  both name `M018/P07` and `runtime-parity`).
+
+P07 closed. M018 advances to milestone-close consolidation.

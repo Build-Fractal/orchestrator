@@ -1,0 +1,16 @@
+# M018/P07/T01 fixture: knowledge-aware filter under test in isolation.
+# All other tiers are disabled so byte-equality across runtimes proves the
+# filter pipeline alone.
+context_verbosity: standard
+duration_budget: 2h
+dispatch_budget: 3
+budget_enforcement: warn
+compression:
+  enabled: true
+  knowledge_filter:
+    enabled: true
+    drop_list: ["superseded", "experimental"]
+  tier1:
+    enabled: false
+  tier2:
+    enabled: false

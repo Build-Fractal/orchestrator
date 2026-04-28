@@ -1,0 +1,19 @@
+# M018/P07/T01 fixture: Tier 1 microcompact under test in isolation.
+# Filter + Tier 2 disabled. Tier 3 short-circuits via the runner's intensity
+# override. tool_result_budget_bytes set so the inline tool-result fires the
+# paging path.
+context_verbosity: standard
+duration_budget: 2h
+dispatch_budget: 3
+budget_enforcement: warn
+compression:
+  enabled: true
+  knowledge_filter:
+    enabled: false
+  tier1:
+    enabled: true
+    inline_threshold_tokens: 200
+    preview_lines: 3
+    cache_dir: .orchestrator/cache/tool-results/
+  tier2:
+    enabled: false

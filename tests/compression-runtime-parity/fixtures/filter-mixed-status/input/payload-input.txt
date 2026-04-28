@@ -1,0 +1,11 @@
+# Filter fixture — payload-input body
+
+This text is folded verbatim into the staged task plan body. The runner
+does not exercise this content directly; the filter runs against the
+fixture's `knowledge/` tree, where MEM-FXT-A and MEM-FXT-D are kept
+(`status: graduated`) and MEM-FXT-B (`status: experimental`) and
+MEM-FXT-C (`status: superseded`) are dropped.
+
+The downstream byte-equality assertion compares post-filter payload
+SHA-256 across the three simulated runtimes (`claude-code`, `codex`,
+`cursor`).

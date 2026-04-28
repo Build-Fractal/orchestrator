@@ -1,0 +1,25 @@
+# M018/P07/T01 fixture: Tier 2 snip under test in isolation.
+# Filter + Tier 1 disabled. Tier 3 short-circuits via the runner's intensity
+# override. section_budget_tokens tuned so the oversized section fires the
+# head-drop path while preserving the configured tail ratio.
+context_verbosity: standard
+duration_budget: 2h
+dispatch_budget: 3
+budget_enforcement: warn
+compression:
+  enabled: true
+  knowledge_filter:
+    enabled: false
+  tier1:
+    enabled: false
+  tier2:
+    enabled: true
+    # Budget tuned so the assembled Task Plan section trips the head-drop
+    # path. The post-snip preservation self-check may roll the snip back
+    # (the in-band tier2 compression marker the snip injects is itself a
+    # preserved-pattern row in the cross-tier vocabulary, so strict
+    # multiplicity is unsatisfied on a marker-free pre payload). Either
+    # outcome — successful snip or boundary-refusal-rollback — is
+    # deterministic across runtimes; the byte-equality contract holds.
+    section_budget_tokens: 200
+    protected_tail_ratio: 0.3

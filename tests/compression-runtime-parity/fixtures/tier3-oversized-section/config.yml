@@ -1,0 +1,17 @@
+# M018/P07/T02 fixture: Tier 3 routing parity under deterministic stub.
+# T01 stages this directory; T02 wires the deterministic stub
+# (tests/compression-runtime-parity/_stubs/tier3-stub-llm.sh) as
+# ORCH_TIER3_LLM_BIN and asserts the helper invokes the stub once per
+# fixture per runtime.
+context_verbosity: standard
+duration_budget: 2h
+dispatch_budget: 3
+budget_enforcement: warn
+compression:
+  enabled: true
+  knowledge_filter:
+    enabled: false
+  tier1:
+    enabled: false
+  tier2:
+    enabled: false

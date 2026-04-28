@@ -14,7 +14,7 @@
 set -euo pipefail
 
 # Valid config keys
-VALID_KEYS="default_tier verification_commands context_verbosity git_isolation dispatch_budget duration_budget budget_enforcement session_weight_limit auto_proceed efficiency_footer predictive_cost_surface anomaly_cost_multiplier anomaly_retry_threshold anomaly_pass_rate_threshold anomaly_check_enabled"
+VALID_KEYS="default_tier verification_commands context_verbosity git_isolation dispatch_budget duration_budget budget_enforcement session_weight_limit auto_proceed efficiency_footer predictive_cost_surface anomaly_cost_multiplier anomaly_retry_threshold anomaly_pass_rate_threshold anomaly_check_enabled compression.efficiency_footer.enabled compression.regression_floor"
 
 # Defaults for file paths
 DEFAULTS_FILE=""
@@ -105,7 +105,8 @@ read_yaml_value() {
 }
 
 # Layer 1: Environment variable (highest precedence)
-upper_key=$(echo "$KEY" | tr '[:lower:]' '[:upper:]')
+# Dotted keys (compression.*) translate '.' to '_' for the env-var name.
+upper_key=$(echo "$KEY" | tr '[:lower:]' '[:upper:]' | tr '.' '_')
 env_var="SPECKIT_ORCHESTRATOR_${upper_key}"
 env_value="${!env_var:-}"
 
@@ -116,6 +117,29 @@ if [[ -n "$env_value" ]]; then
   else
     echo "$env_value"
   fi
+  exit 0
+fi
+
+# M018/P05/T02 — dotted compression keys are nested under the `compression:`
+# block in YAML. Delegate to scripts/lib/knowledge-filter.sh helpers which
+# already implement the indent-aware nested parser. The helpers resolve
+# project-config (`.orchestrator/config.yml`) only; --defaults / --local
+# layering does not currently apply to nested compression keys (consistent
+# with the existing `compression.tier1.*` / `compression.tier2.*` pattern
+# used by build-context.sh).
+if [[ "$KEY" = "compression.efficiency_footer.enabled" ]] || [[ "$KEY" = "compression.regression_floor" ]]; then
+  _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  _PROJECT_ROOT="$(cd "$_SCRIPT_DIR/../.." && pwd)"
+  # shellcheck disable=SC1091
+  . "$_PROJECT_ROOT/scripts/lib/knowledge-filter.sh"
+  case "$KEY" in
+    compression.efficiency_footer.enabled)
+      kf_get_efficiency_footer_compression_enabled "$_PROJECT_ROOT"
+      ;;
+    compression.regression_floor)
+      kf_get_compression_regression_floor "$_PROJECT_ROOT"
+      ;;
+  esac
   exit 0
 fi
 

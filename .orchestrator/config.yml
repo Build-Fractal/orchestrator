@@ -87,3 +87,7 @@ compression:
     enabled: true
     section_budget_tokens: 1500
     protected_tail_ratio: 0.3
+  # M018/P05/T02 — operator-facing surface knobs.
+  efficiency_footer:
+    enabled: true                 # Compression line in M027/P02 efficiency footer.
+  regression_floor: 0.347         # SC-9 P00-calibrated savings-ratio floor.

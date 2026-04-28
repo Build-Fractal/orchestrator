@@ -22,6 +22,9 @@ Thumbs.db
 .orchestrator/milestones/**/*-result.txt
 .orchestrator/tmp/
 
+# Compression caches (M018: tool-result paging + tier3 originals — disposable; rebuilt on demand)
+.orchestrator/cache/
+
 # Ephemeral conversus deliberation output (config committed; output directory is derived)
 specs/**/conversus/
 

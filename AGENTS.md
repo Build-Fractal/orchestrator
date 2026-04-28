@@ -1,3 +1,4 @@
 # >>> orchestrator:recent-changes >>>
-- M018/P01 (2026-04-27): Compression Grammar Contract authored at references/compression-grammar.md (v1.0.0); per-tier preservation contract, marker grammar `<!-- compressed:tierN ... -->`, additive emitter invariants (CON-5); SC-9 floor (34.7%) defended via P00 probe CIs; conversus --strict gate PASS archived under .orchestrator/milestones/M018/phases/P01/conversus/.
+- 030-context-compression-layer / M018/P01: compression-grammar contract v1.0.1 Reviewed; conversus --strict gate PASS.
+- 030-context-compression-layer / M018/P02: knowledge-aware filter live in build-context.sh; preservation-check library shipped; payload_filter + filter_dropped_tokens emitters additive (CON-5); compression_underperformance self-check operational.
 # <<< orchestrator:recent-changes <<<

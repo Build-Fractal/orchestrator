@@ -47,10 +47,11 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # M018/P02/T02: source preservation-check library defensively so downstream
 # tier wiring (P03/P04/P06) inherits a working source path with no further
-# wiring. The filter operates on whole-entry granularity per grammar contract
-# `## Tier: filter` failure semantics, so no caller wires pres_check_section
-# in P02. The `|| true` keeps build-context bail-safe when the library is
-# absent (e.g., on a partial install).
+# wiring. The filter operates on whole-entry granularity per the grammar
+# contract at references/compression-grammar.md `## Tier: filter` failure
+# semantics, so no caller wires pres_check_section in P02. The `|| true`
+# keeps build-context bail-safe when the library is absent (e.g., on a
+# partial install).
 if [ -r "$PROJECT_ROOT/scripts/lib/preservation-check.sh" ]; then
   . "$PROJECT_ROOT/scripts/lib/preservation-check.sh" || true
 fi

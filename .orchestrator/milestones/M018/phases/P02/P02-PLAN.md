@@ -40,7 +40,7 @@ depends_on: ["P01"]
 - `scripts/lib/preservation-check.sh` (min 80 lines, contains "pres_check_section")
 - `scripts/dispatch/build-context.sh` (modified — must contain "filter_dropped_tokens", "payload_filter", "knowledge_filter.drop_list")
 - `.orchestrator/config.yml` (modified — must contain "compression:")
-- `templates/config-defaults.yml` (modified — must contain "knowledge_filter")
+- `templates/orchestrator-config-default.yml` (modified — must contain "knowledge_filter")
 - `tests/fixtures/m018-p02-knowledge-status/README.md` (min 20 lines, contains "status: superseded")
 - `tests/fixtures/m018-p02-baseline-payload.golden.txt` (min 5 lines, contains "Knowledge")
 - `scripts/verify/m018-p02-filter-drops.sh` (min 40 lines, contains "status: superseded")

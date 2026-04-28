@@ -1,3 +1,4 @@
+<!-- M018/P02 Knowledge baseline (compression.enabled:false short-circuit) -->
 ---
 id: MEM900
 scope_tags: "[project]"

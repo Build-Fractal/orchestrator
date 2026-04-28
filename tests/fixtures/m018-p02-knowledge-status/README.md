@@ -18,6 +18,11 @@ via `scripts/lib/knowledge-filter.sh`.
   | MEM903 | experimental   | DROP (default list)  |
   | MEM904 | graduated      | RETAIN               |
 
+  Concretely: MEM901's frontmatter carries `status: superseded`; MEM903's
+  frontmatter carries `status: experimental`. With the default drop-list
+  both are removed from the resolved knowledge stream before payload
+  assembly.
+
   With the default config (`drop_list: ["superseded", "experimental"]`), the
   filter drops MEM901 + MEM903 and retains MEM900, MEM902, MEM904 — a 2/5
   drop ratio that matches the P00 modeling assumption (mean_drop=0.30, see

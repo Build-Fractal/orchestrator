@@ -40,9 +40,11 @@ M024 (universal intake & routing) will run under `orchestrator:auto` against arb
 
 If empirical replay (P01 of M026) shows only 1-2 screenshots actually leak past the existing classifier when the hook *is* portable, M026 can collapse into 2 quick PRs (hook portability + corpus extension) and not block M024 at all.
 
-### Why M027 after M023
+### Why M027 after M023 (and after M018 + M019 T1)
 
 M027 is launch-polish — it makes the orchestrator's autonomous execution legible to humans (and to the M013 GitHub board). It's not blocking; it's the kind of feature that materially improves first-impression adoption *at launch*. M023 (design layer) is currently the last pre-launch gate before M009. M027 fits naturally between them: M023 produces design contracts, M027 makes the runtime visible. Both feed into M009's runtime-parity audit.
+
+**Data-source dependency**: M027 surfaces token + cost data that M018 (Context Compression Layer) emits as additive `payload_breakdown` fields and M019 Tier 1 ships through JSONL. Both are in place by the time M027 lands in the proposed sequence. M019 Tier 2+3 (cost rollup) is *optional* — if it lands before M027, dollars display natively; if not, M027 falls back to token totals plus a static cost table for headline estimates. Either way M027 ships and provides spend transparency.
 
 ### Why constitution amendment any time
 

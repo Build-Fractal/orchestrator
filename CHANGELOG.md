@@ -22,6 +22,46 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This pr
 - `scripts/lifecycle/phase-transition.sh` deduplicates concatenated task-summary fields (`provides`, `key_files`, `key_decisions`, `patterns_established`) and overrides `requires`/`affects` with roadmap-derived phase graph position instead of leaking internal task IDs into phase frontmatter. Adds a new `affects <P##>` query to `scripts/state/read-roadmap.sh` (reverse-Depends). (Bug F)
 - `scripts/lifecycle/check-settings-state.sh` now captures regen/write/merge failure detail to `.orchestrator/diagnostics/settings-regen-<ISO8601>.log` and emits a stderr breadcrumb. Previously the captured stderr was silently dropped behind a `keeping existing` fallback. Exit code unchanged (still 0) — escalation to non-zero in unattended mode deferred pending evidence. (FU-9)
 
+## [0.9.2] — 2026-04-28
+
+v0.9.2 closes **M018 (030-context-compression-layer)** — caveman-style token compression as a four-tier pipeline stage in `scripts/dispatch/build-context.sh`. Eight phases (P00 through P07) all green; `validate-milestone.sh` PASS 75/75. Backfills **M027 (cost+quality observability surfaces, closed 2026-04-27)** which was missing from the changelog. See `.orchestrator/milestones/M018/M018-SUMMARY.md` and `.orchestrator/milestones/M027/M027-SUMMARY.md` for the authoritative scope.
+
+### Added
+
+- **M018 — Context Compression Layer** (eight phases):
+  - **P00** — emitter parity probe + section-distribution probe + SC-9 regression-floor calibration to **34.7%** (P00-baseline savings ratio that downstream phases must not regress below).
+  - **P01** — `references/compression-grammar.md` v1.0.1 (Reviewed) — in-band marker contract (`<!-- compressed:tierN model=... input_tokens=N output_tokens=M -->`), four-tier definitions (filter / T1 / T2 / T3), preservation contract (FR-2), failure-passthrough discipline (FR-9). Conversus `--strict` gate PASS.
+  - **P02** — knowledge-aware status filter live in `build-context.sh`. `scripts/lib/preservation-check.sh` reusable library (used by P03/P04/P06). Additive `payload_filter` and `filter_dropped_tokens` JSONL fields (CON-5). `compression_underperformance` self-check emitter when running mean savings drops below SC-9 floor.
+  - **P03** — Tier 1 microcompact (tool-result paging with SHA-256-keyed disposable cache at `.orchestrator/cache/tool-results/`). `scripts/util/cache-prune.sh --max-age <days>` operator utility. Additive `tier1_savings_tokens` + `tier1_invocations` payload_breakdown fields.
+  - **P04** — Tier 2 snip (section head-drop with `protected_tail_ratio`) + boundary-refusal walker handling 4+-backtick fences and YAML frontmatter delimiters (MIT-01). Additive `tier2_savings_tokens` payload_breakdown field.
+  - **P05** — operator surfaces + eval harness. `scripts/diagnostics/compression-eval.sh` cohort-segmentation diagnostic (`--tier <N>` filter, FR-12 always-exit-0). Schema extensions on `dispatch_usage` + `unit_close` JSONL records (additive `filter_dropped_tokens` / `tier1_savings_tokens` / `tier2_savings_tokens` / `tier1_invocations` rolled up from payload_breakdown at emit-time, CON-5). M027 cost-rollup column extension (cols 13–16). M027 efficiency-footer 'compression: <pct>% reduction' tail. `doctor compression-regression` flag firing below the SC-9 0.347 floor. Two operator-facing config knobs (`compression.efficiency_footer.enabled`, `compression.regression_floor`).
+  - **P06** — Tier 3 auto-compact (LLM-routed section summarization). `_bc_apply_tier3` in `build-context.sh` (intensity-gate + MIT-08 density pre-check + dispatch-interface.sh routing + originals persistence to `.orchestrator/cache/tier3-originals/` + FR-9 failure-passthrough emitting `tier3_failed` JSONL). `scripts/dispatch/lib/tier3-llm-call.sh` runtime-portability shim honoring `ORCH_TIER3_LLM_BIN` operator-binary path with `--prompt-file` / `--output` / `--max-tokens` / `--timeout` flags. `templates/compression-tier3-prompt.md` versioned summarization prompt. Additive `tier3_compression_savings_tokens` + `tier3_invocations` payload_breakdown / dispatch_usage / unit_close fields. `compression-eval.sh --tier 3` first-class real-cohort logic (replaces the P05 stub).
+  - **P07** — multi-runtime parity audit. `tests/compression-runtime-parity/` fixture corpus (filter / T1 / T2 / T3 fixtures). `scripts/diagnostics/m018-runtime-parity.sh` zero-LLM byte-equality runner (proves filter+T1+T2 produce SHA-256-identical post-pipeline payloads across `ORCH_BACKEND` ∈ {claude-code, codex, cursor} for all fixtures). `scripts/diagnostics/m018-runtime-parity-tier3.sh` Tier 3 routing-parity runner with `tests/compression-runtime-parity/_stubs/tier3-stub-llm.sh` deterministic stub. `references/RUNTIME-ASSUMPTIONS.md` `# Compression (M018)` block (RA-M018-01 zero-LLM byte-equality confirmed; RA-M018-02 T3 byte-equality exempt by design + routing-parity asserted instead). Three canonical truth verifiers (`scripts/verify/m018-p07-zero-llm-parity.sh`, `m018-p07-tier3-routing.sh`, `m018-p07-runtime-assumptions-and-dual-write.sh` — 41 assertions PASS combined).
+- **M027 — Cost+Quality Observability Surfaces** (four phases, closed 2026-04-27 — backfilled):
+  - **P00** — rollup engine + fixture suite under `tests/fixtures/m027-rollup/`.
+  - **P01** — `orchestrator:cost` retrospective + predictive command. Cost data drilldown across milestone / phase / task granularity with cohort segmentation.
+  - **P02** — efficiency footer (`scripts/diagnostics/efficiency-footer.sh`) + dispatch-time predictive surface (`scripts/dispatch/predictive-surface.sh`).
+  - **P03** — anomaly detection (`scripts/diagnostics/check-anomalies.sh`) + `orchestrator:doctor --config-check` runtime-cost feedback loop.
+
+### Changed
+
+- `scripts/dispatch/build-context.sh` extended through P02–P06: knowledge-aware filter (P02), Tier 1 paging (P03), Tier 2 snip (P04), Tier 3 auto-compact helper (P06), and additive emitter rollups for filter / T1 / T2 / T3 savings fields. Compression is opt-out — `compression.enabled: false` produces byte-identical pre-M018 payload (P02 golden regression upheld through P07).
+- `scripts/dispatch/dispatch-interface.sh` + `scripts/knowledge/write-summary.sh` extended with rollup foundation (P05/T01 four savings fields) and tier3 carry-forward (P06/T02 two tier3 fields). `dispatch_usage` and `unit_close` JSONL records now carry six additive integer fields each (CON-5; missing fields → `null` for pre-M018 jq filters).
+- `scripts/diagnostics/check-anomalies.sh` / `efficiency-footer.sh` / `metrics-rollup.sh` extended with M027 surfaces foundation (P05/T02) and M018 tier3 carry-forward (P06/T02). `metrics-rollup.sh` cost-rollup columns now run to 18 (cols 17–18 = `tier3_savings_tokens` / `tier3_invocations`).
+- `templates/orchestrator-config-default.yml` gains the `compression.tier3` config block (master `enabled: true` but operator-binary-required to engage — set `ORCH_TIER3_LLM_BIN` to opt in) plus the P05/T02 efficiency-footer + regression-floor surface knobs.
+
+### Knowledge
+
+- 5 milestone-scoped entries appended to `.orchestrator/KNOWLEDGE.md` (`milestone:M018` scope): additive emitter schema + pinned column-index contract; preservation-contract self-check + stats-file-first failure-passthrough; `phase-transition.sh --write` as the canonical phase-close path; hermetic runtime-parity-via-operator-binary-stub pattern (stub-fires-before-exit-1 invariant + knowledge-snapshot/restore); `RUNTIME-ASSUMPTIONS.md` registry pattern + documented-divergence carve-out for M009 launch-gate audit.
+
+### Documentation
+
+- `references/RUNTIME-ASSUMPTIONS.md` — new file (M018/P07). `# Compression (M018)` block; M009 launch-gate audit consumes this as a punch-list rather than re-deriving runtime divergences from scratch.
+- `references/compression-grammar.md` v1.0.1 (Reviewed) — locked-in marker grammar + tier definitions + preservation contract + failure-passthrough discipline. Conversus `--strict` gate PASS.
+- `templates/compression-tier3-prompt.md` — versioned summarization prompt for Tier 3 (frontmatter `prompt_version`).
+- `.orchestrator/milestones/M018/M018-SUMMARY.md` synthesized via `scripts/knowledge/write-summary.sh milestone` — 16-field frontmatter + body covering all 8 phases.
+- `.orchestrator/milestones/M025/` — runtime adapter at `scripts/dispatch/adapters/runtime/claude-code.sh:170-189` known-issue: emits `orchestrator-post-verify` / `orchestrator-before-commit` as bare command names not on PATH. `scripts/util/settings-merge.sh` accumulates dupes on repeated install (no install-side dedup keyed on `_orchestrator_managed`). Surfaced during M018 close. Folded into M028 P02 as Finding F (`.orchestrator/proposals/M028-autonomous-hardening-v3.md`); operator-side cleanup applied 2026-04-28 (manual `~/.claude/settings.json` edit; backup at `~/.claude/settings.json.bak-m018-cleanup-2026-04-28`).
+
 ## [0.9.1] — 2026-04-23
 
 v0.9.1 closes M025 (021-github-installer-coexistence) — remediation of the M013/P04/T04 hook-config regression whose installer overwrote any pre-existing `~/.claude/settings.json` with a schema-invalid wrapper document. See `specs/021-github-installer-coexistence/spec.md` for the authoritative scope.

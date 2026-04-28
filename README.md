@@ -1,8 +1,8 @@
 # spec-kit-orchestrator
 
-A standalone autonomous multi-phase orchestrator for long-horizon software development. Runs on Claude Code, Codex CLI, or Cursor. Originally built as an extension to [spec-kit](https://github.com/github/spec-kit); standalone as of v0.9.0 (M015).
+A standalone autonomous multi-phase orchestrator for long-horizon software development. Runs on Claude Code at launch; Codex CLI and Cursor are aspirational fast-follows (M009 multi-runtime parity audit ships demand-driven post-launch when non-CC users arrive — M018/P07 already proved zero-LLM-tier compression byte-equality across all three). Originally built as an extension to [spec-kit](https://github.com/github/spec-kit); standalone as of v0.9.0 (M015).
 
-> **Current version**: 0.9.0 — standalone-cutover complete. 13 commands, 80+ scripts, 24+ templates, 15 reference docs, 5 user guides.
+> **Current version**: 0.9.2 — context-compression layer (M018) closed 2026-04-28. 13 commands, 80+ scripts, 24+ templates, 15 reference docs, 6 user guides. Closed milestones: M011–M016, M018, M019 T1+T2/3, M020, M021, M024–M027. See [CHANGELOG.md](./CHANGELOG.md) for the full release history.
 
 ## The Problem
 

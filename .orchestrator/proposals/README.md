@@ -36,14 +36,14 @@ Forward queue, after the staleness correction:
 ```
 [constitution-amendment]    ← any time, single PR, no dependencies
 M018  ← currently active (Context Compression Layer)
-M028 (autonomous hardening v3)        ← INSERT — stabilizes autonomous runs
-M030 (adaptive model selection)       ← INSERT — makes runs cheaper
-M031 (right-sized entry)              ← INSERT — restores knowledge promise + tightens UX
-M029 (roadmap visibility + CLI UX)    ← INSERT — launch polish
-M009 (extended)
-M010 (adjusted)
-─── launch ───
-M023 (design layer)                   ← DEFERRED post-launch nice-to-have
+M028 (autonomous hardening v3)        ← stabilizes autonomous runs
+M030 (adaptive model selection)       ← makes runs cheaper
+M031 (right-sized entry)              ← restores knowledge promise + tightens UX
+M029 (roadmap visibility + CLI UX)    ← launch polish
+─── launch (CC-only) ───
+M009 (multi-runtime parity)           ← DEFERRED — when Codex/Cursor users arrive
+M023 (design layer)                   ← DEFERRED — when UI-project users arrive
+M010 (Managed Agents + Codex Cloud)   ← DEFERRED — aspirational, demand-driven
 ```
 
 ### Why M028 first (after M018 finishes)
@@ -62,19 +62,25 @@ M031 composes with M030: M030 routes the dispatching agent to a cheap model; M03
 
 Earlier M031 ships, sooner adoption barrier drops. Best for launch.
 
-### Why M029 just before M009
+### Why M029 closes pre-launch
 
-M029 is launch-polish — `orchestrator:where` and the headline status block. It composes existing M027 cost surfaces into the work-hierarchy tree (no new infrastructure, just new rendering). It wants to ship *with* the launch experience, not before. M009 audits parity; M029 makes the runtime visible right before the audit and launch. Natural order.
+M029 is launch-polish — `orchestrator:where` and the headline status block. It composes existing M027 cost surfaces into the work-hierarchy tree (no new infrastructure, just new rendering). It wants to ship *with* the launch experience, not before. With M009/M023/M010 demoted post-launch (see below), M029 is the last thing pre-launch — the runtime is visible to early users from day one.
 
-### Why M023 deferred post-launch (revised 2026-04-28)
+### Why M009, M010, M023 all deferred post-launch (revised 2026-04-28)
 
-M023 (design layer) was originally slotted pre-launch on the rationale that *this repo has no internal UI to dogfood against*. That's a real concern but not a launch-blocker — the orchestrator's core promise (multi-phase autonomous code orchestration with knowledge layer + cost transparency) is fully exercised by M018, M027, and the M028/M030/M031 proposals. Design-layer work is high-value but has the character of a fast-follow: once real users arrive with real UI projects, M023's design-personality dispatch becomes immediately useful. Pre-launch we don't have those users yet, so building it pre-launch invests dogfooding cycles in synthetic fixtures.
+Three deferrals, same logic: pre-launch dogfooding is CC-only, and these three milestones either expand the runtime story (M009 multi-runtime parity, M010 Managed Agents) or invest in capability that needs real-user signal to prioritize (M023 design layer). Building any of them pre-launch invests cycles in synthetic fixtures rather than user-driven priorities.
 
-Demotion implications:
-- M030 references to M023's `min_tier: novel` annotation become "if/when M023 ships" (not breaking).
-- M031's Tier A+ middle flow does not depend on M023.
-- M029 sequencing simplifies: it now slots directly before M009, no M023 dependency.
-- M009's runtime-parity audit doesn't consume M023 outputs (M023 is single-runtime initially per its own proposal).
+**M009 (multi-runtime parity audit)** — was originally a launch gate consuming `references/RUNTIME-ASSUMPTIONS.md`. M018/P07 has already seeded that registry with a compression-tier parity audit (CC / Codex CLI / Cursor byte-equality across zero-LLM tiers, plus T3 routing parity). The remaining audit work — broadening to non-compression assumptions accumulated across M013–M018 — defers until users with Codex CLI or Cursor projects actually arrive. Launch posture: CC-only with the multi-runtime claim *softened* in user-facing docs to "Claude Code today; Codex CLI / Cursor as fast-follows."
+
+**M023 (design layer)** — high-value but the character of a fast-follow. Once real users arrive with real UI projects, M023's design-personality dispatch becomes immediately useful. Pre-launch we don't have those users.
+
+**M010 (Managed Agents + Codex Cloud)** — net-new capability, not launch readiness. Anthropic's hosted Managed Agents runtime and Codex Cloud are aspirational backends. Demand-driven: ships when a customer-facing reason to ship it appears.
+
+Cross-reference housekeeping (non-breaking):
+- M030's `min_tier: novel` annotation for M023 design tasks becomes "if/when M023 ships."
+- M031's Tier A+ middle flow does not depend on M023, M009, or M010.
+- M029 sequencing simplifies: slots directly at end of pre-launch queue, no M009 dependency.
+- The "CC-only at launch" framing should also flow into the README's Standalone Mode section in CLAUDE.md when next refreshed (currently still says "three runtimes"; that's now aspirational).
 
 ### Why constitution amendment any time
 

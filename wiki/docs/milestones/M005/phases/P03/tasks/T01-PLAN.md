@@ -7,6 +7,7 @@ title: "scripts/lib/payload-transforms.sh — Pure payload transform functions."
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M005/phases/P03/tasks/T01-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

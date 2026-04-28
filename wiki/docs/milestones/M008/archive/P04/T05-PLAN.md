@@ -7,6 +7,7 @@ title: "ROOT RESOLUTION (P04/M008): Callers pass an explicit <milestone-dir>"
 
 {%
   include-markdown "../../../../../../.orchestrator/milestones/M008/archive/P04/T05-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

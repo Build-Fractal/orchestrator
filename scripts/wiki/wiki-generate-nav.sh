@@ -106,7 +106,7 @@ TMP_POST="/tmp/wiki-nav-post-$$.yml"
 TMP_FINAL="/tmp/wiki-nav-final-$$.yml"
 TMP_IDS="/tmp/wiki-nav-ids-$$.list"
 TMP_PHASE="/tmp/wiki-nav-phase-$$.list"
-trap 'rm -f "$SCAN_OUT" "$NAV_BODY" "$TMP_PRE" "$TMP_POST" "$TMP_FINAL" "$TMP_IDS" "$TMP_PHASE" /tmp/wiki-nav-kn-patterns-$$.list /tmp/wiki-nav-kn-conventions-$$.list /tmp/wiki-nav-kn-lessons-$$.list' EXIT INT TERM
+trap 'rm -f "$SCAN_OUT" "$NAV_BODY" "$TMP_PRE" "$TMP_POST" "$TMP_FINAL" "$TMP_IDS" "$TMP_PHASE" "/tmp/wiki-nav-titles-$$.tsv" /tmp/wiki-nav-kn-patterns-$$.list /tmp/wiki-nav-kn-conventions-$$.list /tmp/wiki-nav-kn-lessons-$$.list' EXIT INT TERM
 
 # ---- helpers ---------------------------------------------------------------
 
@@ -241,6 +241,28 @@ if ! bash "$SCANNER" --root "$ROOT" > "$SCAN_OUT" 2>/dev/null; then
   exit 1
 fi
 
+# ---- build M### -> Title lookup --------------------------------------------
+# Loaded once; consulted via milestone_label() for nav group labels so the
+# left navigation reads "M028 — Autonomous Hardening v3" instead of bare M028.
+TITLES_FILE="/tmp/wiki-nav-titles-$$.tsv"
+TITLES_SCRIPT="$ROOT/scripts/wiki/wiki-milestone-titles.sh"
+if [ -x "$TITLES_SCRIPT" ] || [ -f "$TITLES_SCRIPT" ]; then
+  bash "$TITLES_SCRIPT" --root "$ROOT" > "$TITLES_FILE" 2>/dev/null || : > "$TITLES_FILE"
+else
+  : > "$TITLES_FILE"
+fi
+
+# milestone_label <MID> -> echoes "MID — Title" when title resolves, else MID.
+milestone_label() {
+  _mid="$1"
+  _t=$(awk -F'\t' -v m="$_mid" '$1 == m { print $2; exit }' "$TITLES_FILE" 2>/dev/null)
+  if [ -n "$_t" ]; then
+    printf '%s — %s' "$_mid" "$_t"
+  else
+    printf '%s' "$_mid"
+  fi
+}
+
 # ---- assemble nav body -----------------------------------------------------
 : > "$NAV_BODY"
 
@@ -333,7 +355,15 @@ if [ "$HAS_ANY_KNOWLEDGE" -eq 1 ]; then
       [ -n "$KREL" ] || continue
       _kbase=$(basename "$KREL" .md)
       _kpath="knowledge/${_sub}/${_kbase}.md"
-      emit_leaf 3 "$_kbase" "$_kpath"
+      # Use the canonical H1 (scanner-extracted) when available — every MEM
+      # entry has a `# MEM###: <name>` first line, so KTITLE renders as a
+      # human-readable nav label. Falls back to the bare ID when no H1 was
+      # found (scanner returns basename in that case, equal to _kbase).
+      _klabel="$_kbase"
+      if [ -n "$KTITLE" ] && [ "$KTITLE" != "$_kbase" ]; then
+        _klabel="$KTITLE"
+      fi
+      emit_leaf 3 "$_klabel" "$_kpath"
     done < "$TMP_KN"
     rm -f "$TMP_KN"
   done
@@ -359,7 +389,7 @@ if [ "$HAS_ANY_MILESTONE" -eq 1 ]; then
   # For each milestone ID (sorted lexically by the earlier sort -u):
   grep '^M:' "$TMP_IDS" | sed 's/^M://' | while IFS= read -r MID; do
     [ -n "$MID" ] || continue
-    emit_group 2 "$MID"
+    emit_group 2 "$(milestone_label "$MID")"
     emit_leaf 3 "Overview" "milestones/${MID}/index.md"
 
     # Milestone-level artifacts: records with CAT=milestone:MID and REL of the
@@ -505,7 +535,7 @@ if [ "$HAS_ANY_ARCHIVE" -eq 1 ]; then
 
   grep '^A:' "$TMP_IDS" | sed 's/^A://' | while IFS= read -r MID; do
     [ -n "$MID" ] || continue
-    emit_group 2 "$MID"
+    emit_group 2 "$(milestone_label "$MID")"
     emit_leaf 3 "Overview" "archive/${MID}/index.md"
 
     awk -F'|' -v c="archive:${MID}" -v m="${MID}" '

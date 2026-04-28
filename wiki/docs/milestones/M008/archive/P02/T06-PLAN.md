@@ -7,6 +7,7 @@ title: "Verifies all P02 shell scripts are Bash 3.2 compatible."
 
 {%
   include-markdown "../../../../../../.orchestrator/milestones/M008/archive/P02/T06-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

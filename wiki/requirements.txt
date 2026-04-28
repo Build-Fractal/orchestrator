@@ -2,3 +2,7 @@ mkdocs==1.6.1
 mkdocs-material==9.5.49
 mkdocs-include-markdown-plugin==7.1.2
 pymdown-extensions==10.14.3
+# pygments 2.19+ stopped tolerating filename=None from pymdown-extensions
+# 10.14's BlockHtmlFormatter call (raises AttributeError in html.escape).
+# Pin to last-known-good 2.18.x until pymdown-extensions ships the fix.
+pygments<2.19

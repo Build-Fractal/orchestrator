@@ -7,6 +7,7 @@ title: "scripts/verify/m021-p04-corpus-shape.sh — Structural gate for T01 fixt
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M021/phases/P04/tasks/T05-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

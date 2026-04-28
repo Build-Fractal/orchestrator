@@ -7,6 +7,7 @@ title: "--- FR-15 dry-run manifest format --------------------------------------
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M013/phases/P02/tasks/T03-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

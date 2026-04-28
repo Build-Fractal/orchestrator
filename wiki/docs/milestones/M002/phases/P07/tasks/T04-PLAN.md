@@ -7,6 +7,7 @@ title: "scripts/verify/m002-p07-e2e.sh — E2E diagnostics pipeline verification
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M002/phases/P07/tasks/T04-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

@@ -7,6 +7,7 @@ title: "scripts/migrate/lib/sqlite-reader.sh — SQLite query helpers for GSD2 a
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M003/phases/P01/tasks/T02-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

@@ -7,6 +7,7 @@ title: "Adding a new section to the recipe makes it appear without any script ed
 
 {%
   include-markdown "../../../../../../.orchestrator/milestones/M004/phases/P05/P05-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

@@ -7,6 +7,7 @@ title: "scripts/knowledge/resolve-entries.sh — Resolve entry IDs to detail fil
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M002/phases/P03/tasks/T03-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

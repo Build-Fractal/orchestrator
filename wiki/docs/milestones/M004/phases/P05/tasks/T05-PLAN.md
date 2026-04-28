@@ -7,6 +7,7 @@ title: "run-parity.sh — End-to-end parity verification for P05 refactored disp
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M004/phases/P05/tasks/T05-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

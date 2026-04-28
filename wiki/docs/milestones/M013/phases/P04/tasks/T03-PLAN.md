@@ -7,6 +7,7 @@ title: "FR-16 pre-flight rate-limit probe (triggered when projected GraphQL volu
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M013/phases/P04/tasks/T03-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

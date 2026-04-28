@@ -7,6 +7,7 @@ title: "Verify run-suite.sh discovers gate scripts for a known phase"
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M016/phases/P02/tasks/T02-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

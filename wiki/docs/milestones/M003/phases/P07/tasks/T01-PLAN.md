@@ -7,6 +7,7 @@ title: "Resolve target root via M008 5-rule resolver (AD-13)."
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M003/phases/P07/tasks/T01-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

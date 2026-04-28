@@ -7,6 +7,7 @@ title: "Flag $VAR or $? when the line looks like a tool-call-shape invocation"
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M021/phases/P02/tasks/T01-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

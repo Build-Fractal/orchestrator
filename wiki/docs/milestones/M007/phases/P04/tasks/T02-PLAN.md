@@ -7,6 +7,7 @@ title: "Verifies check-graph-health.sh end-to-end with fixture data."
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M007/phases/P04/tasks/T02-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

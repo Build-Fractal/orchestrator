@@ -7,6 +7,7 @@ title: "tests/fixtures/m021-prompt-corpus.txt"
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M021/phases/P04/tasks/T01-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

@@ -7,6 +7,7 @@ title: "scripts/lib/verdicts.sh — Gate verdict protocol for hook scripts."
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M005/phases/P05/tasks/T01-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

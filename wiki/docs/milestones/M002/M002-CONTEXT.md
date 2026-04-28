@@ -7,6 +7,7 @@ title: "M002-CONTEXT"
 
 {%
   include-markdown "../../../../.orchestrator/milestones/M002/M002-CONTEXT.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

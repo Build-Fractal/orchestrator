@@ -7,6 +7,7 @@ title: "M003-SUMMARY"
 
 {%
   include-markdown "../../../../.orchestrator/milestones/M003/M003-SUMMARY.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

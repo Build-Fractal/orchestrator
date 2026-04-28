@@ -7,6 +7,7 @@ title: "Verify commands/auto.md does not contain $( in write-summary examples"
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M016/phases/P01/tasks/T02-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

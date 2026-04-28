@@ -7,6 +7,7 @@ title: "scripts/verify/anti-pattern-lint.sh — Detect Class A anti-patterns in 
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M016/phases/P03/tasks/T01-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

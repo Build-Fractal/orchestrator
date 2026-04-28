@@ -7,6 +7,7 @@ title: "--- next_version_id <old-id> ---"
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M011/phases/P03/tasks/T02-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

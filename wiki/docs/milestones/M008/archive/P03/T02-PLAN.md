@@ -7,6 +7,7 @@ title: "scripts/engine/intensity-override.sh -- Mid-workflow intensity override.
 
 {%
   include-markdown "../../../../../../.orchestrator/milestones/M008/archive/P03/T02-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

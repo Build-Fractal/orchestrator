@@ -7,6 +7,7 @@ title: "scripts/lib/hooks.sh — Hook lifecycle dispatcher with sandbox enforcem
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M004/phases/P02/tasks/T05-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

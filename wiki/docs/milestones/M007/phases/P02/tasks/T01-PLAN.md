@@ -7,6 +7,7 @@ title: "scripts/knowledge/traverse-graph.sh — Traverse knowledge entry relatio
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M007/phases/P02/tasks/T01-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

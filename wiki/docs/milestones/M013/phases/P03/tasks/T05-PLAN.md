@@ -7,6 +7,7 @@ title: "scripts/verify/m013-p03-bash32-compat.sh — Bash 3.2 compatibility gate
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M013/phases/P03/tasks/T05-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

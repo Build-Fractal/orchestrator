@@ -7,6 +7,7 @@ title: "scripts/integrations/github-conversus-gate.sh — M013/P04 UAT PR gate."
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M013/phases/P04/tasks/T05-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

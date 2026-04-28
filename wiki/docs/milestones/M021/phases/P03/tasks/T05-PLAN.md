@@ -7,6 +7,7 @@ title: "scripts/verify/m021-p03-hook-integration.sh — Integration gate for P03
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M021/phases/P03/tasks/T05-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

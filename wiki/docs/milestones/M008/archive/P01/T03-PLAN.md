@@ -7,6 +7,7 @@ title: "scripts/engine/intensity-recommend.sh — Intensity recommendation engin
 
 {%
   include-markdown "../../../../../../.orchestrator/milestones/M008/archive/P01/T03-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

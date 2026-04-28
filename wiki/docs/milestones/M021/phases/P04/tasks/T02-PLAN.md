@@ -7,6 +7,7 @@ title: "scripts/verify/replay-prompt-corpus.sh — M021 SC-1 regression gate."
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M021/phases/P04/tasks/T02-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

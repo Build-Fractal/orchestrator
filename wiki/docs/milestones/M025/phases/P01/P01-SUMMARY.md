@@ -7,6 +7,7 @@ title: "P01 — Installer coexistence: hook-config schema + merge-not-overwrite 
 
 {%
   include-markdown "../../../../../../.orchestrator/milestones/M025/phases/P01/P01-SUMMARY.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

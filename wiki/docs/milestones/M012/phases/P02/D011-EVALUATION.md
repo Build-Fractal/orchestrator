@@ -7,6 +7,7 @@ title: "D011 Mechanical Evaluation — M012/P02 close"
 
 {%
   include-markdown "../../../../../../.orchestrator/milestones/M012/phases/P02/D011-EVALUATION.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

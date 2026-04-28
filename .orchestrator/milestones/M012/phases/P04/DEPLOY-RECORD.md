@@ -25,8 +25,8 @@ site is live at <https://Build-Fractal.github.io/spec-kit-orchestrator/>.
 Deploy required a remediation patch first — the M012 auto-mode execution
 used SKIP-as-PASS on mkdocs-dependent gates, so three bugs were caught at
 first live run: (1) `mkdocs-include-markdown-plugin` aborting on self-
-reference task plans containing literal `{% include-markdown %}` examples
-inside code fences; (2) stub-generator emitting 52 broken section-index
+reference task plans containing literal `include-markdown` directive
+examples inside code fences; (2) stub-generator emitting 52 broken section-index
 links for archived-phase + phase-subdir artifacts; (3) `wiki-link-check.sh`
 taking 30+ minutes because of per-anchor `grep` subprocess calls. All three
 fixed in the remediation patch (commits `b3cbf74`, `1fef016`, `84ce4bd`).

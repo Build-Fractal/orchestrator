@@ -7,6 +7,7 @@ title: "Agent host marker directories — which host format the writer should em
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M005/phases/P07/tasks/T02-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

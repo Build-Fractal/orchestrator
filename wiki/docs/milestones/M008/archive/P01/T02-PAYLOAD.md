@@ -7,6 +7,7 @@ title: "Dispatch Context -- T02 (Phase P01, Milestone M008)"
 
 {%
   include-markdown "../../../../../../.orchestrator/milestones/M008/archive/P01/T02-PAYLOAD.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

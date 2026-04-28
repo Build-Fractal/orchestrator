@@ -7,6 +7,7 @@ title: "scripts/engine/test-resume.sh — End-to-end crash-recovery verification
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M004/phases/P03/tasks/T06-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

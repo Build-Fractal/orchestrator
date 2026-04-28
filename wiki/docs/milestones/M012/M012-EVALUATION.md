@@ -7,6 +7,7 @@ title: "M012 Evaluation"
 
 {%
   include-markdown "../../../../.orchestrator/milestones/M012/M012-EVALUATION.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

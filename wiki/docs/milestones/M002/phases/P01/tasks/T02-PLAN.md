@@ -7,6 +7,7 @@ title: "MEM001: Screen wrappers must use SafeAreaProvider not SafeAreaView"
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M002/phases/P01/tasks/T02-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

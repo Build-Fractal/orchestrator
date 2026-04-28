@@ -7,6 +7,7 @@ title: "http_probe <rest-path>"
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M013/phases/P04/tasks/T01-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

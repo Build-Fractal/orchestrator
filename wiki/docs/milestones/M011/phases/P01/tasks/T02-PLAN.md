@@ -7,6 +7,7 @@ title: "Scans all detail files in knowledge/*/ (excluding knowledge/archive/) an
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M011/phases/P01/tasks/T02-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

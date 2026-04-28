@@ -7,6 +7,7 @@ title: "T01 complete: check-recipe.sh exists"
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M004/phases/P07/tasks/T02-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

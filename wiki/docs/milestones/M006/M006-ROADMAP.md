@@ -7,6 +7,7 @@ title: "M006-ROADMAP"
 
 {%
   include-markdown "../../../../.orchestrator/milestones/M006/M006-ROADMAP.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

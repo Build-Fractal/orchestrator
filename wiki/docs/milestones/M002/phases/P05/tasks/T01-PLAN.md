@@ -7,6 +7,7 @@ title: "aggregate-metrics.sh should be read-only — it reads the log but never 
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M002/phases/P05/tasks/T01-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

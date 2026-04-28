@@ -7,6 +7,7 @@ title: "Verifies record-telemetry.sh accepts --cost-source flag in its argument 
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M005/phases/P02/tasks/T01-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

@@ -7,6 +7,7 @@ title: "Also include scripts/verify/m008-p06-*.sh via glob"
 
 {%
   include-markdown "../../../../../../.orchestrator/milestones/M008/archive/P06/T05-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

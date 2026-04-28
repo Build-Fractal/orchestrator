@@ -7,6 +7,7 @@ title: "Verifies --provenance correctly traverses a 3-entry supersession chain."
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M007/phases/P03/tasks/T02-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

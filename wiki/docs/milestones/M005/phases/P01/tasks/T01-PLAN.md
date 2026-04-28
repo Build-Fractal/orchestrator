@@ -7,6 +7,7 @@ title: "scripts/lib/hash.sh -- Content hash utility for knowledge entries."
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M005/phases/P01/tasks/T01-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

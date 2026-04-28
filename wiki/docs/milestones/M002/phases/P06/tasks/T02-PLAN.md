@@ -7,6 +7,7 @@ title: "These should all return values:"
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M002/phases/P06/tasks/T02-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

@@ -7,6 +7,7 @@ title: "scripts/state/spec-metrics.sh — Count ingested spec chunks by category
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M011/phases/P05/tasks/T01-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

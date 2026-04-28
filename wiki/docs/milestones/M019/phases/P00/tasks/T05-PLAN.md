@@ -7,6 +7,7 @@ title: "scripts/verify/m019-p00-no-regression.sh — SC-13 regression guard."
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M019/phases/P00/tasks/T05-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

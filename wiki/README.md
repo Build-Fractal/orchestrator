@@ -12,7 +12,9 @@ pip install -r requirements.txt
 ```
 
 Pinned versions are authoritative; do not upgrade without a paired commit
-documenting why.
+documenting why. See the inline note in `requirements.txt` for the
+`pygments<2.19` constraint (works around a `filename=None` regression
+in `pymdown-extensions==10.14.3`).
 
 ## Preview
 

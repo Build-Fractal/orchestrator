@@ -7,6 +7,7 @@ title: "scripts/verify/m013-p01-bash32-compat.sh — Verify every P01 shell scri
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M013/phases/P01/tasks/T07-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

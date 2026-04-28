@@ -7,6 +7,7 @@ title: "scripts/providers/example-provider.sh — Minimal compliant provider."
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M005/phases/P05/tasks/T03-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

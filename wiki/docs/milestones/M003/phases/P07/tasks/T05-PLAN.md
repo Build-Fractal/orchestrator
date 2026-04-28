@@ -7,6 +7,7 @@ title: "Find any .specify/orchestrator literal in code lines (not comments)."
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M003/phases/P07/tasks/T05-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

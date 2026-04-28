@@ -12,3 +12,4 @@ title: "Knowledge — Lessons"
 - [MEM024: Lib Path Resolution in Task Plans](MEM024.md)
 - [MEM025: Verification Script Grep Patterns](MEM025.md)
 - [MEM026: M013/P04/T04 hook-config regression](MEM026.md)
+- [MEM028: Bash arithmetic silently interprets zero-padded numerics as octal](MEM028.md)

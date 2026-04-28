@@ -7,6 +7,7 @@ title: "--- P00/L1: First-Turn Completeness block ---"
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M019/phases/P00/tasks/T01-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

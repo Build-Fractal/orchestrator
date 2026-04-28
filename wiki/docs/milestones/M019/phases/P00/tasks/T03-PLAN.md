@@ -7,6 +7,7 @@ title: "scripts/lifecycle/apply-sentinel-overwrite.sh — AD-7 sentinel-scoped o
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M019/phases/P00/tasks/T03-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

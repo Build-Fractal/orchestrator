@@ -7,6 +7,7 @@ title: "T07-SUMMARY"
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M013/phases/P02/tasks/T07-SUMMARY.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

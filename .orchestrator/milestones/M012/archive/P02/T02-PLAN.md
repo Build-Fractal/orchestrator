@@ -225,7 +225,7 @@ T02 ships the anchor-resolution probe as a diagnostic helper used by T05's gate,
 - `bash scripts/wiki/wiki-generate-nav.sh` — exits 0; `wiki/mkdocs.yml` unchanged outside the marker-bounded region.
 - `bash scripts/verify/m012-p01-phase-suite.sh` — 9/9 gates PASS.
 - Manual: `find wiki/docs/knowledge -name 'MEM*.md' -not -name 'index.md'` line count equals the count of `knowledge/**/MEM*.md` files on disk (`find knowledge -name 'MEM*.md' -type f`). Any mismatch indicates a missed scanner record or a stub write failure.
-- Manual: open one MEM stub (e.g., `wiki/docs/knowledge/patterns/MEM001.md`); confirm the include directive reads `{% include-markdown "../../../knowledge/patterns/MEM001.md" … %}` with correct `../` count.
+- Manual: open one MEM stub (e.g., `wiki/docs/knowledge/patterns/MEM001.md`); confirm the include directive reads (in `include-markdown` form) `"../../../knowledge/patterns/MEM001.md"` with correct `../` count.
 - T05's `m012-p02-mem-stubs.sh` gate (authored later) provides the mechanical assertion; T02 verification is gated on the P01 suite staying green.
 
 ## Inputs

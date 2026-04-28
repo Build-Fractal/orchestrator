@@ -7,6 +7,7 @@ title: "scripts/verify/run-suite.sh — Run all gate scripts for a milestone+pha
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M016/phases/P02/tasks/T01-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

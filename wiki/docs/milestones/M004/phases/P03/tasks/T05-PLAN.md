@@ -7,6 +7,7 @@ title: "Repo root for verify/record helpers that misbehave from nested cwd (P06 
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M004/phases/P03/tasks/T05-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

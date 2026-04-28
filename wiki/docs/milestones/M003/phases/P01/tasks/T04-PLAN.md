@@ -7,6 +7,7 @@ title: "scripts/migrate/adapters/gsd2.sh — GSD2 source adapter"
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M003/phases/P01/tasks/T04-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

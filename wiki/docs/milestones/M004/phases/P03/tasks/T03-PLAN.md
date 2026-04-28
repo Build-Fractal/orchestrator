@@ -7,6 +7,7 @@ title: "--- Budget accumulators (T05 may wire real caps from config) ---"
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M004/phases/P03/tasks/T03-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

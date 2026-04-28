@@ -7,6 +7,7 @@ title: "scripts/lib/recipe-parser.sh — YAML recipe reader for context-recipe.y
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M004/phases/P04/tasks/T04-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

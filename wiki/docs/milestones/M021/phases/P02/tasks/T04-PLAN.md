@@ -7,6 +7,7 @@ title: "Scope fixture: specs-like file WITHOUT the agent-facing marker"
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M021/phases/P02/tasks/T04-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

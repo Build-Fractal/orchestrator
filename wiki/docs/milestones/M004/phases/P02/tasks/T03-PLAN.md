@@ -7,6 +7,7 @@ title: "scripts/lib/run-context.sh — Deterministic per-session run context."
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M004/phases/P02/tasks/T03-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

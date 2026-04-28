@@ -7,6 +7,7 @@ title: "scripts/verify/m013-p02-github-common.sh — Gate: T01 github-common.sh 
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M013/phases/P02/tasks/T07-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

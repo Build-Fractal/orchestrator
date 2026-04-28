@@ -7,6 +7,7 @@ title: "scripts/util/read-range.sh — Emit lines M..N of a file (inclusive, 1-i
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M021/phases/P01/tasks/T02-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

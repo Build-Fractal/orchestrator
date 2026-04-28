@@ -15,3 +15,5 @@ title: "Knowledge — Conventions"
 - [MEM018: Runtime Adapter Interface](MEM018.md)
 - [MEM019: Three-Temperature Knowledge Architecture](MEM019.md)
 - [MEM020: Dispatched Agents Must Write Summaries](MEM020.md)
+- [MEM030: `<TOOL>_EDITION=<value>` env-var convention for OSS-default escape hatches](MEM030.md)
+- [MEM031: Knowledge entry `status:` field vocabulary (M020 schema evolution)](MEM031.md)

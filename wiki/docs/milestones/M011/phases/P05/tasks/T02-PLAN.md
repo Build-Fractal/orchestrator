@@ -7,6 +7,7 @@ title: "scripts/knowledge/spec-story-graph.sh — Emit story-to-story depends_on
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M011/phases/P05/tasks/T02-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

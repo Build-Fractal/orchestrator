@@ -7,6 +7,7 @@ title: "SPEC-DEFECT-042: [UAT] Feeding window alert fires at wrong time"
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M013/phases/P01/tasks/T05-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

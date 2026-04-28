@@ -7,6 +7,7 @@ title: "M025 — GitHub installer coexistence remediation"
 
 {%
   include-markdown "../../../../.orchestrator/milestones/M025/M025-SUMMARY.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

@@ -7,6 +7,7 @@ title: "Expected: claude-opus-4-6 200000"
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M004/phases/P05/tasks/T04-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

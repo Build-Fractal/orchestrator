@@ -7,6 +7,7 @@ title: "T05-PLAN"
 
 {%
   include-markdown "../../../../../../.orchestrator/milestones/M012/archive/P02/T05-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

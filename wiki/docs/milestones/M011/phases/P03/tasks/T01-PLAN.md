@@ -7,6 +7,7 @@ title: "--- Observed-ID log for re-ingest diff detection ---"
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M011/phases/P03/tasks/T01-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

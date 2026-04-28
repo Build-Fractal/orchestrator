@@ -7,6 +7,7 @@ title: "scripts/dispatch/backend-registry.sh — Dispatch backend discovery and 
 
 {%
   include-markdown "../../../../../../.orchestrator/milestones/M008/archive/P02/T02-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

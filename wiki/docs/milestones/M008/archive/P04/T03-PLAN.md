@@ -7,6 +7,7 @@ title: "scripts/state/config-system.sh — Unified config get/set/list for the o
 
 {%
   include-markdown "../../../../../../.orchestrator/milestones/M008/archive/P04/T03-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

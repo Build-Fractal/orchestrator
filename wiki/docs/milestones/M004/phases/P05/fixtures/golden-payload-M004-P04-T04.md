@@ -7,6 +7,7 @@ title: "Dispatch Context -- T04 (Phase P04, Milestone M004)"
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M004/phases/P05/fixtures/golden-payload-M004-P04-T04.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

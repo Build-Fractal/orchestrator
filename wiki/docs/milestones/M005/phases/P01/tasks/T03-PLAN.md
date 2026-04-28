@@ -7,6 +7,7 @@ title: "shellcheck source=../lib/hash.sh"
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M005/phases/P01/tasks/T03-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

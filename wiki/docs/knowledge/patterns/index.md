@@ -18,3 +18,4 @@ title: "Knowledge — Patterns"
 - [MEM010: Cross-Link Validation Scripts](MEM010.md)
 - [MEM011: Validation-as-Task Pattern](MEM011.md)
 - [MEM027: merge-not-overwrite user-scope config](MEM027.md)
+- [MEM029: Edition-resolution two-tier detection (env-var primary, metadata-probe fallback)](MEM029.md)

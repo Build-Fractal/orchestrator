@@ -7,6 +7,7 @@ title: "Check that the script contains all three tier keywords as output values"
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M002/phases/P06/tasks/T01-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

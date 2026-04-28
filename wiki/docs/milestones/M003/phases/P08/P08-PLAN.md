@@ -7,6 +7,7 @@ title: "P08-PLAN"
 
 {%
   include-markdown "../../../../../../.orchestrator/milestones/M003/phases/P08/P08-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

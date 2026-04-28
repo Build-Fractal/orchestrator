@@ -7,6 +7,7 @@ title: "scripts/verify/m016-p04-settings-wildcards.sh"
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M016/phases/P04/tasks/T03-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

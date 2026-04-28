@@ -7,6 +7,7 @@ title: "Verifies new P03 scripts avoid Bash 4+ constructs per MEM001 (NFR-200)."
 
 {%
   include-markdown "../../../../../../.orchestrator/milestones/M008/archive/P03/T05-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

@@ -7,6 +7,7 @@ title: "scripts/migrate/migrate-state.sh — One-shot migration of orchestrator 
 
 {%
   include-markdown "../../../../../../.orchestrator/milestones/M008/archive/P04/T04-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

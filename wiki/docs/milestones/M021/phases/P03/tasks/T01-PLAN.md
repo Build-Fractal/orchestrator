@@ -7,6 +7,7 @@ title: "scripts/verify/lib/shape-classifier.sh — Shape classifier for the"
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M021/phases/P03/tasks/T01-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

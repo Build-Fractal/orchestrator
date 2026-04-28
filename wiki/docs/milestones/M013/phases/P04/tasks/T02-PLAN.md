@@ -7,6 +7,7 @@ title: "scripts/integrations/github-sync.sh — M013/P04 sync cycle"
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M013/phases/P04/tasks/T02-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

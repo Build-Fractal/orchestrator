@@ -7,6 +7,7 @@ title: "scripts/knowledge/ingest-spec.sh -- Ingest a markdown spec into the know
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M011/phases/P02/tasks/T01-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

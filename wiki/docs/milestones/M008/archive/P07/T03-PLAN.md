@@ -7,6 +7,7 @@ title: "scripts/lifecycle/init-project.sh — orchestrator:init entry point."
 
 {%
   include-markdown "../../../../../../.orchestrator/milestones/M008/archive/P07/T03-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

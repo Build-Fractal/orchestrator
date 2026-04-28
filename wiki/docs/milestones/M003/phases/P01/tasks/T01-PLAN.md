@@ -7,6 +7,7 @@ title: "detect_source <path>"
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M003/phases/P01/tasks/T01-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

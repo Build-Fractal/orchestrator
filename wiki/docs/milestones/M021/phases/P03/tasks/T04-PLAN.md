@@ -7,6 +7,7 @@ title: "tests/hook/rewrite-cases.sh — Drives scripts/hooks/pre-bash-shape-guar
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M021/phases/P03/tasks/T04-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

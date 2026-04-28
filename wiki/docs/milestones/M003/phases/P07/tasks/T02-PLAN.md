@@ -7,6 +7,7 @@ title: "check_existing_state <target_root>"
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M003/phases/P07/tasks/T02-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

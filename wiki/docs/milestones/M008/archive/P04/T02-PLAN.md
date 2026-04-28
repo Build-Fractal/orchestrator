@@ -7,6 +7,7 @@ title: "scripts/state/detect-speckit.sh — Detect spec-kit installation."
 
 {%
   include-markdown "../../../../../../.orchestrator/milestones/M008/archive/P04/T02-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

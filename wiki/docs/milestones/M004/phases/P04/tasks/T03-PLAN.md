@@ -7,6 +7,7 @@ title: ".specify/orchestrator/routing.yaml — Model routing configuration"
 
 {%
   include-markdown "../../../../../../../.orchestrator/milestones/M004/phases/P04/tasks/T03-PLAN.md"
+  start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=true
 %}

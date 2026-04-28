@@ -18,21 +18,21 @@ A standalone autonomous multi-phase orchestrator. This repo holds the orchestrat
 
 ## Forward Roadmap (revised 2026-04-28)
 
-Active: **M018** (context compression layer). Remaining queue after M018 closes:
+Active: **M018** (context compression layer). Remaining pre-launch queue:
 
-**M028 → M030 → M031 → M023 → M029 → M009 (extended) → M010 (adjusted)**
+**M028 → M030 → M031 → M029 → M009 (extended) → M010 (adjusted)** — launch — **M023 (deferred post-launch nice-to-have)**
 
 Proposal briefs for M028, M029, M030, M031 are at `.orchestrator/proposals/` (each is an input for `orchestrator:specify` when that milestone enters the queue). Brief summaries:
 
 - **M028 (autonomous hardening v3)** — hook portability across consumer projects (M021's shape guard fails-open in projects outside the orchestrator repo) + 4 new shape classes (AP-010 to AP-013) from the post-M021 screenshot corpus + investigation-pattern wrappers.
 - **M030 (adaptive model selection)** — task-character classifier + model routing table; routes surgical/bounded tasks to Haiku/Sonnet, reserves Opus for novel/exploratory work. Verifier-fail auto-escalation (capped at 2 escalations). Empirical shadow-mode validation phase using M027 cost+quality data before flipping live routing.
 - **M031 (right-sized entry)** — restores knowledge graph + compression access for Quick intensity (today `commands/dispatch.md:21` skips `build-context.sh` — load-bearing leak) + adds a Tier A+ middle flow (research → plan → build, no auto/roadmap/consolidate) + a universal `orchestrator <task>` entry that lowers adoption friction for small tasks. Composes with M030 as the thrift-and-ergonomics pair.
-- **M023 (design layer)** — `orchestrator:design` spawns N design-personality agents in parallel via conversus, each producing a DESIGN.md draft + working coded prototype; user picks side-by-side; renderer adapter shaped as MCP clients (runtime-agnostic). Lands pre-launch because this repo has no internal UI to dogfood against.
 - **M029 (roadmap visibility & CLI UX)** — `orchestrator:where` tree renderer + invocation-context resolver + headline status (embeds existing M027 efficiency-footer / metrics-rollup / predictive-surface). M013 GitHub sidecar fold-in (no API calls).
 - **M009 (extended)** — runtime-parity audit as launch gate, consuming a lightweight `RUNTIME-ASSUMPTIONS.md` registry accumulated during M013–M018.
 - **M010 (adjusted)** — Managed Agents primary + Codex Cloud stub (proves abstraction); full Codex Cloud is demand-driven fast-follow.
+- **M023 (design layer, deferred post-launch)** — `orchestrator:design` spawns N design-personality agents in parallel via conversus, each producing a DESIGN.md draft + working coded prototype; user picks side-by-side; renderer adapter shaped as MCP clients (runtime-agnostic). Originally slotted pre-launch because this repo has no internal UI to dogfood against; revised 2026-04-28 — better as a fast-follow once real users arrive with real UI projects, since pre-launch dogfooding would only exercise synthetic fixtures.
 
-Sequencing rationale: M028 stabilizes autonomous runs (load-bearing for everything after); M030 makes runs cheap; M031 restores the knowledge-graph promise + lowers small-task adoption friction; M023/M029 are launch polish; M009/M010 are launch gate + runtime expansion. Earlier M030+M031 ship, more compounding savings + ergonomics across remaining milestones.
+Sequencing rationale: M028 stabilizes autonomous runs (load-bearing for everything after); M030 makes runs cheap; M031 restores the knowledge-graph promise + lowers small-task adoption friction; M029 is launch polish; M009/M010 are launch gate + runtime expansion. Earlier M030+M031 ship, more compounding savings + ergonomics across remaining milestones.
 
 **Standalone constitution amendment** (any time, single PR, no dependencies): inclusion-criteria gate for new principles + `CONSTITUTION-LOG.md` governance log + Principle XVI (Distribution Surface Integrity) + Principle I clarification (minimize *total task tokens via efficient context delivery*, not payload bytes). Brief at `.orchestrator/proposals/constitution-amendment-inclusion-criteria.md`.
 

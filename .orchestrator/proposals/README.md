@@ -39,10 +39,11 @@ M018  ← currently active (Context Compression Layer)
 M028 (autonomous hardening v3)        ← INSERT — stabilizes autonomous runs
 M030 (adaptive model selection)       ← INSERT — makes runs cheaper
 M031 (right-sized entry)              ← INSERT — restores knowledge promise + tightens UX
-M023 (design layer)
 M029 (roadmap visibility + CLI UX)    ← INSERT — launch polish
 M009 (extended)
 M010 (adjusted)
+─── launch ───
+M023 (design layer)                   ← DEFERRED post-launch nice-to-have
 ```
 
 ### Why M028 first (after M018 finishes)
@@ -61,9 +62,19 @@ M031 composes with M030: M030 routes the dispatching agent to a cheap model; M03
 
 Earlier M031 ships, sooner adoption barrier drops. Best for launch.
 
-### Why M029 between M023 and M009
+### Why M029 just before M009
 
-M029 is launch-polish — `orchestrator:where` and the headline status block. It composes existing M027 cost surfaces into the work-hierarchy tree (no new infrastructure, just new rendering). It wants to ship *with* the launch experience, not before. M023 produces design contracts; M029 makes the runtime visible; M009 audits parity. Natural order.
+M029 is launch-polish — `orchestrator:where` and the headline status block. It composes existing M027 cost surfaces into the work-hierarchy tree (no new infrastructure, just new rendering). It wants to ship *with* the launch experience, not before. M009 audits parity; M029 makes the runtime visible right before the audit and launch. Natural order.
+
+### Why M023 deferred post-launch (revised 2026-04-28)
+
+M023 (design layer) was originally slotted pre-launch on the rationale that *this repo has no internal UI to dogfood against*. That's a real concern but not a launch-blocker — the orchestrator's core promise (multi-phase autonomous code orchestration with knowledge layer + cost transparency) is fully exercised by M018, M027, and the M028/M030/M031 proposals. Design-layer work is high-value but has the character of a fast-follow: once real users arrive with real UI projects, M023's design-personality dispatch becomes immediately useful. Pre-launch we don't have those users yet, so building it pre-launch invests dogfooding cycles in synthetic fixtures.
+
+Demotion implications:
+- M030 references to M023's `min_tier: novel` annotation become "if/when M023 ships" (not breaking).
+- M031's Tier A+ middle flow does not depend on M023.
+- M029 sequencing simplifies: it now slots directly before M009, no M023 dependency.
+- M009's runtime-parity audit doesn't consume M023 outputs (M023 is single-runtime initially per its own proposal).
 
 ### Why constitution amendment any time
 

@@ -13,6 +13,8 @@ These docs are inputs for `orchestrator:specify` (and downstream `orchestrator:e
 | `M029-roadmap-visibility-and-cli-ux.md` | `orchestrator:where` tree + invocation-context resolver + headline status (embeds M027 surfaces) | Milestone (3 phases) | No — coherent feature |
 | `M030-adaptive-model-selection.md` | Task-character classifier + model routing table + verifier-fail escalation; surface savings via M027 | Milestone (4 phases) or 2-3 quick PRs depending on classifier complexity | Yes — independent feature |
 | `M031-right-sized-entry.md` | Knowledge + compression unconditional across all intensities; Tier A+ middle flow (research → plan → build); universal `orchestrator <task>` entry; evaluate.md drift reconciliation | Milestone (4 phases + optional P00 baseline) | No — coherent feature |
+| `M032-wiki-distribution-and-init-integration.md` | Project-asset surface + wiki tooling + mkdocs/Giscus templating; `--with-<feature>` flag pattern; replaces existing unmanaged bulk-copy staging in `install-claude-code.sh:287-330` (1,157 files per consumer project today) with a managed `project_assets:` schema supporting `mode: copy\|symlink` | Milestone (3 phases + optional P00 baseline; P00 captured live during pbj-central bootstrap 2026-04-28) | No — pre-launch; M033 P05 invokes its `--with-wiki` gate |
+| `M033-onboarding-experience.md` | `orchestrator:start` warm conversational front door — branches greenfield-empty / greenfield-with-materials / existing-codebase / migrating; orchestrator-native constitution authoring (zero spec-kit dep); codebase-knowledge ingestion; materials intake + drift reconciliation; greenfield ideation; CLAUDE.md custom-block authoring; integrates `--with-wiki` (M032) + `--with-github` (M013) gates | Milestone (5 phases + optional P00 baseline; P03 collapsible) | No — coherent feature; consumes M031/M032 infrastructure |
 
 ## Reality check vs CLAUDE.md (2026-04-28)
 
@@ -39,6 +41,8 @@ M018  ← currently active (Context Compression Layer)
 M028 (autonomous hardening v3)        ← stabilizes autonomous runs
 M030 (adaptive model selection)       ← makes runs cheaper
 M031 (right-sized entry)              ← restores knowledge promise + tightens UX
+M032 (wiki distribution + init)       ← project-asset surface + `--with-<feature>` flag pattern (consumed by M033)
+M033 (onboarding experience)          ← warm conversational front door; standalone constitution authoring; first-impression UX
 M029 (roadmap visibility + CLI UX)    ← launch polish
 ─── launch (CC-only) ───
 M009 (multi-runtime parity)           ← DEFERRED — when Codex/Cursor users arrive
@@ -64,9 +68,19 @@ M031 composes with M030: M030 routes the dispatching agent to a cheap model; M03
 
 Earlier M031 ships, sooner adoption barrier drops. Best for launch.
 
+### Why M032 promoted into pre-launch (revised 2026-04-28 post-M033 capture)
+
+M032 was originally slotted as the first post-launch fast-follow, with manual bootstrap of pbj-central as P00 baseline. M033's capture changes that calculus: M033 P05 invokes M032's `--with-wiki` gate, and the launch first-impression depends on M033 producing a *complete* bootstrapped project including optional wiki. Shipping M033 without M032 means the wiki gate is a stub at launch — defeats the "first 30 minutes are warm" goal. Promoting M032 into pre-launch costs ~3-7 days but unlocks M033's full UX. P00 baseline still runs during pbj-central onboarding (now serving both M032 and M033 as paired empirical data).
+
+### Why M033 right after M032
+
+M033 consumes M032's `--with-<feature>` flag pattern + project-asset distribution. M033 also pairs structurally with M031: M031 makes small-task entry frictionless *post-bootstrap*; M033 makes first-time bootstrap warm *pre-task*. Together they bracket the user journey — M033 lands the user, M031 keeps them productive on small tasks. Either alone is half the adoption story.
+
+M033's standalone-constitution-authoring (P02) is also the first content-authoring compliance test for Principle XVI (M032 was the asset-distribution test). Both ship under XVI.
+
 ### Why M029 closes pre-launch
 
-M029 is launch-polish — `orchestrator:where` and the headline status block. It composes existing M027 cost surfaces into the work-hierarchy tree (no new infrastructure, just new rendering). It wants to ship *with* the launch experience, not before. With M009/M023/M010 demoted post-launch (see below), M029 is the last thing pre-launch — the runtime is visible to early users from day one.
+M029 is launch-polish — `orchestrator:where` and the headline status block. It composes existing M027 cost surfaces into the work-hierarchy tree (no new infrastructure, just new rendering). It wants to ship *with* the launch experience, not before. With M009/M023/M010 demoted post-launch (see below), M029 is the last thing pre-launch — the runtime is visible to early users from day one. M033's UX shifts (interactive branches, custom-block content) inform M029's `where` rendering so M033 ships first.
 
 ### Why M009, M010, M023 all deferred post-launch (revised 2026-04-28)
 
@@ -77,6 +91,8 @@ Three deferrals, same logic: pre-launch dogfooding is CC-only, and these three m
 **M023 (design layer)** — high-value but the character of a fast-follow. Once real users arrive with real UI projects, M023's design-personality dispatch becomes immediately useful. Pre-launch we don't have those users.
 
 **M010 (Managed Agents + Codex Cloud)** — net-new capability, not launch readiness. Anthropic's hosted Managed Agents runtime and Codex Cloud are aspirational backends. Demand-driven: ships when a customer-facing reason to ship it appears.
+
+**M032 (wiki distribution + init integration, promoted to pre-launch 2026-04-28)** — see "Why M032 promoted into pre-launch" above. M033's capture made M032 a launch-critical prerequisite rather than a fast-follow.
 
 Cross-reference housekeeping (non-breaking):
 - M030's `min_tier: novel` annotation for M023 design tasks becomes "if/when M023 ships."

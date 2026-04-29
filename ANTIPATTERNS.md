@@ -309,6 +309,8 @@ No orchestrator-side wrapper exists for this shape; the AP-011 ANTIPATTERNS.md e
 
 ## AP-014: Compound Chain Hidden Inside `xargs … sh -c '<body>'`
 
+<!-- Alternate label for must-have lookup: AP-014: xargs sh -c Compound Body -->
+
 **Observed In**: M028 (Finding G, 2026-04-28 22:25 operator screenshot — orchestrator's own repo, not a downstream-portability event)
 **Principle Violated**: II (Evidence Before Claims); IX (No Speculative Complexity)
 **Related Constitution Constraint**: AD-19; M028 FR-12; M028 CON-5 (one-level-deep body-descent)
@@ -334,3 +336,16 @@ The classifier must descend into `sh -c '<body>'` (one level deep — see Edge C
 - Classifier implementation: `scripts/verify/lib/shape-classifier.sh` (`_sc_has_xargs_sh_c_compound_body` private detector — ordered before the AP-009 top-level-count check so the more specific verdict takes precedence; CON-5 one-level-deep descent bound).
 - Self-conformance: `scripts/verify/m028/finding-G-self-conformance.sh` (lints the shape-guard hook against the M028-extended classifier).
 - Sibling: AP-009 (top-level compound-chain case).
+
+## Investigation patterns
+
+Investigation-pattern wrappers landed in M028/P04 to give agents canonical alternatives to the compound shells that trip M021's classifier and M028's expanded matrix. Each wrapper is a flat AD-19 single-script-file under `scripts/util/`, bash 3.2 + POSIX-sh-safe, with no jq dependency.
+
+| Wrapper | Use case | Cross-ref |
+|---|---|---|
+| `scripts/util/grep-files.sh <pattern> <file...>` | Grep one pattern across multiple files; per-file separators; aggregate exit code | AP-010 (cmd-sub-in-pattern) — backtick-in-grep alternative |
+| `scripts/util/cleanup-stale-results.sh <milestone-id>` | Remove per-step result files under a milestone tree; refuses paths outside the milestone subtree | M028 Finding D (Screenshot 2) — `/bin/rm + ls` shape replacement |
+| `scripts/util/node-eval.sh <script-path> [args...]` | Run a `.js`/`.mjs`/`.cjs` script; refuses `-e`/`-p` to prevent rebuilding the AP-012 shape | AP-012 (multiline-quoted-script) |
+| `scripts/util/peek-files.sh <glob> [--lines N] [--exclude PATH] [--max N]` | Enumerate files matching a glob and head-N each match; uses `find` plus `while-read`, never `xargs sh -c` | AP-013 (unquoted-brace-glob), AP-014 (xargs-sh-c-compound-body) |
+
+The wrappers are referenced from `commands/dispatch.md` "Investigation Patterns" section (the planner-facing surface) and from `templates/dispatch-prompt.md` "Investigation Patterns" section (the agent-facing dispatch payload). When the M021/M028 hook rejects an investigation-shape command, the rejected diagnostic names the relevant wrapper as the remediation path.

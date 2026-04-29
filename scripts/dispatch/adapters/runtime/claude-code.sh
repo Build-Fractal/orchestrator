@@ -150,30 +150,58 @@ fi
 # --- Hook-config mode ---
 
 if [[ "$MODE" = "hook-config" ]]; then
-  # M025/P01: emit a valid Claude Code `settings.json` hooks fragment.
-  # Event mapping (locked in P01-PLAN):
-  #   post_verify    -> Stop        (terminal; no matcher)
-  #   before_commit  -> PreToolUse  (matcher: Bash; git-commit filter in wrapper)
+  # M028/P02 (T02): emit a valid Claude Code `settings.json` hooks fragment.
+  # Every command is an absolute `bash <path>` invocation referencing the
+  # runtime-stable hooks dir at ${HOME}/.claude/orchestrator-hooks/. This
+  # closes Finding F (adapter half): bare command names like
+  # `orchestrator-post-verify` were resolved against PATH by Claude Code's
+  # hook runner, found nothing, and emitted `command not found` on every
+  # Stop event. Absolute `bash <path>` invocations resolve unconditionally
+  # regardless of consumer-project PATH configuration.
+  #
+  # Event mapping (M025/P01 baseline + M028/P02 shape-guard addition):
+  #   post_verify       -> Stop         (terminal; no matcher)
+  #                        -> after-verify-sync.sh (renamed from
+  #                           orchestrator-post-verify; the bare name was a
+  #                           misalignment between the emitted hook string
+  #                           and the actual on-disk lifecycle script)
+  #   pre_bash          -> PreToolUse   (matcher: Bash; shape-guard NEW T02)
+  #                        -> pre-bash-shape-guard.sh
+  #   before_commit     -> PreToolUse   (matcher: Bash; git-commit filter
+  #                                      in wrapper)
+  #                        -> before-commit.sh (renamed from bare
+  #                           orchestrator-before-commit)
+  #
+  # Two PreToolUse Bash leaves coexist because settings-merge.sh's dedup key
+  # is (event, matcher, command), not wrapper identity -- distinct command
+  # strings produce distinct dedup-key tuples.
+  #
   # Deferred orchestrator events (no CC equivalent at M025):
   #   TODO(M025+): before_tasks     -- revisit if CC gains a task-start event
   #   TODO(M025+): after_tasks      -- revisit if CC gains a task-end event
   #   TODO(M025+): before_implement -- revisit if CC gains an implement-start event
   #   TODO(M025+): after_implement  -- revisit if CC gains an implement-end event
+  #
   # Every leaf hook object carries "_orchestrator_managed": true so the
   # installer's --uninstall path (FR-7) can remove only orchestrator entries
-  # without touching user-authored hooks. HOME guard preserved for adapter
-  # convention (not strictly required for stdout emission).
+  # without touching user-authored hooks (M025 invariant; uninstall-cascade
+  # key). HOME guard required because HOME_HOOKS expands at adapter-emit
+  # time -- the JSON fragment carries the resolved absolute path, not a
+  # ${HOME} placeholder. Heredoc terminator is unquoted (<<EOF) so the
+  # variable expands; re-quoting (<<'EOF') would break the absolute-path
+  # contract by writing literal ${HOME_HOOKS} to disk.
   if [[ -z "${HOME:-}" ]] || [[ "${HOME}" = "/" ]]; then
     echo "FAIL: unsafe HOME (empty or '/'): refusing to emit" >&2
     exit 2
   fi
-  cat <<'EOF'
+  HOME_HOOKS="${HOME}/.claude/orchestrator-hooks"
+  cat <<EOF
 {
   "hooks": {
     "Stop": [
       {
         "hooks": [
-          { "type": "command", "command": "orchestrator-post-verify", "_orchestrator_managed": true }
+          { "type": "command", "command": "bash ${HOME_HOOKS}/after-verify-sync.sh", "_orchestrator_managed": true }
         ]
       }
     ],
@@ -181,7 +209,8 @@ if [[ "$MODE" = "hook-config" ]]; then
       {
         "matcher": "Bash",
         "hooks": [
-          { "type": "command", "command": "orchestrator-before-commit", "_orchestrator_managed": true }
+          { "type": "command", "command": "bash ${HOME_HOOKS}/pre-bash-shape-guard.sh", "_orchestrator_managed": true },
+          { "type": "command", "command": "bash ${HOME_HOOKS}/before-commit.sh", "_orchestrator_managed": true }
         ]
       }
     ]

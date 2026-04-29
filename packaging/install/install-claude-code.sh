@@ -91,8 +91,32 @@ MERGE_HELPER="$REPO_ROOT/scripts/util/settings-merge.sh"
 if [ "$UNINSTALL" = "1" ]; then
   hook_target="$HOME/.claude/settings.json"
   hooks_removed=0
+  hooks_removed_p02=0
   config_removed=0
   runtime_removed=0
+
+  # --- M028/P02/T03: remove staged hooks payload BEFORE settings-merge.sh uninstall ---
+  # Walk MANIFEST only; never `find ... -delete`. User-authored siblings (if any)
+  # are preserved. `rmdir` (POSIX) fails when the dir is non-empty -- exactly the
+  # right behavior when user-authored siblings remain.
+  HOOKS_DIR="$HOME/.claude/orchestrator-hooks"
+  if [ -f "$HOOKS_DIR/MANIFEST" ]; then
+    while IFS= read -r staged_name; do
+      [ -z "$staged_name" ] && continue
+      target="$HOOKS_DIR/$staged_name"
+      if [ -f "$target" ]; then
+        if [ "$DRY_RUN" = "1" ]; then
+          echo "would_remove=$target"
+        else
+          rm -f "$target"
+        fi
+        hooks_removed_p02=$((hooks_removed_p02 + 1))
+      fi
+    done < "$HOOKS_DIR/MANIFEST"
+    if [ "$DRY_RUN" = "0" ] && [ -d "$HOOKS_DIR" ]; then
+      rmdir "$HOOKS_DIR" 2>/dev/null || true
+    fi
+  fi
 
   if [ -f "$MERGE_HELPER" ] && [ -e "$hook_target" ]; then
     if [ "$DRY_RUN" = "1" ]; then
@@ -155,7 +179,7 @@ if [ "$UNINSTALL" = "1" ]; then
     echo "WARN: manifest $manifest_file missing; refusing to guess removal" >&2
   fi
 
-  echo "UNINSTALLED: hooks-removed=${hooks_removed} config-removed=${config_removed} runtime-removed=${runtime_removed}"
+  echo "UNINSTALLED: hooks-removed=${hooks_removed} hooks-payload-removed=${hooks_removed_p02} config-removed=${config_removed} runtime-removed=${runtime_removed}"
   exit 0
 fi
 
@@ -208,6 +232,51 @@ else
   [ -z "$skills_installed" ] && skills_installed=0
   agents_installed="$(printf '%s\n' "$reg_out" | sed -n 's/^registered=true count=[0-9][0-9]* agents=\([0-9][0-9]*\)$/\1/p' | head -n 1)"
   [ -z "$agents_installed" ] && agents_installed=0
+fi
+
+# --- 2.5 Stage hooks payload into runtime-stable hooks dir (M028/P02/T03) ---
+# CON-9: ${HOME}/.claude/orchestrator-hooks/ is the runtime-stable contract.
+# The directory holds:
+#   pre-bash-shape-guard.sh  -- T01 self-locating hook (resolves classifier
+#                                as ${HOOK_DIR}/shape-classifier.sh)
+#   shape-classifier.sh      -- M021 classifier library (sibling of hook)
+#   before-commit.sh         -- M025 lifecycle script (PreToolUse Bash)
+#   after-verify-sync.sh     -- M025 lifecycle script (Stop)
+#   MANIFEST                 -- text file listing staged set (used by --uninstall)
+#
+# Repeat-install is idempotent: cp -f overwrites in place. The MANIFEST format
+# is one filename per line; --uninstall walks it instead of `find ... -delete`
+# so user-authored siblings (if any) are preserved.
+HOOKS_DIR="$HOME/.claude/orchestrator-hooks"
+HOOKS_PAYLOAD=""
+HOOKS_PAYLOAD="${HOOKS_PAYLOAD} ${REPO_ROOT}/scripts/hooks/pre-bash-shape-guard.sh"
+HOOKS_PAYLOAD="${HOOKS_PAYLOAD} ${REPO_ROOT}/scripts/verify/lib/shape-classifier.sh"
+HOOKS_PAYLOAD="${HOOKS_PAYLOAD} ${REPO_ROOT}/scripts/lifecycle/before-commit.sh"
+HOOKS_PAYLOAD="${HOOKS_PAYLOAD} ${REPO_ROOT}/scripts/lifecycle/after-verify-sync.sh"
+
+hooks_staged=0
+if [ "$DRY_RUN" = "1" ]; then
+  for src in $HOOKS_PAYLOAD; do
+    echo "would_write=${HOOKS_DIR}/$(basename "$src")"
+    hooks_staged=$((hooks_staged + 1))
+  done
+  echo "would_write=${HOOKS_DIR}/MANIFEST"
+else
+  mkdir -p "$HOOKS_DIR"
+  for src in $HOOKS_PAYLOAD; do
+    if [ ! -f "$src" ]; then
+      echo "FAIL: hooks payload source missing: $src" >&2
+      exit 1
+    fi
+    cp -f "$src" "${HOOKS_DIR}/$(basename "$src")"
+    hooks_staged=$((hooks_staged + 1))
+  done
+  : > "${HOOKS_DIR}/MANIFEST"
+  for src in $HOOKS_PAYLOAD; do
+    echo "$(basename "$src")" >> "${HOOKS_DIR}/MANIFEST"
+  done
+  echo "MANIFEST" >> "${HOOKS_DIR}/MANIFEST"
+  echo "hooks_staged=${hooks_staged} dir=${HOOKS_DIR}"
 fi
 
 # --- 3. Wire hooks: merge-not-overwrite into settings.json (M025/P01/T02) ---
@@ -330,5 +399,5 @@ if [ "$DRY_RUN" = "0" ]; then
 fi
 
 # --- 5. Summary line ---
-echo "SUMMARY: runtime=claude-code skills_installed=${skills_installed} agents_installed=${agents_installed} hooks_wired=${hooks_wired} config_written=${config_written} runtime_staged=${runtime_staged} dry_run=${DRY_RUN}"
+echo "SUMMARY: runtime=claude-code skills_installed=${skills_installed} agents_installed=${agents_installed} hooks_wired=${hooks_wired} hooks_staged=${hooks_staged} config_written=${config_written} runtime_staged=${runtime_staged} dry_run=${DRY_RUN}"
 exit 0

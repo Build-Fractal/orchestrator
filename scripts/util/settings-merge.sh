@@ -14,12 +14,18 @@
 #   1. If target does not exist, write fragment verbatim (new-file path).
 #   2. If target exists but is not valid JSON, exit 4 (no write).
 #   3. For each top-level key in fragment:
-#      - key == "hooks": deep-merge per-event arrays. Append fragment entries
-#        ONLY if an equivalent (command-string) orchestrator-managed entry is
-#        not already present (idempotency guard). --force bypasses the guard.
+#      - key == "hooks": deep-merge per-event arrays. Append fragment leaves
+#        ONLY if an equivalent (event, matcher, command) tuple is not already
+#        present in the target's _orchestrator_managed scope. The dedup key
+#        is the full (event, matcher, command) tuple within the
+#        _orchestrator_managed:true overlay -- M028/P02/T03 promotion of the
+#        M025/P01/T02 command-only key. --force bypasses the guard so manual
+#        edits stripping the managed tag can be recovered.
 #      - any other key: set only if absent in target.
 #   4. Every non-orchestrator top-level key in target survives structurally.
 #   5. Write via temp-file-then-rename ($target.tmp.$$ -> mv -f).
+#   User-authored entries (no _orchestrator_managed tag) are NEVER deduplicated
+#   against orchestrator entries -- they pass through untouched.
 #
 # Uninstall algorithm:
 #   1. Parse target as JSON; exit 4 on parse failure.
@@ -170,30 +176,31 @@ if not isinstance(target, dict) or not isinstance(fragment, dict):
 def leaf_is_managed(leaf):
     return isinstance(leaf, dict) and leaf.get("_orchestrator_managed") is True
 
-def wrapper_managed_commands(wrapper):
-    """Collect command strings from orchestrator-managed leaves in a wrapper."""
-    cmds = set()
-    if not isinstance(wrapper, dict):
-        return cmds
-    for leaf in wrapper.get("hooks", []) or []:
-        if leaf_is_managed(leaf):
-            cmd = leaf.get("command")
-            if isinstance(cmd, str):
-                cmds.add(cmd)
-    return cmds
+def collect_managed_keys(target_hooks):
+    """Walk target hooks and collect every (event, matcher, command) tuple
+    carried by an _orchestrator_managed:true leaf. M028/P02/T03 dedup key."""
+    keys = set()
+    if not isinstance(target_hooks, dict):
+        return keys
+    for event_name, wrappers in target_hooks.items():
+        if not isinstance(wrappers, list):
+            continue
+        for wrapper in wrappers:
+            if not isinstance(wrapper, dict):
+                continue
+            matcher = wrapper.get("matcher", "")
+            if matcher is None:
+                matcher = ""
+            for leaf in wrapper.get("hooks", []) or []:
+                if leaf_is_managed(leaf):
+                    cmd = leaf.get("command", "")
+                    if not isinstance(cmd, str):
+                        cmd = ""
+                    keys.add((event_name, matcher, cmd))
+    return keys
 
-def fragment_wrapper_commands(wrapper):
-    """Collect command strings from a fragment wrapper (any tag state)."""
-    cmds = set()
-    if not isinstance(wrapper, dict):
-        return cmds
-    for leaf in wrapper.get("hooks", []) or []:
-        cmd = leaf.get("command") if isinstance(leaf, dict) else None
-        if isinstance(cmd, str):
-            cmds.add(cmd)
-    return cmds
-
-# Deep-merge hooks (per-event arrays).
+# Deep-merge hooks (per-event arrays). Dedup key: (event, matcher, command)
+# tuple within the _orchestrator_managed:true overlay (M028/P02/T03).
 for key, value in fragment.items():
     if key == "hooks":
         if not isinstance(value, dict):
@@ -202,6 +209,7 @@ for key, value in fragment.items():
         if not isinstance(target_hooks, dict):
             target_hooks = {}
             target["hooks"] = target_hooks
+        target_keys = collect_managed_keys(target_hooks)
         for event_name, frag_wrappers in value.items():
             if not isinstance(frag_wrappers, list):
                 continue
@@ -209,18 +217,36 @@ for key, value in fragment.items():
             if not isinstance(existing, list):
                 existing = []
                 target_hooks[event_name] = existing
-            # Collect all orchestrator-managed command strings already in existing.
-            existing_managed_cmds = set()
-            for w in existing:
-                existing_managed_cmds |= wrapper_managed_commands(w)
             for fw in frag_wrappers:
-                fw_cmds = fragment_wrapper_commands(fw)
-                # Idempotency: skip if any fw cmd already present under managed tag,
-                # unless --force bypasses the guard.
-                if not force and fw_cmds and fw_cmds.issubset(existing_managed_cmds):
+                if not isinstance(fw, dict):
+                    existing.append(fw)
                     continue
-                existing.append(fw)
-                existing_managed_cmds |= fw_cmds
+                matcher = fw.get("matcher", "")
+                if matcher is None:
+                    matcher = ""
+                inner = fw.get("hooks", []) or []
+                new_leaves = []
+                for leaf in inner:
+                    if not isinstance(leaf, dict):
+                        new_leaves.append(leaf)
+                        continue
+                    cmd = leaf.get("command", "")
+                    if not isinstance(cmd, str):
+                        cmd = ""
+                    if leaf_is_managed(leaf) and not force:
+                        if (event_name, matcher, cmd) in target_keys:
+                            # Duplicate tuple in _orchestrator_managed scope -- skip.
+                            continue
+                        target_keys.add((event_name, matcher, cmd))
+                    new_leaves.append(leaf)
+                if not new_leaves:
+                    # Every leaf in this fragment wrapper was a duplicate; skip.
+                    continue
+                # Replace fw's leaves with the deduped set, preserving wrapper
+                # shape (matcher + any other wrapper-level keys).
+                fw_copy = dict(fw)
+                fw_copy["hooks"] = new_leaves
+                existing.append(fw_copy)
     else:
         # Non-hooks keys: set only if absent. Never overwrite.
         if key not in target:

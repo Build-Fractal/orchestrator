@@ -9,12 +9,14 @@ These docs are inputs for `orchestrator:specify` (and downstream `orchestrator:e
 | ID | Title | Shape | Standalone? |
 |---|---|---|---|
 | `constitution-amendment-inclusion-criteria.md` | Inclusion-criteria gate + governance log + distribution-surface integrity | Constitution PR (~50 LOC + 1 new doc) | Yes — no milestone needed |
-| `M028-autonomous-hardening-v3.md` | Hook portability + 4 new shape classes + investigation-pattern wrappers + M025 hook-shim follow-up (bare command names, install dedup, `--repair`) | Milestone (5 phases) or 2 quick PRs | Some phases standalone |
+| `M028-autonomous-hardening-v3.md` | Hook portability + 5 new shape classes (AP-014 `xargs-sh-c-compound-body` added 2026-04-28) + investigation-pattern wrappers (incl. `peek-files.sh`) + M025 hook-shim follow-up (bare command names, install dedup, `--repair`) | Milestone (5 phases) or 2 quick PRs | Some phases standalone |
 | `M029-roadmap-visibility-and-cli-ux.md` | `orchestrator:where` tree + invocation-context resolver + headline status (embeds M027 surfaces) | Milestone (3 phases) | No — coherent feature |
 | `M030-adaptive-model-selection.md` | Task-character classifier + model routing table + verifier-fail escalation; surface savings via M027 | Milestone (4 phases) or 2-3 quick PRs depending on classifier complexity | Yes — independent feature |
 | `M031-right-sized-entry.md` | Knowledge + compression unconditional across all intensities; Tier A+ middle flow (research → plan → build); universal `orchestrator <task>` entry; evaluate.md drift reconciliation | Milestone (4 phases + optional P00 baseline) | No — coherent feature |
 | `M032-wiki-distribution-and-init-integration.md` | Project-asset surface + wiki tooling + mkdocs/Giscus templating; `--with-<feature>` flag pattern; replaces existing unmanaged bulk-copy staging in `install-claude-code.sh:287-330` (1,157 files per consumer project today) with a managed `project_assets:` schema supporting `mode: copy\|symlink` | Milestone (3 phases + optional P00 baseline; P00 captured live during pbj-central bootstrap 2026-04-28) | No — pre-launch; M033 P05 invokes its `--with-wiki` gate |
 | `M033-onboarding-experience.md` | `orchestrator:start` warm conversational front door — branches greenfield-empty / greenfield-with-materials / existing-codebase / migrating; orchestrator-native constitution authoring (zero spec-kit dep); codebase-knowledge ingestion; materials intake + drift reconciliation; greenfield ideation; CLAUDE.md custom-block authoring; integrates `--with-wiki` (M032) + `--with-github` (M013) gates | Milestone (5 phases + optional P00 baseline; P03 collapsible) | No — coherent feature; consumes M031/M032 infrastructure |
+| `M034-interactive-review-gates.md` | First-class interactive-review stage between artifact authoring and SIGNOFF.md population — decision-packet schema + walkthrough consuming it; inherits `commands/comments.md` CON-5/SC-5 review-queue convention; `auto`-mode parity via `defer` / `accept-with-audit` / `block` policies | Milestone (2 phases + optional P00 lakeledger-replay baseline; P01 ships value standalone) | Post-launch — captured 2026-04-28 from lakeledger M066/P01 dogfooding |
+| `M035-packaging-distribution.md` | Pre-launch dev ergonomics (P01 `--mode=symlink` install + `orchestrator:status` version-drift warning) + at-launch package-manager publishing (P02–P06: npm + homebrew + curl-pipe-bash + GH release automation + install integrity + `orchestrator:update` first-class command) | Milestone (6 phases + P00 fresh-machine baseline; P00+P01 pre-launch, P02–P06 ARE launch) | Pre-launch *and* at-launch — split scope; last milestone before launch event |
 
 ## Reality check vs CLAUDE.md (2026-04-28)
 
@@ -44,9 +46,11 @@ M031 (right-sized entry)              ← restores knowledge promise + tightens 
 M032 (wiki distribution + init)       ← project-asset surface + `--with-<feature>` flag pattern (consumed by M033)
 M033 (onboarding experience)          ← warm conversational front door; standalone constitution authoring; first-impression UX
 M029 (roadmap visibility + CLI UX)    ← launch polish
+M035 (packaging + distribution)       ← launch readiness; P00+P01 pre-launch dev-ergonomics, P02-P06 ARE launch event
 ─── launch (CC-only) ───
 M009 (multi-runtime parity)           ← DEFERRED — when Codex/Cursor users arrive
 M023 (design layer)                   ← DEFERRED — when UI-project users arrive
+M034 (interactive review gates)       ← DEFERRED — when a 2nd consumer hits lakeledger-class friction
 M010 (Managed Agents + Codex Cloud)   ← DEFERRED — aspirational, demand-driven
 ```
 
@@ -80,7 +84,13 @@ M033's standalone-constitution-authoring (P02) is also the first content-authori
 
 ### Why M029 closes pre-launch
 
-M029 is launch-polish — `orchestrator:where` and the headline status block. It composes existing M027 cost surfaces into the work-hierarchy tree (no new infrastructure, just new rendering). It wants to ship *with* the launch experience, not before. With M009/M023/M010 demoted post-launch (see below), M029 is the last thing pre-launch — the runtime is visible to early users from day one. M033's UX shifts (interactive branches, custom-block content) inform M029's `where` rendering so M033 ships first.
+M029 is launch-polish — `orchestrator:where` and the headline status block. It composes existing M027 cost surfaces into the work-hierarchy tree (no new infrastructure, just new rendering). It wants to ship *with* the launch experience, not before. M033's UX shifts (interactive branches, custom-block content) inform M029's `where` rendering so M033 ships first.
+
+### Why M035 is the actual final pre-launch milestone (revised 2026-04-28)
+
+M029 was previously framed as "the last thing pre-launch." Refreshed 2026-04-28: M035 is the actual launch-readiness milestone, with split scope. M035 P00 + P01 ship pre-launch as dev-ergonomics infrastructure (`--mode=symlink` install + `orchestrator:status` version-drift warning); they unblock multi-consumer-project freshness *today* for the small number of pre-launch dogfooders. M035 P02–P06 ARE the launch event — npm + homebrew + curl-pipe-bash publishing pipelines + GH release automation + install-script integrity + `orchestrator:update` first-class command. Until P02–P06 close, the install path is "clone + bash" (fine for early adopters, hostile for casual evaluators); once P02–P06 close, `npm install -g @spec-kit/orchestrator` (or equivalent) becomes canonical and orchestrator is broadly installable.
+
+The roadmap gap (no explicit "ship to package managers" milestone in the prior queue) was surfaced 2026-04-28 during a roadmap-fit assessment session. M035 closes it.
 
 ### Why M009, M010, M023 all deferred post-launch (revised 2026-04-28)
 
@@ -91,6 +101,8 @@ Three deferrals, same logic: pre-launch dogfooding is CC-only, and these three m
 **M023 (design layer)** — high-value but the character of a fast-follow. Once real users arrive with real UI projects, M023's design-personality dispatch becomes immediately useful. Pre-launch we don't have those users.
 
 **M010 (Managed Agents + Codex Cloud)** — net-new capability, not launch readiness. Anthropic's hosted Managed Agents runtime and Codex Cloud are aspirational backends. Demand-driven: ships when a customer-facing reason to ship it appears.
+
+**M034 (interactive review gates)** — captured 2026-04-28 during lakeledger M066/P01 dogfooding. Operator hit a contract-defining SIGNOFF gate with 8 load-bearing decisions; static-file review surfaced 2-3 of the 8 as "hmm, do I agree?", an improvised conversational walkthrough surfaced 5-6 more because each came with concrete impact framing the artifact didn't carry. M034 codifies the walkthrough as a first-class lifecycle stage. Power-user workflow (Tier C contract-defining gates), not first-impression — slots post-launch alongside M009/M010/M023. Demand-signal-driven: ships when a second downstream consumer hits the same friction. n=1 today; defensible alternative pre-launch slot is "phase inside M031" but not recommended (grows M031's small-task scope materially).
 
 **M032 (wiki distribution + init integration, promoted to pre-launch 2026-04-28)** — see "Why M032 promoted into pre-launch" above. M033's capture made M032 a launch-critical prerequisite rather than a fast-follow.
 

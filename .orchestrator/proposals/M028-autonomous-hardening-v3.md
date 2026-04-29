@@ -50,6 +50,7 @@ M021 shipped 9 antipatterns, a 21-entry replay corpus, a classifier library, a P
 | 2 | 3 | Newline + `#` inside quoted `--last-action` arg | Path-validation security heuristic ("args hidden from validation") | AP-011 `quoted-arg-newline-hash` |
 | 3 | 5 | Multi-line `node -e "..."` body | "Contains ansi_c_string" parser fallthrough | AP-012 `multiline-quoted-script` |
 | 4 | 6 | Raw `{2,3,4,5}` outside quotes | Brace expansion heuristic; AP-007 only catches *quoted* brace | AP-013 `unquoted-brace-glob` |
+| 5 | G (2026-04-28) | `find … \| head … \| xargs -I{} sh -c '…;…'` | Compound chain hidden inside `xargs … sh -c` body — top-level pipe count + inner `;` chain together exceed AP-009's gt2 limit, yet the hook didn't fire | AP-014 `xargs-sh-c-compound-body` |
 
 Each gets:
 - A new entry in `ANTIPATTERNS.md` with cross-refs to hook + classifier + corpus (mirroring AP-005 through AP-009 structure)
@@ -98,6 +99,30 @@ Each gets:
 
 **Impact**: every `install-claude-code.sh` rerun today doubles broken-hook noise. M028's other findings are useless if installs themselves don't dedup.
 
+### Finding G: Shape-guard miss + literal-bytes "don't ask again" allowlist offer
+
+**Captured**: 2026-04-28 — operator screenshot of Claude Code's native permission-prompt UI on the orchestrator's own repo (so Finding A's downstream-portability gap is *not* the explanation here).
+
+**Evidence (verbatim from screenshot)**: command `find .orchestrator -name "T*-SUMMARY.md" -not -path "*/M066/*" 2>/dev/null | head -3 | xargs -I{} sh -c 'echo "═══ {} ═══"; head -20 "{}"'` triggered Claude Code's "Do you want to proceed?" prompt. The "Yes, and don't ask again for:" rule offered was the literal segment `xargs -I{} sh -c 'echo "═══ {} ═══"; head -20 "{}"'` — i.e., bytes including the `{}` placeholder and the specific `head -20` body.
+
+**Two distinct bugs, one symptom**:
+
+1. **Shape-guard didn't reject**. Three pipes (`find | head | xargs`) plus an inner `;` chain inside `sh -c '…echo;head…'` is exactly the compound-chain shape AP-009 (`compound-chain-gt2`) is supposed to catch. It didn't. Hypothesis: the classifier counts top-level `|`/`;`/`&&` connectors but doesn't descend into `sh -c '<body>'` to count connectors *inside* the quoted body, *and* it terminates pipe-counting at `xargs` (treating it as a sink). Either yields a count ≤ 2 for this shape. Sibling-class to Finding C ("compound shapes possibly slipping past existing classifier") — same root, fresh evidence.
+
+2. **CC's "don't ask again" rule is literal-bytes, not shape-pattern**. Even if the operator accepts the offered rule, it whitelists the exact byte-sequence — same xargs invocation with `head -30` instead of `head -20` would re-prompt, as would a different placeholder name. Worse: accumulating accepted rules progressively pre-approves at the CC layer commands the orchestrator's PreToolUse hook would reject if it had fired, silently degrading the shape guard's effectiveness over time. The orchestrator can't fix CC's prompt UI, but it *can* ensure the hook fires *first* so the operator never has the option to accept an under-specified rule.
+
+**Fix shape (two-part, mirrors Finding B + Finding E)**:
+
+1. **Classifier**: add AP-014 `xargs-sh-c-compound-body` to `scripts/verify/lib/shape-classifier.sh::classify_command` — descends into `sh -c '<body>'` token streams and counts `;`/`&&`/`|` connectors *within* the body alongside top-level pipe count. Reject when combined count exceeds 2. Verbatim screenshot command added to `tests/fixtures/m021-prompt-corpus.txt`.
+2. **Investigation-pattern wrapper**: a 4th wrapper in Finding E's catalog — `scripts/util/peek-files.sh <pattern> [--lines N] [--exclude PATH]` — replaces the `find | head | xargs sh -c 'echo HEADER; head -N FILE'` shape that the screenshot uses for "show first N lines of files matching pattern, with separators". Allowlist the wrapper once; canonical investigation example lives in `commands/dispatch.md` per Finding E's part-2 fix.
+
+**Cross-reference**:
+- **Finding C**: same hypothesis class (classifier under-matches embedded compound shapes). G replaces C's "possibly slipping" hypothesis with confirmed evidence; C's screenshots become G's regression-corpus companions.
+- **Finding E**: the wrapper part of G's fix is the 4th entry in E's investigation-pattern wrapper catalog. AP-014 closes the loop on E's "agents invent compound shells when no canonical example exists" by making the inventive shape unambiguously rejected.
+- **Out of scope for M028**: changing CC's "don't ask again" rule offer to shape-based instead of literal-bytes — that's CC product surface, not orchestrator surface. M028 only ensures the hook fires before CC's prompt is reachable.
+
+**Impact**: every operator-driven investigation that compounds `find | head | xargs sh -c '…'` re-incurs the prompt; accepting the offered rule degrades the allowlist without preventing recurrence. Same severity class as Finding B (shape-guard miss), with the added concern of accumulating CC-layer pre-approvals.
+
 ### Finding E: Agent-emitted *investigation* patterns, not orchestrator script output
 
 **Evidence**: Screenshots 1, 4, 5, 6 — these are exploratory grep/cat/node-eval that an agent ran mid-task to inspect files. Not orchestrator script output.
@@ -117,8 +142,8 @@ Each gets:
 |---|---|---|---|
 | P01 | Empirical baseline | 7 new corpus entries (one per screenshot) appended to `tests/fixtures/m021-prompt-corpus.txt`. Replay shows current pass/fail. Decision: collapse to 2 PRs or proceed with full milestone. | Each screenshot has a known classification verdict. |
 | P02 | Hook portability + M025 follow-up | Installer copies hook + classifier + lifecycle hooks (`before-commit.sh`, `after-verify-sync.sh`) into `~/.claude/orchestrator-hooks/`. Shape-guard hook self-locates via `$0`. Adapter emits absolute `bash <hooks-dir>/<name>.sh` instead of bare command names (Finding F). Merge helper gains install-side dedup keyed on `(event, matcher, command)` × `_orchestrator_managed`. `--repair` flag added to clean flag-less M025-pattern orphans. End-to-end test: fresh bbt-companion-style fixture, run autonomous loop, all 4 downstream-project screenshots reject; Stop hook fires successfully (post-verify runs); install run twice produces byte-identical settings.json. | Cross-project replay passes; install idempotency pinned-sha gate; `--repair` round-trips a flag-less-orphan fixture. |
-| P03 | Classifier extension | AP-010, AP-011, AP-012, AP-013 added to register, classifier, reject_lookup, corpus. M021 corpus still passes (no regressions). New corpus entries reject as expected. | Replay corpus 100% expected verdict. |
-| P04 | Investigation pattern wrappers + dispatch.md catalog | `grep-files.sh`, `cleanup-stale-results.sh`, `node-eval.sh` ship with tests. `commands/dispatch.md` and PAYLOAD template have "Investigation patterns" examples. ANTIPATTERNS.md has §"Investigation patterns" cross-ref. | Antipattern lint passes against updated dispatch.md + template. |
+| P03 | Classifier extension | AP-010, AP-011, AP-012, AP-013, **AP-014** (xargs-sh-c-compound-body, Finding G) added to register, classifier, reject_lookup, corpus. Classifier gains `sh -c '<body>'` body-descent for connector counting. M021 corpus still passes (no regressions). New corpus entries reject as expected. | Replay corpus 100% expected verdict; Finding G screenshot rejects on replay. |
+| P04 | Investigation pattern wrappers + dispatch.md catalog | `grep-files.sh`, `cleanup-stale-results.sh`, `node-eval.sh`, **`peek-files.sh`** (Finding G — `<pattern> [--lines N] [--exclude PATH]`) ship with tests. `commands/dispatch.md` and PAYLOAD template have "Investigation patterns" examples. ANTIPATTERNS.md has §"Investigation patterns" cross-ref. | Antipattern lint passes against updated dispatch.md + template. |
 | P05 | Cross-project replay + verifiers + summary | Verifier suite under `scripts/verify/m026/`. Fresh-fixture autonomous run produces zero prompts on combined M021+M026 corpus. Summary file. | All P01-P04 verifiers pass; downstream replay clean. |
 
 ## Collapse condition
@@ -160,6 +185,11 @@ Total ~1 day of work instead of a 5-phase milestone. P01 is the gating data.
 - `packaging/install/install-claude-code.sh:213-238` (installer hook-merge — extend to copy script payload)
 - `commands/dispatch.md` (add Investigation patterns section)
 - 7 source screenshots: 2026-04-25 8:33 PM / 8:50 PM / 10:04 PM, 2026-04-26 12:21 AM / 9:53 AM / 12:22 PM / 2:33 PM (paths in user message, not in repo)
+- **Finding G sources** (added 2026-04-28 during proposal-update session):
+  - Operator screenshot 2026-04-28 22:25 — Claude Code permission-prompt UI showing `find … | head … | xargs -I{} sh -c '…echo;head…'` and the literal-bytes "don't ask again" rule offer
+  - `scripts/verify/lib/shape-classifier.sh::classify_command` — needs `sh -c '<body>'` body-descent for AP-014
+  - `scripts/hooks/pre-bash-shape-guard.sh::reject_lookup` — new entry for AP-014 → `peek-files.sh`
+  - Composes with Finding C (same root cause class — classifier under-matches embedded compound shapes; G is confirmed evidence for C's hypothesis)
 - **Finding F sources** (added 2026-04-28 during M018 close):
   - `scripts/dispatch/adapters/runtime/claude-code.sh:170-189` (bare-command-name emission — the M025 follow-up bug)
   - `scripts/util/settings-merge.sh:270-310` (uninstall cascade exists; install-side dedup missing)

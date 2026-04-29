@@ -230,7 +230,7 @@ flags violations so you can fix them before running auto mode.
 
 ## Upgrading
 
-There is no version check. To upgrade, pull the latest orchestrator repo and re-run the installer with `--force`:
+There is no version check (yet — M035 P01 adds an `orchestrator:status` drift-warning surface; M035 P06 adds an `orchestrator:update` first-class command at launch). Until then, upgrade manually: pull the latest orchestrator repo and re-run the installer with `--force`:
 
 ```bash
 cd /path/to/spec-kit-orchestrator
@@ -243,6 +243,50 @@ bash packaging/install/install-claude-code.sh --project-dir /path/to/your-projec
 **Known limitation (accepted):** if an upstream release removes a file that a previous install wrote, the stale file remains on disk. The new manifest won't list it, so it will not be removed on subsequent `--uninstall`. This is a deliberate trade-off; the alternative (diff manifests and delete) is a fast-follow.
 
 Check `CHANGELOG.md` in the spec-kit-orchestrator repo for breaking changes before upgrading.
+
+### Staying fresh across multiple consumer projects (recommended workflow)
+
+If you maintain several projects that consume the orchestrator (e.g., dogfooding spec-kit-orchestrator itself plus separate consumer projects like `lakeledger`, `pbj-central`, `bbt-companion`), add this shell function to your `~/.zshrc` or `~/.bashrc`:
+
+```bash
+orchestrator-update() {
+  local repo="${ORCHESTRATOR_REPO:-$HOME/Sites/spec-kit-orchestrator}"
+  ( cd "$repo" && git pull --ff-only ) || return
+  bash "$repo/packaging/install/install-claude-code.sh" --force
+}
+```
+
+Run it from each consumer project's root after the orchestrator repo updates:
+
+```bash
+cd /path/to/lakeledger
+orchestrator-update
+
+cd /path/to/pbj-central
+orchestrator-update
+```
+
+Override the orchestrator repo path with `ORCHESTRATOR_REPO=/path/to/clone orchestrator-update` if you keep yours somewhere other than `~/Sites/spec-kit-orchestrator`.
+
+This is the **bridge workflow until M035 P01 ships** (which will add a `--mode=symlink` install option that makes the per-project re-install unnecessary — a single `git pull` in the orchestrator repo will be enough). At launch, M035 P02–P06 replace this entirely with `npm install -g @spec-kit/orchestrator` (or the homebrew/curl-pipe-bash equivalents).
+
+### Dogfooding the orchestrator on itself (self-development)
+
+When you're editing the orchestrator's own commands and scripts (i.e., `PROJECT_DIR == REPO_ROOT == /path/to/spec-kit-orchestrator`), the freshness model is split:
+
+- **Scripts, templates, references** (`scripts/`, `templates/`, `references/`) — **live**. The installer's `cp -R` from self to self is effectively a no-op, and every `commands/*.md` invokes helpers via project-relative paths that resolve to the in-tree files. Edits take effect immediately on next invocation.
+- **Skills** (slash commands like `/orchestrator:auto`) — **stale until re-registered**. Skills are registered into `~/.claude/skills/` (user-global) at install time; a subsequent edit to `commands/auto.md` is invisible to slash-command resolution until you re-run the installer.
+
+To refresh skill registration without a full re-install of consumer-project artifacts:
+
+```bash
+# From the orchestrator repo root:
+bash packaging/install/install-claude-code.sh --force
+```
+
+The installer is idempotent for skill registration; the no-op `cp -R` for runtime dirs is harmless. Re-run it any time you edit a `commands/*.md` file and want the change reflected in the slash-command palette.
+
+Once M035 P01 ships, `--mode=symlink` will register skills as symlinks pointing at the orchestrator repo, eliminating this re-register-on-edit cycle entirely.
 
 ## Uninstall
 

@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "model": "claude-opus-4-7",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"/Users/<USER>/.claude/hooks/gsd-context-monitor.js\""
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "orchestrator-before-commit"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "orchestrator-before-commit"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "orchestrator-before-commit"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "orchestrator-before-commit"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "orchestrator-before-commit"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "orchestrator-before-commit"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "orchestrator-before-commit"
+          }
+        ]
+      },
+      {
+        "_orchestrator_managed": true,
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "orchestrator-before-commit"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"/Users/<USER>/.claude/hooks/gsd-check-update.js\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "orchestrator-post-verify"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "orchestrator-post-verify"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "orchestrator-post-verify"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "orchestrator-post-verify"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "orchestrator-post-verify"
+          }
+        ]
+      },
+      {
+        "_orchestrator_managed": true,
+        "hooks": [
+          {
+            "type": "command",
+            "command": "orchestrator-post-verify"
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "node \"/Users/<USER>/.claude/hooks/gsd-statusline.js\""
+  },
+  "enabledPlugins": {
+    "conversus@conversus": true,
+    "vercel@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {
+    "conversus": {
+      "source": {
+        "source": "github",
+        "repo": "Build-Fractal/conversus-oss"
+      }
+    }
+  },
+  "effortLevel": "high",
+  "theme": "dark",
+  "feedbackSurveyState": {
+    "lastShownTime": 1754150263580
+  }
+}

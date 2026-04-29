@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# scripts/verify/replay-prompt-corpus.sh -- M021 SC-1 regression gate
-#                                            (M028/P03 corpus extended to 27).
+# tests/run-prompt-corpus-replay.sh -- M028 SC-1 + FR-22 regression gate.
 #
 # Parses tests/fixtures/m021-prompt-corpus.txt (27 entries: 20 M021 baseline
 # + 7 M028 entries appended verbatim per CON-7 strict-superset), invokes the
@@ -8,28 +7,25 @@
 # asserts 27/27 decisions match EXPECTED_OUTCOME, and prints the canonical
 # final line: WOULD_PROMPT=N/27 where N=0 under the hardened configuration.
 #
-# The historical "20-entry M021" semantic claim is preserved: entries 01..20
-# are the M021 baseline corpus and their verdicts are unchanged. Entries
-# 21..27 exercise the AP-010..AP-014 classes T02 added to the classifier.
-# T05 patched EXPECTED_TOTAL 20 -> 27 to keep this M021 SC-1 harness running
-# clean against the post-T04 corpus; the companion harness lives at
-# tests/run-prompt-corpus-replay.sh.
+# Companion harness to scripts/verify/replay-prompt-corpus.sh; both consume
+# the same corpus fixture and produce structurally identical output. This
+# tests/-resident harness is the spec/roadmap-named gate behind SC-1.
 #
 # Exit: 0 on all-pass (N=0 and 27/27 EXPECTED_OUTCOME matches), 1 otherwise.
 #
-# Bash 3.2 compatible.
+# Bash 3.2 compatible. AD-19 single-script-file flat shape. No jq.
 
 set -u
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CORPUS="${REPO_ROOT}/tests/fixtures/m021-prompt-corpus.txt"
 CLASSIFIER="${REPO_ROOT}/scripts/verify/lib/shape-classifier.sh"
 HOOK="${REPO_ROOT}/scripts/hooks/pre-bash-shape-guard.sh"
 
+EXPECTED_TOTAL=27
 fail_count=0
 would_prompt=0
 entry_count=0
-EXPECTED_TOTAL=27
 
 pass() { echo "PASS: $1"; }
 fail() { echo "FAIL: $1 ($2)"; fail_count=$((fail_count + 1)); }
@@ -56,7 +52,7 @@ fi
 
 # --- Parse corpus into a tempfile of tab-separated records ---
 # Each output line: id<TAB>input<TAB>expected
-# The SCREENSHOT line is ignored for gate purposes.
+# Same awk grammar as the M021 historical harness (CON-7 stable parsing).
 
 _tmp="$(mktemp)"
 awk '
@@ -73,9 +69,6 @@ awk '
   /^INPUT: / { input = substr($0, 8); next }
   /^EXPECTED_OUTCOME: / { expected = substr($0, 19); next }
 ' "$CORPUS" > "$_tmp"
-
-# Flush any trailing entry that did not end with ---
-# (awk above only prints on separators, but corpus ends with --- so safe.)
 
 # --- Per-entry assertions ---
 while IFS=$'\t' read -r eid einput eexpected; do
@@ -163,8 +156,8 @@ fi
 echo "WOULD_PROMPT=${would_prompt}/${EXPECTED_TOTAL}"
 
 if [ "$would_prompt" -eq 0 ] && [ "$fail_count" -eq 0 ]; then
-  echo "PASS: replay-prompt-corpus.sh"
+  echo "PASS: tests/run-prompt-corpus-replay.sh"
   exit 0
 fi
-echo "FAIL: replay-prompt-corpus.sh ($fail_count failures)"
+echo "FAIL: tests/run-prompt-corpus-replay.sh ($fail_count failures)"
 exit 1

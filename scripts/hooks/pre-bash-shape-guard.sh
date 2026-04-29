@@ -22,13 +22,27 @@ set -u
 # -----------------------------------------------------------------------------
 
 # reject_lookup <pattern-class> -> prints "<wrapper.sh> <AP-ID>"
+#
+# M021 baseline arms (nested-cmd-sub, compound-chain-gt2, heredoc-with-expansion,
+# quoted-brace) and the catch-all default are preserved byte-for-byte (CON-7
+# strict-superset). M028/P03/T03 appends five new arms for the AP-010..AP-014
+# pattern classes T02 added to the classifier; their wrapper basenames
+# (grep-files.sh, read-range.sh, node-eval.sh, peek-files.sh) reference
+# investigation-class wrappers (read-range.sh ships today; the others are P04
+# deliverables). The diagnostic surfaces the AP-ID; ANTIPATTERNS.md#AP-NNN
+# carries the operator-facing remedy.
 reject_lookup() {
   case "$1" in
-    nested-cmd-sub)         printf 'run-probe.sh AP-009\n'   ;;
-    compound-chain-gt2)     printf 'run-probe.sh AP-009\n'   ;;
-    heredoc-with-expansion) printf 'run-probe.sh AP-008\n'   ;;
-    quoted-brace)           printf 'read-range.sh AP-007\n'  ;;
-    *)                      printf 'run-probe.sh AP-009\n'   ;;
+    nested-cmd-sub)             printf 'run-probe.sh AP-009\n'   ;;
+    compound-chain-gt2)         printf 'run-probe.sh AP-009\n'   ;;
+    heredoc-with-expansion)     printf 'run-probe.sh AP-008\n'   ;;
+    quoted-brace)               printf 'read-range.sh AP-007\n'  ;;
+    cmd-sub-in-pattern)         printf 'grep-files.sh AP-010\n'  ;;
+    quoted-arg-newline-hash)    printf 'read-range.sh AP-011\n'  ;;
+    multiline-quoted-script)    printf 'node-eval.sh AP-012\n'   ;;
+    unquoted-brace-glob)        printf 'peek-files.sh AP-013\n'  ;;
+    xargs-sh-c-compound-body)   printf 'peek-files.sh AP-014\n'  ;;
+    *)                          printf 'run-probe.sh AP-009\n'   ;;
   esac
 }
 

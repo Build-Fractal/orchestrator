@@ -1,11 +1,16 @@
 # tests/fixtures/m021-prompt-corpus.txt
-# Permanent regression corpus for M021 SC-1.
-# 20 verbatim Bash tool-call strings extracted from M011/P05-P07 screenshots.
+# Permanent regression corpus for M021 SC-1 (extended in M028/P03/T04 with
+# 7 new entries, 21..27, exercising the AP-010..AP-014 detectors added to
+# scripts/verify/lib/shape-classifier.sh and the matching reject_lookup
+# arms in scripts/hooks/pre-bash-shape-guard.sh).
+# 27 verbatim Bash tool-call strings (20 M021 + 7 M028, CON-7 strict-superset).
 # Each entry: ID / SCREENSHOT / INPUT / EXPECTED_OUTCOME.
 # Entries separated by '---' lines. Newlines in INPUT encoded as literal '\n'.
 # Grammar of EXPECTED_OUTCOME: allow | rewrite:<result> | reject:<pattern-class>
-# Source: .orchestrator/milestones/M021/M021-CONTEXT.md AD-5.
-# Do not reorder or renumber — replay-prompt-corpus.sh preserves ID->SCREENSHOT traceability.
+# Source: .orchestrator/milestones/M021/M021-CONTEXT.md AD-5;
+#         .orchestrator/milestones/M028/phases/P03/P03-PLAN.md (T04).
+# Do not reorder or renumber — replay-prompt-corpus.sh and
+# tests/run-prompt-corpus-replay.sh both preserve ID->SCREENSHOT traceability.
 ---
 ID: 01
 SCREENSHOT: M011/P05 screenshot 1 of 7 — bash probe heredoc
@@ -106,4 +111,39 @@ ID: 20
 SCREENSHOT: M011/P07 screenshot 6 of 6 — plain allow cat of conversus config
 INPUT: cat .orchestrator/config.yml
 EXPECTED_OUTCOME: allow
+---
+ID: 21
+SCREENSHOT: M028 Finding B #1 (Screenshot 4, 2026-04-26) — backtick inside grep regex (AP-010)
+INPUT: grep '^- `bash scripts/util/' commands/dispatch.md
+EXPECTED_OUTCOME: reject:cmd-sub-in-pattern
+---
+ID: 22
+SCREENSHOT: M028 Finding B #2 (Screenshot 3, 2026-04-25) — newline + # inside quoted CLI arg (AP-011)
+INPUT: bash scripts/state/auto-state.sh set --last-action "T01 done\n# trailing comment"
+EXPECTED_OUTCOME: reject:quoted-arg-newline-hash
+---
+ID: 23
+SCREENSHOT: M028 Finding B #3 (Screenshot 5, 2026-04-26) — multi-line node -e body (AP-012)
+INPUT: node -e "const x = 1;\nconsole.log(x);\n"
+EXPECTED_OUTCOME: reject:multiline-quoted-script
+---
+ID: 24
+SCREENSHOT: M028 Finding B #4 (Screenshot 6, 2026-04-26) — unquoted brace glob (AP-013)
+INPUT: ls .orchestrator/milestones/M0{2,3,4,5}/M*-SUMMARY.md
+EXPECTED_OUTCOME: reject:unquoted-brace-glob
+---
+ID: 25
+SCREENSHOT: M028 Finding G (operator screenshot 2026-04-28 22:25) — verbatim xargs sh -c body (AP-014)
+INPUT: find .orchestrator -name "T*-SUMMARY.md" -not -path "*/M066/*" 2>/dev/null | head -3 | xargs -I{} sh -c 'echo "═══ {} ═══"; head -20 "{}"'
+EXPECTED_OUTCOME: reject:xargs-sh-c-compound-body
+---
+ID: 26
+SCREENSHOT: M028 P03 negative-control — benign verifier-suite invocation must remain allow under both M021 and M028
+INPUT: bash scripts/verify/run-suite.sh M028 P03
+EXPECTED_OUTCOME: allow
+---
+ID: 27
+SCREENSHOT: M028 AP-014 boundary case — one-level-deep descent (CON-5; nested sh -c opaque)
+INPUT: find x | xargs sh -c 'echo a; echo b; echo c; sh -c "echo d; echo e"'
+EXPECTED_OUTCOME: reject:xargs-sh-c-compound-body
 ---

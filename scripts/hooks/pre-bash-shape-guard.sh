@@ -33,15 +33,36 @@ reject_lookup() {
 }
 
 # -----------------------------------------------------------------------------
-# Locate repo root + classifier
+# Locate classifier -- self-relative via BASH_SOURCE (Finding A fix, M028/P02/T01)
+#
+# The hook resolves the classifier from its own on-disk location only. The
+# project-dir env var that older revisions consulted is intentionally retired
+# from the resolution logic; it was the project-relative path that did not
+# exist in consumer projects, so the hook fell through silently. The hook
+# now lives at the runtime-stable ~/.claude/orchestrator-hooks/ dir (M028/P02
+# installer) and resolves its sibling classifier from there. The in-tree
+# development location (hook at scripts/hooks/, classifier at
+# scripts/verify/lib/) is supported via a one-step parent-fallback. On both
+# miss, fail open (exit 0) -- never hard-fail the hook on a missing
+# classifier; that is the install-roundtrip gate's job.
 # -----------------------------------------------------------------------------
 
-REPO_ROOT="${CLAUDE_PROJECT_DIR:-}"
-if [ -z "$REPO_ROOT" ] || [ ! -d "$REPO_ROOT" ]; then
-  REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+HOOK_DIR_RAW="$(dirname "${BASH_SOURCE[0]}")"
+HOOK_DIR="$(cd "$HOOK_DIR_RAW" && pwd -P)"
+CLASSIFIER=""
+
+if [ -f "${HOOK_DIR}/shape-classifier.sh" ]; then
+  CLASSIFIER="${HOOK_DIR}/shape-classifier.sh"
+elif [ -f "${HOOK_DIR}/../verify/lib/shape-classifier.sh" ]; then
+  CLASSIFIER="${HOOK_DIR}/../verify/lib/shape-classifier.sh"
 fi
 
-CLASSIFIER="${REPO_ROOT}/scripts/verify/lib/shape-classifier.sh"
+if [ -z "$CLASSIFIER" ]; then
+  exit 0
+fi
+if [ ! -f "$CLASSIFIER" ]; then
+  exit 0
+fi
 
 # -----------------------------------------------------------------------------
 # Read stdin (Claude Code's hook JSON)

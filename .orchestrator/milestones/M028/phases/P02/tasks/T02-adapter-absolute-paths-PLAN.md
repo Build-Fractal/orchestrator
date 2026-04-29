@@ -110,7 +110,7 @@ It produces the verifier `scripts/verify/m028/p02-adapter-absolute-paths.sh` tha
 ## Verification
 
 ```bash
-bash scripts/util/run-probe.sh scripts/verify/m028/p02-adapter-absolute-paths.sh
+bash scripts/verify/m028/p02-adapter-absolute-paths.sh
 ```
 
 ## Notes

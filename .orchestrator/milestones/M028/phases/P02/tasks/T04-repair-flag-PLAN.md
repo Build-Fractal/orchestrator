@@ -150,7 +150,7 @@ It produces the verifier `scripts/verify/m028/p02-repair-fixture.sh` that gates 
 ## Verification
 
 ```bash
-bash scripts/util/run-probe.sh scripts/verify/m028/p02-repair-fixture.sh
+bash scripts/verify/m028/p02-repair-fixture.sh
 ```
 
 ## Notes

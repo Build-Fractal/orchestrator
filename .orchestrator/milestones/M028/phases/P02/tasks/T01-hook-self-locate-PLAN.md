@@ -126,11 +126,11 @@ It produces the verifiers `scripts/verify/m028/p02-hook-self-locate.sh` and `scr
 ## Verification
 
 ```bash
-bash scripts/util/run-probe.sh scripts/verify/m028/p02-hook-self-locate.sh
+bash scripts/verify/m028/p02-hook-self-locate.sh
 ```
 
 ```bash
-bash scripts/util/run-probe.sh scripts/verify/m028/p02-hook-self-conformance.sh
+bash scripts/verify/m028/p02-hook-self-conformance.sh
 ```
 
 ## Notes

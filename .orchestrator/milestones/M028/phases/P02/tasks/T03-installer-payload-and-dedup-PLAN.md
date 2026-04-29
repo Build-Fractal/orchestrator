@@ -187,7 +187,7 @@ It produces the verifier `scripts/verify/m028/p02-hooks-payload-staged.sh` that 
 ## Verification
 
 ```bash
-bash scripts/util/run-probe.sh scripts/verify/m028/p02-hooks-payload-staged.sh
+bash scripts/verify/m028/p02-hooks-payload-staged.sh
 ```
 
 ## Notes

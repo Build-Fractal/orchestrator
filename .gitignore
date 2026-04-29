@@ -22,6 +22,15 @@ Thumbs.db
 .orchestrator/milestones/**/*-result.txt
 .orchestrator/tmp/
 
+# Transient phase-transition.sh inputs (raw/txt scratch files for --write derivation)
+.orchestrator/milestones/**/phases/*/_fields/
+
+# Transient phase-transition stderr captures (debug-only; not state of record)
+.orchestrator/milestones/**/transition-*-stderr.txt
+
+# Per-install manifest produced by install-claude-code.sh — generated artifact, not source
+.orchestrator/installed-files.txt
+
 # Compression caches (M018: tool-result paging + tier3 originals — disposable; rebuilt on demand)
 .orchestrator/cache/
 

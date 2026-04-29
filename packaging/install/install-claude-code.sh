@@ -137,6 +137,24 @@ if [ "$UNINSTALL" = "1" ]; then
     [ -z "$hooks_removed" ] && hooks_removed=0
   fi
 
+  # M028/P02/T05: reversibility-normalization -- if settings-merge.sh's uninstall
+  # path emptied the target (no orchestrator keys remain AND the user added none
+  # before install), the file persists as a literal `{}` JSON object. Pre-install
+  # canonical state for an unmanaged HOME is FILE-ABSENT, not `{}` -- the
+  # install-roundtrip verifier's snapshot 0 == snapshot 3 invariant requires
+  # that an unmanaged HOME with only orchestrator hooks installed returns to
+  # its pre-install file-absent state on uninstall. Detect "empty object" (the
+  # serializer always emits literal `{}\n` via json.dumps(..., indent=2,
+  # sort_keys=True) when target is empty) and unlink. User-authored
+  # non-orchestrator keys survive uninstall via settings-merge's preservation
+  # path, so the file would be non-empty in that case and stay on disk.
+  if [ "$DRY_RUN" = "0" ] && [ -f "$hook_target" ]; then
+    contents="$(tr -d ' \t\n\r' < "$hook_target")"
+    if [ "$contents" = "{}" ]; then
+      rm -f "$hook_target"
+    fi
+  fi
+
   # Resolve state root to locate a possibly-staged config.yml.
   state_root=""
   if [ -x "$RESOLVE_ROOT" ]; then

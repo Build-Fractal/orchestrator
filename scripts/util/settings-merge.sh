@@ -9,6 +9,8 @@
 #       --target <path> --fragment <json-string> [--dry-run] [--force]
 #   bash scripts/util/settings-merge.sh uninstall \
 #       --target <path> [--dry-run]
+#   bash scripts/util/settings-merge.sh repair \
+#       --target <path> [--dry-run]
 #
 # Merge algorithm:
 #   1. If target does not exist, write fragment verbatim (new-file path).
@@ -33,6 +35,29 @@
 #   3. Cascade cleanup: empty wrapper -> drop; empty event array -> drop key;
 #      empty hooks object -> drop hooks key.
 #   4. Write via temp-file-then-rename. Report removed=<N> (outer-wrapper count).
+#
+# Repair algorithm (M028/P02/T04, FR-7):
+#   1. Parse target as JSON; exit 4 on parse failure.
+#   2. For each (event, wrapper, leaf):
+#      - If wrapper or any leaf carries _orchestrator_managed:true, KEEP the
+#        wrapper verbatim (managed wrapper, post-T02 or pre-T02 shape).
+#      - Else, for each leaf in the unmanaged wrapper:
+#          * If (event, matcher, leaf.command) matches a known M025 orphan
+#            tuple AND leaf has no fields outside {type, command}, REMOVE the
+#            leaf (strict-tuple match per Edge Cases CON-4).
+#          * Else KEEP the leaf (user-authored).
+#      - Cascade cleanup: empty wrapper -> drop; empty event array -> drop key;
+#        empty hooks object -> drop hooks key.
+#   3. --dry-run mode: emit `would_remove=<event>:<matcher>:<command>` per
+#      removed leaf and `would_preserve=<event>:<matcher>:<command>` per
+#      preserved entry, plus a summary `would_repair=<N> would_preserve=<M>
+#      dry_run=1`. No write.
+#   4. Write mode: temp-file-then-rename; report `repaired=<N> preserved=<M>`.
+#
+# Known M025 orphan tuple table (hard-coded; extend here when new flag-less
+# shapes ship):
+#   (Stop,       "",     "orchestrator-post-verify")    -- pre-T02 bare-name shape
+#   (PreToolUse, "Bash", "orchestrator-before-commit") -- pre-T02 bare-name shape
 #
 # Implementation: python3 baseline (repo-wide gate precedent). The plan's
 # original sketch named a jq-with-awk/sed fallback; T02 planner-judgment
@@ -355,5 +380,150 @@ PYEOF
   exit $rc
 fi
 
-echo "FAIL: unknown subcommand '$SUBCMD' (expected: merge | uninstall)" >&2
+# --- Repair subcommand (M028/P02/T04, FR-7) ---
+if [ "$SUBCMD" = "repair" ]; then
+  if [ ! -e "$TARGET" ]; then
+    echo "repaired=0 preserved=0"
+    exit 0
+  fi
+  TARGET_PATH="$TARGET" DRY_RUN_FLAG="$DRY_RUN" python3 <<'PYEOF'
+import json, os, sys
+
+target_path = os.environ["TARGET_PATH"]
+dry_run = os.environ.get("DRY_RUN_FLAG", "0") == "1"
+
+# Known M025 orphan fingerprint table -- exact-tuple match only.
+# Future M028 follow-ups may extend; never replace with structural-shape match.
+ORPHAN_TUPLES = set([
+    ("Stop", "", "orchestrator-post-verify"),
+    ("PreToolUse", "Bash", "orchestrator-before-commit"),
+])
+
+# Allowed leaf fields for strict-tuple match. A leaf with extra fields is
+# treated as user-authored and preserved (Edge Cases item: false-positive risk).
+ALLOWED_LEAF_KEYS = set(["type", "command"])
+
+try:
+    with open(target_path, "r") as f:
+        target = json.load(f)
+except Exception:
+    sys.stderr.write("FAIL: %s is not valid JSON; refusing to repair\n" % target_path)
+    sys.exit(4)
+
+if not isinstance(target, dict):
+    sys.stderr.write("FAIL: target is not a JSON object at root\n")
+    sys.exit(1)
+
+
+def wrapper_is_managed(wrapper):
+    if not isinstance(wrapper, dict):
+        return False
+    if wrapper.get("_orchestrator_managed") is True:
+        return True
+    for leaf in wrapper.get("hooks", []) or []:
+        if isinstance(leaf, dict) and leaf.get("_orchestrator_managed") is True:
+            return True
+    return False
+
+
+def leaf_is_managed(leaf):
+    return isinstance(leaf, dict) and leaf.get("_orchestrator_managed") is True
+
+
+removed_lines = []
+preserved_lines = []
+removed_count = 0
+preserved_count = 0
+
+hooks = target.get("hooks")
+if isinstance(hooks, dict):
+    empty_event_keys = []
+    for event_name, wrappers in list(hooks.items()):
+        if not isinstance(wrappers, list):
+            continue
+        kept_wrappers = []
+        for wrapper in wrappers:
+            if not isinstance(wrapper, dict):
+                kept_wrappers.append(wrapper)
+                preserved_count += 1
+                continue
+            matcher = wrapper.get("matcher", "")
+            if matcher is None:
+                matcher = ""
+            # Managed wrappers (wrapper-level OR leaf-level flag) survive verbatim.
+            if wrapper_is_managed(wrapper):
+                kept_wrappers.append(wrapper)
+                preserved_count += 1
+                # Per-leaf preserve lines for dry-run visibility.
+                for leaf in wrapper.get("hooks", []) or []:
+                    if isinstance(leaf, dict):
+                        cmd = leaf.get("command", "")
+                        if not isinstance(cmd, str):
+                            cmd = ""
+                        preserved_lines.append("%s:%s:%s" % (event_name, matcher, cmd))
+                continue
+            # Unmanaged wrapper: filter leaves via strict orphan-tuple match.
+            inner = wrapper.get("hooks", []) or []
+            new_leaves = []
+            for leaf in inner:
+                if not isinstance(leaf, dict):
+                    new_leaves.append(leaf)
+                    continue
+                if leaf_is_managed(leaf):
+                    new_leaves.append(leaf)
+                    cmd = leaf.get("command", "")
+                    if not isinstance(cmd, str):
+                        cmd = ""
+                    preserved_lines.append("%s:%s:%s" % (event_name, matcher, cmd))
+                    continue
+                cmd = leaf.get("command", "")
+                if not isinstance(cmd, str):
+                    cmd = ""
+                extra_keys = set(leaf.keys()) - ALLOWED_LEAF_KEYS
+                if (event_name, matcher, cmd) in ORPHAN_TUPLES and not extra_keys:
+                    removed_count += 1
+                    removed_lines.append("%s:%s:%s" % (event_name, matcher, cmd))
+                    continue
+                new_leaves.append(leaf)
+                preserved_lines.append("%s:%s:%s" % (event_name, matcher, cmd))
+            if not new_leaves:
+                # Wrapper became empty; cascade-drop. The leaves were already
+                # accounted for above (in removed_lines); the wrapper itself
+                # carried no _orchestrator_managed flag, so no extra accounting
+                # is needed on wrapper drop.
+                continue
+            wrapper_copy = dict(wrapper)
+            wrapper_copy["hooks"] = new_leaves
+            kept_wrappers.append(wrapper_copy)
+            preserved_count += 1
+        if kept_wrappers:
+            hooks[event_name] = kept_wrappers
+        else:
+            empty_event_keys.append(event_name)
+    for k in empty_event_keys:
+        del hooks[k]
+    if not hooks:
+        del target["hooks"]
+
+if dry_run:
+    for line in removed_lines:
+        print("would_remove=%s" % line)
+    for line in preserved_lines:
+        print("would_preserve=%s" % line)
+    print("would_repair=%d would_preserve=%d dry_run=1" % (removed_count, preserved_count))
+    sys.exit(0)
+
+out = json.dumps(target, indent=2, sort_keys=True)
+tmp = "%s.tmp.%d" % (target_path, os.getpid())
+with open(tmp, "w") as f:
+    f.write(out)
+    f.write("\n")
+os.replace(tmp, target_path)
+print("repaired=%d preserved=%d" % (removed_count, preserved_count))
+PYEOF
+  rc=$?
+  exit $rc
+fi
+
+echo "FAIL: unknown subcommand '$SUBCMD' (expected: merge | uninstall | repair)" >&2
 exit 1

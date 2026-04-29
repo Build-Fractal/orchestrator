@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "effortLevel": "high",
+  "enabledPlugins": {
+    "conversus@conversus": true,
+    "vercel@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {
+    "conversus": {
+      "source": {
+        "repo": "Build-Fractal/conversus-oss",
+        "source": "github"
+      }
+    }
+  },
+  "feedbackSurveyState": {
+    "lastShownTime": 1754150263580
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "node \"/Users/<USER>/.claude/hooks/gsd-context-monitor.js\"",
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "_orchestrator_managed": true,
+        "hooks": [
+          {
+            "command": "orchestrator-before-commit",
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "node \"/Users/<USER>/.claude/hooks/gsd-check-update.js\"",
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "_orchestrator_managed": true,
+        "hooks": [
+          {
+            "command": "orchestrator-post-verify",
+            "type": "command"
+          }
+        ]
+      }
+    ]
+  },
+  "model": "claude-opus-4-7",
+  "statusLine": {
+    "command": "node \"/Users/<USER>/.claude/hooks/gsd-statusline.js\"",
+    "type": "command"
+  },
+  "theme": "dark"
+}

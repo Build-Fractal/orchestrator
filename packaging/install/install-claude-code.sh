@@ -42,6 +42,7 @@ DRY_RUN=0
 FORCE=0
 VERBOSE=0
 UNINSTALL=0
+REPAIR=0
 
 # --- Argument parsing (while-case, bash 3.2 safe) ---
 while [ $# -gt 0 ]; do
@@ -65,6 +66,8 @@ while [ $# -gt 0 ]; do
       VERBOSE=1; shift ;;
     --uninstall)
       UNINSTALL=1; shift ;;
+    --repair)
+      REPAIR=1; shift ;;
     -h|--help)
       sed -n '2,32p' "$0"
       exit 0 ;;
@@ -180,6 +183,44 @@ if [ "$UNINSTALL" = "1" ]; then
   fi
 
   echo "UNINSTALLED: hooks-removed=${hooks_removed} hooks-payload-removed=${hooks_removed_p02} config-removed=${config_removed} runtime-removed=${runtime_removed}"
+  exit 0
+fi
+
+# --- 2'. --repair: remove flag-less M025 orphans by exact-tuple match (M028/P02/T04, FR-7) ---
+# The repair pass walks ~/.claude/settings.json and removes hook entries
+# whose (event, matcher, command) tuple matches a known M025 pattern but
+# which lack the _orchestrator_managed: true flag -- exactly the manual
+# cleanup performed for the operator during M018 close. Strict-tuple
+# match: never structural-shape match; user-authored entries with extra
+# fields are preserved. --dry-run emits the diff without mutating
+# settings.json. Repair is a one-shot cleanup that short-circuits the
+# rest of the installer flow (no probe, no payload staging, no runtime
+# staging).
+if [ "$REPAIR" = "1" ]; then
+  hook_target="$HOME/.claude/settings.json"
+  if [ ! -f "$hook_target" ]; then
+    echo "SKIP: $hook_target not present, nothing to repair"
+    exit 0
+  fi
+
+  if [ ! -f "$MERGE_HELPER" ]; then
+    echo "FAIL: settings-merge helper not found at $MERGE_HELPER" >&2
+    exit 1
+  fi
+
+  if [ "$DRY_RUN" = "1" ]; then
+    bash "$MERGE_HELPER" repair --target "$hook_target" --dry-run
+    rep_rc=$?
+  else
+    bash "$MERGE_HELPER" repair --target "$hook_target"
+    rep_rc=$?
+  fi
+
+  if [ "$rep_rc" -ne 0 ]; then
+    echo "FAIL: settings-merge.sh repair exited $rep_rc" >&2
+    exit 1
+  fi
+
   exit 0
 fi
 

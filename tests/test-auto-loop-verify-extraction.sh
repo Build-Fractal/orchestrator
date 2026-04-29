@@ -40,6 +40,18 @@ else
   fail "failing Check flips verdict to AUTO:VERIFY_FAIL (rc=$rc, output: $output)"
 fi
 
+# --- Test 3: M028/P01 dogfood — Expected output: example fence skipped ---
+# The fixture's ## Verification section contains a real `echo` check fence
+# plus an `Expected output:` example fence whose body starts with `PASS:`.
+# The verifier must run the real check (1 pass) and skip the verdict-prefix
+# example line — never eval'ing `PASS:` as a literal shell command.
+output=$(bash "$AUTO_LOOP" "$FIXTURE_MILESTONE" --step=V --phase=P00 --task=T03 2>&1) && rc=$? || rc=$?
+if [[ "$rc" -eq 0 ]] && echo "$output" | grep -qE 'AUTO:VERIFY_PASS .*checks_passed=1$'; then
+  pass "Expected-output example fence with PASS: prefix skipped (1 pass, 0 false-fail)"
+else
+  fail "Expected-output example fence with PASS: prefix skipped (rc=$rc, output: $output)"
+fi
+
 echo "----"
 echo "PASS: $PASS_COUNT  FAIL: $FAIL_COUNT"
 [[ "$FAIL_COUNT" -eq 0 ]]

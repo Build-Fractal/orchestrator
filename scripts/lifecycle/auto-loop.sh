@@ -340,6 +340,15 @@ if [[ "$STEP" = "V" ]]; then
     if [[ "$in_fence" = "true" ]]; then
       # Strip leading/trailing whitespace; skip blank lines.
       check_cmd=$(printf '%s' "$line" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+      # Skip lines whose first token is a verifier-verdict prefix —
+      # plan authors document `Expected output:` example fences inside
+      # `## Verification` and the parser would otherwise eval `PASS: ...`
+      # as a literal shell command and report a false failure
+      # (M028/P01 dogfood finding 2026-04-29). None of these prefixes
+      # are valid command names; skipping them is safe and additive.
+      if printf '%s' "$check_cmd" | grep -qE '^(PASS|FAIL|WARN|OK|SKIP|ERROR|INFO|DEBUG|EXPECT|EXPECTED|Expected|Output|Sample):'; then
+        continue
+      fi
     elif echo "$line" | grep -qE '^[[:space:]]*-?[[:space:]]*Check:[[:space:]]*`[^`]+`'; then
       # Outside fences, only extract from explicit `Check:` sub-items.
       # Truth statements themselves often carry informational backticks

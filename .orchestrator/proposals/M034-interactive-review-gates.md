@@ -101,13 +101,23 @@ Policy choice declared in plan frontmatter; `orchestrator:auto` reads it before 
 
 **Impact**: not load-bearing for launch (CC-only at launch), but cleanest landing if M009 (multi-runtime parity audit) ships post-M034. If M034 ships before M009, M034's runtime-assumption rows are *the* runtime-parity entries until M009 broadens the audit.
 
+### Finding E: Boundary-translation tasks pass mock-only verification but fail at first real run
+
+**Evidence**: 2026-04-29 lakeledger M066/P04 dogfooding. Planner specified hook-migration SQL reads using catalog/spec terminology (e.g. `lake_cache.surface_acres`); actual schema column was `surface_area_acres`. Executor faithfully followed the plan. Jest tests passed because they use typed mocks, not real SQLite. First app reload threw `no such column` from `prepareAsync`. Hook's try/catch swallowed the error; status bar fell back to `not-enough-data`. Took two column-name-drift fixes (different tables each time — reference commits `f8713ea5`, `6382f58a` in lakeledger) to clear the queue. The bridge between catalog/spec vocabulary and schema-native names is a load-bearing decision the planner makes implicitly without an explicit gate.
+
+**Root cause**: planners use spec/catalog vocabulary (the right level of abstraction at planning time); persistence layers use schema-native names (the right level of abstraction at runtime); the translation between them is a load-bearing decision that survives no formal gate. Mock-based tests don't surface the divergence — the mocks share the spec vocabulary the planner used, so they round-trip cleanly even when the runtime schema diverges.
+
+**Fix shape**: a new decision-packet *type* — `boundary_translation` — emitted automatically by tasks declaring `touches_persistence: true` in their plan frontmatter (or detected by planner heuristic: SQL reads, schema migrations, ORM model definitions, file-format readers, network-protocol parsers). Packet entries record (a) the source-vocabulary identifier the spec/catalog/plan uses, (b) the target-vocabulary identifier the persistence/protocol/format actually uses, (c) the transformation site in code (file:line where the bridge lives), (d) the verification mechanism (real-DB column-existence verifier, schema-introspection check, protocol-fixture round-trip). Walkthrough surfaces these as: *"Plan says `surface_acres`, schema column is `surface_area_acres`. Bridge lives at `lib/health/snapshot.ts:42`. Real-DB verifier `scripts/verify/snapshot-columns.sh` PASS. Confirm?"* — making the implicit load-bearing decision explicit at sign-off.
+
+**Impact**: P02 of M034 — folds into the interactive walkthrough as an additional decision-packet type, not a new lifecycle stage. P01's schema accommodates boundary-translation entries (additive — no breaking change). Until M034 ships, the **paper-cut layer** of this fix lives in `commands/plan-phase.md` verification-authoring rubric: when a task introduces new SQL reads, schema migrations, or DB-bound integration, the `## Verification` section MUST include either (a) a real-DB column-existence verifier (prepared SELECT against an empty schema, assert no throw) or (b) an explicit `## Notes` "real-app smoke test pending — confirm before phase close" callout. Mock-only DB integration verification is a known false-pass shape, surfaced 2026-04-29 by lakeledger M066/P04.
+
 ## Phase outline (preliminary — refined by `orchestrator:specify` + roadmap)
 
 | Phase | Goal | Touch list (preliminary) | Standalone? |
 |---|---|---|---|
 | **P00** (recommended) | Empirical baseline | Replay lakeledger M066/P01 walkthrough as fixture; capture the 8-decision packet structure + walkthrough transcript. Decision: schema field-set, `auto_mode` default, REVIEW.md format. | Yes — produces a captured-artifact-fixture used by P01 + P02 |
 | **P01** | Decision-packet schema + writer integration | New template `templates/decisions-packet.md` (versioned frontmatter). New helper `scripts/knowledge/write-decisions.sh` (mirrors `write-summary.sh` shape, single-file, bash 3.2). Dispatcher emits packet alongside primary artifact when plan declares `decision_packet: true`. `doctor` + `status` surfaces "N unreviewed decisions." | Yes — packet is independently useful for audit + observability |
-| **P02** | Interactive walkthrough stage + REVIEW.md + SIGNOFF integration | New lifecycle stage `scripts/lifecycle/interactive-review.sh`. New template `templates/review.md`. Runtime-routed AskUserQuestion via `dispatch-interface.sh`. SIGNOFF.md populated from REVIEW.md terminal entry. `auto`-mode `defer` / `accept-with-audit` / `block` policies. | No — depends on P01 packet |
+| **P02** | Interactive walkthrough stage + REVIEW.md + SIGNOFF integration + boundary-translation packet type (Finding E) | New lifecycle stage `scripts/lifecycle/interactive-review.sh`. New template `templates/review.md`. Runtime-routed AskUserQuestion via `dispatch-interface.sh`. SIGNOFF.md populated from REVIEW.md terminal entry. `auto`-mode `defer` / `accept-with-audit` / `block` policies. **Boundary-translation entries** (Finding E) folded as an additional packet type — surfaces source-vs-target vocabulary divergence at sign-off, prevents lakeledger M066/P04-shape post-deploy column drift. | No — depends on P01 packet |
 
 P00 baseline runs against lakeledger M066/P01 as the canonical empirical fixture (operator already has the artifact + transcript — same model as M032's pbj-central P00 baseline).
 
@@ -158,6 +168,7 @@ P00 baseline runs against lakeledger M066/P01 as the canonical empirical fixture
 ## Source material
 
 - 2026-04-28 lakeledger M066/P01 dogfooding session: catalog spec (197 lines), summary (49 lines), SIGNOFF.md (`approved_by: null`), Claude-the-agent walkthrough transcript covering 8 load-bearing decisions
+- 2026-04-29 lakeledger M066/P04 dogfooding session: hook-migration column drift (`surface_acres` vs `surface_area_acres`) surfacing post-deploy because mock-only verification round-tripped the planner's catalog vocabulary. Reference commits in lakeledger: `f8713ea5`, `6382f58a` (boundary-translation isolated to three explicit transition points). Source for Finding E.
 - Operator quote (verbatim): *"reading the file would have surfaced maybe 2-3 of them as 'hmm, do I agree with this?' The walkthrough surfaced the other 5-6 because each came with a concrete impact framing the file itself didn't carry."*
 - Existing infrastructure to reuse:
   - M014 review-queue (`.orchestrator/comments/review-queue/`, `commands/comments.md`, `scripts/comments/`)

@@ -117,8 +117,19 @@ authoritative trigger list):
 
 **Required shape**: **single-script-file invocations**. Instead of
 writing a compound command inline, extract the logic into a short
-helper script under `scripts/verify/` or into the task's own phase
-directory, then invoke the helper as the `Check:` command.
+helper script and invoke it as the `Check:` command. Path discipline:
+project-owned per-phase verifiers (slug-bearing filenames like
+`p01-foundation-bundle.sh`) live under `tools/verify/`; framework-owned
+verifiers that ship in the install bundle (`check-*`, `run-*`,
+`spec-shape-lint`, `validate-*`, `guards/*`) live under `scripts/verify/`.
+Discriminator: any verifier whose filename embeds a phase/task/milestone
+slug is project-owned and emits to `tools/verify/`. Why: in any downstream
+project, `scripts/` is one of the four bulk-staged framework dirs
+(`commands/ references/ scripts/ templates/`), gitignored to avoid
+duplicating framework files into the consumer git history; project-owned
+files written there are gitignored AND vulnerable to silent clobber on
+the next `install-claude-code.sh` run. (M032 Finding A; surfaced
+2026-04-29 by pbj-central-mono-repo dogfooding.)
 
 ```markdown
 # FORBIDDEN — triggers harness heuristic (plain subshell + source)
@@ -129,9 +140,9 @@ directory, then invoke the helper as the `Check:` command.
 - My truth statement
   - Check: `test $(grep -c "pattern" file.txt) -gt 0`
 
-# REQUIRED — single-script-file shape
+# REQUIRED — single-script-file shape, project-owned path
 - My truth statement
-  - Check: `bash scripts/verify/p07-my-check.sh`
+  - Check: `bash tools/verify/p07-my-check.sh`
 ```
 
 **Why this matters**: the orchestrator's `speckit.orchestrator.auto`

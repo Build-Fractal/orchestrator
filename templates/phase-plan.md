@@ -19,15 +19,21 @@ depends_on: {{depends_on}}
      command-substitution-with-pipes. See commands/plan-phase.md for
      the full forbidden-shape enumeration.
 
+     Path discipline: project-owned per-phase verifiers (slug-bearing
+     filenames) live under tools/verify/. Framework-owned verifiers
+     (check-*, run-*, spec-shape-lint, validate-*, guards/*) live under
+     scripts/verify/ — they ship in the install bundle.
+
      Forbidden:
        - Check: `( . scripts/lib/errors.sh && fn | grep -q X )`
        - Check: `test $(grep -c foo file) -gt 0`
 
      Required:
-       - Check: `bash scripts/verify/<phase>-<task>-<name>.sh`
+       - Check: `bash tools/verify/<phase>-<task>-<name>.sh`         # project-owned
+       - Check: `bash scripts/verify/check-must-haves.sh <phase-dir>` # framework-owned
 -->
 - {{truth statement}}
-  - Check: `bash scripts/verify/{{check-script}}.sh`
+  - Check: `bash tools/verify/{{check-script}}.sh`
 
 ### Artifacts
 

@@ -1,16 +1,23 @@
 #!/usr/bin/env bash
 # scripts/verify/m013-p04-post-verify-hook.sh — T04 gate: post-verify hook descriptor
-# + installer wiring + claude-code runtime adapter sixth-entry (FR-12 Claude-Code-only v1).
+# + installer wiring + claude-code runtime adapter (Claude-Code-only v1).
 #
-# 14 assertions covering:
-#   - post-verify.json descriptor shape (event, command, 4-key schema)
+# Assertions:
+#   - post-verify.json descriptor shape (event=post-verify, after-verify-sync.sh command).
+#     The descriptor uses the M013 lifecycle-event registry schema (event keys are
+#     hyphenated) — distinct from the runtime-adapter emission which uses Claude
+#     Code settings.json keys (Stop/PreToolUse).
 #   - after-verify-sync.sh wrapper presence, executability, absent-sidecar no-op,
-#     manual-mode no-op (zero stdout/stderr)
-#   - claude-code.sh --hook-config emits hook_count=6 and post_verify entry
-#   - M008/P05 runtime-adapter interface contract preserved
+#     manual-mode no-op (zero stdout/stderr).
+#   - claude-code.sh --hook-config emits valid JSON with hooks.{Stop,PreToolUse}
+#     and after-verify-sync.sh appears under Stop leaves. M028/P02/T02 retired
+#     the original M013 hook_count=6 / "event":"post_verify" key shape; the
+#     emission is now exactly two events (Stop + PreToolUse) with absolute-path
+#     `bash <abs-path>/<wrapper>.sh` leaves carrying _orchestrator_managed:true.
+#   - M008/P05 runtime-adapter interface contract preserved.
 #   - Codex/Cursor installers + runtime adapters untouched (FR-12 v1 byte-identity
-#     via negative grep for post_verify + FR-12 marker)
-#   - anti-pattern-lint clean on the new wrapper (SC-7 prompt-free)
+#     via negative grep for post_verify + FR-12 marker).
+#   - anti-pattern-lint clean on the new wrapper (SC-7 prompt-free).
 #
 # Bash 3.2 compatible.
 
@@ -79,19 +86,39 @@ else
   fail "wrapper did not cleanly no-op on manual (rc=${rc})"
 fi
 
-# --- Assertion 7: runtime adapter --hook-config emits hook_count=6
-bash "$ADAPTER" --hook-config >/tmp/m013-p04-t04-hc.out 2>/dev/null
-if grep -qE '"hook_count":[[:space:]]*6' /tmp/m013-p04-t04-hc.out; then
-  pass "adapter hook_count=6"
+# --- Assertion 7: runtime adapter --hook-config emits valid JSON with
+#     hooks.{Stop,PreToolUse} keys (M028/P02/T02 contract).
+HOME="${HOME:-/tmp}" bash "$ADAPTER" --hook-config >/tmp/m013-p04-t04-hc.out 2>/dev/null
+if python3 -c "
+import json, sys
+d = json.load(open('/tmp/m013-p04-t04-hc.out'))
+assert set(d['hooks'].keys()) == {'Stop', 'PreToolUse'}, 'hooks keys=%r' % sorted(d['hooks'].keys())
+" >/dev/null 2>&1; then
+  pass "adapter --hook-config emits hooks.{Stop,PreToolUse} (M028 contract)"
 else
-  fail "adapter hook_count incorrect (expected 6)"
+  fail "adapter --hook-config does not emit hooks.{Stop,PreToolUse}"
 fi
 
-# --- Assertion 8: adapter emits post_verify event entry
-if grep -qE '"event":[[:space:]]*"post_verify"' /tmp/m013-p04-t04-hc.out; then
-  pass "adapter emits post_verify event entry"
+# --- Assertion 8: after-verify-sync.sh appears under Stop leaves with
+#     absolute-bash-path shape and _orchestrator_managed:true.
+if python3 -c "
+import json, os, sys
+d = json.load(open('/tmp/m013-p04-t04-hc.out'))
+stop = d['hooks']['Stop']
+basenames = []
+for w in stop:
+    for leaf in w.get('hooks', []):
+        cmd = leaf.get('command', '')
+        if leaf.get('_orchestrator_managed') is not True:
+            continue
+        if cmd.startswith('bash '):
+            cmd = cmd.split(' ', 1)[1]
+        basenames.append(os.path.basename(cmd))
+assert 'after-verify-sync.sh' in basenames, 'Stop basenames=%r' % basenames
+" >/dev/null 2>&1; then
+  pass "after-verify-sync.sh present under Stop leaves (absolute-bash + _orchestrator_managed)"
 else
-  fail "adapter missing post_verify entry"
+  fail "after-verify-sync.sh missing from Stop leaves"
 fi
 
 # --- Assertion 9: M008/P05 runtime adapter interface contract preserved

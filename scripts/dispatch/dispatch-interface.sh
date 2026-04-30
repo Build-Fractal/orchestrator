@@ -187,6 +187,20 @@ _di_tier_rank() {
   esac
 }
 
+# --- M030/P04/T03: inverse tier-rank for escalation progression ---
+# Maps numeric rank to symbolic tier name (fast=0, balanced=1, smart=2).
+# Returns "" for unknown rank. Used by the escalation loop to compute the
+# next-higher tier on verifier failure. CON-3-clean (symbolic only; no
+# concrete provider model IDs).
+_di_tier_at_rank() {
+  case "$1" in
+    0) echo fast ;;
+    1) echo balanced ;;
+    2) echo smart ;;
+    *) echo "" ;;
+  esac
+}
+
 # --- M030/P04/T02: live-routing resolution helper ---
 # Centralizes the override-resolution + live-routing + flip-gate logic so
 # the dispatcher can run it BEFORE adapter invocation (gate-block needs to
@@ -603,8 +617,10 @@ _di_emit_dispatch_usage() {
     # M018/P00/T01: emission_point="dispatch-interface" disambiguates from
     # build-context co-located emissions (CON-5 additive field).
     if [ "${M030_SHADOW_MODE:-0}" = "1" ] && [ "${CLAUDECODE:-0}" = "1" ]; then
-      # Shadow-on emit: pre-M030 fields + 4 P02 additive fields + P03 override_source.
-      printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"%s","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":%s,"pricing_version":"%s","filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier2_savings_tokens":%d,"tier1_invocations":%d,"tier3_compression_savings_tokens":%d,"tier3_invocations":%d,"model":"%s","source":"estimate","emission_point":"dispatch-interface","timestamp":"%s","classifier_confidence":"%s","model_routed":"%s","model_used":"%s","partial_flip_active":%s,"withheld_classes":"%s","override_source":"%s"}\n' \
+      # Shadow-on emit: pre-M030 fields + 4 P02 additive fields + P03 override_source
+      # + P04/T03 escalation_count + escalation_reason (read from shell-scoped
+      # parent variables; defaults applied if unset).
+      printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"%s","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":%s,"pricing_version":"%s","filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier2_savings_tokens":%d,"tier1_invocations":%d,"tier3_compression_savings_tokens":%d,"tier3_invocations":%d,"model":"%s","source":"estimate","emission_point":"dispatch-interface","timestamp":"%s","classifier_confidence":"%s","model_routed":"%s","model_used":"%s","partial_flip_active":%s,"withheld_classes":"%s","override_source":"%s","escalation_count":%d,"escalation_reason":"%s"}\n' \
         "$UNIT_ID" "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" "$BACKEND" \
         "$input_tokens" "$output_tokens" "$cost_usd" \
         "$pricing_version" \
@@ -613,6 +629,7 @@ _di_emit_dispatch_usage() {
         "$model" "$ts" \
         "$shadow_confidence" "$shadow_routed" "$shadow_used" "$shadow_partial" "$shadow_withheld" \
         "$shadow_override_source" \
+        "${escalation_count:-0}" "${escalation_reason:-}" \
         >> "$log_file" 2>/dev/null || {
         printf 'dispatch-interface.sh: dispatch_usage append failed on %s\n' "$log_file" >&2
         return 0
@@ -636,8 +653,9 @@ _di_emit_dispatch_usage() {
     # M018/P00/T01: emission_point="dispatch-interface" disambiguates from
     # build-context co-located emissions (CON-5 additive field).
     if [ "${M030_SHADOW_MODE:-0}" = "1" ] && [ "${CLAUDECODE:-0}" = "1" ]; then
-      # Shadow-on degradation emit: pre-M030 fields + 4 P02 additive fields + P03 override_source.
-      printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"%s","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":null,"pricing_version":"%s","filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier2_savings_tokens":%d,"tier1_invocations":%d,"tier3_compression_savings_tokens":%d,"tier3_invocations":%d,"pricing_warning":"%s","model":"%s","source":"estimate","emission_point":"dispatch-interface","timestamp":"%s","classifier_confidence":"%s","model_routed":"%s","model_used":"%s","partial_flip_active":%s,"withheld_classes":"%s","override_source":"%s"}\n' \
+      # Shadow-on degradation emit: pre-M030 fields + 4 P02 additive fields + P03 override_source
+      # + P04/T03 escalation_count + escalation_reason.
+      printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"%s","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":null,"pricing_version":"%s","filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier2_savings_tokens":%d,"tier1_invocations":%d,"tier3_compression_savings_tokens":%d,"tier3_invocations":%d,"pricing_warning":"%s","model":"%s","source":"estimate","emission_point":"dispatch-interface","timestamp":"%s","classifier_confidence":"%s","model_routed":"%s","model_used":"%s","partial_flip_active":%s,"withheld_classes":"%s","override_source":"%s","escalation_count":%d,"escalation_reason":"%s"}\n' \
         "$UNIT_ID" "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" "$BACKEND" \
         "$input_tokens" "$output_tokens" \
         "$pricing_version" \
@@ -646,6 +664,7 @@ _di_emit_dispatch_usage() {
         "$escaped_warning" "$model" "$ts" \
         "$shadow_confidence" "$shadow_routed" "$shadow_used" "$shadow_partial" "$shadow_withheld" \
         "$shadow_override_source" \
+        "${escalation_count:-0}" "${escalation_reason:-}" \
         >> "$log_file" 2>/dev/null || {
         printf 'dispatch-interface.sh: dispatch_usage append failed on %s\n' "$log_file" >&2
         return 0
@@ -665,6 +684,35 @@ _di_emit_dispatch_usage() {
       }
     fi
   fi
+  return 0
+}
+
+# --- M030/P04/T03: escalation_cap_hit emission helper ---
+# Writes a single escalation_cap_hit JSONL record after the live-mode
+# escalation loop hits the CON-5 hard-cap (3 attempts all failing). Same
+# log-file resolution logic as _di_emit_dispatch_usage; bail-safe; the
+# caller guarantees at most one invocation per dispatch (one cap event).
+# Append-only via `>>` (CON-6); no `mv`/`cp`/swap. Gated CC-only the same
+# way the rest of the M030 shadow path is gated.
+# MEM004 carve-out: pipes / $() permitted in dispatch-internal helpers.
+_di_emit_escalation_cap_hit() {
+  if [ "${M030_SHADOW_MODE:-0}" != "1" ] || [ "${CLAUDECODE:-0}" != "1" ]; then
+    return 0
+  fi
+  local cap_log_dir cap_log_file cap_ts
+  if [ -d "$ORCH_ROOT/phases" ]; then
+    cap_log_dir="$ORCH_ROOT"
+  elif [ -n "${MILESTONE_ID:-}" ]; then
+    cap_log_dir="$ORCH_ROOT/milestones/$MILESTONE_ID"
+  else
+    return 0
+  fi
+  cap_log_file="$cap_log_dir/execution-log.jsonl"
+  cap_ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  mkdir -p "$cap_log_dir" 2>/dev/null || return 0
+  printf '{"record_type":"escalation_cap_hit","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","final_count":2,"timestamp":"%s"}\n' \
+    "$UNIT_ID" "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" "$cap_ts" \
+    >> "$cap_log_file" 2>/dev/null || true
   return 0
 }
 
@@ -699,6 +747,17 @@ else
 fi
 ORCH_ROOT="${ORCHESTRATOR_ROOT:-.orchestrator}"
 
+# --- M030/P04/T03: shell-scoped escalation state ---
+# Declared here so _di_emit_dispatch_usage (line ~607 / ~640 shadow-on
+# printfs) can read them via parent-shell scope without a signature
+# change. Both default to "no escalation" semantics — escalation_count=0
+# (initial dispatch) + escalation_reason="" (no verifier failure on this
+# attempt). The escalation loop (below) updates these locals as it
+# iterates; the gate-block path + non-live single-shot path leave them
+# at the defaults so the emitted record carries `"escalation_count":0,
+# "escalation_reason":""` (which is the correct shape for those paths).
+escalation_count=0
+escalation_reason=""
 
 # --- Resolve backend ---
 
@@ -759,28 +818,123 @@ fi
 # M030/P04/T02: when live-routing resolved a concrete model id, pass it
 # through to the adapter via --model. Two explicit invocation paths (rather
 # than dynamic flag splicing) preserve word-splitting safety per AD-19.
+#
+# M030/P04/T03: live-mode escalation loop wraps the invocation. Active only
+# when M030_SHADOW_MODE=1 AND CLAUDECODE=1 AND _DI_LIVE_MODEL_FLAG non-empty
+# (i.e. live-routing flip-gate cleared AND task class is flippable).
+# Otherwise the original single-shot invocation runs. The loop walks
+# fast → balanced → smart on rc != 0, capped at 2 escalations (CON-5).
+# On cap-hit: emits a final dispatch_usage record + ONE escalation_cap_hit
+# record + dispatch-error.md, exits 5. Prior records remain bit-identical
+# (CON-6) — every emit is `>>` append-only via the helpers.
 
 adapter_rc=0
-if [ -n "${_DI_LIVE_MODEL_FLAG:-}" ]; then
-  adapter_output="$(bash "$ADAPTER" \
-    --task-plan "$TASK_PLAN" \
-    --payload "$PAYLOAD" \
-    --intensity-metadata "$INTENSITY_METADATA" \
-    --model "$_DI_LIVE_MODEL_FLAG" 2>/dev/null)" || adapter_rc=$?
-else
-  adapter_output="$(bash "$ADAPTER" \
-    --task-plan "$TASK_PLAN" \
-    --payload "$PAYLOAD" \
-    --intensity-metadata "$INTENSITY_METADATA" 2>/dev/null)" || adapter_rc=$?
+adapter_output=""
+escalation_active=0
+if [ "${M030_SHADOW_MODE:-0}" = "1" ] && [ "${CLAUDECODE:-0}" = "1" ] && [ -n "${_DI_LIVE_MODEL_FLAG:-}" ]; then
+  escalation_active=1
 fi
 
-if [[ $adapter_rc -ne 0 ]]; then
-  emit_error "backend_crashed" "true" "developer" "${BACKEND}" \
-    "Adapter subprocess exited with code ${adapter_rc}" \
-    "Adapter: ${ADAPTER}" \
-    "Inspect adapter stderr or re-run with the adapter directly for diagnostics."
-  _di_emit_dispatch_usage "adapter-failed" || true
-  exit 5
+if [ "$escalation_active" -eq 1 ]; then
+  # Live-mode escalation loop. Up to 3 attempts (initial + 2 escalations).
+  # MEM004 carve-out: this is dispatch-internal logic; pipes / $() / awk
+  # are permitted in the body. AD-19 governs verifier-invocation shape,
+  # not internal dispatch logic.
+  while : ; do
+    adapter_rc=0
+    adapter_output="$(bash "$ADAPTER" \
+      --task-plan "$TASK_PLAN" \
+      --payload "$PAYLOAD" \
+      --intensity-metadata "$INTENSITY_METADATA" \
+      --model "$_DI_LIVE_MODEL_FLAG" 2>/dev/null)" || adapter_rc=$?
+
+    if [ "$adapter_rc" -eq 0 ]; then
+      # Success on this attempt. escalation_count reflects the number of
+      # preceding failures (0 if this is the initial dispatch, N>0 if
+      # escalated N times). escalation_reason is empty on success — the
+      # successful attempt itself is not a verifier failure.
+      escalation_reason=""
+      _di_emit_dispatch_usage "" || true
+      break
+    fi
+
+    # Failure on this attempt.
+    if [ "$escalation_count" -ge 2 ]; then
+      # CON-5 cap hit: 3 attempts all failed. Emit the final failed
+      # dispatch_usage record (escalation_count=2, reason=verifier_fail),
+      # emit ONE escalation_cap_hit record, emit dispatch-error.md, exit 5.
+      # NO fourth adapter invocation — the loop terminates here.
+      escalation_reason="verifier_fail"
+      _di_emit_dispatch_usage "adapter-failed" || true
+      _di_emit_escalation_cap_hit
+      emit_error "backend_crashed" "false" "developer" "${BACKEND}" \
+        "Adapter failed after escalation cap of 2 escalations" \
+        "Adapter: ${ADAPTER}; final tier: ${_DI_SHADOW_ROUTED:-}" \
+        "Inspect adapter stderr; consider lowering min_tier or disabling routing for this task."
+      exit 5
+    fi
+
+    # Mid-loop failure (escalation_count < 2). Emit the current-iteration
+    # dispatch_usage record FIRST (with current escalation_count value),
+    # THEN increment and recompute next tier. This ordering matters: the
+    # success record on iteration N reads escalation_count=N (number of
+    # preceding failures), so the increment must follow the emit.
+    escalation_reason="verifier_fail"
+    _di_emit_dispatch_usage "adapter-failed" || true
+
+    escalation_count=$((escalation_count + 1))
+    _di_curr_rank="$(_di_tier_rank "${_DI_SHADOW_ROUTED:-}")"
+    _di_next_rank=$((_di_curr_rank + 1))
+    _DI_SHADOW_ROUTED="$(_di_tier_at_rank "$_di_next_rank")"
+    if [ -z "$_DI_SHADOW_ROUTED" ]; then
+      # Defensive: tier progression exhausted before cap-hit branch fired.
+      # Should not happen under normal flow (count>=2 catches smart-tier
+      # failure first). Treat as cap-hit to avoid infinite loop.
+      _di_emit_escalation_cap_hit
+      emit_error "backend_crashed" "false" "developer" "${BACKEND}" \
+        "Adapter failed; tier progression exhausted before cap" \
+        "Adapter: ${ADAPTER}" \
+        "Reduce escalation aggressiveness or set model_routing.live: false."
+      exit 5
+    fi
+    # Re-resolve _DI_SHADOW_USED + _DI_LIVE_MODEL_FLAG for the new tier.
+    # CON-3-clean: reads from templates/model-routing.yml resolution: block
+    # via awk section-walker; no hardcoded provider model IDs introduced.
+    _DI_SHADOW_USED="$(awk -v tier="$_DI_SHADOW_ROUTED" '
+      BEGIN { in_resolution = 0; in_tier = 0 }
+      /^resolution:/                    { in_resolution = 1; next }
+      /^cost_rates:/                    { exit }
+      in_resolution && /^  [a-z_]+:$/   { in_tier = ($1 == (tier ":")) ? 1 : 0; next }
+      in_resolution && in_tier && /^    claude-code:/ {
+        val = $2; gsub(/[",]/, "", val); print val; exit
+      }
+    ' "$_DI_PROJECT_ROOT/templates/model-routing.yml")"
+    _DI_LIVE_MODEL_FLAG="$_DI_SHADOW_USED"
+  done
+else
+  # Non-live-mode single-shot dispatch. Preserves T02 + pre-T02 behavior
+  # (shadow-off / Codex CLI / Cursor / no flippable class / kill-switch).
+  if [ -n "${_DI_LIVE_MODEL_FLAG:-}" ]; then
+    adapter_output="$(bash "$ADAPTER" \
+      --task-plan "$TASK_PLAN" \
+      --payload "$PAYLOAD" \
+      --intensity-metadata "$INTENSITY_METADATA" \
+      --model "$_DI_LIVE_MODEL_FLAG" 2>/dev/null)" || adapter_rc=$?
+  else
+    adapter_output="$(bash "$ADAPTER" \
+      --task-plan "$TASK_PLAN" \
+      --payload "$PAYLOAD" \
+      --intensity-metadata "$INTENSITY_METADATA" 2>/dev/null)" || adapter_rc=$?
+  fi
+
+  if [[ $adapter_rc -ne 0 ]]; then
+    emit_error "backend_crashed" "true" "developer" "${BACKEND}" \
+      "Adapter subprocess exited with code ${adapter_rc}" \
+      "Adapter: ${ADAPTER}" \
+      "Inspect adapter stderr or re-run with the adapter directly for diagnostics."
+    _di_emit_dispatch_usage "adapter-failed" || true
+    exit 5
+  fi
 fi
 
 # Minimal conformance check: adapter output must contain schema_version
@@ -803,7 +957,14 @@ if ! echo "$adapter_output" | grep -q '^type: "dispatch-result"'; then
 fi
 
 # --- M019/P01/T03: happy-path dispatch_usage emission ---
-_di_emit_dispatch_usage "" || true
+# M030/P04/T03: gate this emit on `escalation_active=0`. When the
+# escalation loop ran, the success record was already appended inside the
+# loop body (the `if adapter_rc -eq 0: emit + break` branch); firing this
+# again would produce a duplicate dispatch_usage record per dispatch
+# (violating SC-1 + the SC-4 record-count assertion).
+if [ "${escalation_active:-0}" -ne 1 ]; then
+  _di_emit_dispatch_usage "" || true
+fi
 
 # --- Emit adapter output unchanged ---
 echo "$adapter_output"

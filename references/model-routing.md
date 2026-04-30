@@ -278,6 +278,146 @@ shadow path itself is bypassed; record is byte-identical to pre-M030
 shape). M009 ships per-runtime override semantics demand-driven post-
 launch.
 
+## Live Routing
+
+M030/P04 ships the live-routing flip-gate plus the verifier-fail
+auto-escalation loop. This section documents how `model_routing.live:
+true` activates the routing layer end-to-end, the four-verdict gate that
+guards the flip, and the bounded escalation chain that runs when an
+adapter fails verification. The path is gated CC-only (`CLAUDECODE=1
+AND M030_SHADOW_MODE=1`) for the same reason the rest of M030's shadow
+path is — non-CC runtimes (Codex CLI / Cursor) defer to M009.
+
+### Activation
+
+Live routing is opt-in via `.orchestrator/config.yml`:
+
+```yaml
+model_routing:
+  live: true
+```
+
+When set, every dispatch through `scripts/dispatch/dispatch-interface.sh`
+runs the programmatic flip-gate (D-A2). The gate invokes
+`scripts/diagnostics/shadow-compare.sh` against the in-flight execution
+log (or a corpus path explicitly provided via
+`M030_SHADOW_COMPARE_CORPUS`) and reads exactly one
+`flip_recommendation=` line from its output. The closed enum is the
+same four-verdict set defined in `## Classifier-Confidence Stability
+Metric` above (D-A1).
+
+### Verdict-to-action table
+
+| Verdict                | Action                                                                                                                                             |
+|------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
+| `ready`                | All classes flip live. The classifier's symbolic tier resolves to a concrete model id via `templates/model-routing.yml`'s `resolution:` block; that id is passed to the backend adapter via `--model <id>`. JSONL records `partial_flip_active=false`, `withheld_classes=""`. |
+| `partially_ready`      | Per-class authorization (D-A3): only classes whose routing-table default is `smart` may be enumerated in `withheld_classes`. Flippable classes route live (`--model <id>`); withheld classes fall back to the runtime default model. JSONL records `partial_flip_active=true`, `withheld_classes=<list>`. |
+| `evidence_insufficient`| Adapter is NOT invoked. Dispatcher emits a `dispatch-error.md` with `error_type=shadow_gate_blocked` and appends a `dispatch_usage` record with `override_source=shadow_gate_blocked`. Exit code 7. |
+| `block`                | Same as `evidence_insufficient` — adapter not invoked, `override_source=shadow_gate_blocked`, exit 7. The two verdicts collapse at the gate; the distinction is preserved upstream in `shadow-compare.sh` for operator-facing diagnostics. |
+
+### Escalation chain (CON-5)
+
+When live routing IS active and the adapter exits non-zero (the
+verifier-fail signal), `dispatch-interface.sh` retries with a higher-tier
+model. The progression is `fast → balanced → smart`, computed via the
+`_di_tier_at_rank` helper (the inverse of the `_di_tier_rank` rank used
+by floor-comparison). Each retry re-resolves
+`resolution.<tier>.claude-code` from `templates/model-routing.yml` —
+zero hardcoded model IDs — and re-invokes the adapter with the new
+`--model` value.
+
+The cap is **2 escalations** (CON-5 hard-cap) — equivalently 3
+adapter invocations total. After the third invocation also exits
+non-zero, the dispatcher MUST stop:
+
+1. Emit the third `dispatch_usage` record with
+   `escalation_count=2` + `escalation_reason=verifier_fail`.
+2. Emit ONE `escalation_cap_hit` record (`record_type=escalation_cap_hit`,
+   `final_count=2`, `unitId`, `timestamp`).
+3. Emit `dispatch-error.md` with `error_type=backend_crashed` on stderr.
+4. Exit 5.
+
+A fourth adapter invocation is forbidden. The hard-cap is enforced at
+the invocation site, not just the JSONL emit site —
+`tools/verify/p04-con5-no-fourth-record.sh` asserts both the
+3-dispatch_usage-records contract AND the 3-adapter-invocations contract
+(via the `STUB_FAIL_COUNTER_INVOCATIONS_FILE` side-channel).
+
+### Escalation JSONL fields
+
+Two additive fields appear on every shadow-on `dispatch_usage` record
+post-M030/P04:
+
+| field               | type    | semantics                                                                                                  |
+|---------------------|---------|------------------------------------------------------------------------------------------------------------|
+| `escalation_count`  | integer | Number of preceding failed attempts before this record's dispatch. `0` on the initial dispatch, `1` on the first escalation, `2` on the second escalation. Capped at `2`. |
+| `escalation_reason` | string  | `"verifier_fail"` when the recorded attempt itself failed (rc != 0); `""` (empty) on the success record. The cap-hit record carries `verifier_fail`. |
+
+**Emit-vs-increment ordering**: the increment of `escalation_count`
+happens AFTER the failed attempt's record is emitted, BEFORE the next
+attempt is invoked. This means the success record on the Nth attempt
+reads `escalation_count=N-1` (N-1 preceding failures); a fail-twice-then-pass
+sequence emits `(0/verifier_fail) (1/verifier_fail) (2/"")`. A
+fail-three-times sequence emits `(0/verifier_fail) (1/verifier_fail)
+(2/verifier_fail)` plus the `escalation_cap_hit` record.
+
+### Override precedence (extended)
+
+The full precedence chain, evaluated in order (first match wins,
+downstream knobs bypassed):
+
+1. **Kill switch** (`model_routing_enabled: false`) — supersedes
+   everything, including `live: true`. CON-4/D-A5. The
+   `live: true is inactive` warning is emitted on stderr alongside any
+   `min_tier is inactive` warning.
+2. **Plan frontmatter** (`model_override:`) — short-circuits routing.
+3. **Milestone floor** (`min_tier:`) — raises the effective floor.
+   Floor wins over plan frontmatter when the floor is higher (FR-14).
+4. **Live routing** (`live: true` AND no override above) — runs the
+   programmatic flip-gate; on `ready` / `partially_ready` (flippable
+   class) the resolved model is passed to the adapter. The escalation
+   loop wraps THIS path only.
+5. **Plain routed** — no overrides, no `live: true`. Shadow path
+   continues to record `model_routed` / `model_used` / `override_source=none`
+   without passing `--model` to the adapter.
+
+The closed `override_source` enum from `## Operator Overrides` is
+unchanged. `shadow_gate_blocked` is the value emitted on the
+`evidence_insufficient` / `block` verdicts at the live-routing gate.
+
+### Operator workflow: shadow → live
+
+To flip a project from shadow to live:
+
+1. **Validate corpus readiness.** Ensure the shadow corpus has ≥50
+   records per class (per the per-class coverage threshold in
+   `## Classifier-Confidence Stability Metric`) and the
+   classifier-confidence variance is ≤ 0.10 over the rolling N=20 window.
+2. **Run shadow-compare.** `bash scripts/diagnostics/shadow-compare.sh
+   --corpus <path>` returns a `flip_recommendation=` line. Verify it is
+   `ready` (all classes flip) or an acceptable `partially_ready` (with
+   the `withheld_classes` list documented in your operations runbook).
+3. **Edit config.** Set `model_routing.live: true` in
+   `.orchestrator/config.yml`.
+4. **Verify on the next dispatch.** The dispatch-interface re-runs the
+   programmatic flip-gate against the in-flight log. If the verdict is
+   still acceptable, the adapter is invoked with `--model <resolution>`;
+   otherwise the dispatch refuses with exit 7 and `override_source=shadow_gate_blocked`
+   in the appended JSONL record.
+
+To roll back: revert `live: true` to `live: false` (or remove the line)
+— the next dispatch re-enters shadow-only mode without flipping. To
+disable routing entirely (kill switch), set `model_routing_enabled:
+false`; this supersedes any `live:` value per CON-4/D-A5.
+
+### CC-only launch posture
+
+The live-routing path requires `CLAUDECODE=1` AND `M030_SHADOW_MODE=1`,
+the same gates that scope the rest of the M030 shadow surface. Codex
+CLI and Cursor cannot reach the live-routing branch or the escalation
+loop; they continue to dispatch with the runtime default model. M009
+ships per-runtime live-routing semantics demand-driven post-launch.
+
 ## See Also
 
 - `templates/model-routing.yml` — the SSOT this document describes.
@@ -297,3 +437,14 @@ launch.
 - `.orchestrator/milestones/M030/M030-CONTEXT.md` D-A5 — the binding
   decision establishing the kill-switch-supersedes-min_tier compound
   resolution amended into CON-4.
+- `tools/verify/p04-sc4-escalation-sequence.sh`,
+  `tools/verify/p04-sc5-escalation-cap.sh`,
+  `tools/verify/p04-con5-no-fourth-record.sh`,
+  `tools/verify/p04-con6-prior-records-bit-identical.sh`,
+  `tools/verify/p04-escalation-fields-enum.sh` (M030/P04/T03) — the
+  five gate verifiers for the live-routing escalation loop, CON-5 hard-
+  cap, CON-6 append-only, and the `escalation_count` / `escalation_reason`
+  field enum documented in `## Live Routing` above.
+- `scripts/dispatch/adapters/backend/stub-fail-n.sh` (M030/P04/T01) —
+  the programmable fail-counter fixture adapter consumed by the SC-4 /
+  SC-5 / CON-5 verifiers.

@@ -204,6 +204,80 @@ windows smooth more aggressively at the cost of slower drift detection;
 operators may widen to 40 in the aggressive overlay if dogfood shows
 20-window variance over-rejects.
 
+## Operator Overrides
+
+M030/P03 ships three operator-facing override knobs plus a kill switch.
+This section documents the precedence chain mechanically: knobs evaluate
+in the order below, the first match wins, downstream knobs are bypassed.
+The chain is implemented in `scripts/dispatch/dispatch-interface.sh`'s
+`_di_emit_dispatch_usage` body and is gated by the same `M030_SHADOW_MODE=1
+AND CLAUDECODE=1` envelope as the rest of the M030 shadow path.
+
+### Precedence Chain
+
+1. **Kill switch** (`.orchestrator/config.yml` top-level
+   `model_routing_enabled: false`) — disables the entire routing layer.
+   Records `override_source=disabled`. The classifier still runs and
+   `model_routed`/`classifier_confidence` are still emitted (the shadow
+   corpus continues to grow), but the dispatched model falls back to the
+   runtime default. **Kill switch supersedes `min_tier`** (CON-4/D-A5).
+   When both are active, `override_source=disabled` is recorded and a
+   one-line stderr warning names the bypassed value:
+
+   ```
+   model_routing_enabled=false: min_tier: smart is inactive
+   ```
+
+2. **Plan frontmatter** (`PLAN.md` frontmatter
+   `model_override: <symbolic-tier>`) — short-circuits classification.
+   Records `override_source=plan_frontmatter`. The override value MUST be
+   a closed-enum symbolic tier (`fast | balanced | smart`) — concrete
+   model IDs in the override field are accepted but discouraged
+   (operators pinning to a dated snapshot like `claude-haiku-4-5-20260101`
+   should override under `model_routing.resolution_override:` in
+   `.orchestrator/config.yml`, not in the plan).
+
+3. **Milestone floor** (`.orchestrator/config.yml`
+   `model_routing.min_tier: <symbolic-tier>`) — raises the effective
+   floor for every dispatch in the active milestone. Records
+   `override_source=milestone_floor`. **Floor wins over plan
+   frontmatter** when the floor is higher than the plan's override
+   (FR-14). When this conflict fires, a one-line stderr warning names
+   both knobs:
+
+   ```
+   model_override=fast overridden by min_tier=smart (floor wins)
+   ```
+
+4. **Plain routed** (no overrides active) — the routing table runs as
+   documented in the `## Routing Table` section above. Records
+   `override_source=none`.
+
+### override_source closed enum
+
+The JSONL `override_source` field is drawn from the closed set:
+
+| value                | trigger                                   |
+|----------------------|-------------------------------------------|
+| `disabled`           | kill switch active                        |
+| `plan_frontmatter`   | plan frontmatter `model_override:` set    |
+| `milestone_floor`    | `min_tier:` set (or floor-wins conflict)  |
+| `none`               | plain routed (no overrides)               |
+| `shadow_gate_blocked`| reserved for FR-9 live-flip refusal (P05) |
+
+`shadow_gate_blocked` is the FR-9 flip-readiness gate value emitted when
+`model_routing.live: true` is set without sufficient shadow corpus —
+M030/P05 ships the live-flip path; the value is reserved here so the
+closed enum is locked at P03 close.
+
+### CC-only launch posture
+
+Override resolution requires `CLAUDECODE=1`. On Codex CLI / Cursor the
+override path short-circuits and `override_source` is not emitted (the
+shadow path itself is bypassed; record is byte-identical to pre-M030
+shape). M009 ships per-runtime override semantics demand-driven post-
+launch.
+
 ## See Also
 
 - `templates/model-routing.yml` — the SSOT this document describes.
@@ -217,3 +291,9 @@ operators may widen to 40 in the aggressive overlay if dogfood shows
   CON-3 (the constraints this document operationalizes).
 - `specs/032-adaptive-model-selection/spec.md` — FR-3, FR-6, FR-8,
   FR-12, CON-3.
+- `tools/verify/p03-override-source-enum.sh` (M030/P03/T01) — the closed-
+  enum gate verifying every shadow-on dispatch_usage record carries
+  exactly one override_source field whose value is in the closed set.
+- `.orchestrator/milestones/M030/M030-CONTEXT.md` D-A5 — the binding
+  decision establishing the kill-switch-supersedes-min_tier compound
+  resolution amended into CON-4.

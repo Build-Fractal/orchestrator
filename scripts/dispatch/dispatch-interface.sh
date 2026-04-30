@@ -174,6 +174,19 @@ _di_rollup_savings_fields() {
   ' "$log_file" 2>/dev/null || printf '0\n0\n0\n0\n0\n0\n'
 }
 
+# --- M030/P03/T02: numeric tier-rank for floor comparison ---
+# Maps symbolic tier names to numeric ranks (fast<balanced<smart). Higher
+# rank = stricter floor. Returns rank on stdout; unknown tier returns -1.
+# POSIX-safe (case statement); no bash 4 features.
+_di_tier_rank() {
+  case "$1" in
+    fast) echo 0 ;;
+    balanced) echo 1 ;;
+    smart) echo 2 ;;
+    *) echo -1 ;;
+  esac
+}
+
 # --- M019/P01/T03: dispatch_usage JSONL emitter ---
 # Emits exactly one `dispatch_usage` record per dispatch invocation after
 # BACKEND is resolved. Called from the happy-path end AND each post-BACKEND
@@ -289,6 +302,16 @@ _di_emit_dispatch_usage() {
   shadow_partial=""
   shadow_withheld=""
   shadow_confidence=""
+  # M030/P03/T02: override-resolution locals.
+  local shadow_override_source override_kill override_min_tier override_plan
+  local _di_config_yml _plan_rank _floor_rank
+  shadow_override_source=""
+  override_kill=""
+  override_min_tier=""
+  override_plan=""
+  _di_config_yml=""
+  _plan_rank=""
+  _floor_rank=""
   if [ "${M030_SHADOW_MODE:-0}" = "1" ] && [ "${CLAUDECODE:-0}" = "1" ]; then
     # 1. Classify the task plan (P01/T02 deliverable; FR-1 + FR-2).
     _di_classifier_out="$(bash "$_DI_PROJECT_ROOT/scripts/dispatch/classify-task.sh" "$TASK_PLAN" 2>/dev/null)"
@@ -296,28 +319,126 @@ _di_emit_dispatch_usage() {
     # 1b. M030/P02/T03: capture classifier confidence enum {high, medium, low}
     #     for downstream rolling-variance stability check in shadow-compare.sh.
     shadow_confidence="$(printf '%s\n' "$_di_classifier_out" | grep -E '^confidence=' | head -n 1 | sed 's/^confidence=//')"
+
+    # --- M030/P03/T02: override-resolution path (CON-4 / D-A5 / FR-11..14) ---
+    # Precedence chain:
+    #   1. KILL SWITCH (config: model_routing_enabled: false) -> disabled
+    #      If min_tier is also active: emit one-line stderr warning naming the
+    #      bypassed value (CON-4 / D-A5 compound case).
+    #   2. PLAN FRONTMATTER (plan: model_override: <tier>) -> plan_frontmatter
+    #      If milestone min_tier raises above plan tier: bump to milestone_floor
+    #      (FR-14 conflict case; emit stderr warning naming both knobs).
+    #   3. MILESTONE FLOOR (config: model_routing.min_tier: <tier>) -> milestone_floor
+    #   4. PLAIN ROUTED -> none (the existing routing-table awk extraction
+    #      below produces the routed tier; override_source=none).
+
+    # Resolve per-project config path. Three candidate locations:
+    #   a) $ORCH_ROOT/config.yml -- canonical when ORCH_ROOT IS .orchestrator/.
+    #   b) $ORCH_ROOT/.orchestrator/config.yml -- when ORCH_ROOT is the
+    #      project root or a fixture-staged dir holding a .orchestrator/ subdir.
+    #   c) $ORCH_ROOT/../config.yml -- less-canonical fallback.
+    if [ -f "$ORCH_ROOT/config.yml" ]; then
+      _di_config_yml="$ORCH_ROOT/config.yml"
+    elif [ -f "$ORCH_ROOT/.orchestrator/config.yml" ]; then
+      _di_config_yml="$ORCH_ROOT/.orchestrator/config.yml"
+    elif [ -f "$ORCH_ROOT/../config.yml" ]; then
+      _di_config_yml="$ORCH_ROOT/../config.yml"
+    fi
+
+    # Read kill switch (top-level `model_routing_enabled:` boolean).
+    if [ -n "$_di_config_yml" ] && [ -f "$_di_config_yml" ]; then
+      override_kill="$(grep -E '^model_routing_enabled:' "$_di_config_yml" 2>/dev/null | head -n 1 | sed -E 's/^model_routing_enabled:[[:space:]]*"?([^"#]*)"?.*/\1/' | tr -d '[:space:]')"
+    fi
+
+    # Read plan-frontmatter override (top-level `model_override:` in plan YAML).
+    if [ -n "${TASK_PLAN:-}" ] && [ -f "$TASK_PLAN" ]; then
+      override_plan="$(grep -E '^model_override:' "$TASK_PLAN" 2>/dev/null | head -n 1 | sed -E 's/^model_override:[[:space:]]*"?([^"#]*)"?.*/\1/' | tr -d '[:space:]')"
+    fi
+
+    # Read milestone floor (nested `min_tier:` under `model_routing:` block).
+    # Awk section-walker scoped to model_routing: block; same pattern as P02.
+    if [ -n "$_di_config_yml" ] && [ -f "$_di_config_yml" ]; then
+      override_min_tier="$(awk '
+        BEGIN { in_block = 0 }
+        /^model_routing:/                 { in_block = 1; next }
+        in_block && /^[a-zA-Z_]/          { exit }
+        in_block && /^[[:space:]]+min_tier:/ {
+          val = $2; gsub(/[",]/, "", val); print val; exit
+        }
+      ' "$_di_config_yml")"
+    fi
+
+    # Apply precedence. Kill switch first (D-A5).
+    if [ "$override_kill" = "false" ]; then
+      shadow_override_source="disabled"
+      # Compound case (CON-4): emit one-line stderr warning naming the
+      # bypassed min_tier value. Operator hears the conflict mid-run.
+      if [ -n "$override_min_tier" ]; then
+        printf 'model_routing_enabled=false: min_tier: %s is inactive\n' "$override_min_tier" >&2
+      fi
+    elif [ -n "$override_plan" ]; then
+      shadow_override_source="plan_frontmatter"
+      shadow_routed="$override_plan"
+      # Floor-wins-conflict (FR-14): if min_tier raises strictly above plan
+      # tier, bump to milestone_floor and emit stderr warning naming both.
+      if [ -n "$override_min_tier" ]; then
+        _plan_rank="$(_di_tier_rank "$override_plan")"
+        _floor_rank="$(_di_tier_rank "$override_min_tier")"
+        if [ "$_plan_rank" -ge 0 ] && [ "$_floor_rank" -ge 0 ] && [ "$_floor_rank" -gt "$_plan_rank" ]; then
+          shadow_override_source="milestone_floor"
+          shadow_routed="$override_min_tier"
+          printf 'model_override=%s overridden by min_tier=%s (floor wins)\n' "$override_plan" "$override_min_tier" >&2
+        fi
+      fi
+    elif [ -n "$override_min_tier" ]; then
+      shadow_override_source="milestone_floor"
+      shadow_routed="$override_min_tier"
+    else
+      shadow_override_source="none"
+    fi
+
     # 2. Resolve symbolic tier via templates/model-routing.yml routing: block.
     #    Awk section-walker (P01 pattern; no jq dependency).
-    shadow_routed="$(awk -v ch="$_di_shadow_character" '
-      BEGIN { in_routing = 0; in_class = 0 }
-      /^routing:/                       { in_routing = 1; next }
-      /^resolution:/                    { exit }
-      in_routing && /^  [a-z_]+:$/      { in_class = ($1 == (ch ":")) ? 1 : 0; next }
-      in_routing && in_class && /^    claude-code:/ {
-        val = $2; gsub(/[",]/, "", val); print val; exit
-      }
-    ' "$_DI_PROJECT_ROOT/templates/model-routing.yml")"
-    # 3. Resolve symbolic tier -> runtime model ID via resolution: block.
-    #    Same awk pattern, scoped to resolution: section.
-    shadow_used="$(awk -v tier="$shadow_routed" '
-      BEGIN { in_resolution = 0; in_tier = 0 }
-      /^resolution:/                    { in_resolution = 1; next }
-      /^cost_rates:/                    { exit }
-      in_resolution && /^  [a-z_]+:$/   { in_tier = ($1 == (tier ":")) ? 1 : 0; next }
-      in_resolution && in_tier && /^    claude-code:/ {
-        val = $2; gsub(/[",]/, "", val); print val; exit
-      }
-    ' "$_DI_PROJECT_ROOT/templates/model-routing.yml")"
+    #    Skipped under disabled (kill switch) or when shadow_routed is already
+    #    set by plan-frontmatter / milestone-floor override.
+    if [ "$shadow_override_source" = "none" ]; then
+      shadow_routed="$(awk -v ch="$_di_shadow_character" '
+        BEGIN { in_routing = 0; in_class = 0 }
+        /^routing:/                       { in_routing = 1; next }
+        /^resolution:/                    { exit }
+        in_routing && /^  [a-z_]+:$/      { in_class = ($1 == (ch ":")) ? 1 : 0; next }
+        in_routing && in_class && /^    claude-code:/ {
+          val = $2; gsub(/[",]/, "", val); print val; exit
+        }
+      ' "$_DI_PROJECT_ROOT/templates/model-routing.yml")"
+      # 3. Resolve symbolic tier -> runtime model ID via resolution: block.
+      shadow_used="$(awk -v tier="$shadow_routed" '
+        BEGIN { in_resolution = 0; in_tier = 0 }
+        /^resolution:/                    { in_resolution = 1; next }
+        /^cost_rates:/                    { exit }
+        in_resolution && /^  [a-z_]+:$/   { in_tier = ($1 == (tier ":")) ? 1 : 0; next }
+        in_resolution && in_tier && /^    claude-code:/ {
+          val = $2; gsub(/[",]/, "", val); print val; exit
+        }
+      ' "$_DI_PROJECT_ROOT/templates/model-routing.yml")"
+    elif [ "$shadow_override_source" = "plan_frontmatter" ] || [ "$shadow_override_source" = "milestone_floor" ]; then
+      # shadow_routed is already set by override block. Resolve shadow_used
+      # from the resolution: block scoped to that tier.
+      shadow_used="$(awk -v tier="$shadow_routed" '
+        BEGIN { in_resolution = 0; in_tier = 0 }
+        /^resolution:/                    { in_resolution = 1; next }
+        /^cost_rates:/                    { exit }
+        in_resolution && /^  [a-z_]+:$/   { in_tier = ($1 == (tier ":")) ? 1 : 0; next }
+        in_resolution && in_tier && /^    claude-code:/ {
+          val = $2; gsub(/[",]/, "", val); print val; exit
+        }
+      ' "$_DI_PROJECT_ROOT/templates/model-routing.yml")"
+    fi
+    if [ "$shadow_override_source" = "disabled" ]; then
+      # Kill switch: routing skipped; runtime-default channel used directly.
+      shadow_routed=""
+      shadow_used="$model"
+    fi
     # 4. P03/P04 placeholders — emitted as no-op-empty in P02.
     shadow_partial="false"
     shadow_withheld=""
@@ -328,8 +449,8 @@ _di_emit_dispatch_usage() {
     # M018/P00/T01: emission_point="dispatch-interface" disambiguates from
     # build-context co-located emissions (CON-5 additive field).
     if [ "${M030_SHADOW_MODE:-0}" = "1" ] && [ "${CLAUDECODE:-0}" = "1" ]; then
-      # Shadow-on emit: pre-M030 fields + 4 P02 additive fields.
-      printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"%s","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":%s,"pricing_version":"%s","filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier2_savings_tokens":%d,"tier1_invocations":%d,"tier3_compression_savings_tokens":%d,"tier3_invocations":%d,"model":"%s","source":"estimate","emission_point":"dispatch-interface","timestamp":"%s","classifier_confidence":"%s","model_routed":"%s","model_used":"%s","partial_flip_active":%s,"withheld_classes":"%s"}\n' \
+      # Shadow-on emit: pre-M030 fields + 4 P02 additive fields + P03 override_source.
+      printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"%s","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":%s,"pricing_version":"%s","filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier2_savings_tokens":%d,"tier1_invocations":%d,"tier3_compression_savings_tokens":%d,"tier3_invocations":%d,"model":"%s","source":"estimate","emission_point":"dispatch-interface","timestamp":"%s","classifier_confidence":"%s","model_routed":"%s","model_used":"%s","partial_flip_active":%s,"withheld_classes":"%s","override_source":"%s"}\n' \
         "$UNIT_ID" "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" "$BACKEND" \
         "$input_tokens" "$output_tokens" "$cost_usd" \
         "$pricing_version" \
@@ -337,6 +458,7 @@ _di_emit_dispatch_usage() {
         "$_di_tier3_savings" "$_di_tier3_invocs" \
         "$model" "$ts" \
         "$shadow_confidence" "$shadow_routed" "$shadow_used" "$shadow_partial" "$shadow_withheld" \
+        "$shadow_override_source" \
         >> "$log_file" 2>/dev/null || {
         printf 'dispatch-interface.sh: dispatch_usage append failed on %s\n' "$log_file" >&2
         return 0
@@ -360,8 +482,8 @@ _di_emit_dispatch_usage() {
     # M018/P00/T01: emission_point="dispatch-interface" disambiguates from
     # build-context co-located emissions (CON-5 additive field).
     if [ "${M030_SHADOW_MODE:-0}" = "1" ] && [ "${CLAUDECODE:-0}" = "1" ]; then
-      # Shadow-on degradation emit: pre-M030 fields + 4 P02 additive fields.
-      printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"%s","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":null,"pricing_version":"%s","filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier2_savings_tokens":%d,"tier1_invocations":%d,"tier3_compression_savings_tokens":%d,"tier3_invocations":%d,"pricing_warning":"%s","model":"%s","source":"estimate","emission_point":"dispatch-interface","timestamp":"%s","classifier_confidence":"%s","model_routed":"%s","model_used":"%s","partial_flip_active":%s,"withheld_classes":"%s"}\n' \
+      # Shadow-on degradation emit: pre-M030 fields + 4 P02 additive fields + P03 override_source.
+      printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"%s","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":null,"pricing_version":"%s","filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier2_savings_tokens":%d,"tier1_invocations":%d,"tier3_compression_savings_tokens":%d,"tier3_invocations":%d,"pricing_warning":"%s","model":"%s","source":"estimate","emission_point":"dispatch-interface","timestamp":"%s","classifier_confidence":"%s","model_routed":"%s","model_used":"%s","partial_flip_active":%s,"withheld_classes":"%s","override_source":"%s"}\n' \
         "$UNIT_ID" "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" "$BACKEND" \
         "$input_tokens" "$output_tokens" \
         "$pricing_version" \
@@ -369,6 +491,7 @@ _di_emit_dispatch_usage() {
         "$_di_tier3_savings" "$_di_tier3_invocs" \
         "$escaped_warning" "$model" "$ts" \
         "$shadow_confidence" "$shadow_routed" "$shadow_used" "$shadow_partial" "$shadow_withheld" \
+        "$shadow_override_source" \
         >> "$log_file" 2>/dev/null || {
         printf 'dispatch-interface.sh: dispatch_usage append failed on %s\n' "$log_file" >&2
         return 0

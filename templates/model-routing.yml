@@ -1,0 +1,97 @@
+---
+schema_version: "1.0"
+type: model-routing-table
+milestone: "M030"
+created_at: "2026-04-30"
+---
+
+# templates/model-routing.yml — Adaptive Model Routing SSOT (M030)
+#
+# Three top-level sections:
+#   - routing:      (character × runtime) -> symbolic-tier
+#   - resolution:   (symbolic-tier × runtime) -> concrete model ID
+#   - cost_rates:   per-symbolic-tier USD/Mtok input + output rates
+#
+# CON-3 closure invariant: hardcoded model IDs MUST appear ONLY in the
+# resolution: section. The routing: section is symbolic (fast | balanced
+# | smart | inherit). Renaming a provider's model is therefore a single-
+# file edit under resolution: — no callers downstream need to change.
+#
+# CC-only launch posture (FR-6 + M009 deferred). codex-cli and cursor
+# resolve to "inherit" until M009 ships the multi-runtime parity audit.
+# Operators on those runtimes today get the claude-code values via the
+# inherit-fallback resolved at runtime by select-model.sh's adapter.
+#
+# Operator docs: references/model-routing.md (five required sections).
+
+# ---------- Symbolic interface: character -> symbolic-tier ----------
+#
+# The classifier (scripts/dispatch/classify-task.sh) emits character ∈
+# {mechanical, standard, novel}. This table resolves (character, runtime)
+# to a symbolic tier. Conservative shipping defaults below: mechanical
+# tasks go to fast, standard to balanced, novel to smart. The aggressive
+# overlay (.orchestrator/config.yml model_routing.overlay: aggressive)
+# is the opt-in path for operators who want standard -> fast and novel
+# -> balanced. See ## Aggressive Overlay in references/model-routing.md.
+
+routing:
+  mechanical:
+    claude-code: fast
+    codex-cli: inherit
+    cursor: inherit
+  standard:
+    claude-code: balanced
+    codex-cli: inherit
+    cursor: inherit
+  novel:
+    claude-code: smart
+    codex-cli: inherit
+    cursor: inherit
+
+# ---------- Per-runtime resolution: symbolic-tier -> model ID ----------
+#
+# CON-3: hardcoded model IDs ONLY appear here. Update this section when
+# providers release new models. The recommended IDs below are pinned to
+# the project's documented runtime references (see CLAUDE.md and the
+# project tree's existing claude-haiku-4-5 / claude-sonnet-4-7 /
+# claude-opus-4-7 references). Operators may pin to dated snapshots
+# (e.g. "claude-haiku-4-5-20260101") in their consumer projects.
+
+resolution:
+  fast:
+    claude-code: "claude-haiku-4-5"
+    codex-cli: inherit
+    cursor: inherit
+  balanced:
+    claude-code: "claude-sonnet-4-7"
+    codex-cli: inherit
+    cursor: inherit
+  smart:
+    claude-code: "claude-opus-4-7"
+    codex-cli: inherit
+    cursor: inherit
+
+# ---------- Cost-rate SSOT (D-A6) ----------
+#
+# Per-symbolic-tier USD per million tokens (input + output). Consumed by
+# scripts/observability/metrics-rollup.sh --by-model for the all-smart
+# counterfactual savings line. Operator obligation: update on provider
+# pricing changes. When cost_rates: is absent or a tier is missing,
+# metrics-rollup.sh --by-model emits a "cost rates not configured"
+# warning and a zero-savings line per FR-3 + FR-15 + SC-8 (warning-not-
+# hard-failure semantics).
+#
+# Values as of 2026-04-30 Anthropic published pricing for the claude-code
+# runtime tiers. Other runtimes inherit at runtime; per-runtime cost
+# overrides ship under M009.
+
+cost_rates:
+  fast:
+    input_per_mtok: 1.00
+    output_per_mtok: 5.00
+  balanced:
+    input_per_mtok: 3.00
+    output_per_mtok: 15.00
+  smart:
+    input_per_mtok: 15.00
+    output_per_mtok: 75.00

@@ -100,6 +100,22 @@ M035 asks: *can a new operator install the orchestrator with a single package-ma
 
 **Impact**: replaces "clone + bash" with the canonical OSS install patterns. Adoption friction drops from "you need to know what `git clone` is" to "you've installed packages before, this works the same way."
 
+### Finding E: `speckit.orchestrator.*` namespace cohort rename outstanding (PR #3 salvage)
+
+**Evidence**: 71 occurrences of `speckit.orchestrator.*` across 15 files in current main (2026-04-30 audit at PR #3 close). Distribution: 4 templates (`templates/claude-settings.json`, `templates/autonomy-defaults.yaml`, `templates/instruction-schema.md`, `templates/compression-tier3-prompt.md`, `templates/claude-code-appendix.md`) + 11 commands (`commands/auto.md` 16 refs, `commands/status.md` 9, `commands/discuss.md` 8, `commands/resume.md` 8, `commands/roadmap.md` 6, `commands/plan-phase.md` 4, `commands/migrate.md` 3, `commands/consolidate.md` 2, `commands/evaluate.md` 2, `commands/dispatch.md` 1). `commands/migrate.md:71-78` (AD-15) explicitly defers the rename: *"The `speckit.orchestrator.*` namespace stays intact until a coordinated cohort rename ships in a future milestone, tracked separately."*
+
+**Root cause**: M008 decoupled the orchestrator from spec-kit as a *runtime dependency* but did NOT rename the command cohort. The deferred rename is conditional on a coordinated change — partial rename would silently break dispatched-agent prompts (e.g. `commands/auto.md` Stage 2 dispatches with `Skill(speckit.orchestrator.plan-phase)` references that must resolve to a registered skill name).
+
+**Why M035 is the right home**: Open Question 1 ("npm scope — `@spec-kit/orchestrator` vs `@orchestrator/cli` vs unscoped") binds the rename to the launch publishing surface. Whatever scope ships in P02 (npm) determines the canonical command-cohort prefix; the in-tree namespace must match. Renaming earlier than M035 risks shipping a name that conflicts with the published-package decision; renaming later than M035 P02 means the published package's first version carries `speckit.orchestrator.*` references in its skills/commands, baking the legacy name into the v1 install surface.
+
+**Fix shape (P01.5 — pre-launch, prerequisite to P02)**: Mechanical sweep across the 15 files. Two surfaces require per-line judgment:
+1. **Operational references** (e.g. `commands/auto.md` Stage 2 prompt, `Skill(speckit.orchestrator.plan-phase)` invocations) — replace with `orchestrator:<command>` shape.
+2. **Historical/migration documentation** (`commands/migrate.md` AD-15, `templates/instruction-schema.md` legacy schema docs) — preserve as historical references, framed as "legacy name" rather than active.
+
+Distinct from a global `sed` because (1) and (2) cannot be disambiguated by pattern alone; requires reading each occurrence in context. Co-located with the broader **`spec-kit-orchestrator` → `orchestrator` repo/project rename** (separate scope captured in operator session 2026-04-30) — both renames share the same audit pass and can land in a single commit sequence if the broader rename ships pre-launch.
+
+**Impact**: closes a documentation-vs-code drift that PR #3 (closed 2026-04-30) surfaced. Without it, the v1 npm install carries a name that contradicts the package scope. With it, the namespace, package name, and repo name align at launch.
+
 ### Finding D: `orchestrator:update` should be a first-class command, not a shell-function recipe
 
 **Evidence**: today's recommended workflow (per the operator's pre-M035 guidance) is a shell function in `~/.zshrc`:
@@ -126,6 +142,7 @@ This works pre-M035 but has three problems:
 |---|---|---|---|
 | **P00** (recommended) | Empirical baseline + decisions | Manual publish of beta `@spec-kit/orchestrator` to npm under `@beta` tag; install on a fresh macOS + fresh Linux VM; friction inventory. Decisions: npm scope (`@spec-kit` vs `@orchestrator` vs unscoped), homebrew tap location, curl-pipe-bash domain, GPG signing keys, release-notes generation strategy. | Pre-launch — informs P01–P06 design |
 | **P01** | Dev-install symlink mode + version-drift warning | `--mode=symlink\|copy` flag in `install-claude-code.sh` (and codex/cursor installers). M025 manifest extension to record symlink-vs-copy per entry (so uninstall handles both). `orchestrator:status` version-drift warning reading consumer's `CHANGELOG.md` vs known-orchestrator-repo `CHANGELOG.md`. Documented shell-function recipe in `references/installation.md`. | **Pre-launch** — ships immediately after M029 |
+| **P01.5** | Namespace + project rename (`speckit.orchestrator.*` purge + `spec-kit-orchestrator` → `orchestrator`) | Mechanical sweep across the 15 files carrying `speckit.orchestrator.*` operational references (~71 occurrences) replaced with `orchestrator:<command>` shape; historical/migration documentation (`commands/migrate.md` AD-15, `templates/instruction-schema.md`) reframed as legacy references. Co-shipped with the broader project rename (repo, package.json, `~/Sites/<dir>` path, `.claude/projects/` key) per the dedicated rename plan. Open Question 1 (npm scope) resolved here; P02 inherits the resolved name. | **Pre-launch** — prerequisite to P02 |
 | **P02** | npm publishing pipeline | `package.json` with `@spec-kit/orchestrator` (or chosen scope). Postinstall script wraps existing `install-claude-code.sh`. `bin/orchestrator` entry point delegating to commands. `npm publish` works idempotently. | **At-launch** |
 | **P03** | Homebrew formula + tap | `homebrew-orchestrator` tap repo. Formula authored. `brew install orchestrator` works on macOS + Linuxbrew. Uninstall cascades through M025. | **At-launch** |
 | **P04** | curl-pipe-bash + GH release automation | `install.sh` hosted at GitHub release URL (or `orchestrator.dev` if domain registered by P00). CI workflow: `v*` tag push → `gh release create` + npm tarball upload + homebrew bottle + signed `install.sh` upload. | **At-launch** |

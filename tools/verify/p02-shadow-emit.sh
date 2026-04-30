@@ -110,11 +110,16 @@ if [ $? -ne 0 ]; then
   a_ok=0
   printf 'FAIL: scenario A — withheld_classes token missing under shadow-on + CC-on\n'
 fi
+grep -q -F '"classifier_confidence"' "$LINE_TMP" 2>/dev/null
+if [ $? -ne 0 ]; then
+  a_ok=0
+  printf 'FAIL: scenario A — classifier_confidence token missing under shadow-on + CC-on (M030/P02/T03)\n'
+fi
 rm -f "$LINE_TMP" 2>/dev/null
 rm -f "$LOG_FILE" 2>/dev/null
 
 if [ "$a_ok" -eq 1 ]; then
-  pass=$((pass + 5))
+  pass=$((pass + 6))
 else
   fail=$((fail + 1))
   pass=$((pass + 0))
@@ -151,11 +156,16 @@ if [ $? -eq 0 ]; then
   b_ok=0
   printf 'FAIL: scenario B — withheld_classes token leaked under shadow-off\n'
 fi
+grep -q -F '"classifier_confidence"' "$LINE_TMP" 2>/dev/null
+if [ $? -eq 0 ]; then
+  b_ok=0
+  printf 'FAIL: scenario B — classifier_confidence token leaked under shadow-off (M030/P02/T03)\n'
+fi
 rm -f "$LINE_TMP" 2>/dev/null
 rm -f "$LOG_FILE" 2>/dev/null
 
 if [ "$b_ok" -eq 1 ]; then
-  pass=$((pass + 4))
+  pass=$((pass + 5))
 else
   fail=$((fail + 1))
 fi
@@ -191,11 +201,16 @@ if [ $? -eq 0 ]; then
   c_ok=0
   printf 'FAIL: scenario C — withheld_classes token leaked under CC-off\n'
 fi
+grep -q -F '"classifier_confidence"' "$LINE_TMP" 2>/dev/null
+if [ $? -eq 0 ]; then
+  c_ok=0
+  printf 'FAIL: scenario C — classifier_confidence token leaked under CC-off (M030/P02/T03)\n'
+fi
 rm -f "$LINE_TMP" 2>/dev/null
 rm -f "$LOG_FILE" 2>/dev/null
 
 if [ "$c_ok" -eq 1 ]; then
-  pass=$((pass + 4))
+  pass=$((pass + 5))
 else
   fail=$((fail + 1))
 fi

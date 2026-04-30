@@ -282,16 +282,20 @@ _di_emit_dispatch_usage() {
   # "Runtime that does not support model selection"). Codex CLI / Cursor
   # fall through to the pre-P02 emit (no new fields).
   # Indirection target for resolution: templates/model-routing.yml (CON-3).
-  local shadow_routed shadow_used shadow_partial shadow_withheld
+  local shadow_routed shadow_used shadow_partial shadow_withheld shadow_confidence
   local _di_classifier_out _di_shadow_character
   shadow_routed=""
   shadow_used=""
   shadow_partial=""
   shadow_withheld=""
+  shadow_confidence=""
   if [ "${M030_SHADOW_MODE:-0}" = "1" ] && [ "${CLAUDECODE:-0}" = "1" ]; then
     # 1. Classify the task plan (P01/T02 deliverable; FR-1 + FR-2).
     _di_classifier_out="$(bash "$_DI_PROJECT_ROOT/scripts/dispatch/classify-task.sh" "$TASK_PLAN" 2>/dev/null)"
     _di_shadow_character="$(printf '%s\n' "$_di_classifier_out" | grep -E '^character=' | head -n 1 | sed 's/^character=//')"
+    # 1b. M030/P02/T03: capture classifier confidence enum {high, medium, low}
+    #     for downstream rolling-variance stability check in shadow-compare.sh.
+    shadow_confidence="$(printf '%s\n' "$_di_classifier_out" | grep -E '^confidence=' | head -n 1 | sed 's/^confidence=//')"
     # 2. Resolve symbolic tier via templates/model-routing.yml routing: block.
     #    Awk section-walker (P01 pattern; no jq dependency).
     shadow_routed="$(awk -v ch="$_di_shadow_character" '
@@ -325,14 +329,14 @@ _di_emit_dispatch_usage() {
     # build-context co-located emissions (CON-5 additive field).
     if [ "${M030_SHADOW_MODE:-0}" = "1" ] && [ "${CLAUDECODE:-0}" = "1" ]; then
       # Shadow-on emit: pre-M030 fields + 4 P02 additive fields.
-      printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"%s","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":%s,"pricing_version":"%s","filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier2_savings_tokens":%d,"tier1_invocations":%d,"tier3_compression_savings_tokens":%d,"tier3_invocations":%d,"model":"%s","source":"estimate","emission_point":"dispatch-interface","timestamp":"%s","model_routed":"%s","model_used":"%s","partial_flip_active":%s,"withheld_classes":"%s"}\n' \
+      printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"%s","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":%s,"pricing_version":"%s","filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier2_savings_tokens":%d,"tier1_invocations":%d,"tier3_compression_savings_tokens":%d,"tier3_invocations":%d,"model":"%s","source":"estimate","emission_point":"dispatch-interface","timestamp":"%s","classifier_confidence":"%s","model_routed":"%s","model_used":"%s","partial_flip_active":%s,"withheld_classes":"%s"}\n' \
         "$UNIT_ID" "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" "$BACKEND" \
         "$input_tokens" "$output_tokens" "$cost_usd" \
         "$pricing_version" \
         "$_di_filter_dropped" "$_di_tier1_savings" "$_di_tier2_savings" "$_di_tier1_invocs" \
         "$_di_tier3_savings" "$_di_tier3_invocs" \
         "$model" "$ts" \
-        "$shadow_routed" "$shadow_used" "$shadow_partial" "$shadow_withheld" \
+        "$shadow_confidence" "$shadow_routed" "$shadow_used" "$shadow_partial" "$shadow_withheld" \
         >> "$log_file" 2>/dev/null || {
         printf 'dispatch-interface.sh: dispatch_usage append failed on %s\n' "$log_file" >&2
         return 0
@@ -357,14 +361,14 @@ _di_emit_dispatch_usage() {
     # build-context co-located emissions (CON-5 additive field).
     if [ "${M030_SHADOW_MODE:-0}" = "1" ] && [ "${CLAUDECODE:-0}" = "1" ]; then
       # Shadow-on degradation emit: pre-M030 fields + 4 P02 additive fields.
-      printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"%s","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":null,"pricing_version":"%s","filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier2_savings_tokens":%d,"tier1_invocations":%d,"tier3_compression_savings_tokens":%d,"tier3_invocations":%d,"pricing_warning":"%s","model":"%s","source":"estimate","emission_point":"dispatch-interface","timestamp":"%s","model_routed":"%s","model_used":"%s","partial_flip_active":%s,"withheld_classes":"%s"}\n' \
+      printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"%s","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":null,"pricing_version":"%s","filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier2_savings_tokens":%d,"tier1_invocations":%d,"tier3_compression_savings_tokens":%d,"tier3_invocations":%d,"pricing_warning":"%s","model":"%s","source":"estimate","emission_point":"dispatch-interface","timestamp":"%s","classifier_confidence":"%s","model_routed":"%s","model_used":"%s","partial_flip_active":%s,"withheld_classes":"%s"}\n' \
         "$UNIT_ID" "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" "$BACKEND" \
         "$input_tokens" "$output_tokens" \
         "$pricing_version" \
         "$_di_filter_dropped" "$_di_tier1_savings" "$_di_tier2_savings" "$_di_tier1_invocs" \
         "$_di_tier3_savings" "$_di_tier3_invocs" \
         "$escaped_warning" "$model" "$ts" \
-        "$shadow_routed" "$shadow_used" "$shadow_partial" "$shadow_withheld" \
+        "$shadow_confidence" "$shadow_routed" "$shadow_used" "$shadow_partial" "$shadow_withheld" \
         >> "$log_file" 2>/dev/null || {
         printf 'dispatch-interface.sh: dispatch_usage append failed on %s\n' "$log_file" >&2
         return 0

@@ -1,0 +1,5 @@
+Efficiency (Tier 1 rollup)
+  scope=no/records
+  estimated_cost_usd=filter
+  verification_pass_rate=
+  dispatches=match

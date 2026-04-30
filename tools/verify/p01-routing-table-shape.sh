@@ -6,7 +6,10 @@
 #   1. File exists.
 #   2. Frontmatter has schema_version, type: model-routing-table,
 #      milestone: "M030".
-#   3. Three top-level sections present: routing:, resolution:, cost_rates:.
+#   3. Required top-level sections present: routing: + resolution:.
+#      cost_rates: is OPTIONAL (FR-15 fallback path: when absent,
+#      metrics-rollup --by-model emits a "cost rates not configured"
+#      warning and a zero-savings line — warning, not hard failure).
 #   4. Every symbolic-tier name referenced under routing: (right-hand
 #      side of claude-code:/codex-cli:/cursor: lines, excluding the
 #      literal "inherit") has a matching key under resolution:.
@@ -95,10 +98,14 @@ else
   note_fail_at 1 "frontmatter missing keys: ${missing_keys}"
 fi
 
-# ---------- Check 3: three top-level sections ----------
+# ---------- Check 3: required top-level sections ----------
+# routing: + resolution: are REQUIRED. cost_rates: is OPTIONAL — its
+# absence triggers the FR-15 fallback path in metrics-rollup --by-model
+# (warning-not-hard-failure). When cost_rates: IS present, Check 5 + 8
+# enforce its closure + per-tier numeric-shape invariants.
 
 missing_sections=""
-for section in 'routing:' 'resolution:' 'cost_rates:'; do
+for section in 'routing:' 'resolution:'; do
   if ! grep -q "^${section}" "$TARGET"; then
     missing_sections="${missing_sections}${section} | "
   fi
@@ -107,7 +114,7 @@ done
 if [ -z "$missing_sections" ]; then
   note_pass
 else
-  note_fail_at 1 "top-level sections missing: ${missing_sections}"
+  note_fail_at 1 "required top-level sections missing: ${missing_sections}"
 fi
 
 # ---------- Section-bounded extraction via awk ----------

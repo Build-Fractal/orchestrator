@@ -1,0 +1,53 @@
+---
+schema_version: "1.0"
+type: model-routing-table
+milestone: "M030"
+created_at: "2026-04-30"
+---
+
+# tests/fixtures/m030-p05/no-cost-rates-routing.yml — M030/P05/T01 fixture.
+#
+# Verbatim derivative of templates/model-routing.yml with the cost_rates:
+# section removed. Used by T02's --by-model cost-rates-absent verifier
+# to exercise the FR-15 fallback ("cost rates not configured" warning +
+# zero-savings line + exit 0).
+#
+# routing: + resolution: sections are byte-identical to the shipped
+# template so that tools/verify/p01-routing-table-shape.sh continues to
+# accept this file under a cost_rates-optional posture (T01 amends
+# check #3 + check #5 to treat cost_rates: as optional — see T01
+# summary for the contingent-amendment decision).
+
+# ---------- Symbolic interface: character -> symbolic-tier ----------
+
+routing:
+  mechanical:
+    claude-code: fast
+    codex-cli: inherit
+    cursor: inherit
+  standard:
+    claude-code: balanced
+    codex-cli: inherit
+    cursor: inherit
+  novel:
+    claude-code: smart
+    codex-cli: inherit
+    cursor: inherit
+
+# ---------- Per-runtime resolution: symbolic-tier -> model ID ----------
+
+resolution:
+  fast:
+    claude-code: "claude-haiku-4-5"
+    codex-cli: inherit
+    cursor: inherit
+  balanced:
+    claude-code: "claude-sonnet-4-7"
+    codex-cli: inherit
+    cursor: inherit
+  smart:
+    claude-code: "claude-opus-4-7"
+    codex-cli: inherit
+    cursor: inherit
+
+# No cost_rates: section — fixture exercises the FR-15 fallback path.

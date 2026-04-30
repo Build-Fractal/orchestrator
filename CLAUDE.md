@@ -1,4 +1,5 @@
 # >>> orchestrator:recent-changes >>>
+M030 P02 close: dispatch-interface shadow hook (M030_SHADOW_MODE=1 + CLAUDECODE=1) + 5 additive JSONL fields + scripts/diagnostics/shadow-compare.sh 4-verdict (ready|partially_ready|block|evidence_insufficient) + SC-3a roundtrip green + SC-11 byte-equality preserved (CON-2/FR-19) + CON-3 closure + CON-6 append-only + stability metric 0.10/N=20/50 traced; phase-suite green pass=9 fail=0
 M030 P01 close: classifier (36/40 ground-truth agreement) + routing table (cost_rates SSOT) + classifier-confidence stability metric (variance<=0.10 N=20 cov>=50) + doctor --config-check; phase-suite green pass=7 fail=0
 M030 P00 close: classifier-ground-truth corpus authored at tests/fixtures/m030-classifier-corpus/ (40 hand-labeled pre-M030 task plans, 20 mechanical / 15 standard / 5 novel, D-A4 independence by construction, phase-suite green pass=5 fail=0)
 - 032-adaptive-model-selection: Adaptive model selection: task-character classifier routes each dispatch to the

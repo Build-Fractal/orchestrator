@@ -334,13 +334,26 @@ if isinstance(hooks, dict):
             if not isinstance(inner, list):
                 kept.append(wrapper)
                 continue
-            # Check if any leaf in wrapper is orchestrator-managed.
-            any_managed = False
+            # Detect orchestrator-managed status: wrapper-level flag OR any
+            # leaf-level flag. Earlier this branch only checked the leaves,
+            # so a wrapper flagged at its own level (with no leaf flags)
+            # survived `--uninstall` untouched. The repair subcommand below
+            # uses wrapper_is_managed() helper that handles both forms; this
+            # arm now mirrors the same wrapper-OR-leaf logic.
+            wrapper_managed = wrapper.get("_orchestrator_managed") is True
+            if wrapper_managed:
+                # Wrapper-level managed: drop the entire wrapper regardless
+                # of leaf flags. This is what M025-baseline pre-T02 wrappers
+                # carried, and what the symmetric repair-arm path drops.
+                removed += 1
+                continue
+            # Otherwise, scan leaves for the per-leaf managed flag.
+            any_leaf_managed = False
             for leaf in inner:
                 if isinstance(leaf, dict) and leaf.get("_orchestrator_managed") is True:
-                    any_managed = True
+                    any_leaf_managed = True
                     break
-            if not any_managed:
+            if not any_leaf_managed:
                 kept.append(wrapper)
                 continue
             # Strip managed leaves; keep wrapper only if non-managed leaves remain.

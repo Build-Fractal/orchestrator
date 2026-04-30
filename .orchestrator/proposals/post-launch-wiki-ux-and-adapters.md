@@ -20,15 +20,34 @@ This arc is the post-launch *expansion of reach* once M032 has shipped the basic
 **Goal**: take the wiki from "renders markdown" to "navigable knowledge graph" — adoptable for cross-company consumption without engineering training.
 
 **Scope candidates** (for the eventual brief):
+- **Forward-planning lifecycle visibility** — first-class wiki concept exposing stages 1–3 (stub / brief / specified) of the milestone lifecycle alongside stages 4–5 (active / closed). Stage badges per entry; comment threads on every stage; explicit "this is not yet a real plan" framing for stages 1–2 to set reader expectations. **Loadbearing for the engagement-loop goal** — see "The forward-planning lifecycle thesis" below.
 - **Code-to-title resolution layer** (Finding G in M032) — surface bare codes like `AN-011`, `M028`, `DR-STACK-001` as `AN-011 (Analyzer Trust Erosion)` with link to definition. May ship as part of M032 readability hardening; if not, consolidates here.
 - **Scannable index pages** — section indexes show one-line summaries (frontmatter `description:` or first body line) per artifact, not bare nav lists. May ship as part of M032; if not, here.
-- **Faceted search** — beyond mkdocs's built-in search: filter by milestone, decision-status, knowledge-category, date range.
-- **Graph chips on every page** — render incoming/outgoing graph edges as inline chips ("Decided by: DR-CONSTITUTION-001", "Cited by: M001/P02 plan").
-- **Related-entries sidebar** — auto-populate "see also" lists from graph relations.
+- **Faceted search** — beyond mkdocs's built-in search: filter by milestone, decision-status, knowledge-category, date range, lifecycle stage.
+- **Graph chips on every page** — render incoming/outgoing graph edges as inline chips ("Decided by: DR-CONSTITUTION-001", "Cited by: M001/P02 plan", "Promotes from: proposals/M032").
+- **Related-entries sidebar** — auto-populate "see also" lists from graph relations. Especially valuable for proposals — surfacing predecessor/successor relationships across the lifecycle.
 - **AI Q&A widget** — "Ask the wiki" surface backed by the project's knowledge graph + LLM. Sits alongside Giscus comments; lower-friction than commenting for "how does this work?" questions. Composes with M033's onboarding-AI work.
-- **Comment-driven engagement** — beyond Giscus presence: comment-prompts at section bottoms, comment-aggregation views ("recent comments across the wiki"), comment-to-issue conversion.
+- **Comment-driven engagement** — beyond Giscus presence: comment-prompts at section bottoms, comment-aggregation views ("recent comments across the wiki"), comment-to-issue conversion. **Special treatment for proposals**: comments on a proposal during stub/brief stages should propagate into the eventual `orchestrator:specify` input as captured "stakeholder input" — the loop closes by feeding cross-company input into the spec when the proposal promotes.
 
-**Why post-launch**: launch must ship a wiki that's *usable* (M032 readability hardening covers that), but the deeper UX (graph chips, faceted search, AI Q&A) is differentiated polish. Real-user signal informs which features matter most. Pre-launch dogfooding exercises only synthetic shape; post-launch gives real diversity.
+### The forward-planning lifecycle thesis
+
+The orchestrator's planning artifacts move through five stages:
+
+| Stage | Where it lives | Editable? | Comment-able? | Visible to non-eng today? |
+|---|---|---|---|---|
+| 1. Stub idea | `.orchestrator/proposals/<name>.md` (short) | yes | should be | ❌ |
+| 2. Full brief | `.orchestrator/proposals/<name>.md` (with findings) | yes | should be | ❌ |
+| 3. Specified | `specs/<NNN>-<slug>/spec.md` | reviewed | should be | ❌ |
+| 4. Active milestone | `.orchestrator/milestones/M###/` | active work | yes (Giscus) | ✅ |
+| 5. Closed | `.orchestrator/milestone-summary.md` + archive | frozen | yes (Giscus) | ✅ |
+
+**The cross-company-collaboration goal only realizes when stages 1–3 are visible alongside 4–5.** By the time work reaches stage 4, plan direction is mostly locked. The engagement loop — where non-engineers, validators, customers shape direction *before* plans harden — operates in stages 1–3. Today the wiki only ships 4–5.
+
+**Workflow principle that shapes this scope** (captured 2026-04-30): proposals stay as proposals (not promoted to formal milestones) until that milestone is about to be worked. Each newly-shipped milestone produces lessons that get folded into pending proposals. Promotion to formal milestone is a deliberate, reevaluation-driven step. This means the proposals corpus is itself **living**, not write-once. The wiki must support iterative editing + comment-accretion across long pending periods, not just one-shot publication.
+
+This also constrains the lifecycle visibility design: stage badges must be *informative not prescriptive* — readers should understand "this idea may or may not happen, and may change shape significantly before it does." The stub/brief framing in the wiki should be friendly to that ambiguity rather than fighting it.
+
+**Why post-launch**: launch must ship a wiki that's *usable* (M032 readability hardening covers that — including basic proposals/ scanner extension per Finding H), but the deeper UX (lifecycle stage badges with edit/comment surfaces, graph chips, faceted search, AI Q&A) is differentiated polish. Real-user signal informs which features matter most. Pre-launch dogfooding exercises only synthetic shape; post-launch gives real diversity.
 
 **Predecessors**: M032 (wiki distribution must ship first — every consumer project needs the basic wiki working before deeper UX matters); M020 (knowledge layer maturation, closed — graph relations exist); M033 (onboarding experience — composes with AI Q&A surface).
 

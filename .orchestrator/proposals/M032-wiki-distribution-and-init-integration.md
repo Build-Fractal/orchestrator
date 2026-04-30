@@ -161,25 +161,34 @@ Future milestones consume the same pattern: `--with-github-integration` (M013/M0
 
 **Impact**: this is the **single biggest readability blocker** for cross-company adoption (Brett's primary success criterion: "make the knowledge base accessible to everyone in the company to read, comment on, edit"). Without it, the wiki is internal-team-only — non-engineers and new hires can't navigate the cross-references. Loadbearing for the post-launch wiki-UX-deep milestone (see `.orchestrator/proposals/post-launch-wiki-ux-and-adapters.md`).
 
-### Finding H: Real product content lives outside `.orchestrator/` (added 2026-04-29)
+### Finding H: Real product content lives outside the wiki scanner's enumeration (added 2026-04-29, extended 2026-04-30)
 
-**Evidence**: PBJ has canonical product content in two locations the wiki scanner doesn't see:
-- `<project>/specs/<NNN>-<slug>/spec.md` — feature spec (262 lines for PBJ)
-- `<project>/decisions/<DR-CODE>-<slug>.md` — domain decision detail (BG-002 inventory was 184 lines added in the very recent architectural session)
+**Evidence**: PBJ has canonical product content in three locations the wiki scanner doesn't see, plus the orchestrator itself has the same issue with one of them. All three matter for the cross-company-collaboration thesis (see `post-launch-wiki-ux-and-adapters.md` § Forward-Planning Lifecycle Visibility).
 
-The scanner's enumeration is `.orchestrator/**.md` + `knowledge/<category>/MEM*.md`. Top-level project dirs are out-of-scope by design. Same pattern likely applies to most consumer projects — specs and decision docs commonly live at project root (Speckit convention), not under `.orchestrator/`.
+1. **Project-root specs**: `<project>/specs/<NNN>-<slug>/spec.md` — feature spec (262 lines for PBJ). Speckit convention; lives at project root, not under `.orchestrator/`.
+2. **Project-root decisions**: `<project>/decisions/<DR-CODE>-<slug>.md` — domain decision detail (BG-002 inventory was 184 lines added in PBJ's recent architectural session).
+3. **Future-planning briefs**: `.orchestrator/proposals/<name>.md` — captured stubs and full briefs for milestones not yet promoted to formal `specs/` (orchestrator has 11 today: M028, M029, M030, M031, M032, M033, M034, M035, post-launch wiki UX/adapters, papercut-sweep, constitution-amendment). PBJ has none today but will accumulate them as the project matures. **This is the workflow surface where cross-company input shapes the plan before it hardens** — by far the highest-leverage of the three for the engagement-loop goal.
+
+The scanner's current enumeration is `.orchestrator/**.md` minus tmp/scratch/config + `knowledge/<category>/MEM*.md`. Despite being under `.orchestrator/`, the `proposals/` directory falls outside the categorization (`top:*`, `milestone:*`, `archive:*`) — so it's silently dropped by the categorizer, not by an exclusion rule.
 
 Also surfaced: **flat knowledge files** like `.orchestrator/knowledge/analysis-object-schema.md` (90 lines) — a knowledge entry that's *not* under a category subdir and doesn't follow the `MEM###` naming, so the M012/P02/T02 knowledge-rendering pattern misses it.
 
-**Root cause**: M012's scanner was scoped to the orchestrator's own state-tree shape (which is uniform). Consumer projects have richer content layouts that the scanner doesn't model.
+**Root cause**: M012's scanner was scoped to the orchestrator's own state-tree shape *as it existed in M012*. Two sources of drift since then:
+- Consumer projects have richer content layouts (specs/, decisions/) that the scanner doesn't model.
+- The orchestrator's own state tree grew a `proposals/` directory (M027-era) that the M012 scanner predates and doesn't enumerate.
 
-**Fix shape**: add two opt-in scanner configs per consumer project:
-1. `wiki.extra_dirs:` in `<project>/.orchestrator/config.yml` — list of additional dirs (relative to project root) whose `.md` files render under a configurable nav section. Default empty. PBJ-style usage: `[specs/, decisions/]`.
-2. Flat-knowledge support: also pick up `.orchestrator/knowledge/*.md` files (no category subdir) under a "Knowledge — Flat" section, separate from categorized entries.
+**Fix shape**: extend the scanner with three additive enumerations:
+1. **`proposals/` as a top-level category** (in-tree fix, no config needed — same pattern for orchestrator and consumer projects). Adds `top:proposals` enum value, renders under a "Forward Plans" or "Proposals" or "Roadmap" nav section (naming TBD — see Open question below). Each entry's lifecycle stage is exposed via a frontmatter `stage:` field (`stub | brief | specified | active | closed`); the wiki renders a stage badge per entry. This is the load-bearing piece for the engagement-loop goal.
+2. **`wiki.extra_dirs:` in `<project>/.orchestrator/config.yml`** — list of additional project-root dirs whose `.md` files render under a configurable nav section. Default empty. PBJ-style usage: `[specs/, decisions/]`.
+3. **Flat-knowledge support** — also pick up `.orchestrator/knowledge/*.md` files (no category subdir) under a "Knowledge — Flat" section, separate from categorized entries.
 
-Both are pure scanner extensions — no template changes, no nav-format changes. Generator adds new sections only when matching content exists.
+All three are pure scanner extensions — no template changes, no nav-format changes. Generator adds new sections only when matching content exists.
 
-**Impact**: today every consumer project must either move their spec/decision content under `.orchestrator/` (violates Speckit convention) or hand-author include stubs (what we did for PBJ today — reproducible workaround, but high-friction for non-author readers).
+**Open question for spec**: nav section name for `proposals/`. "Proposals" is technically accurate but reads like internal jargon to non-technical readers. "Roadmap" reads to non-technical readers but conflates with the formal `M###-ROADMAP.md` artifacts under each milestone. "Forward Plans" is a compromise that dodges both. Recommend `orchestrator:specify` resolves with one of: (a) "Roadmap" with the milestone-internal roadmaps renamed "Phase Map"; (b) "Forward Plans" as the wiki section, internal docs keep "proposals" as a directory name; (c) "Proposals" with a one-line introduction-paragraph at the section index explaining what it is.
+
+**Impact**: without proposals/ in the wiki, the cross-company-collaboration goal has a hole — engineering can see future plans by reading `.orchestrator/proposals/`, but non-technical contributors can't comment on plans before they're formal specs. By that point, plan direction is mostly locked in. **The engagement loop only closes when stage 1–3 artifacts (stub / brief / specified) are visible alongside stage 4–5 (active milestone / closed). Today only 4–5 ship.**
+
+For specs/ and decisions/: today every consumer project must either move their content under `.orchestrator/` (violates Speckit convention) or hand-author include stubs (what we did for PBJ — reproducible workaround, but high-friction).
 
 ### Finding I: Auto-generated nav clobbers user-added entries (added 2026-04-29)
 

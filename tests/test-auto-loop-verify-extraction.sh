@@ -52,6 +52,20 @@ else
   fail "Expected-output example fence with PASS: prefix skipped (rc=$rc, output: $output)"
 fi
 
+# --- Test 4: Bare-backtick bullets under ## Verification → checks_passed=2 ---
+# Group 5 / paper-cut sweep: the bullet body is a single backtick-wrapped
+# command, no `Check:` prefix. Earlier the parser only matched
+# `Check:`-prefixed bullets and silently dropped this shape, reporting
+# AUTO:VERIFY_NO_CHECKS even though the section had executable content.
+# The fix accepts bare-backtick bullets per the no-checks-found error
+# message's documented contract.
+output=$(bash "$AUTO_LOOP" "$FIXTURE_MILESTONE" --step=V --phase=P00 --task=T04 2>&1) && rc=$? || rc=$?
+if [[ "$rc" -eq 0 ]] && echo "$output" | grep -qE 'AUTO:VERIFY_PASS .*checks_passed=2'; then
+  pass "two bare-backtick-bullet commands extracted (checks_passed=2)"
+else
+  fail "two bare-backtick-bullet commands extracted (rc=$rc, output: $output)"
+fi
+
 echo "----"
 echo "PASS: $PASS_COUNT  FAIL: $FAIL_COUNT"
 [[ "$FAIL_COUNT" -eq 0 ]]

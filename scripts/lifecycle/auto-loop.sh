@@ -356,6 +356,17 @@ if [[ "$STEP" = "V" ]]; then
       # documented contract per templates/phase-plan.md is that the
       # `- Check: ` ` cmd ` ` ` sub-item is the executable form.
       check_cmd=$(echo "$line" | sed 's/.*Check:[[:space:]]*`\([^`]*\)`.*/\1/')
+    elif echo "$line" | grep -qE '^[[:space:]]*-[[:space:]]+`[^`]+`[[:space:]]*$'; then
+      # Bare-backtick bullet shape: `- \`bash scripts/verify/foo.sh\`` (the
+      # entire bullet body is a single backtick-wrapped command, no Check:
+      # prefix). The earlier no-checks-found error message advertised that
+      # this shape was accepted, but the parser only matched `Check:`
+      # bullets — silently dropping bare-backtick bullets and reporting
+      # AUTO:VERIFY_NO_CHECKS even when the section had executable content.
+      # Strict-shape regex (anchored `^- ` + single backtick run + EOL)
+      # avoids false positives on truth statements that carry informational
+      # backticks mid-prose.
+      check_cmd=$(echo "$line" | sed 's/^[[:space:]]*-[[:space:]]*`\([^`]*\)`[[:space:]]*$/\1/')
     fi
     [[ -z "$check_cmd" ]] && continue
 

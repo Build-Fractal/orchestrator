@@ -276,36 +276,113 @@ _di_emit_dispatch_usage() {
   # suspenders; pricing-lib reasons are ascii-safe by construction).
   escaped_warning="$(printf '%s' "$warning" | sed 's/\\/\\\\/g; s/"/\\"/g')"
 
+  # --- M030/P02/T02: shadow-mode classifier + routing-table fields ---
+  # Gated by BOTH env vars: M030_SHADOW_MODE=1 (operator flag) AND
+  # CLAUDECODE=1 (CC-only launch posture per CON-3 + spec edge case
+  # "Runtime that does not support model selection"). Codex CLI / Cursor
+  # fall through to the pre-P02 emit (no new fields).
+  # Indirection target for resolution: templates/model-routing.yml (CON-3).
+  local shadow_routed shadow_used shadow_partial shadow_withheld
+  local _di_classifier_out _di_shadow_character
+  shadow_routed=""
+  shadow_used=""
+  shadow_partial=""
+  shadow_withheld=""
+  if [ "${M030_SHADOW_MODE:-0}" = "1" ] && [ "${CLAUDECODE:-0}" = "1" ]; then
+    # 1. Classify the task plan (P01/T02 deliverable; FR-1 + FR-2).
+    _di_classifier_out="$(bash "$_DI_PROJECT_ROOT/scripts/dispatch/classify-task.sh" "$TASK_PLAN" 2>/dev/null)"
+    _di_shadow_character="$(printf '%s\n' "$_di_classifier_out" | grep -E '^character=' | head -n 1 | sed 's/^character=//')"
+    # 2. Resolve symbolic tier via templates/model-routing.yml routing: block.
+    #    Awk section-walker (P01 pattern; no jq dependency).
+    shadow_routed="$(awk -v ch="$_di_shadow_character" '
+      BEGIN { in_routing = 0; in_class = 0 }
+      /^routing:/                       { in_routing = 1; next }
+      /^resolution:/                    { exit }
+      in_routing && /^  [a-z_]+:$/      { in_class = ($1 == (ch ":")) ? 1 : 0; next }
+      in_routing && in_class && /^    claude-code:/ {
+        val = $2; gsub(/[",]/, "", val); print val; exit
+      }
+    ' "$_DI_PROJECT_ROOT/templates/model-routing.yml")"
+    # 3. Resolve symbolic tier -> runtime model ID via resolution: block.
+    #    Same awk pattern, scoped to resolution: section.
+    shadow_used="$(awk -v tier="$shadow_routed" '
+      BEGIN { in_resolution = 0; in_tier = 0 }
+      /^resolution:/                    { in_resolution = 1; next }
+      /^cost_rates:/                    { exit }
+      in_resolution && /^  [a-z_]+:$/   { in_tier = ($1 == (tier ":")) ? 1 : 0; next }
+      in_resolution && in_tier && /^    claude-code:/ {
+        val = $2; gsub(/[",]/, "", val); print val; exit
+      }
+    ' "$_DI_PROJECT_ROOT/templates/model-routing.yml")"
+    # 4. P03/P04 placeholders — emitted as no-op-empty in P02.
+    shadow_partial="false"
+    shadow_withheld=""
+  fi
+
   if [ -n "$cost_usd" ] && [ -z "$warning" ]; then
     # Happy path — numeric cost, no warning field.
     # M018/P00/T01: emission_point="dispatch-interface" disambiguates from
     # build-context co-located emissions (CON-5 additive field).
-    printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"%s","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":%s,"pricing_version":"%s","filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier2_savings_tokens":%d,"tier1_invocations":%d,"tier3_compression_savings_tokens":%d,"tier3_invocations":%d,"model":"%s","source":"estimate","emission_point":"dispatch-interface","timestamp":"%s"}\n' \
-      "$UNIT_ID" "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" "$BACKEND" \
-      "$input_tokens" "$output_tokens" "$cost_usd" \
-      "$pricing_version" \
-      "$_di_filter_dropped" "$_di_tier1_savings" "$_di_tier2_savings" "$_di_tier1_invocs" \
-      "$_di_tier3_savings" "$_di_tier3_invocs" \
-      "$model" "$ts" \
-      >> "$log_file" 2>/dev/null || {
-      printf 'dispatch-interface.sh: dispatch_usage append failed on %s\n' "$log_file" >&2
-      return 0
-    }
+    if [ "${M030_SHADOW_MODE:-0}" = "1" ] && [ "${CLAUDECODE:-0}" = "1" ]; then
+      # Shadow-on emit: pre-M030 fields + 4 P02 additive fields.
+      printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"%s","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":%s,"pricing_version":"%s","filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier2_savings_tokens":%d,"tier1_invocations":%d,"tier3_compression_savings_tokens":%d,"tier3_invocations":%d,"model":"%s","source":"estimate","emission_point":"dispatch-interface","timestamp":"%s","model_routed":"%s","model_used":"%s","partial_flip_active":%s,"withheld_classes":"%s"}\n' \
+        "$UNIT_ID" "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" "$BACKEND" \
+        "$input_tokens" "$output_tokens" "$cost_usd" \
+        "$pricing_version" \
+        "$_di_filter_dropped" "$_di_tier1_savings" "$_di_tier2_savings" "$_di_tier1_invocs" \
+        "$_di_tier3_savings" "$_di_tier3_invocs" \
+        "$model" "$ts" \
+        "$shadow_routed" "$shadow_used" "$shadow_partial" "$shadow_withheld" \
+        >> "$log_file" 2>/dev/null || {
+        printf 'dispatch-interface.sh: dispatch_usage append failed on %s\n' "$log_file" >&2
+        return 0
+      }
+    else
+      # Shadow-off emit: byte-identical to pre-P02 (preserves SC-11).
+      printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"%s","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":%s,"pricing_version":"%s","filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier2_savings_tokens":%d,"tier1_invocations":%d,"tier3_compression_savings_tokens":%d,"tier3_invocations":%d,"model":"%s","source":"estimate","emission_point":"dispatch-interface","timestamp":"%s"}\n' \
+        "$UNIT_ID" "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" "$BACKEND" \
+        "$input_tokens" "$output_tokens" "$cost_usd" \
+        "$pricing_version" \
+        "$_di_filter_dropped" "$_di_tier1_savings" "$_di_tier2_savings" "$_di_tier1_invocs" \
+        "$_di_tier3_savings" "$_di_tier3_invocs" \
+        "$model" "$ts" \
+        >> "$log_file" 2>/dev/null || {
+        printf 'dispatch-interface.sh: dispatch_usage append failed on %s\n' "$log_file" >&2
+        return 0
+      }
+    fi
   else
     # Degradation path — cost=null JSON literal, pricing_warning present.
     # M018/P00/T01: emission_point="dispatch-interface" disambiguates from
     # build-context co-located emissions (CON-5 additive field).
-    printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"%s","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":null,"pricing_version":"%s","filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier2_savings_tokens":%d,"tier1_invocations":%d,"tier3_compression_savings_tokens":%d,"tier3_invocations":%d,"pricing_warning":"%s","model":"%s","source":"estimate","emission_point":"dispatch-interface","timestamp":"%s"}\n' \
-      "$UNIT_ID" "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" "$BACKEND" \
-      "$input_tokens" "$output_tokens" \
-      "$pricing_version" \
-      "$_di_filter_dropped" "$_di_tier1_savings" "$_di_tier2_savings" "$_di_tier1_invocs" \
-      "$_di_tier3_savings" "$_di_tier3_invocs" \
-      "$escaped_warning" "$model" "$ts" \
-      >> "$log_file" 2>/dev/null || {
-      printf 'dispatch-interface.sh: dispatch_usage append failed on %s\n' "$log_file" >&2
-      return 0
-    }
+    if [ "${M030_SHADOW_MODE:-0}" = "1" ] && [ "${CLAUDECODE:-0}" = "1" ]; then
+      # Shadow-on degradation emit: pre-M030 fields + 4 P02 additive fields.
+      printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"%s","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":null,"pricing_version":"%s","filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier2_savings_tokens":%d,"tier1_invocations":%d,"tier3_compression_savings_tokens":%d,"tier3_invocations":%d,"pricing_warning":"%s","model":"%s","source":"estimate","emission_point":"dispatch-interface","timestamp":"%s","model_routed":"%s","model_used":"%s","partial_flip_active":%s,"withheld_classes":"%s"}\n' \
+        "$UNIT_ID" "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" "$BACKEND" \
+        "$input_tokens" "$output_tokens" \
+        "$pricing_version" \
+        "$_di_filter_dropped" "$_di_tier1_savings" "$_di_tier2_savings" "$_di_tier1_invocs" \
+        "$_di_tier3_savings" "$_di_tier3_invocs" \
+        "$escaped_warning" "$model" "$ts" \
+        "$shadow_routed" "$shadow_used" "$shadow_partial" "$shadow_withheld" \
+        >> "$log_file" 2>/dev/null || {
+        printf 'dispatch-interface.sh: dispatch_usage append failed on %s\n' "$log_file" >&2
+        return 0
+      }
+    else
+      # Shadow-off degradation emit: byte-identical to pre-P02 (preserves SC-11).
+      printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"%s","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":null,"pricing_version":"%s","filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier2_savings_tokens":%d,"tier1_invocations":%d,"tier3_compression_savings_tokens":%d,"tier3_invocations":%d,"pricing_warning":"%s","model":"%s","source":"estimate","emission_point":"dispatch-interface","timestamp":"%s"}\n' \
+        "$UNIT_ID" "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" "$BACKEND" \
+        "$input_tokens" "$output_tokens" \
+        "$pricing_version" \
+        "$_di_filter_dropped" "$_di_tier1_savings" "$_di_tier2_savings" "$_di_tier1_invocs" \
+        "$_di_tier3_savings" "$_di_tier3_invocs" \
+        "$escaped_warning" "$model" "$ts" \
+        >> "$log_file" 2>/dev/null || {
+        printf 'dispatch-interface.sh: dispatch_usage append failed on %s\n' "$log_file" >&2
+        return 0
+      }
+    fi
   fi
   return 0
 }

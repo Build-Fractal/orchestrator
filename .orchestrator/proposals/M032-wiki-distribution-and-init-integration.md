@@ -151,6 +151,62 @@ Future milestones consume the same pattern: `--with-github-integration` (M013/M0
 
 **Impact**: without this pattern, every feature added to init becomes either always-on (bloat) or its own command (fragmentation). The flag pattern keeps init's surface small while enabling progressive enrichment.
 
+### Finding G: Codes-without-titles burns the reader (added 2026-04-29 — pbj wiki deploy session)
+
+**Evidence**: PBJ's constitution renders bare code shorthand throughout — `Why: AN-011 + AUD-003 + BG-003 + BG-004` — without surfacing what those codes mean. The reader must cross-reference a separate page (or several) to understand a single principle. Same problem for orchestrator's own M-codes (M028, M030), AP-codes (AP-009), DR-codes (DR-STACK-001). The wiki today is technically complete and practically unscannable.
+
+**Root cause**: M012 rendered raw markdown unchanged. No code-to-title resolution layer exists. The codes are the project's natural shorthand in source markdown — they shouldn't be rewritten *in source* — but the rendered wiki should decorate them inline: `AN-011 (Analyzer Trust Erosion)` linking to the definition.
+
+**Fix shape**: build-time decorator pass. Reads a glossary file (`<project>/.orchestrator/knowledge/glossary.md` if present, or scans the codebase for code-definition patterns) → on each rendered page, regex-scan for known code patterns (`[A-Z]{2,4}-\d+`, `M\d{3}`, `DR-[A-Z]+-\d+`, `AP-\d+`) → rewrite first occurrence on each page as `CODE (Title)` linked to the definition; subsequent occurrences just linked. Configurable per-project: which patterns to scan, where to look up titles. Skip patterns that don't resolve (no broken-link noise).
+
+**Impact**: this is the **single biggest readability blocker** for cross-company adoption (Brett's primary success criterion: "make the knowledge base accessible to everyone in the company to read, comment on, edit"). Without it, the wiki is internal-team-only — non-engineers and new hires can't navigate the cross-references. Loadbearing for the post-launch wiki-UX-deep milestone (see `.orchestrator/proposals/post-launch-wiki-ux-and-adapters.md`).
+
+### Finding H: Real product content lives outside `.orchestrator/` (added 2026-04-29)
+
+**Evidence**: PBJ has canonical product content in two locations the wiki scanner doesn't see:
+- `<project>/specs/<NNN>-<slug>/spec.md` — feature spec (262 lines for PBJ)
+- `<project>/decisions/<DR-CODE>-<slug>.md` — domain decision detail (BG-002 inventory was 184 lines added in the very recent architectural session)
+
+The scanner's enumeration is `.orchestrator/**.md` + `knowledge/<category>/MEM*.md`. Top-level project dirs are out-of-scope by design. Same pattern likely applies to most consumer projects — specs and decision docs commonly live at project root (Speckit convention), not under `.orchestrator/`.
+
+Also surfaced: **flat knowledge files** like `.orchestrator/knowledge/analysis-object-schema.md` (90 lines) — a knowledge entry that's *not* under a category subdir and doesn't follow the `MEM###` naming, so the M012/P02/T02 knowledge-rendering pattern misses it.
+
+**Root cause**: M012's scanner was scoped to the orchestrator's own state-tree shape (which is uniform). Consumer projects have richer content layouts that the scanner doesn't model.
+
+**Fix shape**: add two opt-in scanner configs per consumer project:
+1. `wiki.extra_dirs:` in `<project>/.orchestrator/config.yml` — list of additional dirs (relative to project root) whose `.md` files render under a configurable nav section. Default empty. PBJ-style usage: `[specs/, decisions/]`.
+2. Flat-knowledge support: also pick up `.orchestrator/knowledge/*.md` files (no category subdir) under a "Knowledge — Flat" section, separate from categorized entries.
+
+Both are pure scanner extensions — no template changes, no nav-format changes. Generator adds new sections only when matching content exists.
+
+**Impact**: today every consumer project must either move their spec/decision content under `.orchestrator/` (violates Speckit convention) or hand-author include stubs (what we did for PBJ today — reproducible workaround, but high-friction for non-author readers).
+
+### Finding I: Auto-generated nav clobbers user-added entries (added 2026-04-29)
+
+**Evidence**: `wiki-generate-nav.sh` rewrites the entire `nav:` block between `# >>> M012-P01 nav` and `# <<< M012-P01 nav end` markers. Any nav entries the operator hand-added (today's PBJ workaround for Finding H — Spec, Domain Decisions, Knowledge-as-section) are silently destroyed on next regenerate.
+
+**Root cause**: M012/P01/T04 designed the nav as wholly auto-generated. No "user customization" surface.
+
+**Fix shape**: split the nav block into two regions:
+- `# >>> auto-nav` ... `# <<< auto-nav end` — managed wholly by the generator (Constitution / Decisions / Knowledge / Milestones).
+- `# >>> custom-nav` ... `# <<< custom-nav end` — preserved verbatim across regenerates. Default empty; operators add Spec / Domain Decisions / project-specific top-level entries here.
+
+Generator merges the two at output time. ~15 lines of awk in `wiki-generate-nav.sh` to read+preserve custom block; no schema change.
+
+**Impact**: today, any operator workaround for Finding H is throwaway after first regenerate. With this fix, custom entries persist across the regen lifecycle. Loadbearing for Finding H's "hand-author include stubs" workaround being viable.
+
+### Finding J: `mkdocs gh-deploy` uses cwd's git remote — silent cross-project hazard (added 2026-04-29)
+
+**Evidence**: `mkdocs gh-deploy` builds the site, then `git push <cwd's origin> gh-pages --force`. If the operator runs `mkdocs gh-deploy -f /path/to/project-A/wiki/mkdocs.yml` from inside `/path/to/project-B/`, the build reads from project A but the push goes to project B's remote. Today's session lost ~1 minute restoring `Build-Fractal/spec-kit-orchestrator`'s `gh-pages` after PBJ's wiki content force-pushed there. Prior gh-pages SHA was recoverable via reflog; without reflog, would have been a real loss.
+
+**Root cause**: `-f <config>` was added by mkdocs to support cross-config builds, but `gh-deploy`'s git-remote inference is cwd-bound. Mismatch is invisible until the push line.
+
+**Fix shape**: `wiki-deploy.sh` (already exists) becomes the *only* documented deploy path for consumer projects. It does an explicit `cd "$PROJECT_ROOT"` before `mkdocs gh-deploy`, plus a sanity check: parse `repo_url:` from `mkdocs.yml`, compare to `git -C <cwd> remote get-url origin`, fail closed on mismatch. Add this gate to `wiki-deploy.sh` regardless of M032's other work — it's a 5-line patch.
+
+Documentation update in `wiki/README.md`: explicitly warn against direct `mkdocs gh-deploy -f` usage; point to `wiki-deploy.sh`.
+
+**Impact**: silent cross-project force-push. Even with reflog rescue, a confidence-eroding bug. The `wiki-deploy.sh` gate makes this class of error impossible regardless of operator carefulness.
+
 ## Phase shape
 
 | Phase | Goal | Key artifact | Verifies |

@@ -1,0 +1,22 @@
+---
+schema_version: "1.0"
+type: orchestrator-config
+---
+
+# P04 fixture: live-routing-true config (model_routing.live: true).
+#
+# Used by:
+#   - Scenario F of tools/verify/p04-override-source-enum-extended.sh
+#     (live + empty corpus -> shadow_gate_blocked, post-T02)
+#   - Live-routing happy-path verifiers in T02 + T03.
+#
+# Pre-T02: dispatch-interface.sh has no `live:` consumer; the field is
+# documented-but-inert. T02's amendment introduces the live branch which
+# resolves the corpus verdict via shadow-compare and routes accordingly.
+#
+# CON-4 / D-A5: this config does NOT set model_routing_enabled=false; the
+# kill switch is OFF. See config-with-live-and-killswitch.yml for the
+# compound-conflict fixture.
+
+model_routing:
+  live: true

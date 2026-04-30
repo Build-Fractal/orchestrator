@@ -1,0 +1,24 @@
+---
+schema_version: "1.0"
+type: orchestrator-config
+---
+
+# P04 fixture: live-routing-true + kill-switch + min_tier compound config.
+#
+# Used by tools/verify/p04-con4-live-killswitch.sh (T02 deliverable):
+# CON-4 / D-A5 invariant — when the kill switch is engaged, live-routing
+# is overridden regardless of any other model_routing knobs. The
+# `override_source` token under shadow-on must be `disabled` (NOT
+# `shadow_gate_blocked` even though live: true is also declared).
+#
+# The compound shape (kill switch AND live AND min_tier all set) ensures
+# the verifier exercises the precedence chain top-to-bottom: kill switch
+# wins over live; live (when active) would otherwise block on empty
+# corpus / route on full corpus; min_tier (when active) would otherwise
+# raise the tier. The kill switch SHORT-CIRCUITS the entire chain.
+
+model_routing_enabled: false
+
+model_routing:
+  live: true
+  min_tier: smart

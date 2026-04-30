@@ -1,0 +1,16 @@
+---
+schema_version: "1.0"
+type: orchestrator-config
+---
+
+# P04 fixture: live-routing-false config (explicit pass-through baseline).
+#
+# `model_routing.live: false` declares the live branch is off. Even with
+# CLAUDECODE=1 and M030_SHADOW_MODE=1 set, the dispatch falls through to
+# the pre-live override-resolution chain (kill-switch / plan-frontmatter /
+# milestone-floor / classifier-default / none). Asserts that the live
+# branch is gated correctly: declaring `live: false` MUST be observably
+# equivalent to omitting the `live:` key entirely (the baseline config).
+
+model_routing:
+  live: false

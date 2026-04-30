@@ -19,7 +19,7 @@ updated_at: "2026-04-29"
     - Produces: `tests/fixtures/m030-classifier-corpus/labels.yml` (version-controlled fixture file with ≥30 hand-labeled pre-M030 PLAN.md references); `tests/fixtures/m030-classifier-corpus/README.md` (labeling methodology + independence-constraint compliance per D-A4)
     - Consumes: nothing (foundational; the labeling MUST happen before `classify-task.sh` is authored to satisfy SC-10's mechanical independence constraint)
 
-- [ ] **P01**: Classifier + routing table + cost_rates — "Running `bash scripts/dispatch/classify-task.sh <plan-path>` against any P00 fixture plan emits deterministic `character=` + `confidence=` lines in <100ms with no network calls; `templates/model-routing.yml` declares the routing + cost_rates SSOT and `bash scripts/diagnostics/doctor.sh --config-check` validates its closure."
+- [x] **P01**: Classifier + routing table + cost_rates — "Running `bash scripts/dispatch/classify-task.sh <plan-path>` against any P00 fixture plan emits deterministic `character=` + `confidence=` lines in <100ms with no network calls; `templates/model-routing.yml` declares the routing + cost_rates SSOT and `bash scripts/diagnostics/doctor.sh --config-check` validates its closure."
   - Risk: high
   - Depends: P00
   - Boundary Map:

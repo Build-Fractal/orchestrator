@@ -64,6 +64,19 @@ Context filtering is handled by `scripts/dispatch/scope-filter.sh`:
 - For KNOWLEDGE.md: includes `[project]` entries + entries matching current milestone/phase; excludes entries scoped to other milestones or other phases
 - For DECISIONS.md: includes rows matching current milestone, current phase, upstream dependencies, and `arch`-scoped rows (architectural — milestone-wide); excludes rows scoped to unrelated phases
 
+## Investigation Patterns
+
+Subagents performing mid-task investigation (grep across files, cleanup stale per-step results, evaluate a short Node expression, peek the first N lines of files matching a glob) MUST call one of the four canonical wrappers under `scripts/util/` instead of constructing a compound shell. The compound shells trip the M021/M028 shape guard; the wrappers are allow-listed and shape-clean.
+
+| Use case | Wrapper | One-line example | Antipattern remediated |
+|---|---|---|---|
+| Grep one pattern across multiple files | `scripts/util/grep-files.sh` | `bash scripts/util/grep-files.sh 'pattern' file1.md file2.md` | AP-010 (cmd-sub-in-pattern) |
+| Remove stale per-step result files | `scripts/util/cleanup-stale-results.sh` | `bash scripts/util/cleanup-stale-results.sh M028` | Finding D (Screenshot 2) |
+| Run a Node script file (no inline `-e` body) | `scripts/util/node-eval.sh` | `bash scripts/util/node-eval.sh tmp/probe.js arg1 arg2` | AP-012 (multiline-quoted-script) |
+| Peek first N lines of files matching a glob | `scripts/util/peek-files.sh` | `bash scripts/util/peek-files.sh 'T*-SUMMARY.md' --lines 20` | AP-013, AP-014 |
+
+Each wrapper exits 0 on success, returns a structured exit code on failure (2 on usage error), and is bash 3.2 + POSIX-sh-safe. See `ANTIPATTERNS.md` "Investigation patterns" subsection for AP-ID cross-references.
+
 ## Dispatch Strategy
 
 Check runtime capabilities to determine the dispatch method:

@@ -22,26 +22,61 @@ set -u
 # -----------------------------------------------------------------------------
 
 # reject_lookup <pattern-class> -> prints "<wrapper.sh> <AP-ID>"
+#
+# M021 baseline arms (nested-cmd-sub, compound-chain-gt2, heredoc-with-expansion,
+# quoted-brace) and the catch-all default are preserved byte-for-byte (CON-7
+# strict-superset). M028/P03/T03 appends five new arms for the AP-010..AP-014
+# pattern classes T02 added to the classifier; their wrapper basenames
+# (grep-files.sh, read-range.sh, node-eval.sh, peek-files.sh) reference
+# investigation-class wrappers (read-range.sh ships today; the others are P04
+# deliverables). The diagnostic surfaces the AP-ID; ANTIPATTERNS.md#AP-NNN
+# carries the operator-facing remedy.
 reject_lookup() {
   case "$1" in
-    nested-cmd-sub)         printf 'run-probe.sh AP-009\n'   ;;
-    compound-chain-gt2)     printf 'run-probe.sh AP-009\n'   ;;
-    heredoc-with-expansion) printf 'run-probe.sh AP-008\n'   ;;
-    quoted-brace)           printf 'read-range.sh AP-007\n'  ;;
-    *)                      printf 'run-probe.sh AP-009\n'   ;;
+    nested-cmd-sub)             printf 'run-probe.sh AP-009\n'   ;;
+    compound-chain-gt2)         printf 'run-probe.sh AP-009\n'   ;;
+    heredoc-with-expansion)     printf 'run-probe.sh AP-008\n'   ;;
+    quoted-brace)               printf 'read-range.sh AP-007\n'  ;;
+    cmd-sub-in-pattern)         printf 'grep-files.sh AP-010\n'  ;;
+    quoted-arg-newline-hash)    printf 'read-range.sh AP-011\n'  ;;
+    multiline-quoted-script)    printf 'node-eval.sh AP-012\n'   ;;
+    unquoted-brace-glob)        printf 'peek-files.sh AP-013\n'  ;;
+    xargs-sh-c-compound-body)   printf 'peek-files.sh AP-014\n'  ;;
+    *)                          printf 'run-probe.sh AP-009\n'   ;;
   esac
 }
 
 # -----------------------------------------------------------------------------
-# Locate repo root + classifier
+# Locate classifier -- self-relative via BASH_SOURCE (Finding A fix, M028/P02/T01)
+#
+# The hook resolves the classifier from its own on-disk location only. The
+# project-dir env var that older revisions consulted is intentionally retired
+# from the resolution logic; it was the project-relative path that did not
+# exist in consumer projects, so the hook fell through silently. The hook
+# now lives at the runtime-stable ~/.claude/orchestrator-hooks/ dir (M028/P02
+# installer) and resolves its sibling classifier from there. The in-tree
+# development location (hook at scripts/hooks/, classifier at
+# scripts/verify/lib/) is supported via a one-step parent-fallback. On both
+# miss, fail open (exit 0) -- never hard-fail the hook on a missing
+# classifier; that is the install-roundtrip gate's job.
 # -----------------------------------------------------------------------------
 
-REPO_ROOT="${CLAUDE_PROJECT_DIR:-}"
-if [ -z "$REPO_ROOT" ] || [ ! -d "$REPO_ROOT" ]; then
-  REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+HOOK_DIR_RAW="$(dirname "${BASH_SOURCE[0]}")"
+HOOK_DIR="$(cd "$HOOK_DIR_RAW" && pwd -P)"
+CLASSIFIER=""
+
+if [ -f "${HOOK_DIR}/shape-classifier.sh" ]; then
+  CLASSIFIER="${HOOK_DIR}/shape-classifier.sh"
+elif [ -f "${HOOK_DIR}/../verify/lib/shape-classifier.sh" ]; then
+  CLASSIFIER="${HOOK_DIR}/../verify/lib/shape-classifier.sh"
 fi
 
-CLASSIFIER="${REPO_ROOT}/scripts/verify/lib/shape-classifier.sh"
+if [ -z "$CLASSIFIER" ]; then
+  exit 0
+fi
+if [ ! -f "$CLASSIFIER" ]; then
+  exit 0
+fi
 
 # -----------------------------------------------------------------------------
 # Read stdin (Claude Code's hook JSON)

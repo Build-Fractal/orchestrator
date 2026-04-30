@@ -117,8 +117,19 @@ authoritative trigger list):
 
 **Required shape**: **single-script-file invocations**. Instead of
 writing a compound command inline, extract the logic into a short
-helper script under `scripts/verify/` or into the task's own phase
-directory, then invoke the helper as the `Check:` command.
+helper script and invoke it as the `Check:` command. Path discipline:
+project-owned per-phase verifiers (slug-bearing filenames like
+`p01-foundation-bundle.sh`) live under `tools/verify/`; framework-owned
+verifiers that ship in the install bundle (`check-*`, `run-*`,
+`spec-shape-lint`, `validate-*`, `guards/*`) live under `scripts/verify/`.
+Discriminator: any verifier whose filename embeds a phase/task/milestone
+slug is project-owned and emits to `tools/verify/`. Why: in any downstream
+project, `scripts/` is one of the four bulk-staged framework dirs
+(`commands/ references/ scripts/ templates/`), gitignored to avoid
+duplicating framework files into the consumer git history; project-owned
+files written there are gitignored AND vulnerable to silent clobber on
+the next `install-claude-code.sh` run. (M032 Finding A; surfaced
+2026-04-29 by pbj-central-mono-repo dogfooding.)
 
 ```markdown
 # FORBIDDEN — triggers harness heuristic (plain subshell + source)
@@ -129,9 +140,9 @@ directory, then invoke the helper as the `Check:` command.
 - My truth statement
   - Check: `test $(grep -c "pattern" file.txt) -gt 0`
 
-# REQUIRED — single-script-file shape
+# REQUIRED — single-script-file shape, project-owned path
 - My truth statement
-  - Check: `bash scripts/verify/p07-my-check.sh`
+  - Check: `bash tools/verify/p07-my-check.sh`
 ```
 
 **Why this matters**: the orchestrator's `speckit.orchestrator.auto`
@@ -191,6 +202,20 @@ Each task plan must be completely self-contained — an agent starting with zero
 - **Inputs**: what files from previous tasks this task reads. The Inputs section must summarize the API surface of upstream outputs — method signatures, key types, behavioral contracts — not just list file paths. An agent reading only this task plan must know what methods to call, what types to use, and what behavior to expect without reading upstream files.
 - **Must-haves**: the subset of phase must-haves that this specific task addresses
 
+### Plan-Time Discipline (Verification + Prerequisites)
+
+These five rules turn known plan-time confabulations into mechanical fail-fast checks at plan-authoring time, before any executor is dispatched. The brief that captured them is `.orchestrator/proposals/papercut-sweep-pre-M030.md` (paper-cut sweep, group 8 commit 1); each rule cites the dogfood incident that motivated it.
+
+1. **Prerequisite-existence verification.** When a task plan's `Prerequisites:` block names files via paths, run `[ -f <path> ]` against each path at plan-authoring time. FAIL the plan-authoring step on any miss — surface the gap before the executor inherits a stale assumption. Surfaced 2026-04-29 by M028/P02/T03 (`before-commit.sh` was claimed to exist; only `after-verify-sync.sh` did).
+
+2. **Verifier-availability cross-check.** Every command in a task's `## Verification` section MUST resolve to an existing-on-disk script at plan-authoring time. Cross-task verifier dependencies are rejected: if a verifier script does not yet exist, the plan must either (a) schedule its authorship inside *this* task's `## Steps` (co-authored alongside the deliverable), or (b) use a stub-tolerant inline shape-check (file existence, content-presence grep) that doesn't depend on the unwritten verifier. Surfaced 2026-04-29 by M028/P03/T01 (T01-T04 plans referenced verifier scripts that were T05 deliverables — first-fail-retry/second-fail-pause cannot recover from a missing verifier).
+
+3. **Classifier-shape pre-validation.** When a task introduces lines that will be subject to the active M021/M028 PreToolUse Bash shape-guard, OR when a verifier's contract depends on a specific classifier verdict for a specific input, the planner MUST run the proposed line/input through `scripts/verify/lib/shape-classifier.sh::classify_command` at plan-authoring time and record the verdict in plan prose. Without the classifier trace, the verdict claim is text — not a contract. Surfaced 2026-04-29 by M028/P02/T01 + T05 (planners confabulated classifier verdicts for compound shapes that the classifier actually rejects).
+
+4. **`run-probe.sh` scope discipline.** `scripts/util/run-probe.sh` is the staged-throwaway-probe wrapper — it exits 3 on paths outside `/tmp`, `/var/folders`, and `<repo>/tmp/`. It is **not** a generic invocation harness. For repo-resident verifiers under `scripts/verify/<...>.sh` or `tools/verify/<...>.sh`, invoke directly via `bash scripts/verify/<path>` (or `bash tools/verify/<path>`). Reserve `run-probe.sh` for genuinely staged probes inside the allowed directories. Surfaced 2026-04-29 by M028/P02/T01-T05 self-dogfood: five consecutive task plans wrapped a project-tree verifier path in `run-probe.sh` and uniformly false-FAILed under `auto-loop --step=V`.
+
+5. **Real-DB verification for SQL-bound code.** When a task introduces new SQL reads, schema migrations, or DB-bound integration code, the `## Verification` section MUST include either (a) a real-DB column-existence verifier (a prepared SELECT against a freshly-migrated empty schema, asserting no `no such column` throw), OR (b) an explicit `## Notes` "real-app smoke test pending — confirm before phase close" callout that names the surface to smoke-test and the expected behavior. Mock-only DB integration verification is a known false-pass shape: typed mocks share the planner's vocabulary so they round-trip cleanly even when the runtime schema diverges. Surfaced 2026-04-29 by lakeledger M066/P04 (column-name drift between planner spec vocabulary and persistence-layer schema names; mock tests passed; first app reload threw `no such column` — took two column-name-drift fixes against different tables to clear). Layer-2 fix (boundary-translation decision packet) is queued for M034.
+
 ## Scope Declaration
 
 Include a "Files Likely Touched" section listing all files the phase will create or modify:
@@ -218,6 +243,7 @@ After writing the phase plan and all task plans:
 
 1. **Verify state transition**: Run `bash scripts/state/derive-phase.sh <milestone-dir>`. The state should now be `executing` (task plans exist without summaries).
 2. **Report next step**: Inform the developer that the phase is ready for execution via `speckit.orchestrator.dispatch` (one task at a time) or `speckit.orchestrator.auto` (autonomous execution).
+3. **Report deliverables accurately**: when listing what the plan delivers, frame the report as "deliverables the plan **schedules**" — regardless of which agent actually authors the artifact at execution time. Do NOT report "authored N verifier scripts" if the scripts are scheduled as executor-task deliverables in plan bodies; planner has *scheduled* their authorship, not *performed* it. Misleading reporting muddies plan/exec accounting and makes verification gaps harder to spot. Surfaced 2026-04-29 by lakeledger M066/P02 dogfooding.
 
 Note: Running `plan-phase` again without `--phase P##` would attempt to re-plan the same phase since it is still the active phase. Use `--phase` to target a different phase.
 

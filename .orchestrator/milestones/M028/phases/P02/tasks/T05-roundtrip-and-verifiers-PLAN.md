@@ -131,15 +131,15 @@ It produces three verifiers: `install-roundtrip.sh`, `finding-A-verifier.sh`, `f
 ## Verification
 
 ```bash
-bash scripts/util/run-probe.sh scripts/verify/m028/install-roundtrip.sh
+bash scripts/verify/m028/install-roundtrip.sh
 ```
 
 ```bash
-bash scripts/util/run-probe.sh scripts/verify/m028/finding-A-verifier.sh
+bash scripts/verify/m028/finding-A-verifier.sh
 ```
 
 ```bash
-bash scripts/util/run-probe.sh scripts/verify/m028/finding-F-verifier.sh
+bash scripts/verify/m028/finding-F-verifier.sh
 ```
 
 ## Notes

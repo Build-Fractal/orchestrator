@@ -269,14 +269,31 @@ case "$QUERY" in
           if [[ -z "$dep" ]]; then
             continue
           fi
-          # Unparseable token = parser bug or malformed roadmap. A phase with
-          # a non-P## dependency must refuse to schedule rather than silently
-          # declaring itself ready (this was the load-bearing miss that let a
-          # parens-in-Risk parse mishap mark P02 ready while P01 was incomplete).
-          if [[ ! "$dep" =~ ^P[0-9] ]]; then
-            echo "read-roadmap.sh: phase $pid has unparseable dependency token '$dep' (full Depends: '$pdepends')" >&2
-            deps_satisfied=false
-            break
+          # Roadmap convention: `Depends:` carries phase tokens only;
+          # external prerequisites (BG-### gates, release-cut markers,
+          # cross-milestone references) live under `Blocked by:` and are not
+          # phase-completion deps. Mixed entries like `Depends: P03, BG-002
+          # closure` were producing fatal "unparseable dependency token"
+          # warnings on the trailing commentary, even though P03 alone is
+          # the load-bearing dep.
+          #
+          # Discriminator: tokens that begin with `P<digit>` but don't match
+          # `^P[0-9]+$` (e.g. `Pfoo`, `P-1`, `P3a`) are still parser-bug
+          # candidates — keep the load-bearing warn+refuse path for those.
+          # Tokens with any other shape (`BG-002`, prose words, residue from
+          # a `Blocked by:` line that leaked into a `Depends:` parse) are
+          # silently skipped per the documented convention.
+          if [[ ! "$dep" =~ ^P[0-9]+$ ]]; then
+            case "$dep" in
+              P[0-9]*)
+                echo "read-roadmap.sh: phase $pid has unparseable dependency token '$dep' (full Depends: '$pdepends')" >&2
+                deps_satisfied=false
+                break
+                ;;
+              *)
+                continue
+                ;;
+            esac
           fi
           # `|| true` is load-bearing: under `set -e + pipefail`, a no-match
           # grep would otherwise abort the whole script silently.

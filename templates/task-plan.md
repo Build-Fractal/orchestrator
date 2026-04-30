@@ -37,9 +37,17 @@ depends_on: [{{upstream_task_ids}}]
      full forbidden-shape enumeration and rationale (AD-19).
 
      Required form:
-       bash scripts/verify/<phase>-<task>-<name>.sh
-       bash scripts/verify/check-must-haves.sh <phase-dir>
-       bash scripts/verify/run-suite.sh <milestone> <phase>
+       bash tools/verify/<phase>-<task>-<name>.sh         # project-owned, slug-bearing
+       bash scripts/verify/check-must-haves.sh <phase-dir>  # framework-owned, ships in bundle
+       bash scripts/verify/run-suite.sh <milestone> <phase> # framework-owned, ships in bundle
+
+     Path discipline: project-owned per-phase verifiers (slug-bearing
+     filenames like p01-foundation-bundle.sh) MUST live under tools/verify/.
+     Framework-owned verifiers (check-*, run-*, spec-shape-lint, validate-*,
+     guards/*) keep scripts/verify/... — they ship in the install bundle.
+     scripts/ is one of the four bulk-staged framework dirs (commands/
+     references/ scripts/ templates/) in downstream projects; project-
+     owned files there are gitignored AND vulnerable to install-clobber.
 
      Forbidden forms:
        ( . scripts/lib/errors.sh && fn arg )

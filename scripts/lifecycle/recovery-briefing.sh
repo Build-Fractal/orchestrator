@@ -117,6 +117,17 @@ if [[ -d "$phases_dir" ]]; then
         [[ -f "$plan_file" ]] || continue
         task_id="$(basename "$plan_file" | sed 's/-PLAN\.md$//')"
         summary_file="$tasks_dir/${task_id}-SUMMARY.md"
+        # Bilateral-tolerance for slug-suffixed plan filenames; see
+        # scripts/state/derive-phase.sh for the same fallback shape.
+        if [[ ! -f "$summary_file" ]]; then
+          bare_task_id="${task_id%%-*}"
+          if [[ "$bare_task_id" != "$task_id" ]]; then
+            bare_summary_file="$tasks_dir/${bare_task_id}-SUMMARY.md"
+            if [[ -f "$bare_summary_file" ]]; then
+              summary_file="$bare_summary_file"
+            fi
+          fi
+        fi
 
         if [[ -f "$summary_file" ]]; then
           completed_units="${completed_units}- ${phase_id}/${task_id} (summary exists)

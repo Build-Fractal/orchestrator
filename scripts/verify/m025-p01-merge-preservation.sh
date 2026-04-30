@@ -64,7 +64,7 @@ fi
 RESULT="$TMPHOME/.claude/settings.json"
 
 python3 - "$RESULT" <<'PYEOF'
-import json, sys
+import json, os, sys
 d = json.load(open(sys.argv[1]))
 # 1. original top-level keys preserved
 for k in ("$schema", "statusLine", "permissions", "hooks"):
@@ -77,15 +77,37 @@ assert "SessionStart" in h and len(h["SessionStart"]) >= 1
 assert h["SessionStart"][0]["hooks"][0]["command"] == "~/.claude/hooks/gsd-session-start.sh"
 assert "PostToolUse" in h and h["PostToolUse"][0]["matcher"] == "Edit|Write"
 assert h["PostToolUse"][0]["hooks"][0]["command"] == "~/.claude/hooks/gsd-post-edit.sh"
-# 3. orchestrator hooks appended
+# 3. orchestrator hooks appended.
+#    M028/P02/T02 retired the M025 baseline bare-name commands
+#    (`orchestrator-post-verify`, `orchestrator-before-commit`) in favor of
+#    absolute `bash <abs-path>/<wrapper>.sh` emission. Match by basename so
+#    this verifier survives runtime-stable install-location moves.
 assert "Stop" in h, "Stop not appended"
 assert "PreToolUse" in h, "PreToolUse not appended"
-stop_cmds = [leaf["command"] for w in h["Stop"] for leaf in w.get("hooks", [])
-             if leaf.get("_orchestrator_managed") is True]
-assert "orchestrator-post-verify" in stop_cmds
-pre_cmds = [leaf["command"] for w in h["PreToolUse"] for leaf in w.get("hooks", [])
-            if leaf.get("_orchestrator_managed") is True]
-assert "orchestrator-before-commit" in pre_cmds
+
+
+def _basenames(wrappers):
+    out = []
+    for w in wrappers:
+        for leaf in w.get("hooks", []):
+            if leaf.get("_orchestrator_managed") is not True:
+                continue
+            cmd = leaf.get("command", "")
+            # Expected shape: `bash <abs-path>/<wrapper>.sh`. Tolerate the
+            # M025-baseline bare-name shape too — if some future install
+            # path emits the bare name, this verifier doesn't false-FAIL.
+            if cmd.startswith("bash "):
+                cmd = cmd.split(" ", 1)[1]
+            out.append(os.path.basename(cmd))
+    return out
+
+
+stop_basenames = _basenames(h["Stop"])
+pre_basenames = _basenames(h["PreToolUse"])
+assert "after-verify-sync.sh" in stop_basenames, \
+    "Stop missing after-verify-sync.sh; have %r" % stop_basenames
+assert "before-commit.sh" in pre_basenames, \
+    "PreToolUse missing before-commit.sh; have %r" % pre_basenames
 # 4. No wrapper metadata at root (regression guard: runtime/hook_count/target_file)
 for bad in ("runtime", "hook_count", "target_file"):
     assert bad not in d, "root leaked wrapper key: %s" % bad

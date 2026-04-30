@@ -140,6 +140,20 @@ if [[ -n "$active_phase" && "$active_phase" != "none" ]]; then
       has_any_task=true
       task_id=$(basename "$plan_file" | sed 's/-PLAN\.md$//')
       summary_file="$tasks_dir/${task_id}-SUMMARY.md"
+      # Bilateral-tolerance: the planner emits slug-suffixed plan filenames
+      # (`T01-input-audit-PLAN.md`) per commands/plan-phase.md, but
+      # write-summary.sh emits the bare-task-id form (`T01-SUMMARY.md`).
+      # Accept either shape so the reader and writer stay in sync without
+      # forcing slug-suffix emission on the writer.
+      if [[ ! -f "$summary_file" ]]; then
+        bare_task_id="${task_id%%-*}"
+        if [[ "$bare_task_id" != "$task_id" ]]; then
+          bare_summary_file="$tasks_dir/${bare_task_id}-SUMMARY.md"
+          if [[ -f "$bare_summary_file" ]]; then
+            summary_file="$bare_summary_file"
+          fi
+        fi
+      fi
       if [[ ! -f "$summary_file" ]]; then
         has_incomplete_task=true
         break

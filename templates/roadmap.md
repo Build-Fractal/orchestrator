@@ -22,7 +22,19 @@ updated_at: "{{updated_at}}"
 <!-- Repeat the phase block above for each phase in the milestone.
      Mark completed phases with [x] instead of [ ].
      Phases are ordered by dependency + risk (high-risk first among satisfied deps).
-     Never modify completed phase entries — append new phases at the bottom. -->
+     Never modify completed phase entries — append new phases at the bottom.
+
+     Convention:
+       - Depends:    phase IDs only (P01, P03, ...) — these gate scheduling.
+                     read-roadmap.sh refuses to schedule a phase whose
+                     Depends: list contains a malformed phase token (Pfoo,
+                     P-1, P3a) — that's the load-bearing parser-bug catch.
+       - Blocked by: external prerequisites (BG-### bug-gates, release-cut
+                     markers, cross-milestone references). Tracked
+                     separately; not enforced by the scheduler.
+     Mixed `Depends:` lines like `Depends: P03, BG-002 closure` are tolerated
+     (the BG-### token is silently skipped) but the canonical form is to put
+     phase tokens in `Depends:` and external prerequisites in `Blocked by:`. -->
 
 ## Cross-Cutting Concerns
 

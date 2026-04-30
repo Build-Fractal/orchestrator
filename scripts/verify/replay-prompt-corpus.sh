@@ -1,12 +1,21 @@
 #!/usr/bin/env bash
-# scripts/verify/replay-prompt-corpus.sh -- M021 SC-1 regression gate.
+# scripts/verify/replay-prompt-corpus.sh -- M021 SC-1 regression gate
+#                                            (M028/P03 corpus extended to 27).
 #
-# Parses tests/fixtures/m021-prompt-corpus.txt (20 entries), invokes the
+# Parses tests/fixtures/m021-prompt-corpus.txt (27 entries: 20 M021 baseline
+# + 7 M028 entries appended verbatim per CON-7 strict-superset), invokes the
 # shape-classifier library + the pre-bash-shape-guard hook on each INPUT,
-# asserts 20/20 decisions match EXPECTED_OUTCOME, and prints the canonical
-# final line: WOULD_PROMPT=N/20 where N=0 under the hardened configuration.
+# asserts 27/27 decisions match EXPECTED_OUTCOME, and prints the canonical
+# final line: WOULD_PROMPT=N/27 where N=0 under the hardened configuration.
 #
-# Exit: 0 on all-pass (N=0 and 20/20 EXPECTED_OUTCOME matches), 1 otherwise.
+# The historical "20-entry M021" semantic claim is preserved: entries 01..20
+# are the M021 baseline corpus and their verdicts are unchanged. Entries
+# 21..27 exercise the AP-010..AP-014 classes T02 added to the classifier.
+# T05 patched EXPECTED_TOTAL 20 -> 27 to keep this M021 SC-1 harness running
+# clean against the post-T04 corpus; the companion harness lives at
+# tests/run-prompt-corpus-replay.sh.
+#
+# Exit: 0 on all-pass (N=0 and 27/27 EXPECTED_OUTCOME matches), 1 otherwise.
 #
 # Bash 3.2 compatible.
 
@@ -20,7 +29,7 @@ HOOK="${REPO_ROOT}/scripts/hooks/pre-bash-shape-guard.sh"
 fail_count=0
 would_prompt=0
 entry_count=0
-EXPECTED_TOTAL=20
+EXPECTED_TOTAL=27
 
 pass() { echo "PASS: $1"; }
 fail() { echo "FAIL: $1 ($2)"; fail_count=$((fail_count + 1)); }

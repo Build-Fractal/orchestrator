@@ -24,6 +24,21 @@ type: dispatch-prompt
 
 {{task_scope}}
 
+## Investigation Patterns
+
+<!-- Static reference for the dispatched agent. Names the four canonical
+     wrappers under scripts/util/ that replace agent-invented compound shells.
+     The dispatched agent reads this section in-payload and calls these
+     wrappers instead of constructing inline grep ; echo ; grep / find | head |
+     xargs sh -c '...' / node -e "<multiline body>" / etc. shapes. -->
+
+If you need to investigate the codebase mid-task, use these canonical wrappers under `scripts/util/` instead of constructing compound shells (which the active M021/M028 shape guard will reject):
+
+- **Grep one pattern across multiple files**: `bash scripts/util/grep-files.sh <pattern> <file...>` — emits per-file separators; replaces `grep PAT f1 ; echo '---' ; grep PAT f2`. Cross-ref: ANTIPATTERNS.md AP-010.
+- **Remove stale per-step result files for a milestone**: `bash scripts/util/cleanup-stale-results.sh <milestone-id>` — refuses paths outside the milestone tree. Cross-ref: M028 Finding D.
+- **Run a short Node script** (file path, NOT `-e` body): `bash scripts/util/node-eval.sh <script-path> [args...]` — refuses `-e`/`-p`. Cross-ref: ANTIPATTERNS.md AP-012.
+- **Peek first N lines of files matching a glob**: `bash scripts/util/peek-files.sh <glob> [--lines N] [--exclude PATH] [--max N]` — replaces `find ... | head | xargs -I PH sh -c '...'`. Cross-ref: ANTIPATTERNS.md AP-013 + AP-014.
+
 ## Upstream Context
 
 <!-- Scope-filtered summaries from dependency phases/tasks.

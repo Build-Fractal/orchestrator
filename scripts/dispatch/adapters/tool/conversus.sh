@@ -186,10 +186,60 @@ _resolve_edition() {
   return 0
 }
 
+# Known SDK / provider error sentinels. If any of these strings appear in
+# the gate-result.md or in per-agent artifacts under conversus_output_dir,
+# the deliberation produced stub error-string content and any verdict it
+# carries is PASS-by-empty rather than load-bearing. Conversus 0.3.0 has a
+# known correctness bug where unreachable model IDs (e.g. the hardcoded
+# claude-sonnet-4-20250514 on `--provider claude-code` OAuth sessions)
+# synthesize through to a misleading PASS. This guard is reliability
+# insurance regardless of upstream conversus fix timing — defensive,
+# additive, fail-closed.
+KNOWN_PROVIDER_ERROR_PATTERNS="There's an issue with the selected model"
+
+_check_provider_error_stubs() {
+  # _check_provider_error_stubs <gate-result-path>
+  # Scans the gate-result.md and (when discoverable from frontmatter) the
+  # per-agent artifacts under conversus_output_dir for known provider-error
+  # sentinels. Emits FAIL: + returns 1 on match. Returns 0 on clean.
+  _cpe_gr="$1"
+  _cpe_dir=""
+  if [ -f "$_cpe_gr" ]; then
+    _cpe_dir="$(grep -E '^conversus_output_dir:' "$_cpe_gr" 2>/dev/null \
+      | head -n 1 \
+      | sed -E 's/^conversus_output_dir:[[:space:]]*"?([^"]*)"?.*/\1/')"
+  fi
+  # Iterate the newline-separated pattern set. Bash 3.2: avoid arrays for
+  # set -u safety on empty-array reads under older bash.
+  _cpe_old_ifs="$IFS"
+  IFS='
+'
+  for _cpe_pat in $KNOWN_PROVIDER_ERROR_PATTERNS; do
+    [ -n "$_cpe_pat" ] || continue
+    if [ -f "$_cpe_gr" ] && grep -qF "$_cpe_pat" "$_cpe_gr" 2>/dev/null; then
+      IFS="$_cpe_old_ifs"
+      _emit_fail "conversus produced provider-error stub content (matched in $_cpe_gr): $_cpe_pat"
+      return 1
+    fi
+    if [ -n "$_cpe_dir" ] && [ -d "$_cpe_dir" ]; then
+      if grep -rqF "$_cpe_pat" "$_cpe_dir" 2>/dev/null; then
+        IFS="$_cpe_old_ifs"
+        _emit_fail "conversus produced provider-error stub content (matched under $_cpe_dir): $_cpe_pat"
+        return 1
+      fi
+    fi
+  done
+  IFS="$_cpe_old_ifs"
+  return 0
+}
+
 _parse_verdict() {
   _gr="$1"
   if [ ! -f "$_gr" ]; then
     _emit_fail "gate-result not found: $_gr"
+    return 1
+  fi
+  if ! _check_provider_error_stubs "$_gr"; then
     return 1
   fi
   _line="$(grep -E '^verdict:' "$_gr" | head -n 1)"

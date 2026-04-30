@@ -7,9 +7,17 @@
 #   1. Adapter emits valid JSON.
 #   2. Root keys are exactly {"hooks"}.
 #   3. hooks keys are exactly {"Stop","PreToolUse"}.
-#   4. hooks.Stop[0].hooks[0].command == "orchestrator-post-verify".
+#   4. hooks.Stop[0].hooks[0].command starts with "bash " and ends with
+#      "after-verify-sync.sh" (M028/P02/T02 -- Finding F adapter half:
+#      absolute-path emission replaces the M025 baseline bare-name
+#      "orchestrator-post-verify"; M025 invariant of "exactly one Stop
+#      leaf, _orchestrator_managed-tagged" is preserved).
 #   5. hooks.PreToolUse[0].matcher == "Bash".
-#   6. hooks.PreToolUse[0].hooks[0].command == "orchestrator-before-commit".
+#   6. PreToolUse Bash matcher carries leaf objects whose commands all
+#      start with "bash " and end with ".sh"; the set of basenames includes
+#      "before-commit.sh" (M025 baseline, renamed from
+#      "orchestrator-before-commit") and "pre-bash-shape-guard.sh"
+#      (M028/P02/T02 addition for the runtime-stable shape-guard).
 #   7. Every leaf hook object carries "_orchestrator_managed": true.
 #   8. Adapter source contains the four TODO(M025+) deferral markers.
 #
@@ -71,30 +79,46 @@ else
   fail "hooks keys are not exactly {Stop, PreToolUse}"
 fi
 
-# --- Assertion 5: Stop leaf command
+# --- Assertion 5: Stop leaf command shape (M028/P02/T02 absolute-path)
 python3 -c "
-import json,sys
+import json,sys,os
 d = json.load(open(sys.argv[1]))
-assert d['hooks']['Stop'][0]['hooks'][0]['command'] == 'orchestrator-post-verify'
+stop_leaves = d['hooks']['Stop'][0]['hooks']
+assert len(stop_leaves) == 1, 'expected exactly 1 Stop leaf, got %d' % len(stop_leaves)
+cmd = stop_leaves[0]['command']
+assert cmd.startswith('bash '), 'Stop command does not start with bash: %r' % cmd
+assert cmd.endswith('.sh'), 'Stop command does not end with .sh: %r' % cmd
+assert os.path.basename(cmd.split(' ', 1)[1]) == 'after-verify-sync.sh', 'Stop basename != after-verify-sync.sh: %r' % cmd
 " "$HC_OUT" >/dev/null 2>&1
 if [ $? -eq 0 ]; then
-  pass "hooks.Stop[0].hooks[0].command == orchestrator-post-verify"
+  pass "hooks.Stop[0] leaf is absolute bash <path>/after-verify-sync.sh"
 else
-  fail "Stop leaf command wrong"
+  fail "Stop leaf command wrong (expected absolute bash <path>/after-verify-sync.sh)"
 fi
 
-# --- Assertion 6: PreToolUse matcher + command
+# --- Assertion 6: PreToolUse Bash matcher carries shape-guard + before-commit
 python3 -c "
-import json,sys
+import json,sys,os
 d = json.load(open(sys.argv[1]))
-p = d['hooks']['PreToolUse'][0]
-assert p['matcher'] == 'Bash', 'matcher=%r' % p['matcher']
-assert p['hooks'][0]['command'] == 'orchestrator-before-commit'
+# Aggregate all leaves under any PreToolUse Bash-matcher wrapper.
+basenames = []
+for w in d['hooks']['PreToolUse']:
+    if w.get('matcher') != 'Bash':
+        continue
+    for leaf in w.get('hooks', []):
+        cmd = leaf['command']
+        assert cmd.startswith('bash '), 'PreToolUse Bash command does not start with bash: %r' % cmd
+        assert cmd.endswith('.sh'), 'PreToolUse Bash command does not end with .sh: %r' % cmd
+        basenames.append(os.path.basename(cmd.split(' ', 1)[1]))
+assert d['hooks']['PreToolUse'][0]['matcher'] == 'Bash'
+required = {'before-commit.sh', 'pre-bash-shape-guard.sh'}
+missing = required - set(basenames)
+assert not missing, 'missing required PreToolUse Bash leaves: %r (have %r)' % (sorted(missing), basenames)
 " "$HC_OUT" >/dev/null 2>&1
 if [ $? -eq 0 ]; then
-  pass "hooks.PreToolUse[0].matcher=Bash + command=orchestrator-before-commit"
+  pass "hooks.PreToolUse Bash matcher carries before-commit.sh + pre-bash-shape-guard.sh as absolute bash <path>"
 else
-  fail "PreToolUse matcher or command wrong"
+  fail "PreToolUse Bash matcher missing expected absolute-path leaves"
 fi
 
 # --- Assertion 7: every leaf hook object has _orchestrator_managed: true

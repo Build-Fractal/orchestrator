@@ -236,8 +236,18 @@ while IFS= read -r line; do
         from_path=$(echo "$line" | sed 's/^- //' | sed 's/ →.*//' | sed 's/[[:space:]]*$//' | sed 's/^`//' | sed 's/`$//')
         # Handle both → (UTF-8) properly
         to_path=$(echo "$line" | sed 's/.*→ //' | sed 's/ *(.*//' | sed 's/[[:space:]]*$//' | sed 's/^`//' | sed 's/`$//')
-        
-        from_full="$PROJECT_ROOT/$from_path"
+
+        # Bilateral path resolution: plan-relative bare filenames (e.g.
+        # `M066-CATALOG.md → spec.md` where spec.md sits at the phase dir,
+        # not the project root) were resolving only against PROJECT_ROOT
+        # and reporting FAIL. Try PHASE_DIR first; fall back to PROJECT_ROOT
+        # when the phase-relative path doesn't exist. PHASE_DIR is set
+        # earlier in this script (line 42).
+        if [[ -f "$PHASE_DIR/$from_path" ]]; then
+          from_full="$PHASE_DIR/$from_path"
+        else
+          from_full="$PROJECT_ROOT/$from_path"
+        fi
         to_basename=$(basename "$to_path")
 
         if [[ ! -f "$from_full" ]]; then
@@ -246,7 +256,28 @@ while IFS= read -r line; do
           continue
         fi
 
-        if grep -q "$to_basename" "$from_full" 2>/dev/null; then
+        # TS/TSX module specifiers omit the extension (`from '@/lib/x'`,
+        # not `from '@/lib/x.ts'`). When the target basename ends in .ts
+        # or .tsx, also accept the extensionless form so key-links like
+        # `StatusBar.test.ts → StatusBar.ts` don't false-FAIL against
+        # TypeScript projects. Initial scope: .ts / .tsx only — a future
+        # scope-up could read a project-extension list config (.py, .go,
+        # etc.) but defer.
+        match_found=false
+        if grep -q -- "$to_basename" "$from_full" 2>/dev/null; then
+          match_found=true
+        else
+          case "$to_basename" in
+            *.ts)  to_stem="${to_basename%.ts}" ;;
+            *.tsx) to_stem="${to_basename%.tsx}" ;;
+            *)     to_stem="" ;;
+          esac
+          if [[ -n "$to_stem" ]] && grep -q -- "$to_stem" "$from_full" 2>/dev/null; then
+            match_found=true
+          fi
+        fi
+
+        if [[ "$match_found" = "true" ]]; then
           echo "PASS: key-link $from_path → $to_path (reference found)"
         else
           echo "FAIL: key-link $from_path → $to_path (no reference to '$to_basename' in $from_path)"

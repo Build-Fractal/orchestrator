@@ -187,6 +187,280 @@ _di_tier_rank() {
   esac
 }
 
+# --- M030/P04/T02: live-routing resolution helper ---
+# Centralizes the override-resolution + live-routing + flip-gate logic so
+# the dispatcher can run it BEFORE adapter invocation (gate-block needs to
+# fire before the adapter is called). Idempotent via _DI_RESOLVED sentinel.
+# Outputs (top-level, not local — read by both dispatcher + emitter):
+#   _DI_SHADOW_CONFIDENCE        classifier confidence (high|medium|low|"")
+#   _DI_SHADOW_ROUTED            symbolic tier (fast|balanced|smart|"")
+#   _DI_SHADOW_USED              concrete model id used (live: routing-table
+#                                resolution; shadow-only: $model fallback)
+#   _DI_SHADOW_PARTIAL           "true"|"false" partial-flip-active flag
+#   _DI_SHADOW_WITHHELD          comma-separated withheld classes (or "")
+#   _DI_SHADOW_OVERRIDE_SOURCE   none|disabled|plan_frontmatter|
+#                                milestone_floor|shadow_gate_blocked|""
+#   _DI_LIVE_MODEL_FLAG          model id to pass via --model (or "" / unset
+#                                when not live-routed)
+#   _DI_LIVE_GATE_BLOCKED        1 when live verdict is evidence_insufficient
+#                                or block; 0 otherwise
+#
+# Shadow gate (CC-only launch posture): runs ONLY when both M030_SHADOW_MODE=1
+# AND CLAUDECODE=1. Otherwise leaves all _DI_SHADOW_* / _DI_LIVE_* empty.
+# CON-3: every concrete model id flows through templates/model-routing.yml's
+# resolution: block via awk; no hardcoded model literals.
+# CON-4 / D-A5: kill switch evaluated FIRST; live: true is inactive when
+# kill switch fires (one-line stderr warning emitted in that case).
+# D-A2: live: true verdict is gated programmatically via shadow-compare.sh.
+# D-A3: per-class authorization on partially_ready — only flippable classes
+# route live; withheld classes fall back to runtime default.
+# MEM004 carve-out: pipes / $() / awk permitted in body.
+_di_resolve_live_routing() {
+  if [ "${_DI_RESOLVED:-0}" = "1" ]; then
+    return 0
+  fi
+  _DI_RESOLVED=1
+
+  _DI_SHADOW_CONFIDENCE=""
+  _DI_SHADOW_ROUTED=""
+  _DI_SHADOW_USED=""
+  _DI_SHADOW_PARTIAL=""
+  _DI_SHADOW_WITHHELD=""
+  _DI_SHADOW_OVERRIDE_SOURCE=""
+  _DI_LIVE_MODEL_FLAG=""
+  _DI_LIVE_GATE_BLOCKED=0
+
+  # CC-only short-circuit. Codex CLI / Cursor leave outputs empty so the
+  # emitter's shadow-on branch does not fire.
+  if [ "${M030_SHADOW_MODE:-0}" != "1" ] || [ "${CLAUDECODE:-0}" != "1" ]; then
+    return 0
+  fi
+
+  # Resolve per-project config path. Three candidate locations (P03 chain).
+  local _di_config_yml=""
+  if [ -f "${ORCH_ROOT:-}/config.yml" ]; then
+    _di_config_yml="$ORCH_ROOT/config.yml"
+  elif [ -f "${ORCH_ROOT:-}/.orchestrator/config.yml" ]; then
+    _di_config_yml="$ORCH_ROOT/.orchestrator/config.yml"
+  elif [ -f "${ORCH_ROOT:-}/../config.yml" ]; then
+    _di_config_yml="$ORCH_ROOT/../config.yml"
+  fi
+
+  # 1. Classify task plan.
+  local _di_classifier_out _di_shadow_character
+  _di_classifier_out="$(bash "$_DI_PROJECT_ROOT/scripts/dispatch/classify-task.sh" "$TASK_PLAN" 2>/dev/null)"
+  _di_shadow_character="$(printf '%s\n' "$_di_classifier_out" | grep -E '^character=' | head -n 1 | sed 's/^character=//')"
+  _DI_SHADOW_CONFIDENCE="$(printf '%s\n' "$_di_classifier_out" | grep -E '^confidence=' | head -n 1 | sed 's/^confidence=//')"
+
+  # Resolve $model the same way the emitter does (runtime-default channel).
+  local _di_model="${ORCH_MODEL:-}"
+  if [ -z "$_di_model" ] && [ -n "${INTENSITY_METADATA:-}" ] && [ -f "$INTENSITY_METADATA" ]; then
+    _di_model="$(grep -E '^model:' "$INTENSITY_METADATA" | head -n 1 | sed -E 's/^model:[[:space:]]*"?([^"]*)"?.*/\1/')"
+  fi
+
+  # 2. Read override knobs.
+  local override_kill="" override_min_tier="" override_plan="" override_live=""
+  if [ -n "$_di_config_yml" ] && [ -f "$_di_config_yml" ]; then
+    override_kill="$(grep -E '^model_routing_enabled:' "$_di_config_yml" 2>/dev/null | head -n 1 | sed -E 's/^model_routing_enabled:[[:space:]]*"?([^"#]*)"?.*/\1/' | tr -d '[:space:]')"
+  fi
+  if [ -n "${TASK_PLAN:-}" ] && [ -f "$TASK_PLAN" ]; then
+    override_plan="$(grep -E '^model_override:' "$TASK_PLAN" 2>/dev/null | head -n 1 | sed -E 's/^model_override:[[:space:]]*"?([^"#]*)"?.*/\1/' | tr -d '[:space:]')"
+  fi
+  if [ -n "$_di_config_yml" ] && [ -f "$_di_config_yml" ]; then
+    override_min_tier="$(awk '
+      BEGIN { in_block = 0 }
+      /^model_routing:/                 { in_block = 1; next }
+      in_block && /^[a-zA-Z_]/          { exit }
+      in_block && /^[[:space:]]+min_tier:/ {
+        val = $2; gsub(/[",]/, "", val); print val; exit
+      }
+    ' "$_di_config_yml")"
+    override_live="$(awk '
+      BEGIN { in_block = 0 }
+      /^model_routing:/                 { in_block = 1; next }
+      in_block && /^[a-zA-Z_]/          { exit }
+      in_block && /^[[:space:]]+live:/  {
+        val = $2; gsub(/[",]/, "", val); print val; exit
+      }
+    ' "$_di_config_yml")"
+  fi
+
+  # 3. Apply precedence (kill switch first).
+  local _plan_rank _floor_rank
+  if [ "$override_kill" = "false" ]; then
+    _DI_SHADOW_OVERRIDE_SOURCE="disabled"
+    if [ -n "$override_min_tier" ]; then
+      printf 'model_routing_enabled=false: min_tier: %s is inactive\n' "$override_min_tier" >&2
+    fi
+    if [ "$override_live" = "true" ]; then
+      printf 'model_routing_enabled=false: live: true is inactive\n' >&2
+    fi
+  elif [ -n "$override_plan" ]; then
+    _DI_SHADOW_OVERRIDE_SOURCE="plan_frontmatter"
+    _DI_SHADOW_ROUTED="$override_plan"
+    if [ -n "$override_min_tier" ]; then
+      _plan_rank="$(_di_tier_rank "$override_plan")"
+      _floor_rank="$(_di_tier_rank "$override_min_tier")"
+      if [ "$_plan_rank" -ge 0 ] && [ "$_floor_rank" -ge 0 ] && [ "$_floor_rank" -gt "$_plan_rank" ]; then
+        _DI_SHADOW_OVERRIDE_SOURCE="milestone_floor"
+        _DI_SHADOW_ROUTED="$override_min_tier"
+        printf 'model_override=%s overridden by min_tier=%s (floor wins)\n' "$override_plan" "$override_min_tier" >&2
+      fi
+    fi
+  elif [ -n "$override_min_tier" ]; then
+    _DI_SHADOW_OVERRIDE_SOURCE="milestone_floor"
+    _DI_SHADOW_ROUTED="$override_min_tier"
+  else
+    _DI_SHADOW_OVERRIDE_SOURCE="none"
+  fi
+
+  # 4. M030/P04/T02: live-routing branch (FR-9 / D-A2 / D-A3). Runs only
+  #    when no override fired AND live: true. Verdict from shadow-compare.sh
+  #    gates the adapter call.
+  if [ "$_DI_SHADOW_OVERRIDE_SOURCE" = "none" ] && [ "$override_live" = "true" ]; then
+    local _di_compare_corpus _di_compare_tmp _di_verdict _di_withheld_line
+    _di_compare_corpus="${M030_SHADOW_COMPARE_CORPUS:-}"
+    if [ -z "$_di_compare_corpus" ]; then
+      # Default: in-flight log file derived the same way the emitter derives it.
+      if [ -d "$ORCH_ROOT/phases" ]; then
+        _di_compare_corpus="$ORCH_ROOT/execution-log.jsonl"
+      elif [ -n "${MILESTONE_ID:-}" ]; then
+        _di_compare_corpus="$ORCH_ROOT/milestones/$MILESTONE_ID/execution-log.jsonl"
+      fi
+    fi
+    _di_compare_tmp="$(mktemp 2>/dev/null || printf '/tmp/p04_compare_%d' "$$")"
+    if [ -n "$_di_compare_corpus" ] && [ -f "$_di_compare_corpus" ]; then
+      bash "$_DI_PROJECT_ROOT/scripts/diagnostics/shadow-compare.sh" --corpus "$_di_compare_corpus" > "$_di_compare_tmp" 2>/dev/null || true
+    else
+      # Missing corpus path: synthesize evidence_insufficient verdict.
+      printf 'flip_recommendation=evidence_insufficient\n' > "$_di_compare_tmp"
+    fi
+    _di_verdict="$(grep -E '^flip_recommendation=' "$_di_compare_tmp" | head -n 1 | sed -E 's/^flip_recommendation=([^[:space:]]+).*/\1/')"
+    _di_withheld_line="$(grep -E '^withheld_classes=' "$_di_compare_tmp" | head -n 1 | sed -E 's/^withheld_classes=//')"
+    rm -f "$_di_compare_tmp" 2>/dev/null
+
+    if [ "$_di_verdict" = "evidence_insufficient" ] || [ "$_di_verdict" = "block" ]; then
+      _DI_SHADOW_OVERRIDE_SOURCE="shadow_gate_blocked"
+      _DI_SHADOW_ROUTED=""
+      _DI_SHADOW_USED="$_di_model"
+      _DI_SHADOW_PARTIAL="false"
+      _DI_SHADOW_WITHHELD=""
+      _DI_LIVE_GATE_BLOCKED=1
+    elif [ "$_di_verdict" = "ready" ]; then
+      _DI_SHADOW_ROUTED="$(awk -v ch="$_di_shadow_character" '
+        BEGIN { in_routing = 0; in_class = 0 }
+        /^routing:/                       { in_routing = 1; next }
+        /^resolution:/                    { exit }
+        in_routing && /^  [a-z_]+:$/      { in_class = ($1 == (ch ":")) ? 1 : 0; next }
+        in_routing && in_class && /^    claude-code:/ {
+          val = $2; gsub(/[",]/, "", val); print val; exit
+        }
+      ' "$_DI_PROJECT_ROOT/templates/model-routing.yml")"
+      _DI_SHADOW_USED="$(awk -v tier="$_DI_SHADOW_ROUTED" '
+        BEGIN { in_resolution = 0; in_tier = 0 }
+        /^resolution:/                    { in_resolution = 1; next }
+        /^cost_rates:/                    { exit }
+        in_resolution && /^  [a-z_]+:$/   { in_tier = ($1 == (tier ":")) ? 1 : 0; next }
+        in_resolution && in_tier && /^    claude-code:/ {
+          val = $2; gsub(/[",]/, "", val); print val; exit
+        }
+      ' "$_DI_PROJECT_ROOT/templates/model-routing.yml")"
+      _DI_SHADOW_PARTIAL="false"
+      _DI_SHADOW_WITHHELD=""
+      _DI_LIVE_MODEL_FLAG="$_DI_SHADOW_USED"
+    elif [ "$_di_verdict" = "partially_ready" ]; then
+      _DI_SHADOW_PARTIAL="true"
+      _DI_SHADOW_WITHHELD="$_di_withheld_line"
+      # Per-class authorization (D-A3): if task class is in withheld_classes,
+      # fall back to runtime default. Otherwise route live.
+      local _di_is_withheld _di_w _di_w_first
+      _di_is_withheld=0
+      _di_w="$_di_withheld_line"
+      while [ -n "$_di_w" ]; do
+        _di_w_first="${_di_w%%,*}"
+        if [ "$_di_w_first" = "$_di_shadow_character" ]; then
+          _di_is_withheld=1
+          break
+        fi
+        case "$_di_w" in
+          *,*) _di_w="${_di_w#*,}" ;;
+          *) _di_w="" ;;
+        esac
+      done
+      if [ "$_di_is_withheld" -eq 1 ]; then
+        _DI_SHADOW_ROUTED=""
+        _DI_SHADOW_USED="$_di_model"
+        # _DI_LIVE_MODEL_FLAG stays empty -- adapter receives no --model flag.
+      else
+        _DI_SHADOW_ROUTED="$(awk -v ch="$_di_shadow_character" '
+          BEGIN { in_routing = 0; in_class = 0 }
+          /^routing:/                       { in_routing = 1; next }
+          /^resolution:/                    { exit }
+          in_routing && /^  [a-z_]+:$/      { in_class = ($1 == (ch ":")) ? 1 : 0; next }
+          in_routing && in_class && /^    claude-code:/ {
+            val = $2; gsub(/[",]/, "", val); print val; exit
+          }
+        ' "$_DI_PROJECT_ROOT/templates/model-routing.yml")"
+        _DI_SHADOW_USED="$(awk -v tier="$_DI_SHADOW_ROUTED" '
+          BEGIN { in_resolution = 0; in_tier = 0 }
+          /^resolution:/                    { in_resolution = 1; next }
+          /^cost_rates:/                    { exit }
+          in_resolution && /^  [a-z_]+:$/   { in_tier = ($1 == (tier ":")) ? 1 : 0; next }
+          in_resolution && in_tier && /^    claude-code:/ {
+            val = $2; gsub(/[",]/, "", val); print val; exit
+          }
+        ' "$_DI_PROJECT_ROOT/templates/model-routing.yml")"
+        _DI_LIVE_MODEL_FLAG="$_DI_SHADOW_USED"
+      fi
+    fi
+  fi
+
+  # 5. Resolve symbolic tier -> concrete model id for non-live cases when
+  #    routed is set (kill-switch / plan / floor / none paths). Live-on
+  #    branches above already populated _DI_SHADOW_USED.
+  if [ -z "$_DI_SHADOW_USED" ]; then
+    if [ "$_DI_SHADOW_OVERRIDE_SOURCE" = "disabled" ]; then
+      _DI_SHADOW_ROUTED=""
+      _DI_SHADOW_USED="$_di_model"
+    elif [ "$_DI_SHADOW_OVERRIDE_SOURCE" = "none" ] && [ -z "$_DI_SHADOW_ROUTED" ]; then
+      _DI_SHADOW_ROUTED="$(awk -v ch="$_di_shadow_character" '
+        BEGIN { in_routing = 0; in_class = 0 }
+        /^routing:/                       { in_routing = 1; next }
+        /^resolution:/                    { exit }
+        in_routing && /^  [a-z_]+:$/      { in_class = ($1 == (ch ":")) ? 1 : 0; next }
+        in_routing && in_class && /^    claude-code:/ {
+          val = $2; gsub(/[",]/, "", val); print val; exit
+        }
+      ' "$_DI_PROJECT_ROOT/templates/model-routing.yml")"
+      _DI_SHADOW_USED="$(awk -v tier="$_DI_SHADOW_ROUTED" '
+        BEGIN { in_resolution = 0; in_tier = 0 }
+        /^resolution:/                    { in_resolution = 1; next }
+        /^cost_rates:/                    { exit }
+        in_resolution && /^  [a-z_]+:$/   { in_tier = ($1 == (tier ":")) ? 1 : 0; next }
+        in_resolution && in_tier && /^    claude-code:/ {
+          val = $2; gsub(/[",]/, "", val); print val; exit
+        }
+      ' "$_DI_PROJECT_ROOT/templates/model-routing.yml")"
+    elif [ -n "$_DI_SHADOW_ROUTED" ]; then
+      _DI_SHADOW_USED="$(awk -v tier="$_DI_SHADOW_ROUTED" '
+        BEGIN { in_resolution = 0; in_tier = 0 }
+        /^resolution:/                    { in_resolution = 1; next }
+        /^cost_rates:/                    { exit }
+        in_resolution && /^  [a-z_]+:$/   { in_tier = ($1 == (tier ":")) ? 1 : 0; next }
+        in_resolution && in_tier && /^    claude-code:/ {
+          val = $2; gsub(/[",]/, "", val); print val; exit
+        }
+      ' "$_DI_PROJECT_ROOT/templates/model-routing.yml")"
+    fi
+  fi
+
+  # 6. P03/P04 placeholders default to false/empty when unset.
+  if [ -z "$_DI_SHADOW_PARTIAL" ]; then
+    _DI_SHADOW_PARTIAL="false"
+  fi
+  return 0
+}
+
 # --- M019/P01/T03: dispatch_usage JSONL emitter ---
 # Emits exactly one `dispatch_usage` record per dispatch invocation after
 # BACKEND is resolved. Called from the happy-path end AND each post-BACKEND
@@ -289,159 +563,39 @@ _di_emit_dispatch_usage() {
   # suspenders; pricing-lib reasons are ascii-safe by construction).
   escaped_warning="$(printf '%s' "$warning" | sed 's/\\/\\\\/g; s/"/\\"/g')"
 
-  # --- M030/P02/T02: shadow-mode classifier + routing-table fields ---
-  # Gated by BOTH env vars: M030_SHADOW_MODE=1 (operator flag) AND
-  # CLAUDECODE=1 (CC-only launch posture per CON-3 + spec edge case
-  # "Runtime that does not support model selection"). Codex CLI / Cursor
-  # fall through to the pre-P02 emit (no new fields).
-  # Indirection target for resolution: templates/model-routing.yml (CON-3).
+  # --- M030/P02-P04: shadow-mode classifier + routing-table fields ---
+  # All resolution work is delegated to _di_resolve_live_routing (top-level
+  # helper added in M030/P04/T02). The helper is idempotent — calling it
+  # here is a no-op when the dispatcher already invoked it before adapter
+  # invocation (live-routing flip-gate path). It writes its outputs into
+  # top-level _DI_SHADOW_* / _DI_LIVE_* variables; this emitter copies the
+  # shadow_* values into local variables so the shadow-on printf branches
+  # below preserve their existing format-string substitutions verbatim.
+  #
+  # Gating still happens inside the helper (M030_SHADOW_MODE=1 AND
+  # CLAUDECODE=1 — CC-only launch posture). When shadow is off, the helper
+  # leaves _DI_SHADOW_* empty; the shadow-off printf branch is unaffected.
   local shadow_routed shadow_used shadow_partial shadow_withheld shadow_confidence
-  local _di_classifier_out _di_shadow_character
+  local shadow_override_source
   shadow_routed=""
   shadow_used=""
   shadow_partial=""
   shadow_withheld=""
   shadow_confidence=""
-  # M030/P03/T02: override-resolution locals.
-  local shadow_override_source override_kill override_min_tier override_plan
-  local _di_config_yml _plan_rank _floor_rank
   shadow_override_source=""
-  override_kill=""
-  override_min_tier=""
-  override_plan=""
-  _di_config_yml=""
-  _plan_rank=""
-  _floor_rank=""
   if [ "${M030_SHADOW_MODE:-0}" = "1" ] && [ "${CLAUDECODE:-0}" = "1" ]; then
-    # 1. Classify the task plan (P01/T02 deliverable; FR-1 + FR-2).
-    _di_classifier_out="$(bash "$_DI_PROJECT_ROOT/scripts/dispatch/classify-task.sh" "$TASK_PLAN" 2>/dev/null)"
-    _di_shadow_character="$(printf '%s\n' "$_di_classifier_out" | grep -E '^character=' | head -n 1 | sed 's/^character=//')"
-    # 1b. M030/P02/T03: capture classifier confidence enum {high, medium, low}
-    #     for downstream rolling-variance stability check in shadow-compare.sh.
-    shadow_confidence="$(printf '%s\n' "$_di_classifier_out" | grep -E '^confidence=' | head -n 1 | sed 's/^confidence=//')"
-
-    # --- M030/P03/T02: override-resolution path (CON-4 / D-A5 / FR-11..14) ---
-    # Precedence chain:
-    #   1. KILL SWITCH (config: model_routing_enabled: false) -> disabled
-    #      If min_tier is also active: emit one-line stderr warning naming the
-    #      bypassed value (CON-4 / D-A5 compound case).
-    #   2. PLAN FRONTMATTER (plan: model_override: <tier>) -> plan_frontmatter
-    #      If milestone min_tier raises above plan tier: bump to milestone_floor
-    #      (FR-14 conflict case; emit stderr warning naming both knobs).
-    #   3. MILESTONE FLOOR (config: model_routing.min_tier: <tier>) -> milestone_floor
-    #   4. PLAIN ROUTED -> none (the existing routing-table awk extraction
-    #      below produces the routed tier; override_source=none).
-
-    # Resolve per-project config path. Three candidate locations:
-    #   a) $ORCH_ROOT/config.yml -- canonical when ORCH_ROOT IS .orchestrator/.
-    #   b) $ORCH_ROOT/.orchestrator/config.yml -- when ORCH_ROOT is the
-    #      project root or a fixture-staged dir holding a .orchestrator/ subdir.
-    #   c) $ORCH_ROOT/../config.yml -- less-canonical fallback.
-    if [ -f "$ORCH_ROOT/config.yml" ]; then
-      _di_config_yml="$ORCH_ROOT/config.yml"
-    elif [ -f "$ORCH_ROOT/.orchestrator/config.yml" ]; then
-      _di_config_yml="$ORCH_ROOT/.orchestrator/config.yml"
-    elif [ -f "$ORCH_ROOT/../config.yml" ]; then
-      _di_config_yml="$ORCH_ROOT/../config.yml"
-    fi
-
-    # Read kill switch (top-level `model_routing_enabled:` boolean).
-    if [ -n "$_di_config_yml" ] && [ -f "$_di_config_yml" ]; then
-      override_kill="$(grep -E '^model_routing_enabled:' "$_di_config_yml" 2>/dev/null | head -n 1 | sed -E 's/^model_routing_enabled:[[:space:]]*"?([^"#]*)"?.*/\1/' | tr -d '[:space:]')"
-    fi
-
-    # Read plan-frontmatter override (top-level `model_override:` in plan YAML).
-    if [ -n "${TASK_PLAN:-}" ] && [ -f "$TASK_PLAN" ]; then
-      override_plan="$(grep -E '^model_override:' "$TASK_PLAN" 2>/dev/null | head -n 1 | sed -E 's/^model_override:[[:space:]]*"?([^"#]*)"?.*/\1/' | tr -d '[:space:]')"
-    fi
-
-    # Read milestone floor (nested `min_tier:` under `model_routing:` block).
-    # Awk section-walker scoped to model_routing: block; same pattern as P02.
-    if [ -n "$_di_config_yml" ] && [ -f "$_di_config_yml" ]; then
-      override_min_tier="$(awk '
-        BEGIN { in_block = 0 }
-        /^model_routing:/                 { in_block = 1; next }
-        in_block && /^[a-zA-Z_]/          { exit }
-        in_block && /^[[:space:]]+min_tier:/ {
-          val = $2; gsub(/[",]/, "", val); print val; exit
-        }
-      ' "$_di_config_yml")"
-    fi
-
-    # Apply precedence. Kill switch first (D-A5).
-    if [ "$override_kill" = "false" ]; then
-      shadow_override_source="disabled"
-      # Compound case (CON-4): emit one-line stderr warning naming the
-      # bypassed min_tier value. Operator hears the conflict mid-run.
-      if [ -n "$override_min_tier" ]; then
-        printf 'model_routing_enabled=false: min_tier: %s is inactive\n' "$override_min_tier" >&2
-      fi
-    elif [ -n "$override_plan" ]; then
-      shadow_override_source="plan_frontmatter"
-      shadow_routed="$override_plan"
-      # Floor-wins-conflict (FR-14): if min_tier raises strictly above plan
-      # tier, bump to milestone_floor and emit stderr warning naming both.
-      if [ -n "$override_min_tier" ]; then
-        _plan_rank="$(_di_tier_rank "$override_plan")"
-        _floor_rank="$(_di_tier_rank "$override_min_tier")"
-        if [ "$_plan_rank" -ge 0 ] && [ "$_floor_rank" -ge 0 ] && [ "$_floor_rank" -gt "$_plan_rank" ]; then
-          shadow_override_source="milestone_floor"
-          shadow_routed="$override_min_tier"
-          printf 'model_override=%s overridden by min_tier=%s (floor wins)\n' "$override_plan" "$override_min_tier" >&2
-        fi
-      fi
-    elif [ -n "$override_min_tier" ]; then
-      shadow_override_source="milestone_floor"
-      shadow_routed="$override_min_tier"
-    else
-      shadow_override_source="none"
-    fi
-
-    # 2. Resolve symbolic tier via templates/model-routing.yml routing: block.
-    #    Awk section-walker (P01 pattern; no jq dependency).
-    #    Skipped under disabled (kill switch) or when shadow_routed is already
-    #    set by plan-frontmatter / milestone-floor override.
-    if [ "$shadow_override_source" = "none" ]; then
-      shadow_routed="$(awk -v ch="$_di_shadow_character" '
-        BEGIN { in_routing = 0; in_class = 0 }
-        /^routing:/                       { in_routing = 1; next }
-        /^resolution:/                    { exit }
-        in_routing && /^  [a-z_]+:$/      { in_class = ($1 == (ch ":")) ? 1 : 0; next }
-        in_routing && in_class && /^    claude-code:/ {
-          val = $2; gsub(/[",]/, "", val); print val; exit
-        }
-      ' "$_DI_PROJECT_ROOT/templates/model-routing.yml")"
-      # 3. Resolve symbolic tier -> runtime model ID via resolution: block.
-      shadow_used="$(awk -v tier="$shadow_routed" '
-        BEGIN { in_resolution = 0; in_tier = 0 }
-        /^resolution:/                    { in_resolution = 1; next }
-        /^cost_rates:/                    { exit }
-        in_resolution && /^  [a-z_]+:$/   { in_tier = ($1 == (tier ":")) ? 1 : 0; next }
-        in_resolution && in_tier && /^    claude-code:/ {
-          val = $2; gsub(/[",]/, "", val); print val; exit
-        }
-      ' "$_DI_PROJECT_ROOT/templates/model-routing.yml")"
-    elif [ "$shadow_override_source" = "plan_frontmatter" ] || [ "$shadow_override_source" = "milestone_floor" ]; then
-      # shadow_routed is already set by override block. Resolve shadow_used
-      # from the resolution: block scoped to that tier.
-      shadow_used="$(awk -v tier="$shadow_routed" '
-        BEGIN { in_resolution = 0; in_tier = 0 }
-        /^resolution:/                    { in_resolution = 1; next }
-        /^cost_rates:/                    { exit }
-        in_resolution && /^  [a-z_]+:$/   { in_tier = ($1 == (tier ":")) ? 1 : 0; next }
-        in_resolution && in_tier && /^    claude-code:/ {
-          val = $2; gsub(/[",]/, "", val); print val; exit
-        }
-      ' "$_DI_PROJECT_ROOT/templates/model-routing.yml")"
-    fi
+    _di_resolve_live_routing
+    shadow_confidence="${_DI_SHADOW_CONFIDENCE:-}"
+    shadow_routed="${_DI_SHADOW_ROUTED:-}"
+    shadow_used="${_DI_SHADOW_USED:-}"
+    shadow_partial="${_DI_SHADOW_PARTIAL:-false}"
+    shadow_withheld="${_DI_SHADOW_WITHHELD:-}"
+    shadow_override_source="${_DI_SHADOW_OVERRIDE_SOURCE:-}"
+    # Disabled path: runtime-default channel — emitter's $model is the
+    # authoritative source after pricing-lib resolution at line ~227.
     if [ "$shadow_override_source" = "disabled" ]; then
-      # Kill switch: routing skipped; runtime-default channel used directly.
-      shadow_routed=""
       shadow_used="$model"
     fi
-    # 4. P03/P04 placeholders — emitted as no-op-empty in P02.
-    shadow_partial="false"
-    shadow_withheld=""
   fi
 
   if [ -n "$cost_usd" ] && [ -z "$warning" ]; then
@@ -580,13 +734,45 @@ if [[ ! -f "$ADAPTER" ]]; then
   exit 4
 fi
 
+# --- M030/P04/T02: live-routing flip-gate (D-A2) ---
+# Resolve override + live-routing state BEFORE invoking the adapter so the
+# evidence_insufficient/block verdict can short-circuit the adapter call.
+# Idempotent: the emitter will call the same helper later (no-op when
+# already resolved). Helper is silent under shadow-off / non-CC runtimes.
+_di_resolve_live_routing
+
+# Shadow-gate-block branch (FR-9 / SC-2a). When live: true AND the corpus
+# verdict is evidence_insufficient or block, the dispatcher MUST refuse the
+# adapter call, emit a dispatch-error doc, append the dispatch_usage record
+# (so the gate-block is observable in JSONL), and exit nonzero. Exit code 7
+# disambiguates from adapter-failed=5 / adapter-malformed=6.
+if [ "${_DI_LIVE_GATE_BLOCKED:-0}" = "1" ]; then
+  emit_error "shadow_gate_blocked" "true" "operator" "${BACKEND}" \
+    "Live routing requested but shadow corpus did not pass flip-readiness check" \
+    "Shadow-compare verdict: evidence_insufficient or block" \
+    "Either populate the shadow corpus to >=50 records per class with stable confidence, set model_routing.live: false, or set model_routing_enabled: false to bypass routing entirely."
+  _di_emit_dispatch_usage "" || true
+  exit 7
+fi
+
 # --- Invoke adapter as a subprocess ---
+# M030/P04/T02: when live-routing resolved a concrete model id, pass it
+# through to the adapter via --model. Two explicit invocation paths (rather
+# than dynamic flag splicing) preserve word-splitting safety per AD-19.
 
 adapter_rc=0
-adapter_output="$(bash "$ADAPTER" \
-  --task-plan "$TASK_PLAN" \
-  --payload "$PAYLOAD" \
-  --intensity-metadata "$INTENSITY_METADATA" 2>/dev/null)" || adapter_rc=$?
+if [ -n "${_DI_LIVE_MODEL_FLAG:-}" ]; then
+  adapter_output="$(bash "$ADAPTER" \
+    --task-plan "$TASK_PLAN" \
+    --payload "$PAYLOAD" \
+    --intensity-metadata "$INTENSITY_METADATA" \
+    --model "$_DI_LIVE_MODEL_FLAG" 2>/dev/null)" || adapter_rc=$?
+else
+  adapter_output="$(bash "$ADAPTER" \
+    --task-plan "$TASK_PLAN" \
+    --payload "$PAYLOAD" \
+    --intensity-metadata "$INTENSITY_METADATA" 2>/dev/null)" || adapter_rc=$?
+fi
 
 if [[ $adapter_rc -ne 0 ]]; then
   emit_error "backend_crashed" "true" "developer" "${BACKEND}" \

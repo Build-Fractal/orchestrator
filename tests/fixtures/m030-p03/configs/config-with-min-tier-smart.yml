@@ -1,0 +1,17 @@
+---
+schema_version: "1.0"
+type: orchestrator-config
+---
+
+# P03 fixture: milestone-floor config (model_routing.min_tier: smart).
+# Used by Scenario D of tools/verify/p03-override-source-enum.sh and the
+# milestone-floor verifier (T03). min_tier is nested under model_routing
+# because it is one of several routing-table-related knobs (others land
+# in M030/P05).
+#
+# Under T02's amendment, this config raises every routed tier to at least
+# `smart`, producing override_source=milestone_floor when the classifier-
+# resolved tier is below smart.
+
+model_routing:
+  min_tier: smart

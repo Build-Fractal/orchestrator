@@ -1,0 +1,13 @@
+---
+schema_version: "1.0"
+type: orchestrator-config
+---
+
+# P03 fixture: baseline config (no model_routing overrides).
+# Used by Scenario A of tools/verify/p03-override-source-enum.sh and as the
+# control case in subsequent T03/T04 verifiers. Pre-T02 (and forever
+# under shadow-off), no consumer reads model_routing fields; this file
+# documents the no-override-no-floor shape.
+
+# No model_routing_enabled key (defaults to enabled).
+# No model_routing block (no min_tier floor).

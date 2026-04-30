@@ -1,0 +1,8 @@
+P03 round-trip stage payload.
+
+This file is a fixture input for tools/verify/p03-override-source-enum.sh
+and downstream P03 verifiers. The payload bytes drive the dispatcher's
+chars_to_tokens_quartile estimate, but no P03 verifier asserts a specific
+input_tokens_estimate value -- payload size is non-load-bearing for the
+override-source enum gate. Padding follows to clear the 256-byte floor.
+PAD-PAD-PAD-PAD-PAD-PAD-PAD-PAD-PAD-PAD-PAD-PAD-PAD-PAD-PAD-PAD-PAD-PAD

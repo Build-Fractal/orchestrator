@@ -1,0 +1,16 @@
+---
+schema_version: "1.0"
+type: orchestrator-config
+---
+
+# P03 fixture: kill-switch config (model_routing_enabled: false at top level).
+# Used by Scenario B of tools/verify/p03-override-source-enum.sh and the
+# SC-7 kill-switch verifier (T03). The kill switch is the operator panic
+# button per FR-13; it is its own root key (NOT nested under model_routing)
+# because it must be readable WITHOUT walking into the routing config block.
+#
+# Under T02's amendment, this config produces override_source=disabled on
+# every shadow-on dispatch_usage record routed through ORCHESTRATOR_ROOT
+# pointing at this config.
+
+model_routing_enabled: false

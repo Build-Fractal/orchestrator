@@ -1,0 +1,2 @@
+intensity: standard
+model: "claude-opus-4-7"

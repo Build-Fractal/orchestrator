@@ -1,0 +1,17 @@
+---
+schema_version: "1.0"
+type: orchestrator-config
+---
+
+# P03 fixture: compound config (kill switch AND milestone floor).
+# Used by the SC-7a compound verifier (T03). Both knobs declared:
+# - top-level model_routing_enabled: false
+# - nested model_routing.min_tier: smart
+#
+# Under T02's amendment, the kill switch wins (override_source=disabled);
+# min_tier is moot when routing is disabled. The SC-7a contract asserts
+# this precedence is mechanical, not order-of-key-dependent.
+
+model_routing_enabled: false
+model_routing:
+  min_tier: smart

@@ -161,6 +161,18 @@ By the time M029 starts, every dependency is on disk. F6 is pure composition.
 
 **Slot recommendation** (per `.orchestrator/proposals/README.md`): after M023 (design layer), before M009 (extended runtime-parity audit). It's launch polish that wants to ship *with* the launch experience, not before.
 
+## Adjacent navigation utility: `orchestrator:zoom-out` (already shipped)
+
+Captured 2026-04-30 during a sweep of `mattpocock/skills` (MIT). The skill `zoom-out` — "give me a one-layer-up map of this code area, using the project's domain vocabulary" — is the *neighborhood* counterpart to M029's *hierarchy* view:
+
+| Question | Command |
+|---|---|
+| "Where am I in the milestone/phase tree?" | `orchestrator:where` (this milestone) |
+| "What does this code area look like one layer up?" | `orchestrator:zoom-out` (shipped at `commands/zoom-out.md`) |
+| "How is the work going at a glance?" | `orchestrator:status` (existing) |
+
+`zoom-out` shipped ahead of M029 as a low-risk standalone utility — it's read-only, has no state contract, and consumes the knowledge graph + the M032 Finding K glossary if present. M029 doesn't need to revisit it; just be aware that M029's headline output (§ Render shape) and `zoom-out`'s output should use the *same* domain vocabulary so users moving between the two commands don't context-switch terminology. The shared anchor is the project glossary at `wiki/glossary.md` (M032 Finding K).
+
 ## Out of scope
 
 - A "live dashboard" or web UI — terminal-only.

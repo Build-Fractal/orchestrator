@@ -92,6 +92,29 @@ Not a constitutional principle (per inclusion criteria — too narrow). Lives in
 
 This is a clarification of intent, not a new principle. Lives in Principle I's body. Existing wording stays; one paragraph appended.
 
+### Change 6 — Add "Deep modules" lens to the Plan-Time Discipline reference (light, not a principle)
+
+**Captured 2026-04-30** during a sweep of `mattpocock/skills` (MIT). The skill `improve-codebase-architecture` formalizes a vocabulary that the orchestrator's planning prose has been working around without naming:
+
+- **Module** — any unit with an interface and an implementation (function, class, package, slice).
+- **Interface** — everything callers must know: types, invariants, error modes, ordering, config.
+- **Implementation** — the code inside.
+- **Depth** — leverage at the interface. *Deep* modules expose simple interfaces over complex implementations; *shallow* modules expose interfaces whose complexity mirrors implementation complexity (callers gain nothing).
+- **Seam** — where an interface lives; the place behavior alters without in-place editing.
+- **Adapter** — a concrete implementation satisfying an interface at a seam.
+- **Locality** — what maintainers gain when one concern concentrates in one place.
+
+Operative principle from the source: **the interface is the test surface**. The "deletion test" follows: would removing this module concentrate complexity, or just relocate it?
+
+**Where this lands**: not a constitution principle (it's a planning lens, not a falsifiable rule about the orchestrator's behavior — fails the inclusion criteria from Change 1). Add a short subsection to `references/plan-time-discipline.md` (or `references/architecture.md`, depending on which reference doc is the natural home; `commands/plan-phase.md` already has a "Plan-Time Discipline" section that points to a reference). The subsection lifts the vocabulary verbatim, references the source as `mattpocock/skills::improve-codebase-architecture` (MIT), and adds two orchestrator-specific notes:
+
+1. **Adapters at runtime seams**: the orchestrator's existing adapter pattern (`scripts/dispatch/adapters/backend/<runtime>.sh`, `scripts/runtime/<runtime>/`, the format-tier adapter tree) *is* this pattern. Naming the pattern aligns prose so future plans (M009 multi-runtime parity, M010 Managed Agents) inherit the vocabulary without re-deriving it.
+2. **Deletion test as planning gate (optional)**: when `orchestrator:plan-phase` proposes a new helper script or new `references/` doc, the agent SHOULD apply the deletion test in the plan's *Risk* section. Not a hard gate; a discipline. Composes with Constitution Principle III (Design Before Code).
+
+**Pairs with**: Change 1 (the inclusion criteria explicitly excludes design lenses from the principle list — Change 6 is the worked example of a lens that lands as reference doc, not principle).
+
+**Effort**: ~30 minutes — one section in `references/plan-time-discipline.md`, one cross-reference from `commands/plan-phase.md` "Plan-Time Discipline" section, one credit line.
+
 ## Out of scope
 
 - Renumbering existing principles. Keep I-XV stable to preserve cross-references in `ANTIPATTERNS.md` ("Principle Violated: IX") and `knowledge/` entries.
@@ -104,8 +127,9 @@ This is a clarification of intent, not a new principle. Lives in Principle I's b
 - Change 2 (new file + 4 backfill entries): 1 hour
 - Change 3 (~50 LOC in constitution.md + 3 verification scripts as stubs / TODO): 2 hours
 - Change 4 (~80 LOC in references/): 1 hour
+- Change 6 (~40 LOC subsection in references/plan-time-discipline.md + 1 cross-ref): 30 min
 
-**Total**: ~5 hours, single PR. No dependency on any milestone.
+**Total**: ~5.5 hours, single PR. No dependency on any milestone.
 
 ## Risk / open questions
 

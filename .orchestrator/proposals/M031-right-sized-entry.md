@@ -40,11 +40,13 @@ M031 asks: *does every dispatch path get knowledge + compression, and is the ent
 
 **Fix**: knowledge + compression are unconditional. What scales with intensity is *traversal aggressiveness*, not *whether knowledge ships*:
 
-| Intensity | Knowledge scope | Traversal | Decisions | Compression |
-|---|---|---|---|---|
-| **Quick** | Touched files only | 1-hop direct hits | Excluded by default | M018 tier-1 + tier-2 |
-| **Standard** | Phase scope | 2-hop graph traversal | Phase-relevant included | M018 tier-1 + tier-2 |
-| **Full** | Milestone + dependencies | Full provenance chain | All milestone + cross-refs | M018 tier-1 + tier-2 |
+| Intensity | Knowledge scope | Traversal | Decisions | Glossary | Compression |
+|---|---|---|---|---|---|
+| **Quick** | Touched files only | 1-hop direct hits | Excluded by default | Touched terms only | M018 tier-1 + tier-2 |
+| **Standard** | Phase scope | 2-hop graph traversal | Phase-relevant included | Phase-touched terms | M018 tier-1 + tier-2 |
+| **Full** | Milestone + dependencies | Full provenance chain | All milestone + cross-refs | Full project glossary | M018 tier-1 + tier-2 |
+
+**Glossary column** is the M032 Finding K surface (`wiki/glossary.md`). Reading it requires no graph traversal — it's a flat alphabetized file the adapter slices by term-touch rather than by hop count. Glossary inject is typically 100–400 tokens at Quick (touched terms only) and 800–1500 at Full. Adopted from `mattpocock/skills::grill-with-docs` (MIT); see `.orchestrator/proposals/M032-wiki-distribution-and-init-integration.md` § Finding K for the surface design.
 
 Implementation: `build-context.sh` gains `--profile=quick|standard|full` flag. Quick profile sets `--scope=touched-files-only --traversal=1-hop --no-decisions`. The "skip" branch in dispatch.md is removed entirely.
 

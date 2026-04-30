@@ -216,6 +216,31 @@ Documentation update in `wiki/README.md`: explicitly warn against direct `mkdocs
 
 **Impact**: silent cross-project force-push. Even with reflog rescue, a confidence-eroding bug. The `wiki-deploy.sh` gate makes this class of error impossible regardless of operator carefulness.
 
+### Finding K: Domain glossary is not a first-class wiki artifact (added 2026-04-30 — mattpocock/skills review)
+
+**Evidence**: the consumer wiki today renders `.orchestrator/**.md` + `knowledge/<category>/MEM*.md` (Finding A row 1, M012/P02/T01 wiki-scan-sources). It has no convention for a *domain glossary* — the project-specific vocabulary of nouns and verbs that callers, agents, and reviewers all need to share. `mattpocock/skills::grill-with-docs` (MIT) ships this as `CONTEXT.md` at project root, with two enforced disciplines:
+
+1. **Update inline as terms resolve** — never batch glossary updates to the end of a session. The moment the user disambiguates "materialization cascade" from "lesson rendering," the entry lands.
+2. **Only domain-meaningful terms** — no implementation specifics; the glossary is the cross-section of *what the project means*, not *how the project is built*. Implementation-shaped notes belong in MEMs or ADRs.
+
+The orchestrator already has surfaces for *decisions* (`DECISIONS.md`, MEM030/MEM031 conventions) and *patterns* (`knowledge/patterns/`). The glossary is the missing surface — it lives upstream of those because deciding requires already-shared vocabulary.
+
+**Root cause**: M020 closed the knowledge layer with kinds `pattern | convention | lesson | decision` plus spec-chunk subkinds. No `glossary` kind. M012 wiki-scan-sources had no glossary path to render.
+
+**Fix shape (load-bearing for M033)**: M032 adds a project-glossary surface with three pieces:
+
+- **Path convention**: `wiki/glossary.md` at project root, single file, alphabetized term entries with one-line definitions and at most a two-line elaboration. (Multi-context projects fold this into Finding I's custom-nav region — operator decision, not auto-generated.)
+- **Wiki rendering**: `wiki-scan-sources.sh` gets a `--include-glossary` toggle (default on) that prepends `wiki/glossary.md` to the auto-nav block as the second top-level entry after Constitution.
+- **Knowledge graph integration**: a thin `scripts/knowledge/lookup-mems.sh --kind=glossary` adapter that reads `wiki/glossary.md` and synthesizes glossary records for `build-context.sh` to inject into Standard/Full payloads. Quick payloads inject only glossary terms touched by the task (per M031's `--profile=quick` traversal contract).
+
+**Why M032, not M020**: M020's kinds are *content-shaped* (decisions vs patterns vs lessons). The glossary is *project-shaped* — one per project, single file, owned by the operator, distributed via the wiki. It rides M032's project-asset surface (Finding A revised) cleanly.
+
+**Why this is load-bearing for M033**: M033's grilling protocol (proposal § *Adopted external pattern*) commits to *update doc inline as terms resolve*. The doc the protocol updates needs to exist before the protocol runs. M032 lands the surface; M033 P01–P02 are the first authoring path that writes into it; M033 P03 (codebase ingestion) seeds initial entries from README/manifests/directory-structure on the existing-codebase branch.
+
+**Impact**: without this, the grilling protocol has nowhere to write resolved terms. Glossary entries either never get captured (the grilling produces shared vocabulary in-conversation but the next conversation starts from zero) or land in the wrong file (knowledge MEMs get polluted with vocabulary that should ride at the wiki/spec level). With the glossary surface in place, every M033 grilling session compounds — same as the rest of the knowledge layer per Constitution Principle VII.
+
+**Effort**: small. Adapter scripts ≤ 80 lines total; wiki-nav extension reuses Finding I's custom-nav region; no schema change. Could ship in P01 alongside the bundle work if scope budget allows; otherwise P02 alongside `wiki-init` is the natural seam.
+
 ## Phase shape
 
 | Phase | Goal | Key artifact | Verifies |

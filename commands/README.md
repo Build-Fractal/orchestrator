@@ -24,3 +24,5 @@ Every command file follows: YAML frontmatter → Title → Prerequisites → Cor
 | status.md | /orchestrator-status | Progress dashboard |
 | resume.md | /orchestrator-resume | Crash/pause recovery |
 | consolidate.md | /orchestrator-consolidate | Knowledge compression |
+| zoom-out.md | /orchestrator-zoom-out | One-layer-up code map (read-only utility, mattpocock/skills-derived, MIT) |
+| diagnose.md | /orchestrator-diagnose | Six-phase debug loop: feedback → reproduce → hypothesize → instrument → fix → regression-test (mattpocock/skills-derived, MIT) |

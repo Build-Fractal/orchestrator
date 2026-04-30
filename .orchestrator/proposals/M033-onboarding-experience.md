@@ -48,6 +48,18 @@ This is **conversational front-door + content authoring layer**, not:
 
 M033 asks: *can a first-time user land in a fully-bootstrapped project after one warm conversation?*
 
+## Adopted external pattern: relentless grilling protocol
+
+The four-branch interactive flow (Findings A, D, E) operationalizes a pattern lifted from `mattpocock/skills::grill-with-docs` (MIT). The protocol — for use anywhere `start` asks the user a structured question — is:
+
+1. **Sequential, never batched** — present one question at a time and await the answer before the next. Batched questions invite skimming and produce shallow inputs.
+2. **Code-first speculation cap** — when a question can be answered by reading the project (manifests, directory structure, existing materials), read first, then ask only what reading cannot resolve. The greenfield-with-materials branch (Finding E) and existing-codebase branch (Finding A row 3) are most exposed to this rule.
+3. **Inline doc updates** — when an answer resolves a domain term, write it to the project's domain glossary immediately. Do not batch glossary updates to the end; batched updates are the easiest thing to drop and the fact that the user just disambiguated the term is the reason the glossary entry is high-quality. (See M032 *Wiki domain glossary as first-class artifact* for where the glossary lives.)
+4. **Surface contradictions live** — if a user answer conflicts with detected codebase state or a prior answer, surface the contradiction in the next turn rather than silently picking one. Constitution Principle II (Evidence Before Claims).
+5. **Recommendation, not interrogation** — every question carries a recommended default the user can accept with a single keystroke. The grilling is rigor for the *plan*, not friction for the *user*.
+
+This protocol is the contract for the conversational shell built in P01 and reused by P02 (constitution authoring), P04 (materials intake + ideation), and P05 (custom block authoring). P00 baseline runs validate the protocol against fixtures before P01 codifies it.
+
 ## Findings (root-cause analysis)
 
 ### Finding A: `orchestrator:init` is binary; no interactive branching

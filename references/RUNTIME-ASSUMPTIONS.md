@@ -57,3 +57,65 @@ audit. P07 uses placeholder IDs (`M009-RP-01`, `M009-RP-02`); M009
 will assign real audit-row IDs at audit time. The verifier asserts the
 column header exists and at least one RA-M018-NN row is present, not
 specific row IDs.
+
+## Shape-Guard Carve-Outs (M021 / M028)
+
+The active PreToolUse Bash shape-guard
+(`scripts/hooks/pre-bash-shape-guard.sh`, classifier at
+`scripts/verify/lib/shape-classifier.sh`) inspects command shape
+**line-by-line** against the AP-### antipattern table. Two carve-outs
+are load-bearing for plan and verifier authoring; both are easy to
+forget when authoring helpers, so they're documented here.
+
+### AD-19 helper-function carve-out — function bodies are not classifier-scanned
+
+Bash function bodies declared inside a script under audit are out of
+scope for the AP-### classifier. The classifier matches command-shape
+on the body of the *invocation* line; the multi-step compounds inside
+a function body are not re-scanned at definition time. This means a
+multi-step compound like:
+
+```bash
+compute_sha() {
+  shasum -a 256 "$1" > "$2.raw"
+  awk '{print $1}' "$2.raw" > "$2"
+}
+```
+
+…can be hoisted into a top-of-script function and called once per
+invocation site without triggering AP-009 (`compound-chain-gt2`) or
+AP-010 (`heredoc-with-expansion`) at the call site. Verifier authors
+can use this to keep complex setup compact while staying classifier-clean.
+
+This carve-out was implicit in M028/P02/T03-T05 verifier authoring;
+documented retroactively after M028/P02/T05 codified it as a
+comment-block convention. Without this note, every future verifier
+author rediscovers it from scratch — or gives up and reaches for
+`scripts/util/run-probe.sh` (which is the wrong tool for project-tree
+verifier paths; see `commands/plan-phase.md` Plan-Time Discipline rule
+4 for the run-probe.sh scope contract).
+
+### Inline-shape-check carve-out — `if [ -f X ] && grep ...` is allowed
+
+A two-stage compound (one `&&` or one `;`) inside an `if`-test condition
+is below the `compound-chain-gt2` threshold. The shape:
+
+```bash
+if [ -f "$path" ] && grep -q "$pattern" "$path"; then
+  ...
+fi
+```
+
+…is classifier-clean and is the canonical shape for the stub-tolerant
+inline shape-checks that `commands/plan-phase.md` Plan-Time Discipline
+rule 2 names as the alternative when a verifier script doesn't yet
+exist at plan-authoring time.
+
+### Cross-references
+
+- `commands/plan-phase.md` — Plan-Time Discipline (rules 3 + 4 reference
+  this section).
+- `scripts/verify/lib/shape-classifier.sh::classify_command` — call
+  this directly at plan-authoring time when the verdict is load-bearing.
+- `references/ANTIPATTERNS.md` — AP-### table (the rule set this
+  carve-out lives outside of).

@@ -243,6 +243,7 @@ After writing the phase plan and all task plans:
 
 1. **Verify state transition**: Run `bash scripts/state/derive-phase.sh <milestone-dir>`. The state should now be `executing` (task plans exist without summaries).
 2. **Report next step**: Inform the developer that the phase is ready for execution via `speckit.orchestrator.dispatch` (one task at a time) or `speckit.orchestrator.auto` (autonomous execution).
+3. **Report deliverables accurately**: when listing what the plan delivers, frame the report as "deliverables the plan **schedules**" — regardless of which agent actually authors the artifact at execution time. Do NOT report "authored N verifier scripts" if the scripts are scheduled as executor-task deliverables in plan bodies; planner has *scheduled* their authorship, not *performed* it. Misleading reporting muddies plan/exec accounting and makes verification gaps harder to spot. Surfaced 2026-04-29 by lakeledger M066/P02 dogfooding.
 
 Note: Running `plan-phase` again without `--phase P##` would attempt to re-plan the same phase since it is still the active phase. Use `--phase` to target a different phase.
 

@@ -153,6 +153,40 @@ efficiency_footer_render() {
       fi
       ;;
   esac
+
+  # M030/P05/T02 — model_mix: line. Invokes metrics-rollup.sh --by-model
+  # against the same milestone the parent footer is rendering. Suppressed
+  # when the corpus has zero shadow-on records (zero `model_routed` fields).
+  # This is the SC-11 byte-equality preservation mechanism — pre-M030
+  # fixtures emit zero new bytes through the footer.
+  cfg_model_mix_footer="${ORCH_MODEL_MIX_FOOTER:-}"
+  if [ -z "$cfg_model_mix_footer" ] && [ -x "$_EFF_PROJECT_ROOT/scripts/state/read-config.sh" ]; then
+    cfg_model_mix_footer="$(bash "$_EFF_PROJECT_ROOT/scripts/state/read-config.sh" model_routing.efficiency_footer.enabled 2>/dev/null || true)"
+  fi
+  case "$cfg_model_mix_footer" in
+    false|FALSE|False|0|no|NO|No)
+      : # suppressed by config
+      ;;
+    *)
+      _eff_by_model_out=""
+      if [ -n "$milestone" ]; then
+        _eff_by_model_out="$(bash "$_EFF_PROJECT_ROOT/scripts/diagnostics/metrics-rollup.sh" \
+          --by-model --milestone "$milestone" 2>/dev/null || true)"
+      fi
+      _eff_mm_line="$(printf '%s\n' "$_eff_by_model_out" | grep -E '^[0-9]+ dispatches:' | head -n 1)"
+      if [ -n "$_eff_mm_line" ]; then
+        _eff_mm_total="$(printf '%s\n' "$_eff_mm_line" | awk '{print $1}')"
+        _eff_mm_fast="$(printf '%s\n' "$_eff_mm_line" | awk -F'[: /]+' '{for(i=1;i<=NF;i++) if($i=="fast") print $(i-1)}' | head -n 1)"
+        _eff_mm_bal="$(printf '%s\n' "$_eff_mm_line" | awk -F'[: /]+' '{for(i=1;i<=NF;i++) if($i=="balanced") print $(i-1)}' | head -n 1)"
+        _eff_mm_smart="$(printf '%s\n' "$_eff_mm_line" | awk -F'[: /]+' '{for(i=1;i<=NF;i++) if($i=="smart") print $(i-1)}' | head -n 1)"
+        # Suppress when total == 0 (no shadow-on records — SC-11 contract).
+        if [ -n "$_eff_mm_total" ] && [ "$_eff_mm_total" != "0" ] && [ "$_eff_mm_total" -gt 0 ] 2>/dev/null; then
+          printf '  model_mix: fast=%s balanced=%s smart=%s\n' \
+            "${_eff_mm_fast:-0}" "${_eff_mm_bal:-0}" "${_eff_mm_smart:-0}"
+        fi
+      fi
+      ;;
+  esac
   return 0
 }
 

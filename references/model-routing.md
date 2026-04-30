@@ -418,6 +418,121 @@ CLI and Cursor cannot reach the live-routing branch or the escalation
 loop; they continue to dispatch with the runtime default model. M009
 ships per-runtime live-routing semantics demand-driven post-launch.
 
+## Cost Rollup Surfaces
+
+M030/P05 lands the cost-rollup integration for adaptive model selection.
+Two existing observability surfaces gain additive output: the rollup
+itself surfaces a per-tier dispatch-count + aggregated-cost line via a
+new `--by-model` flag, and the efficiency footer rendered at the close
+of an `orchestrator:auto` run gains a `model_mix:` line summarizing the
+same per-tier counts. Both amendments are strictly additive (CON-2 /
+FR-19 / SC-11): pre-M030 fixtures with no `model_routed` field round-trip
+byte-identically through the unflagged rollup and through the footer.
+
+### `metrics-rollup.sh --by-model`
+
+`scripts/diagnostics/metrics-rollup.sh --by-model` walks the snapshot
+JSONL and counts shadow-on `dispatch_usage` records by their
+`model_routed` symbolic-tier value. Records without `model_routed`
+(pre-M030) are skipped — they don't contribute to the count. Output
+shape when `cost_rates:` is present in the routing-table:
+
+```text
+N dispatches: <fast> fast / <balanced> balanced / <smart> smart
+aggregated_cost_usd: <USD>
+counterfactual_all_smart_cost_usd: <USD>
+```
+
+The aggregated cost is computed per-record from the
+`input_tokens_estimate` + `output_tokens_estimate` fields multiplied by
+the per-tier `cost_rates.<tier>.input_per_mtok` +
+`cost_rates.<tier>.output_per_mtok` rates. The all-`smart` counterfactual
+re-prices every record at the smart tier so the operator can read the
+USD savings the routing layer is delivering versus a naive smart-only
+posture.
+
+When `cost_rates:` is absent from the routing-table — either the section
+is missing wholesale, a tier entry is missing, or a per-tier rate is
+non-numeric — `--by-model` substitutes the warning + zero-savings
+fallback:
+
+```text
+N dispatches: <fast> fast / <balanced> balanced / <smart> smart
+cost rates not configured
+aggregated_cost_usd: 0
+counterfactual_all_smart_cost_usd: 0
+```
+
+The dispatch-count line is always emitted regardless of cost-rates
+presence; the cost lines are warning-class output, not hard failure.
+`--by-model` exits 0 in both branches so the rollup remains useful as
+a dispatch-count surface even on a misconfigured routing-table.
+
+Routing-table path resolution, in priority order:
+
+1. `--routing-table <path>` flag (verifier-friendly explicit override).
+2. `M030_ROUTING_TABLE_PATH` env var.
+3. Default: `<project-root>/templates/model-routing.yml`.
+
+The default rollup output (no `--by-model` flag) is byte-identical to
+its pre-M030 form — the existing tabular cost+quality table is
+unaffected. Mechanical contract: `tools/verify/p05-sc11-rollup-byte-equality.sh`.
+
+### `efficiency-footer.sh model_mix:` line
+
+`scripts/diagnostics/efficiency-footer.sh` emits an additional
+`model_mix:` line at the close of an `orchestrator:auto` run when the
+active milestone's execution-log carries shadow-on `dispatch_usage`
+records (records bearing the `model_routed` field). Line shape:
+
+```text
+  model_mix: fast=<N> balanced=<M> smart=<K>
+```
+
+The leading 2-space indent matches the rest of the footer body. The
+line is suppressed entirely when the corpus has zero shadow-on records
+— pre-M030 fixtures emit zero new bytes through the footer. Mechanical
+contract: `tools/verify/p05-sc11-footer-byte-equality.sh` (round-trips
+the pre-M030 fixture from P02/T01 against a committed golden snapshot).
+
+Config knob discipline (matches the compression line):
+
+- `ORCH_MODEL_MIX_FOOTER` env var override.
+- `model_routing.efficiency_footer.enabled` config (read via
+  `scripts/state/read-config.sh`).
+- Falsy values (`false`, `0`, `no`, etc.) suppress the line; any other
+  value (or absence) emits.
+
+The model-mix block is independent of the parent footer suppressor
+(`--quiet` / `efficiency_footer: false`), which already short-circuits
+upstream of the model-mix block. The mechanical gate
+`tools/verify/p05-model-mix-footer-line.sh` asserts the line shape and
+the per-tier counts against an `ORCHESTRATOR_ROOT=<tmp_root>` carve-out
+staging the live-routed corpus fixture as the active milestone's
+execution-log.
+
+### Operator obligation: keep `cost_rates:` current
+
+The `--by-model` counterfactual relies on `cost_rates:` reflecting
+current provider pricing. Operators MUST update
+`templates/model-routing.yml cost_rates:` when their provider changes
+rates — the rollup has no automatic refresh.
+
+The doctor's `--config-check` validates the SECTION SHAPE (closure
+invariants per CON-3, well-formed numeric per-tier values when present)
+but does NOT validate that the RATES are CURRENT — pricing-staleness
+is an operator-noticed fact, not a mechanical gate. The
+`tools/verify/p01-routing-table-shape.sh` verifier (consumed by
+`scripts/diagnostics/run-doctor.sh --config-check`) treats `cost_rates:`
+as OPTIONAL: when absent, the FR-15 fallback path activates at runtime;
+when present, every per-tier rate is shape-validated.
+
+See `tools/verify/p05-doctor-config-check.sh` for the SC-9 gate that
+delegates to the doctor surface and asserts both well-formed
+(exit 0, no `<file>:<lineno>` diagnostic) and malformed (exit 1, file
+path + lineno emitted to stdout) routing-table behavior holds at P05
+close.
+
 ## See Also
 
 - `templates/model-routing.yml` — the SSOT this document describes.

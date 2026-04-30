@@ -637,6 +637,172 @@ metrics_rollup_render() {
   done < "$rows"
 }
 
+# --- M030/P05/T02 — by-model emission --------------------------------------
+# _metrics_rollup_by_model_emit SNAPSHOT ROUTING_TABLE
+#
+# Reads the snapshot JSONL line-by-line via awk, counting dispatch_usage
+# records by `model_routed` value (`fast | balanced | smart`). Pre-M030
+# records (no `model_routed` field) are skipped — they don't contribute.
+#
+# When `cost_rates:` is present in ROUTING_TABLE and every tier carries
+# numeric input_per_mtok + output_per_mtok values, computes:
+#   aggregated_cost_usd          = sum_over_records of per-record cost
+#   counterfactual_all_smart_cost_usd = sum at smart rates for every record
+# When `cost_rates:` is absent or malformed, emits the warning + zero-savings
+# fallback. Always exit 0.
+#
+# CON-3: zero hardcoded model IDs introduced. Cost computation indexes by
+# symbolic tier (fast | balanced | smart) — the same closed enum the rest
+# of M030 uses. Awk pass is MEM004 emitter-internal carve-out.
+_metrics_rollup_by_model_emit() {
+  local snapshot="$1"
+  local rt_path="$2"
+
+  # Parse cost_rates: section from the routing-table file (if present).
+  # Output one line of the form "RATES <fi> <fo> <bi> <bo> <si> <so>" or
+  # "NO_RATES" when the section is absent / malformed. Tolerant against
+  # whitespace + comments. The awk parser is single-pass (CON-12).
+  local rates_line="NO_RATES"
+  if [ -n "$rt_path" ] && [ -f "$rt_path" ]; then
+    rates_line="$(awk '
+      BEGIN {
+        in_section = 0; cur_tier = "";
+        fi = ""; fo = ""; bi = ""; bo = ""; si = ""; so = "";
+      }
+      /^[^[:space:]#]/ {
+        # Top-level (column 0) key — section boundary.
+        if ($0 ~ /^cost_rates:[[:space:]]*$/) {
+          in_section = 1; cur_tier = "";
+          next;
+        } else {
+          in_section = 0; cur_tier = "";
+          next;
+        }
+      }
+      {
+        if (!in_section) next;
+        # Strip leading whitespace.
+        line = $0;
+        sub(/[[:space:]]+$/, "", line);
+        # Indent depth: 2 spaces = tier; 4 spaces = key.
+        match(line, /^[[:space:]]+/);
+        indent = RLENGTH;
+        body = substr(line, indent + 1);
+        if (body == "" || substr(body, 1, 1) == "#") next;
+        if (indent == 2) {
+          # Tier header: "fast:" | "balanced:" | "smart:"
+          if (body ~ /^fast:[[:space:]]*$/)     cur_tier = "fast";
+          else if (body ~ /^balanced:[[:space:]]*$/) cur_tier = "balanced";
+          else if (body ~ /^smart:[[:space:]]*$/)    cur_tier = "smart";
+          else cur_tier = "";
+        } else if (indent >= 4 && cur_tier != "") {
+          # "input_per_mtok: <num>" or "output_per_mtok: <num>"
+          if (match(body, /^input_per_mtok:[[:space:]]*-?[0-9]+(\.[0-9]+)?[[:space:]]*$/)) {
+            v = body; sub(/^input_per_mtok:[[:space:]]*/, "", v); sub(/[[:space:]]*$/, "", v);
+            if (cur_tier == "fast")     fi = v;
+            else if (cur_tier == "balanced") bi = v;
+            else if (cur_tier == "smart")    si = v;
+          } else if (match(body, /^output_per_mtok:[[:space:]]*-?[0-9]+(\.[0-9]+)?[[:space:]]*$/)) {
+            v = body; sub(/^output_per_mtok:[[:space:]]*/, "", v); sub(/[[:space:]]*$/, "", v);
+            if (cur_tier == "fast")     fo = v;
+            else if (cur_tier == "balanced") bo = v;
+            else if (cur_tier == "smart")    so = v;
+          }
+        }
+      }
+      END {
+        if (fi != "" && fo != "" && bi != "" && bo != "" && si != "" && so != "") {
+          printf "RATES %s %s %s %s %s %s\n", fi, fo, bi, bo, si, so;
+        } else {
+          printf "NO_RATES\n";
+        }
+      }
+    ' "$rt_path")"
+  fi
+
+  # Walk the snapshot JSONL: count by model_routed, sum per-tier cost using
+  # input_tokens_estimate + output_tokens_estimate fields from each record.
+  # Emit per-tier counts + (if rates present) aggregated cost + counterfactual.
+  awk -v rates="$rates_line" '
+    function field_str(line, key,    re, m) {
+      re = "\"" key "\"[[:space:]]*:[[:space:]]*\"[^\"]*\"";
+      if (match(line, re)) {
+        m = substr(line, RSTART, RLENGTH);
+        sub("^\"" key "\"[[:space:]]*:[[:space:]]*\"", "", m);
+        sub("\"$", "", m);
+        return m;
+      }
+      return "";
+    }
+    function field_num(line, key,    re, m) {
+      re = "\"" key "\"[[:space:]]*:[[:space:]]*-?[0-9]+(\\.[0-9]+)?";
+      if (match(line, re)) {
+        m = substr(line, RSTART, RLENGTH);
+        sub("^\"" key "\"[[:space:]]*:[[:space:]]*", "", m);
+        return m;
+      }
+      return "";
+    }
+    function field_present(line, key,    re) {
+      re = "\"" key "\"[[:space:]]*:";
+      return (match(line, re) > 0);
+    }
+    BEGIN {
+      fast = 0; balanced = 0; smart = 0;
+      agg_cost = 0; cf_cost = 0;
+      have_rates = 0;
+      n = split(rates, rparts, " ");
+      if (n == 7 && rparts[1] == "RATES") {
+        have_rates = 1;
+        fi = rparts[2] + 0; fo = rparts[3] + 0;
+        bi = rparts[4] + 0; bo = rparts[5] + 0;
+        si = rparts[6] + 0; so = rparts[7] + 0;
+      }
+    }
+    {
+      line = $0;
+      if (length(line) == 0) next;
+      if (substr(line, 1, 1) != "{") next;
+      if (!field_present(line, "model_routed")) next;
+      tier = field_str(line, "model_routed");
+      if (tier != "fast" && tier != "balanced" && tier != "smart") next;
+      if (tier == "fast")     fast++;
+      else if (tier == "balanced") balanced++;
+      else if (tier == "smart")    smart++;
+
+      if (have_rates) {
+        in_tok  = field_num(line, "input_tokens_estimate") + 0;
+        out_tok = field_num(line, "output_tokens_estimate") + 0;
+        # Per-record cost at the routed tier.
+        if (tier == "fast") {
+          agg_cost += (in_tok / 1000000.0) * fi + (out_tok / 1000000.0) * fo;
+        } else if (tier == "balanced") {
+          agg_cost += (in_tok / 1000000.0) * bi + (out_tok / 1000000.0) * bo;
+        } else if (tier == "smart") {
+          agg_cost += (in_tok / 1000000.0) * si + (out_tok / 1000000.0) * so;
+        }
+        # Counterfactual cost if every record were routed at smart.
+        cf_cost += (in_tok / 1000000.0) * si + (out_tok / 1000000.0) * so;
+      }
+    }
+    END {
+      total = fast + balanced + smart;
+      printf "%d dispatches: %d fast / %d balanced / %d smart\n",
+        total, fast, balanced, smart;
+      if (have_rates) {
+        printf "aggregated_cost_usd: %.8f\n", agg_cost;
+        printf "counterfactual_all_smart_cost_usd: %.8f\n", cf_cost;
+      } else {
+        printf "cost rates not configured\n";
+        printf "aggregated_cost_usd: 0\n";
+        printf "counterfactual_all_smart_cost_usd: 0\n";
+      }
+    }
+  ' "$snapshot"
+
+  return 0
+}
+
 # --- Usage ---------------------------------------------------------------
 _metrics_rollup_usage() {
   cat >&2 <<'USAGE'
@@ -649,6 +815,8 @@ Options:
   --task <id>                                   (scope filter)
   --source estimate|runtime|aggregate|all       (default: all)
   --log <path>                                  (override JSONL path)
+  --by-model                                    (M030/P05: per-tier dispatch counts + cost rollup)
+  --routing-table <path>                        (override routing-table; default: templates/model-routing.yml)
   --help, -h                                    (this message)
 
 Reads M019 Tier 1 execution-log.jsonl and emits paired cost+quality rows.
@@ -698,6 +866,11 @@ metrics_rollup_main() {
   local task=""
   local source_filter="all"
   local log_path=""
+  # M030/P05/T02 — additive flags. by_model_mode=0 default preserves SC-11
+  # byte-equality on the unflagged path; routing_table_path defaults to
+  # M030_ROUTING_TABLE_PATH env then templates/model-routing.yml.
+  local by_model_mode=0
+  local routing_table_path=""
 
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -755,6 +928,22 @@ metrics_rollup_main() {
         ;;
       --log=*)
         log_path="${1#--log=}"
+        shift
+        ;;
+      --by-model)
+        # M030/P05/T02 — additive flag. Branches into the per-tier dispatch-
+        # count + cost emission shape after snapshot/normalize. Unflagged
+        # path remains byte-identical (SC-11 contract).
+        by_model_mode=1
+        shift
+        ;;
+      --routing-table)
+        if [ $# -lt 2 ]; then _metrics_rollup_usage; return 2; fi
+        routing_table_path="$2"
+        shift 2
+        ;;
+      --routing-table=*)
+        routing_table_path="${1#--routing-table=}"
         shift
         ;;
       --help|-h)
@@ -815,6 +1004,22 @@ metrics_rollup_main() {
   snapshot="$(mktemp -t m027-rollup.XXXXXXXX)"
   if ! metrics_rollup_snapshot "$log_path" "$snapshot"; then
     printf 'no Tier 1 records yet (log: %s)\n' "$log_path"
+    return 0
+  fi
+
+  # M030/P05/T02 — --by-model branch. Reads from the same snapshot so FR-19/
+  # AD-3 atomicity is preserved; emits per-tier dispatch counts + cost lines
+  # in place of the existing tabular shape. Default code path (by_model_mode=0)
+  # is byte-identical to pre-T02 (SC-11 / FR-19 contract).
+  if [ "$by_model_mode" -eq 1 ]; then
+    local rt_resolved="$routing_table_path"
+    if [ -z "$rt_resolved" ]; then
+      rt_resolved="${M030_ROUTING_TABLE_PATH:-}"
+    fi
+    if [ -z "$rt_resolved" ]; then
+      rt_resolved="$(_metrics_rollup_project_root)/templates/model-routing.yml"
+    fi
+    _metrics_rollup_by_model_emit "$snapshot" "$rt_resolved"
     return 0
   fi
 

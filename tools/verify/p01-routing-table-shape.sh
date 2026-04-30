@@ -42,12 +42,38 @@ note_fail() {
 "
 }
 
+# note_fail_at: emit FAIL with <path>:<lineno> prefix per FR-17 + SC-9.
+# $1 = lineno (>=1), $2 = message.
+note_fail_at() {
+  fail=$((fail + 1))
+  fail_reasons="${fail_reasons}FAIL: ${TARGET}:$1 — $2
+"
+}
+
+# lineno_of_pattern: prints first matching line number for a fixed-string
+# pattern within $TARGET, or "1" if not found (so callers always have a
+# sensible line to emit). Bash 3.2 safe.
+lineno_of_pattern() {
+  local pat
+  pat="$1"
+  local n
+  n="$(grep -nF "$pat" "$TARGET" | head -1 | cut -d: -f1)"
+  if [ -z "$n" ]; then
+    echo "1"
+  else
+    echo "$n"
+  fi
+}
+
 # ---------- Check 1: file exists ----------
 
 if [ -f "$TARGET" ]; then
   note_pass
 else
-  note_fail "model-routing.yml missing at $TARGET"
+  # File missing: emit <path>:0 so the file:line shape is preserved.
+  fail=$((fail + 1))
+  fail_reasons="${fail_reasons}FAIL: ${TARGET}:0 — model-routing.yml missing
+"
   printf '%s' "$fail_reasons"
   printf 'SUMMARY: p01-routing-table-shape.sh pass=%s fail=%s\n' "$pass" "$fail"
   exit 1
@@ -65,7 +91,8 @@ done
 if [ -z "$missing_keys" ]; then
   note_pass
 else
-  note_fail "frontmatter missing keys: ${missing_keys}"
+  # Frontmatter sits at top of file; emit line 1 as the locus.
+  note_fail_at 1 "frontmatter missing keys: ${missing_keys}"
 fi
 
 # ---------- Check 3: three top-level sections ----------
@@ -80,7 +107,7 @@ done
 if [ -z "$missing_sections" ]; then
   note_pass
 else
-  note_fail "top-level sections missing: ${missing_sections}"
+  note_fail_at 1 "top-level sections missing: ${missing_sections}"
 fi
 
 # ---------- Section-bounded extraction via awk ----------
@@ -133,7 +160,23 @@ if [ -z "$routing_closure_missing" ]; then
   note_pass
   printf 'OK: routing -> resolution closure holds (%s tiers referenced, %s defined)\n' "$ref_count" "$def_count"
 else
-  note_fail "routing references tiers not defined in resolution: ${routing_closure_missing}"
+  # Locate the first offending tier reference under routing: by grepping
+  # for `<runtime>: <tier>` pattern. We pick the first missing tier and
+  # emit its lineno; if multiple tiers are missing, additional missing
+  # ones are listed in the message text but the lineno points to the
+  # first occurrence we find.
+  first_missing=""
+  for tier in $referenced_tiers; do
+    if ! printf '%s\n' "$defined_tiers" | grep -qx "$tier"; then
+      first_missing="$tier"
+      break
+    fi
+  done
+  off_ln="$(grep -nE "^[[:space:]]+(claude-code|codex-cli|cursor):[[:space:]]+${first_missing}\$" "$TARGET" | head -1 | cut -d: -f1)"
+  if [ -z "$off_ln" ]; then
+    off_ln="1"
+  fi
+  note_fail_at "$off_ln" "symbolic tier '${first_missing}' referenced in routing: but not defined in resolution: (all missing: ${routing_closure_missing})"
 fi
 
 # ---------- Check 5: cost_rates -> resolution closure ----------
@@ -153,7 +196,15 @@ if [ -z "$cost_closure_missing" ]; then
   note_pass
   printf 'OK: cost_rates -> resolution closure holds\n'
 else
-  note_fail "cost_rates references tiers not defined in resolution: ${cost_closure_missing}"
+  first_missing_cost=""
+  for tier in $cost_tier_keys; do
+    if ! printf '%s\n' "$defined_tiers" | grep -qx "$tier"; then
+      first_missing_cost="$tier"
+      break
+    fi
+  done
+  off_ln_cost="$(lineno_of_pattern "  ${first_missing_cost}:")"
+  note_fail_at "$off_ln_cost" "cost_rates tier '${first_missing_cost}' not defined in resolution: (all missing: ${cost_closure_missing})"
 fi
 
 # ---------- Check 6: character closed enum under routing: ----------
@@ -180,7 +231,20 @@ done
 if [ -z "$unexpected_chars" ] && [ -z "$missing_chars" ]; then
   note_pass
 else
-  note_fail "routing: character keys not exact closed enum {mechanical, standard, novel}; unexpected=[${unexpected_chars}] missing=[${missing_chars}]"
+  # Pick first unexpected char as locus; fall back to "routing:" header.
+  first_bad_char=""
+  for key in $char_keys; do
+    case "$key" in
+      mechanical|standard|novel) ;;
+      *) first_bad_char="$key"; break ;;
+    esac
+  done
+  if [ -n "$first_bad_char" ]; then
+    char_ln="$(lineno_of_pattern "  ${first_bad_char}:")"
+  else
+    char_ln="$(lineno_of_pattern "routing:")"
+  fi
+  note_fail_at "$char_ln" "routing: character keys not exact closed enum {mechanical, standard, novel}; unexpected=[${unexpected_chars}] missing=[${missing_chars}]"
 fi
 
 # ---------- Check 7: symbolic-tier closed enum ----------
@@ -211,7 +275,27 @@ done
 if [ -z "$unexpected_resolution_tiers" ] && [ -z "$missing_resolution_tiers" ] && [ -z "$unexpected_cost_tiers" ]; then
   note_pass
 else
-  note_fail "symbolic-tier vocabulary breach: resolution unexpected=[${unexpected_resolution_tiers}] resolution missing=[${missing_resolution_tiers}] cost_rates unexpected=[${unexpected_cost_tiers}]"
+  first_bad_tier=""
+  for tier in $defined_tiers; do
+    case "$tier" in
+      fast|balanced|smart) ;;
+      *) first_bad_tier="$tier"; break ;;
+    esac
+  done
+  if [ -z "$first_bad_tier" ]; then
+    for tier in $cost_tier_keys; do
+      case "$tier" in
+        fast|balanced|smart) ;;
+        *) first_bad_tier="$tier"; break ;;
+      esac
+    done
+  fi
+  if [ -n "$first_bad_tier" ]; then
+    sym_ln="$(lineno_of_pattern "  ${first_bad_tier}:")"
+  else
+    sym_ln="$(lineno_of_pattern "resolution:")"
+  fi
+  note_fail_at "$sym_ln" "symbolic-tier vocabulary breach: resolution unexpected=[${unexpected_resolution_tiers}] resolution missing=[${missing_resolution_tiers}] cost_rates unexpected=[${unexpected_cost_tiers}]"
 fi
 
 # ---------- Check 8: cost_rates entries have input_per_mtok + output_per_mtok ----------
@@ -246,7 +330,20 @@ done
 if [ -z "$cost_shape_missing" ]; then
   note_pass
 else
-  note_fail "cost_rates tier(s) missing required numeric keys: ${cost_shape_missing}"
+  # Locate the first offending tier header line under cost_rates:.
+  first_bad_cost=""
+  for tier in $cost_tier_keys; do
+    if printf '%s' "$cost_shape_missing" | grep -q "${tier}("; then
+      first_bad_cost="$tier"
+      break
+    fi
+  done
+  if [ -n "$first_bad_cost" ]; then
+    cost_ln="$(lineno_of_pattern "  ${first_bad_cost}:")"
+  else
+    cost_ln="$(lineno_of_pattern "cost_rates:")"
+  fi
+  note_fail_at "$cost_ln" "cost_rates tier(s) missing required numeric keys: ${cost_shape_missing}"
 fi
 
 # ---------- Summary ----------

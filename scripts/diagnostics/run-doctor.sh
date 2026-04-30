@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # scripts/diagnostics/run-doctor.sh — Run all diagnostic checks with scored health report
 # Usage: run-doctor.sh [--root <project-root>] [--format text|json]
+#                      [--config-check] [--routing-table <path>] [--no-anomaly]
 #
 # Main orchestrator for all diagnostic checks. Runs each check script,
 # produces a scored health report, and appends results to doctor-history.jsonl.
@@ -13,18 +14,53 @@ PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 FORMAT="text"
 CONFIG_CHECK=0
 NO_ANOMALY=0
+ROUTING_TABLE_FLAG=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --root) PROJECT_ROOT="$2"; shift 2 ;;
     --format) FORMAT="$2"; shift 2 ;;
     --config-check) CONFIG_CHECK=1; shift ;;
+    --routing-table) ROUTING_TABLE_FLAG="$2"; shift 2 ;;
     --no-anomaly) NO_ANOMALY=1; shift ;;
     *) echo "run-doctor.sh: unknown option: $1" >&2; exit 1 ;;
   esac
 done
 
 export PROJECT_ROOT
+
+# --- M030/P01/T04: --config-check routing-table validation (FR-17 + SC-9) ---
+#
+# When --config-check is set, validate templates/model-routing.yml shape
+# via tools/verify/p01-routing-table-shape.sh. On a malformed table,
+# propagate the verifier's <file>:<lineno> diagnostic to stdout and
+# exit 1 immediately. On a well-formed table, continue with the rest
+# of the doctor pipeline. Resolution priority for the table path:
+#   --routing-table <path>  (CLI flag)
+#   $ROUTING_TABLE_PATH     (env var)
+#   templates/model-routing.yml (default, resolved under PROJECT_ROOT)
+if [ "$CONFIG_CHECK" -eq 1 ]; then
+  if [ -n "$ROUTING_TABLE_FLAG" ]; then
+    ROUTING_TABLE="$ROUTING_TABLE_FLAG"
+  elif [ -n "${ROUTING_TABLE_PATH:-}" ]; then
+    ROUTING_TABLE="$ROUTING_TABLE_PATH"
+  else
+    ROUTING_TABLE="$PROJECT_ROOT/templates/model-routing.yml"
+  fi
+
+  echo "--- Routing Table Shape (templates/model-routing.yml) ---"
+  bash "$PROJECT_ROOT/tools/verify/p01-routing-table-shape.sh" "$ROUTING_TABLE"
+  routing_rc=$?
+  echo ""
+
+  if [ "$routing_rc" -ne 0 ]; then
+    # Verifier already emitted FAIL: <file>:<lineno> — <msg> to stdout.
+    echo "=== Health Report ==="
+    echo "Status: NEEDS_ATTENTION"
+    echo "Routing table validation failed (--config-check)."
+    exit 1
+  fi
+fi
 
 # --- Scoring state ---
 checks_passed=0

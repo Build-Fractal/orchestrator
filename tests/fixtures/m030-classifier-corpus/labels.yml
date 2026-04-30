@@ -1,0 +1,178 @@
+---
+schema_version: "1.0"
+type: classifier-fixture-corpus
+milestone: "M030"
+phase: "P00"
+created_at: "2026-04-30"
+labeler_constraint: "labels applied before scripts/dispatch/classify-task.sh authored — D-A4 independence by construction. See README.md ## D-A4 Independence Compliance."
+---
+
+# M030 Classifier Ground-Truth Corpus
+
+# Labels are applied per the FR-1 three-class taxonomy:
+#   mechanical|standard|novel  (plus confidence: high|medium|low)
+# See README.md ## Labeling Rubric for the full vocabulary definitions.
+# Independence: this file's first commit MUST predate the first commit
+# of scripts/dispatch/classify-task.sh per D-A4 / SC-10.
+
+entries:
+  - plan_path: ".orchestrator/milestones/M002/phases/P01/tasks/T01-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M002/phases/P04/tasks/T03-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M002/phases/P07/tasks/T04-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M003/phases/P01/tasks/T02-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M003/phases/P08/tasks/T03-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M004/phases/P02/tasks/T05-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M004/phases/P06/tasks/T03-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M005/phases/P02/tasks/T02-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M005/phases/P05/tasks/T01-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M006/phases/P01/tasks/T01-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M007/phases/P01/tasks/T02-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M008/archive/P05/T01-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M008/archive/P05/T03-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M011/phases/P02/tasks/T03-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M011/phases/P05/tasks/T01-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M012/archive/P01/T01-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M012/archive/P03/T02-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M013/phases/P02/tasks/T01-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M013/phases/P04/tasks/T03-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M014/archive/P01/T02-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M014/archive/P03/T02-classify-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M015/phases/P01/tasks/T01-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M015/phases/P03/tasks/T02-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M016/phases/P01/tasks/T02-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M016/phases/P03/tasks/T04-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M018/phases/P01/tasks/T01-grammar-contract-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M018/phases/P03/tasks/T02-cache-prune-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M018/phases/P07/tasks/T01-fixture-corpus-and-parity-runner-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M019/phases/P01/tasks/T01-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M019/phases/P00/tasks/T03-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M020/phases/P01/tasks/T01-schema-evolution-gate-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M020/phases/P03/tasks/T02-graduate-cluster-extension-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M021/phases/P01/tasks/T01-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M021/phases/P03/tasks/T03-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M024/archive/P01/T01-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M024/archive/P02/T02-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M026/archive/P01/T01-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M026/archive/P03/T02-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M027/archive/P01/T01-cost-estimator-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD
+  - plan_path: ".orchestrator/milestones/M027/archive/P02/T03-predictive-surface-PLAN.md"
+    character: TBD
+    confidence: TBD
+    rationale: TBD

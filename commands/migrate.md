@@ -44,10 +44,10 @@ After migration completes:
 ## State Root Resolution (AD-13)
 
 `migrate.sh` writes to the path returned by `scripts/state/resolve-root.sh`,
-honoring the M008 5-rule precedence chain (`ORCHESTRATOR_ROOT` env ->
-`config.yml state_root` -> `.orchestrator/` -> `.specify/orchestrator/` ->
-default `.orchestrator/`). The `--output <path>` flag overrides the
-resolver for offline extraction runs.
+honoring the M008 4-rule precedence chain (`ORCHESTRATOR_ROOT` env ->
+`config.yml state_root` -> existing `.orchestrator/` -> default
+`.orchestrator/`). The `--output <path>` flag overrides the resolver
+for offline extraction runs.
 
 No transform script may concatenate `.specify/orchestrator/` itself — every
 output path is derived from the `target_root` argument passed in by
@@ -80,6 +80,6 @@ rename this command in isolation — see AD-15 in `M003-CONTEXT.md`.
 ## Referenced Scripts
 
 - `scripts/migrate/migrate.sh` — migration CLI entry point
-- `scripts/state/resolve-root.sh` — M008 5-rule state root resolver (AD-13)
+- `scripts/state/resolve-root.sh` — M008 4-rule state root resolver (AD-13)
 - `scripts/knowledge/rebuild-index.sh` — index + graph DB rebuilder, called as final pipeline step (AD-14)
 - `scripts/knowledge/detect-overlap.sh` — optional post-migration semantic enrichment (AD-14)

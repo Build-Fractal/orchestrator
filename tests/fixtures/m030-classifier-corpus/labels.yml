@@ -17,162 +17,162 @@ labeler_constraint: "labels applied before scripts/dispatch/classify-task.sh aut
 
 entries:
   - plan_path: ".orchestrator/milestones/M002/phases/P01/tasks/T01-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: standard
+    confidence: high
+    rationale: "Creates a knowledge directory tree plus two library files (staleness.sh, index-utils.sh) — file paths are spelled out and bash bodies given verbatim, but the deliverable spans 4+ files across knowledge/ and scripts/knowledge/lib/, putting it past the mechanical ≤3-file ceiling."
   - plan_path: ".orchestrator/milestones/M002/phases/P04/tasks/T03-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: mechanical
+    confidence: high
+    rationale: "Modifies one function (_bc_display_order) in scripts/dispatch/build-context.sh with the new ordering quoted verbatim; named verifiers (m002-p04-manifest-header.sh, m002-p04-static-first-ordering.sh) gate the change — fully prescribed, no judgment calls."
   - plan_path: ".orchestrator/milestones/M002/phases/P07/tasks/T04-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: mechanical
+    confidence: high
+    rationale: "Authors a single e2e script (scripts/verify/m002-p07-e2e.sh) with verbatim bash body, deliberate anomaly fixtures spelled out inline, and a temp-dir cleanup pattern — one-file deliverable with a fully-specified shape."
   - plan_path: ".orchestrator/milestones/M003/phases/P01/tasks/T02-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: mechanical
+    confidence: high
+    rationale: "Single-file deliverable (scripts/migrate/lib/sqlite-reader.sh) with all helper functions (check_sqlite3, is_valid_sqlite, sqlite_read_*) given verbatim bash bodies; CLI sqlite3 calls and TSV escape pattern fully prescribed."
   - plan_path: ".orchestrator/milestones/M003/phases/P08/tasks/T03-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: standard
+    confidence: medium
+    rationale: "Builds an integration test plus eight scripts/verify/m003-p08-*.sh helpers that share a fixture-output cache — the per-helper shape is dictated but the test orchestrates two passes (synthetic + skip-gracefully lakeledger), giving a 9+-file scope across multiple subsystems."
   - plan_path: ".orchestrator/milestones/M004/phases/P02/tasks/T05-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: mechanical
+    confidence: high
+    rationale: "Single-file library scripts/lib/hooks.sh with exact run_hooks contract, lifecycle-point enum, snapshot-and-chmod-444 sequence, and graceful-degradation branch all spelled out — implementation reads as a transcription of the spec."
   - plan_path: ".orchestrator/milestones/M004/phases/P06/tasks/T03-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: mechanical
+    confidence: high
+    rationale: "Edits two telemetry scripts with explicit step list (source libs, add run_id field, emit TASK_COMPLETE event, add by_error_kind grouping) — file paths declared, line ranges noted, cross-cutting constraints inherited verbatim from P06-PLAN.md."
   - plan_path: ".orchestrator/milestones/M005/phases/P02/tasks/T02-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: mechanical
+    confidence: high
+    rationale: "Single-file modification of scripts/telemetry/aggregate-metrics.sh with new accumulator variables, classification logic, and output formatting all quoted verbatim with line-number anchors — fully transcriptional."
   - plan_path: ".orchestrator/milestones/M005/phases/P05/tasks/T01-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: standard
+    confidence: high
+    rationale: "Ships the verdicts.sh library plus five scripts/verify/p05-*.sh verification scripts (6 files); the verdict protocol shape is fully specified but the deliverable spans library + multi-script verification surface, putting it past mechanical's ≤3-file ceiling."
   - plan_path: ".orchestrator/milestones/M006/phases/P01/tasks/T01-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: novel
+    confidence: medium
+    rationale: "Authors references/architecture.md to give a developer a complete mental model — design/explanatory work that requires judgment about what to include, how to order subsystems, and how to narrate data flow; structure is suggested but content composition is exploratory."
   - plan_path: ".orchestrator/milestones/M007/phases/P01/tasks/T02-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: mechanical
+    confidence: high
+    rationale: "Single-file modification of scripts/knowledge/rebuild-index.sh; the source-line for graph-db.sh, the temp-DB pattern, the relates_to/scope_tags parsing, and the supersedes edge are each given as exact code snippets with insertion-line references."
   - plan_path: ".orchestrator/milestones/M008/archive/P05/T01-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: mechanical
+    confidence: high
+    rationale: "Creates one new script (scripts/dispatch/detect-runtime.sh) with explicit env-var lists per runtime, named filesystem markers, confidence rules, and four named verifiers gating the must-haves — every probe and emit shape is prescribed."
   - plan_path: ".orchestrator/milestones/M008/archive/P05/T03-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: mechanical
+    confidence: high
+    rationale: "Creates scripts/dispatch/adapters/runtime/codex.sh mirroring the T02 claude-code adapter; --probe / --register / --hook-config branches each spelled out with exact stdout shapes; four named verifiers gate the implementation."
   - plan_path: ".orchestrator/milestones/M011/phases/P02/tasks/T03-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: standard
+    confidence: medium
+    rationale: "Wires content_hash into create_chunk plus adds end-to-end verification; the sed-in-place patching has portability judgment (GNU vs BSD sed branch), and the deliverable spans ingest-spec.sh modifications plus multiple verify scripts including a real-spec exercise."
   - plan_path: ".orchestrator/milestones/M011/phases/P05/tasks/T01-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: standard
+    confidence: medium
+    rationale: "Adds spec-metrics.sh helper, modifies commands/evaluate.md documentation, and ships three verify scripts; the chunks-first vs raw-spec metric-source switch requires judgment in graceful fallback shape and metrics_source labeling, spanning state/dispatch/commands subsystems."
   - plan_path: ".orchestrator/milestones/M012/archive/P01/T01-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: standard
+    confidence: high
+    rationale: "Creates the wiki/ directory skeleton — seven files (requirements.txt, mkdocs.yml, two index.md, two README.md, .gitignore, wiki-serve.sh) plus scripts/wiki/wiki-serve.sh; each file's content is spelled out but the breadth of the deliverable across wiki/ and scripts/wiki/ exceeds mechanical scope."
   - plan_path: ".orchestrator/milestones/M012/archive/P03/T02-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: mechanical
+    confidence: high
+    rationale: "Authors one diagnostic script (scripts/diagnostics/wiki-giscus-config-check.sh) with full bash body verbatim including PASS/FAIL contract, --quiet/--help flags, and Bash 3.2 indirect-eval pattern — single-file, no judgment calls."
   - plan_path: ".orchestrator/milestones/M013/phases/P02/tasks/T01-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: standard
+    confidence: high
+    rationale: "Authors scripts/integrations/github-common.sh (multi-function library: orchestrator-id derivation, marker primitives, sidecar cache upsert, preflight stubs) plus the P02 fixture tree at tests/fixtures/m013-p02/ — multi-file deliverable spanning library + fixtures."
   - plan_path: ".orchestrator/milestones/M013/phases/P04/tasks/T03-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: standard
+    confidence: high
+    rationale: "Layers two additive passes onto github-sync.sh: rate-limit/auth-expiry detection (FR-16) with multi-rc-class diagnostics, and Tier 1 JSONL observability emission (FR-17); single-file edits but spans multiple gh subprocess shapes plus a shared helper in github-common.sh."
   - plan_path: ".orchestrator/milestones/M014/archive/P01/T02-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: mechanical
+    confidence: high
+    rationale: "Creates scripts/verify/spec-shape-lint.sh with full bash body verbatim, derived-from-template required-section list, and named exit codes — single-file deliverable with the linter behavior fully specified."
   - plan_path: ".orchestrator/milestones/M014/archive/P03/T02-classify-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: standard
+    confidence: medium
+    rationale: "Ships scripts/comments/classify.sh plus a four-class regex/heuristic ruleset, a dogfood-data capture file (planning-inputs/inbox-dogfood.md), an ambiguous-routing preset, and a verifier; the regex thresholds and confidence weights involve tuning judgment though the rules themselves are pinned by D023."
   - plan_path: ".orchestrator/milestones/M015/phases/P01/tasks/T01-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: mechanical
+    confidence: high
+    rationale: "Hard-deletes named files (extension.yml, .claude/commands/speckit.*.md, .specify/scripts/bash/, .specify/templates/commands/, six root templates) and creates four verify scripts whose bodies are quoted verbatim — pure mechanical removal with named gates."
   - plan_path: ".orchestrator/milestones/M015/phases/P03/tasks/T02-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: novel
+    confidence: medium
+    rationale: "Reframes five primary documents (README.md, CLAUDE.md, references/architecture.md, references/installation.md, docs/getting-started.md) plus appends a CHANGELOG entry — establishing a new replacement narrative requires judgment per file about how to recompose standalone framing without spec-kit-extension language."
   - plan_path: ".orchestrator/milestones/M016/phases/P01/tasks/T02-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: mechanical
+    confidence: high
+    rationale: "Single-file edit to commands/auto.md (remove --completed_at line from the milestone write-summary example, add a guidance note) plus a verify script with full body — exact replacement text quoted, no judgment calls."
   - plan_path: ".orchestrator/milestones/M016/phases/P03/tasks/T04-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: standard
+    confidence: high
+    rationale: "Creates 11 verify scripts under scripts/verify/ that each exercise a specific aspect of anti-pattern-lint.sh; each script body is given verbatim, but the deliverable's 11-file breadth places it past mechanical's ≤3-file ceiling."
   - plan_path: ".orchestrator/milestones/M018/phases/P01/tasks/T01-grammar-contract-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: novel
+    confidence: medium
+    rationale: "Authors references/compression-grammar.md as a versioned per-tier contract for conversus-strict review — design-artifact authoring where reviewers will dispute modeling assumptions on paper; structure is dictated but the technical contract composition (preserved-pattern catalogue, plausibility argument, marker grammar ABNF) is design judgment."
   - plan_path: ".orchestrator/milestones/M018/phases/P03/tasks/T02-cache-prune-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: mechanical
+    confidence: high
+    rationale: "One utility script (scripts/util/cache-prune.sh) with --max-age duration parser, mtime-based prune walk, --dry-run flag, and SUMMARY line — full body given verbatim with AP-009 compliance noted; single-file mechanical."
   - plan_path: ".orchestrator/milestones/M018/phases/P07/tasks/T01-fixture-corpus-and-parity-runner-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: standard
+    confidence: medium
+    rationale: "Ships a fixture corpus tree (three fixtures with per-fixture configs and inputs), a runtime parity runner (scripts/diagnostics/m018-runtime-parity.sh), and a fixture-staging helper — multi-file scope and design judgment in the fixture shapes (what triggers each tier under test)."
   - plan_path: ".orchestrator/milestones/M019/phases/P01/tasks/T01-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: standard
+    confidence: high
+    rationale: "Creates scripts/lib/pricing.sh (8+ functions: pricing_file_path, pricing_lookup_rates, pricing_estimate_cost_usd, chars_to_tokens_quartile, etc.) plus scripts/verify/m019-schema.sh JSONL validator — multi-function library + validator across emitter-internal subsystem."
   - plan_path: ".orchestrator/milestones/M019/phases/P00/tasks/T03-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: standard
+    confidence: medium
+    rationale: "Modifies generate-permissions.sh to emit sentinel keys plus rewrites the MODE=overwrite branch in write-permissions.sh to sentinel-scoped semantics; adds an additivity verifier — the sentinel-design choice (_generated_start/_generated_end pair as JSON keys) involves design judgment though the implementation is then explicit."
   - plan_path: ".orchestrator/milestones/M020/phases/P01/tasks/T01-schema-evolution-gate-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: mechanical
+    confidence: medium
+    rationale: "Three text-only deliverables (D-row append in DECISIONS.md, knowledge/conventions/MEM031.md schema-evolution note, KNOWLEDGE-INDEX.md row) — content load-bearing tokens prescribed verbatim, but composition of the prose around the load-bearing tokens has minor judgment latitude."
   - plan_path: ".orchestrator/milestones/M020/phases/P03/tasks/T02-graduate-cluster-extension-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: standard
+    confidence: medium
+    rationale: "Extends scripts/knowledge/graduate.sh in place with --cluster and --reject flag paths, multi-entry atomicity (drift gate + deterministic write order), archived_into back-references, decision_history append, and JSONL emission — single-file but the cluster-atomicity semantics and reject-path divergence require careful sequencing."
   - plan_path: ".orchestrator/milestones/M021/phases/P01/tasks/T01-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: mechanical
+    confidence: high
+    rationale: "Creates scripts/util/with-env.sh wrapper plus scripts/verify/m021-p01-with-env.sh gate — both bodies quoted verbatim, KEY=VALUE parser shape spelled out, exit codes named; two-file mechanical deliverable."
   - plan_path: ".orchestrator/milestones/M021/phases/P03/tasks/T03-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: mechanical
+    confidence: high
+    rationale: "Three explicit edits: 9-entry allow-list widening in .claude/settings.json (enumerated verbatim), PreToolUse hook registration block (full JSON given), and the 'Allowed invocation shapes' subsection appended to section-handlers.sh's constraints branch (block content quoted verbatim)."
   - plan_path: ".orchestrator/milestones/M024/archive/P01/T01-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: mechanical
+    confidence: high
+    rationale: "Authors templates/intake-proposal.md — frontmatter key list pinned in exact order (22 keys), body section headings pinned, {{placeholder}} syntax noted; single-file template with no shell logic and a fully specified shape."
   - plan_path: ".orchestrator/milestones/M024/archive/P02/T02-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: mechanical
+    confidence: high
+    rationale: "Single-file reader (scripts/intake/m014-manifest-read.sh) with --spec-path / --specs-dir CLI surface, six-line stdout output contract, probe-failure shape, and exit-code mapping (2/3 distinct) — all spelled out verbatim."
   - plan_path: ".orchestrator/milestones/M026/archive/P01/T01-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: novel
+    confidence: medium
+    rationale: "fs-inspects two conversus trees row-by-row to author the parity matrix .orchestrator/milestones/M026/M026-CONVERSUS-PARITY.md — investigation-shaped task: read paid and OSS source files, form per-row Verified verdicts from a fixed vocabulary, fold in smoke-test confirmations; the deliverable is a research artifact not a code change."
   - plan_path: ".orchestrator/milestones/M026/archive/P03/T02-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: standard
+    confidence: medium
+    rationale: "Six in-place doc rewrites across commands/ and references/ surfaces (revise-in-place posture per AD-7) plus a verifier (m026-p03-doc-surface-coverage.sh); insertion targets named with line numbers and replacement text given, but narrative composition per surface requires editorial judgment."
   - plan_path: ".orchestrator/milestones/M027/archive/P01/T01-cost-estimator-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: novel
+    confidence: medium
+    rationale: "Designs the predictive cost-estimator surface (scripts/engine/cost-estimate.sh) — per-tier overhead and output-token constants are explicitly 'tuned-by-eye' against M019 baseline with a +/-20% disclaimer (D027), output format and Goodhart cost+quality pairing are design choices about what the predictive surface should expose to operators."
   - plan_path: ".orchestrator/milestones/M027/archive/P02/T03-predictive-surface-PLAN.md"
-    character: TBD
-    confidence: TBD
-    rationale: TBD
+    character: mechanical
+    confidence: high
+    rationale: "Creates scripts/dispatch/predictive-surface.sh (sourceable + CLI) with explicit suppression-matrix branches (--yes / ORCHESTRATOR_AUTO=1 / --no-predict / config flag / quick tier) plus a documentation insertion in commands/dispatch.md at a named attach point — both deliverables fully specified."

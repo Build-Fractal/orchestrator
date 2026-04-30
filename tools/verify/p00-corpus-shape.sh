@@ -9,9 +9,9 @@
 #   5. Every entry's immediately-following lines carry the four required
 #      keys (`character`, `confidence`, `rationale`).
 #   6. Vocabulary check: every `character` is one of
-#      `mechanical|standard|novel|TBD`; every `confidence` is one of
-#      `high|medium|low|TBD`; every `rationale` value is non-empty
-#      (TBD allowed at T01-close, tightened by T02/T03 verifiers).
+#      `mechanical|standard|novel`; every `confidence` is one of
+#      `high|medium|low`; every `rationale` value is non-empty.
+#      (Strict post-T02 — TBD is rejected. T01-close lenience retired.)
 #
 # Bash 3.2 compatible. AD-19 single-script-file shape.
 # Override fixture path via $1.
@@ -135,16 +135,16 @@ ${awk_violations}"
 fi
 
 # ---------- Check 6: vocabulary checks ----------
-# character: mechanical|standard|novel|TBD
-# confidence: high|medium|low|TBD
-# rationale: non-empty (TBD allowed)
+# character: mechanical|standard|novel  (strict — TBD rejected)
+# confidence: high|medium|low            (strict — TBD rejected)
+# rationale: non-empty
 
 vocab_violations=$(awk '
   BEGIN { v = 0 }
   /^    character:/ {
     val = $2
     gsub(/[",]/, "", val)
-    if (val != "mechanical" && val != "standard" && val != "novel" && val != "TBD") {
+    if (val != "mechanical" && val != "standard" && val != "novel") {
       printf "bad character: %s\n", $0
       v = v + 1
     }
@@ -153,7 +153,7 @@ vocab_violations=$(awk '
   /^    confidence:/ {
     val = $2
     gsub(/[",]/, "", val)
-    if (val != "high" && val != "medium" && val != "low" && val != "TBD") {
+    if (val != "high" && val != "medium" && val != "low") {
       printf "bad confidence: %s\n", $0
       v = v + 1
     }

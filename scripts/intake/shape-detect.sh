@@ -84,6 +84,24 @@ if [ "$structural" -gt 0 ] || [ "$words" -ge 81 ]; then
   exit 0
 fi
 
+# Tier A+: 30-80 words, zero structural markers (FR-6, AD-16 grounded).
+# Empirical boundary documented in tests/m031-acceptance/fixtures/FIXTURE-PROVENANCE.md.
+# Insertion point: AFTER the structural-marker-fragment branch and BEFORE
+# the idea branch. The fragment branch already claimed structural>0 OR
+# words>=81; the idea branch claims words<=10; the paragraph default
+# claims the 11-29 word band. Tier A+ takes the uninstantiated middle
+# band: 30 <= words <= 80 with zero structural markers.
+if [ "$structural" -eq 0 ] && [ "$words" -ge 30 ] && [ "$words" -le 80 ]; then
+  conf="high"
+  # Low-confidence sub-case: word-count near the boundary edges.
+  if [ "$words" -le 32 ] || [ "$words" -ge 78 ]; then
+    conf="low"
+  fi
+  echo "input_shape=tier_a_plus"
+  echo "shape_classification=$conf"
+  exit 0
+fi
+
 # Idea: word count <= 10.
 if [ "$words" -le 10 ]; then
   conf="high"

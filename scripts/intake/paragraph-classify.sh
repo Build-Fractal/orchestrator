@@ -52,6 +52,16 @@ if [ "$tier_c_markers" -eq 1 ] || [ "$fr_bullets" -ge 3 ]; then
   exit 0
 fi
 
+# Tier A+ recognition (FR-6, AD-16): paragraphs in the 30-80 word band
+# with zero structural markers are `tier_a_plus` candidates per
+# shape-detect.sh's verdict surface. paragraph-classify.sh runs as a
+# sub-classifier on already-paragraph-classified inputs (M024 contract);
+# the M031 P02 router (T04) consumes shape-detect.sh's `tier_a_plus`
+# verdict directly and skips paragraph-classify.sh entirely on the
+# Tier A+ branch. The empirical heuristic boundary is documented in
+# tests/m031-acceptance/fixtures/FIXTURE-PROVENANCE.md. This file's
+# Tier B branch (31-80 words) is the legacy paragraph-tier mapping and
+# stays byte-equal pre/post per the M031 P02 T01 additivity constraint.
 if [ "$words" -ge 31 ] && [ "$words" -le 80 ]; then
   echo "scope_tier=B"
   echo "decomposition=single-phase"

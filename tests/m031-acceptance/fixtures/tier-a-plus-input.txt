@@ -1,0 +1,6 @@
+Extend the dispatch build-context script with two additive flags so
+callers can request a quick profile and a meta sidecar file in one
+invocation. Wire a direct-mode short circuit when a task plan is supplied
+and emit a five key JSON sidecar with mem count, total tokens, profile,
+compression applied, and snip applied. Ship three shape verifiers under
+the tools verify directory.

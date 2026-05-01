@@ -6,6 +6,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This pr
 
 ## [Unreleased]
 
+### Changed (M031 — right-sized entry)
+
+- Compound behavioral change: `auto_proceed` config default flips from `false` to `true`, AND Quick-profile dispatches now inject knowledge + compression unconditionally (the pre-M031 `commands/dispatch.md:21` skip branch is gone). Operators upgrading from pre-M031 see both changes simultaneously on first post-M031 dispatch.
+- New config knob `quick_knowledge_token_budget` (default 800 tokens) tunes the Quick-profile knowledge ceiling; M018 tier-2 snip enforces it as an advisory ceiling per AD-13.
+- New config knob `entry_routing_confidence_floor` (default 0.7) gates the `orchestrator:do <task>` universal-entry routing; verdicts below the floor produce an explicit Tier A vs Tier B prompt rather than a silent guess.
+- Recovery: operators who prefer the pre-M031 auto-proceed behavior should add an explicit `auto_proceed: false` line to their `.orchestrator/config.yml`.
+
 ### Changed
 
 - Task plan filename convention canonicalized to `T##-<slug>-PLAN.md` in `commands/plan-phase.md`. The no-slug form `T##-PLAN.md` remains accepted by every discovery glob and downstream tooling — historical milestones are unchanged. Planners producing new task plans should use the slug form for readability and sibling-symmetry with `T##-<slug>-PAYLOAD.md` / `T##-<slug>-SUMMARY.md`. (Bug H)

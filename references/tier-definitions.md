@@ -15,19 +15,21 @@ Tier classification happens automatically during `speckit.orchestrator.evaluate`
 
 **When it applies**: The entire feature fits in approximately one context window. All SDD steps run inline with minimal context switching. The work is one task or a few very small tasks.
 
+`.orchestrator/` (config, knowledge, integrations) is always present in any orchestrator-installed project; only `.orchestrator/milestones/M###/` scaffolding is conditional on Tier B/C. Tier A invocations read knowledge and reuse the project's compression layer — they just skip the milestone-tree ceremony.
+
 ### What's Included
 
-- The host runtime's native SDD workflow (specify → clarify → plan → tasks → implement, invoked via the runtime's own commands)
-- Zero additional files, directories, or ceremony
-- Direct routing to the host runtime's native workflow with no orchestrator overhead
+- Single dispatch with knowledge + compression via the Quick profile (M031: `build-context.sh` always runs)
+- The host runtime's native SDD workflow remains available (specify → clarify → plan → tasks → implement, invoked via the runtime's own commands) when the operator prefers
+- Quick-profile knowledge injection (1-hop touched-file hits) and the M018 compression pipeline (filter + Tier 1/2 caveman-style compaction) — both unconditional per M031
 
 ### What's Excluded
 
-- Everything orchestrator — no state machine, no roadmap, no dispatch, no summaries
-- No `.orchestrator/` directory created
-- No orchestrator commands available
-- No execution log, decisions register, or knowledge file
-- No verification ladder (standard host-runtime verification applies)
+- No state machine progression, no roadmap, no per-milestone summaries
+- No `.orchestrator/milestones/M###/` directory created
+- No autonomous loop, no consolidation, no boundary-map ceremony
+- No execution log per milestone (the project-level `.orchestrator/observability/` records remain, but no milestone-grain `unit_close` series)
+- No verification ladder beyond the dispatch's own Quick-profile gates
 
 ### State Machine
 

@@ -24,6 +24,12 @@ budget_enforcement: advisory    # advisory (warn only) | enforced (hard stop)
 # Set to false project-wide to disable the fast-path entirely (every
 # proposal halts at the approval gate). Per AD-1 there is no per-invocation
 # CLI flag — this is a project-config-only knob (#Q-7).
+#
+# M031 (right-sized entry, 2026-05-01) flipped this default from false
+# to true and made Quick-profile knowledge injection unconditional. Set
+# quick_knowledge_token_budget below to tune the Quick-profile knowledge
+# ceiling. Operators who prefer the pre-M031 behavior should add an
+# explicit `auto_proceed: false` line to their .orchestrator/config.yml.
 auto_proceed: true              # true (default) | false
 
 # Autonomy permission generation (P07 — FR-1)
@@ -132,3 +138,9 @@ compression:
   efficiency_footer:
     enabled: true                 # M018/P05/T02 — compression line in efficiency footer.
   regression_floor: 0.347         # M018/P05/T02 — SC-9 P00-calibrated savings-ratio floor.
+
+# M031 — Right-sized entry (knowledge + compression unconditional, Tier A+ flow,
+# universal entry). Knobs pinned by P00 empirical baseline; AD-5 / OQ-4 / AD-20.
+quick_knowledge_token_budget: 800            # FR-5 / AD-5 — advisory ceiling for Quick-profile knowledge inject; M018 tier-2 snip enforces.
+entry_routing_confidence_floor: 0.7          # FR-11 / OQ-4 — universal-entry classifier confidence below which the operator is prompted Tier A vs Tier B.
+tier_a_plus_prompt_summary_lines: 8          # AD-20 — number of leading lines of research.md rendered inline in the Tier A+ pre-plan approval prompt.

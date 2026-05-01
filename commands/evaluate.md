@@ -103,7 +103,7 @@ Apply the tier classification criteria from `references/tier-definitions.md`:
 - Fits in approximately one context window
 - One task or a few very small tasks
 - All SDD steps run inline with minimal context switching
-- **Result**: No orchestrator overhead — route directly to standard spec-kit commands
+- **Result**: Single dispatch with knowledge + compression via the Quick profile (M031: `build-context.sh` always runs; the Quick profile scopes traversal to 1-hop touched-file hits)
 
 ### Tier B — One SDD Flow, Multiple Contexts
 
@@ -135,9 +135,9 @@ Based on the classified tier:
 
 ### Tier A Result
 
-- Report the classification: "Tier A — Single Context. Routing to standard spec-kit."
-- Do NOT create any orchestrator directory structure (FR-003)
-- Do NOT create any additional files — exit and let the developer use standard spec-kit commands directly
+- Report the classification: "Tier A — Single Context. Routing via the Quick profile."
+- Tier A invokes `orchestrator:dispatch` with the Quick profile (knowledge + compression unconditional per M031). `.orchestrator/` (config, knowledge, integrations) is always present; only `.orchestrator/milestones/M###/` scaffolding is conditional on Tier B/C.
+- Do not create per-milestone orchestrator artifacts (no `M###-EVALUATION.md`, no `milestones/M###/` tree). The dispatch payload is assembled by `scripts/dispatch/build-context.sh --profile=quick` and handed to the agent runtime directly.
 
 ### Tier B or C Result
 

@@ -32,6 +32,86 @@ _EFFICIENCY_FOOTER_SH_SOURCED=1
 _EFF_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 _EFF_PROJECT_ROOT="$(cd "$_EFF_SCRIPT_DIR/../.." && pwd)"
 
+# M031/P04/T03 — AD-19 QUICK_BUDGET_DRIFT informational warning.
+#
+# Reads payload_breakdown JSONL records (knowledge_section_tokens field,
+# AD-11 sidecar schema from M031/P01) and, when the rolling median of
+# knowledge_section_tokens across the most-recent 7 Quick-profile dispatches
+# exceeds quick_knowledge_token_budget * 1.1, emits one informational JSONL
+# record carrying the literal substring QUICK_BUDGET_DRIFT. Non-blocking;
+# always returns 0; preserves the script's existing exit-code contract.
+#
+# Test-only seam: ORCH_EFFICIENCY_FOOTER_INPUT env override resolves the
+# JSONL stream path (acceptance fixture in tests/m031-acceptance/). When
+# unset, the production path under .orchestrator/observability/ is used.
+
+# m031_quick_budget — resolve quick_knowledge_token_budget via the standard
+# 4-layer fallback: env-var implicit / .orchestrator/config.yml / template
+# default / hardcoded P00 default 800. Mirrors the M031/P02/P03 config-knob
+# resolution pattern. Bash 3.2 compatible.
+m031_quick_budget() {
+  local cfg_path="${ORCH_CONFIG_PATH:-$_EFF_PROJECT_ROOT/.orchestrator/config.yml}"
+  local val
+  if [ -f "$cfg_path" ]; then
+    val=$(grep -E '^quick_knowledge_token_budget:' "$cfg_path" | head -n 1 | awk '{print $2}')
+    if [ -n "$val" ]; then
+      printf '%s\n' "$val"
+      return 0
+    fi
+  fi
+  local tpl_path="$_EFF_PROJECT_ROOT/templates/orchestrator-config-default.yml"
+  if [ -f "$tpl_path" ]; then
+    val=$(grep -E '^quick_knowledge_token_budget:' "$tpl_path" | head -n 1 | awk '{print $2}')
+    if [ -n "$val" ]; then
+      printf '%s\n' "$val"
+      return 0
+    fi
+  fi
+  printf '800\n'
+}
+
+# m031_quick_window_median — median knowledge_section_tokens across the most
+# recent 7 quick-profile records in the JSONL stream at $1. Emits empty
+# stdout when the window holds fewer than 7 quick records (AD-19 trigger
+# does not fire on a half-full window). Bash 3.2 compatible.
+m031_quick_window_median() {
+  local input="$1"
+  if [ ! -f "$input" ]; then
+    return 0
+  fi
+  local tmp_quick
+  tmp_quick=$(mktemp)
+  grep -F '"profile":"quick"' "$input" 2>/dev/null | tail -n 7 >"$tmp_quick" || true
+  local count
+  count=$(wc -l <"$tmp_quick" | awk '{print $1}')
+  if [ "$count" -lt 7 ]; then
+    rm -f "$tmp_quick"
+    return 0
+  fi
+  local median
+  median=$(grep -oE '"knowledge_section_tokens":[0-9]+' "$tmp_quick" | awk -F: '{print $2}' | sort -n | sed -n '4p')
+  rm -f "$tmp_quick"
+  printf '%s\n' "$median"
+}
+
+# m031_quick_budget_drift_check — emit one JSONL record carrying the
+# QUICK_BUDGET_DRIFT literal when median > budget * 1.1; silent otherwise.
+# Always returns 0 (informational; never gates exit). Bash 3.2 compatible.
+m031_quick_budget_drift_check() {
+  local input="$1"
+  local budget median threshold
+  budget=$(m031_quick_budget)
+  median=$(m031_quick_window_median "$input")
+  if [ -z "$median" ]; then
+    return 0
+  fi
+  threshold=$(awk -v b="$budget" 'BEGIN{printf "%d\n", b * 11 / 10}')
+  if [ "$median" -gt "$threshold" ]; then
+    printf '{"warning":"QUICK_BUDGET_DRIFT","window":7,"median":%s,"budget":%s,"threshold":%s}\n' "$median" "$budget" "$threshold"
+  fi
+  return 0
+}
+
 # efficiency_footer_render <milestone-or-empty> <quiet-flag>
 #   When <quiet-flag> = 1, emits zero stdout (and returns 0). This is the
 #   load-bearing CON-3/SC-3 invariant -- the T02 baseline fixture + T04
@@ -255,5 +335,20 @@ if [ "${BASH_SOURCE[0]:-$0}" = "$0" ]; then
   fi
 
   efficiency_footer_render "$MILESTONE" "$QUIET"
+
+  # M031/P04/T03 — AD-19 QUICK_BUDGET_DRIFT informational warning.
+  # Resolution: env override ORCH_EFFICIENCY_FOOTER_INPUT first, then the
+  # canonical .orchestrator/observability/ payload_breakdown JSONL stream.
+  # Suppressed when --quiet is in effect (preserves the CON-3/SC-3
+  # byte-identity contract that gates zero-stdout under quiet).
+  if [ "$QUIET" -eq 0 ]; then
+    if [ -n "${ORCH_EFFICIENCY_FOOTER_INPUT:-}" ]; then
+      INPUT_PATH="$ORCH_EFFICIENCY_FOOTER_INPUT"
+    else
+      INPUT_PATH="$_EFF_PROJECT_ROOT/.orchestrator/observability/payload_breakdown.jsonl"
+    fi
+    m031_quick_budget_drift_check "$INPUT_PATH"
+  fi
+
   exit 0
 fi

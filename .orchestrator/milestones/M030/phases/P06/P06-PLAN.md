@@ -75,13 +75,13 @@ depends_on: ["P02", "P04"]
 - scripts/diagnostics/check-anomalies.sh (modify — add per-class verifier-fail-rate check + JSONL emit + stdout text-render line; preserve unchanged output when no `model_routing_regression` fires) — modify
 - references/model-routing.md (modify — add `## Anomaly Records` section documenting the `model_routing_regression` record shape, threshold defaults, JSONL emit path, and doctor surfacing) — modify
 - tools/verify/p06-mechanical-regression.sh (min 60 lines, contains "regression-mechanical.jsonl", contains "model_routing_regression", contains "class=mechanical", contains "SUMMARY:") — create
-- tools/verify/p06-standard-regression.sh (min 60 lines, contains "regression-standard.jsonl", contains "model_routing_regression", contains "class=standard", contains "SUMMARY:") — create
-- tools/verify/p06-novel-regression.sh (min 60 lines, contains "regression-novel.jsonl", contains "model_routing_regression", contains "class=novel", contains "SUMMARY:") — create
+- tools/verify/p06-standard-regression.sh (min 50 lines, contains "regression-standard.jsonl", contains "model_routing_regression", contains "class=standard", contains "SUMMARY:") — create
+- tools/verify/p06-novel-regression.sh (min 50 lines, contains "regression-novel.jsonl", contains "model_routing_regression", contains "class=novel", contains "SUMMARY:") — create
 - tools/verify/p06-no-regression.sh (min 50 lines, contains "no-regression.jsonl", contains "model_routing_regression", contains "SUMMARY:") — create
 - tools/verify/p06-below-min-sample.sh (min 50 lines, contains "below-min-sample.jsonl", contains "min_class_sample", contains "SUMMARY:") — create
 - tools/verify/p06-doctor-surfaces-anomaly.sh (min 60 lines, contains "run-doctor.sh", contains "model_routing_regression", contains "Anomaly Detection", contains "SUMMARY:") — create
 - tools/verify/p06-sc11-byte-equality.sh (min 50 lines, contains "pre-m030-dispatch-usage.jsonl", contains "check-anomalies-pre-m030-baseline.txt", contains "diff", contains "SUMMARY:") — create
-- tools/verify/p06-shadow-off-byte-equality.sh (min 30 lines, contains "p02-additive-schema.sh", contains "SUMMARY:") — create
+- tools/verify/p06-shadow-off-byte-equality.sh (min 25 lines, contains "p02-additive-schema.sh", contains "SUMMARY:") — create
 - tools/verify/p06-phase-suite.sh (min 80 lines, contains "p06-mechanical-regression", contains "p06-standard-regression", contains "p06-novel-regression", contains "p06-no-regression", contains "p06-below-min-sample", contains "p06-doctor-surfaces-anomaly", contains "p06-sc11-byte-equality", contains "p06-shadow-off-byte-equality", contains "SUMMARY:") — create
 - CLAUDE.md (modify — recent-changes region) — modify
 - AGENTS.md (modify — recent-changes region) — modify

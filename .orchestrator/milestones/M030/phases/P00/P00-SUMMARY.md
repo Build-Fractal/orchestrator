@@ -11,7 +11,7 @@ requires:
 affects:
   - "P01"
 key_files:
-  - "tests/fixtures/m030-classifier-corpus/labels.yml,tests/fixtures/m030-classifier-corpus/SELECTION-NOTES.md,tools/verify/p00-corpus-shape.sh,tools/verify/p00-plans-exist.sh,tools/verify/p00-class-coverage.sh,tests/fixtures/m030-classifier-corpus/README.md,tools/verify/p00-d-a4-independence.sh,tools/verify/p00-readme-shape.sh,tools/verify/p00-phase-suite.sh"
+  - "tests/fixtures/m030-classifier-corpus/labels.yml,tools/verify/p00-corpus-shape.sh,tools/verify/p00-plans-exist.sh,tools/verify/p00-class-coverage.sh,tests/fixtures/m030-classifier-corpus/README.md,tools/verify/p00-d-a4-independence.sh,tools/verify/p00-readme-shape.sh,tools/verify/p00-phase-suite.sh"
 key_decisions:
   - "D-A4 (independence-by-construction: classifier labels predate classifier code on disk); closed-milestone-only sourcing (in-flight bias guard); 40-plan floor with provisional class-diversity intent,D-A4 (mechanical independence preserved — classify-task.sh STILL absent during T02 labeling); rubric application per-plan with judgment,no automated pre-pass,D-A4-independence-by-absence-during-P00; phase-suite-straight-line-no-loops"
 patterns_established:

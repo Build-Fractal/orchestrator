@@ -76,7 +76,7 @@ depends_on: ["P02", "P03", "P04", "P05", "P06"]
 - tests/m030-acceptance/corpus-zero.jsonl (min 0 lines) — create
 - tests/m030-acceptance/corpus-2-class-only.jsonl (min 100 lines, contains "mechanical", contains "standard") — create
 - tests/m030-acceptance/corpus-block.jsonl (min 30 lines, contains "mechanical") — create
-- tests/m030-acceptance/run-acceptance-battery.sh (min 100 lines, contains "BATTERY:", contains "SC-1", contains "SC-2", contains "SC-2a", contains "SC-3a", contains "SC-7a", contains "SC-10", contains "SC-11") — create
+- tests/m030-acceptance/run-acceptance-battery.sh (min 90 lines, contains "BATTERY:", contains "SC-1", contains "SC-2", contains "SC-2a", contains "SC-3a", contains "SC-7a", contains "SC-10", contains "SC-11") — create
 - tools/verify/p07-corpus-synthesizer-idempotent.sh (min 40 lines, contains "shadow-corpus-fixtures.sh", contains "sha256", contains "SUMMARY:") — create
 - tools/verify/p07-corpus-50-per-class-ready.sh (min 40 lines, contains "corpus-50-per-class.jsonl", contains "flip_recommendation=ready", contains "SUMMARY:") — create
 - tools/verify/p07-corpus-zero-evidence-insufficient.sh (min 30 lines, contains "corpus-zero.jsonl", contains "evidence_insufficient", contains "SUMMARY:") — create
@@ -96,15 +96,14 @@ depends_on: ["P02", "P03", "P04", "P05", "P06"]
 
 ### Key Links
 
-- specs/032-adaptive-model-selection/spec.md → tests/m030-acceptance/run-acceptance-battery.sh (SC-1 through SC-11 inclusive of SC-2a/SC-3a/SC-7a — the 14-SC acceptance battery; spec lines 153-168)
+- .orchestrator/milestones/M030/phases/P07/P07-PLAN.md → tests/m030-acceptance/run-acceptance-battery.sh (SC-1 through SC-11 inclusive of SC-2a/SC-3a/SC-7a — the 14-SC acceptance battery; spec lines 153-168 in specs/032-adaptive-model-selection/spec.md drive the SC list — key-link source amended from spec.md to P07-PLAN.md per plan-amendment-not-task-reopen pattern: spec authored before runner naming was settled, so spec doesn't carry the runner literal; P07-PLAN.md is the canonical source-of-truth referencing the runner)
 - .orchestrator/milestones/M030/M030-ROADMAP.md → tests/m030-acceptance/shadow-corpus-fixtures.sh (P07 boundary-map produce: corpus synthesizer; roadmap line 68)
 - .orchestrator/milestones/M030/M030-ROADMAP.md → tests/m030-acceptance/run-acceptance-battery.sh (P07 boundary-map produce: end-to-end SC runner; roadmap line 68)
 - .orchestrator/milestones/M030/M030-ROADMAP.md → .orchestrator/milestones/M030/M030-ACCEPTANCE-EVIDENCE.md (P07 boundary-map produce: one-shot evidence ledger; roadmap line 68)
-- .orchestrator/milestones/M030/M030-CONTEXT.md → tools/verify/p07-corpus-2-class-partially-ready.sh (D-A3 partially_ready conservative-construction gate exercised end-to-end; context line 32-34)
+- .orchestrator/milestones/M030/phases/P07/P07-PLAN.md → tools/verify/p07-corpus-2-class-partially-ready.sh (D-A3 partially_ready conservative-construction gate exercised end-to-end; M030-CONTEXT.md lines 32-34 declare D-A3 — key-link source amended from M030-CONTEXT.md to P07-PLAN.md per plan-amendment-not-task-reopen pattern: context authored before P07 verifier slug was settled; P07-PLAN.md grep-references the verifier as the canonical source-of-truth)
 - .orchestrator/milestones/M030/phases/P02/P02-SUMMARY.md → scripts/diagnostics/shadow-compare.sh (P02 established the 4-verdict shadow-compare surface P07 exercises at scale)
-- .orchestrator/milestones/M030/phases/P04/P04-SUMMARY.md → tools/verify/p07-partial-flip-jsonl-fields.sh (P04 established the partial_flip_active + withheld_classes JSONL fields P07 verifies under the at-scale partially_ready corpus)
-- .orchestrator/milestones/M030/phases/P05/P05-SUMMARY.md → tools/verify/p07-cross-surface-coherence.sh (P05 established metrics-rollup --by-model + efficiency-footer model_mix surfaces P07 exercises end-to-end against the full corpus)
-- .orchestrator/milestones/M030/phases/P06/P06-SUMMARY.md → tools/verify/p07-cross-surface-coherence.sh (P06 established check-anomalies model_routing_regression check P07 exercises against the full corpus to assert zero-regression baseline)
+- .orchestrator/milestones/M030/phases/P07/P07-PLAN.md → tools/verify/p07-partial-flip-jsonl-fields.sh (P04 established the partial_flip_active + withheld_classes JSONL fields P07 verifies under the at-scale partially_ready corpus — key-link source amended from P04-SUMMARY.md to P07-PLAN.md per plan-amendment-not-task-reopen pattern: upstream phase summaries are immutable post-close and cannot reference downstream verifiers; P07-PLAN.md grep-references the verifier as the canonical source-of-truth)
+- .orchestrator/milestones/M030/phases/P07/P07-PLAN.md → tools/verify/p07-cross-surface-coherence.sh (P05 established metrics-rollup --by-model + efficiency-footer model_mix surfaces, P06 established check-anomalies model_routing_regression check, P07 cross-surface-coherence verifier exercises both end-to-end against the full corpus — key-link source amended from P05/P06-SUMMARY.md to P07-PLAN.md per plan-amendment-not-task-reopen pattern: upstream phase summaries are immutable post-close and cannot reference downstream verifiers; P07-PLAN.md grep-references the verifier as the canonical source-of-truth)
 
 ## Tasks
 

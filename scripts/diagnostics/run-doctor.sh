@@ -16,6 +16,56 @@ CONFIG_CHECK=0
 NO_ANOMALY=0
 ROUTING_TABLE_FLAG=""
 
+# M031/P04/T02: AD-9 compound-change comms — resolve the active config path.
+# Test-only env override `ORCH_DOCTOR_CONFIG_PATH` lets the SC test point
+# doctor at fixture configs under a tmp scratch root; production callers do
+# NOT set the env var and the doctor falls back to the canonical resolution
+# (.orchestrator/config.yml under PROJECT_ROOT). The override is read at the
+# top of the resolution chain so it beats every fallback.
+if [ -n "${ORCH_DOCTOR_CONFIG_PATH:-}" ]; then
+  DOCTOR_CONFIG_PATH="$ORCH_DOCTOR_CONFIG_PATH"
+else
+  DOCTOR_CONFIG_PATH="$PROJECT_ROOT/.orchestrator/config.yml"
+fi
+
+# M031/P04/T02: AD-9 compound-change comms. Emits a one-time message
+# when the active config lacks quick_knowledge_token_budget (i.e. the
+# config predates M031). Detection by knob-absence is the simplest
+# invariant — no version field, no migration timestamp.
+m031_compound_change_check() {
+  # $1 config_path
+  local cfg="$1"
+  if [ ! -f "$cfg" ]; then
+    return 0
+  fi
+  if grep -q -F -- "quick_knowledge_token_budget" "$cfg"; then
+    return 0
+  fi
+  printf '\n'
+  printf 'M031 (right-sized entry) is active. Two behavioral changes since the\n'
+  printf 'last init of this project'\''s .orchestrator/config.yml:\n'
+  printf '\n'
+  printf '  1. auto_proceed default flipped from false to true. Dispatch loops\n'
+  printf '     now auto-proceed past green gates without operator confirmation.\n'
+  printf '  2. Quick-profile dispatches now inject knowledge + compression\n'
+  printf '     unconditionally (the pre-M031 skip-context-for-Quick shortcut is\n'
+  printf '     gone). Total task tokens drop because agents no longer rediscover\n'
+  printf '     context the knowledge graph already holds.\n'
+  printf '\n'
+  printf 'If you prefer the pre-M031 auto_proceed behavior, add this line to\n'
+  printf '.orchestrator/config.yml:\n'
+  printf '\n'
+  printf '    auto_proceed: false\n'
+  printf '\n'
+  printf 'To tune the knowledge ceiling, adjust quick_knowledge_token_budget\n'
+  printf 'in your config (default 800 tokens).\n'
+  printf '\n'
+  printf 'This message will not appear again once your .orchestrator/config.yml\n'
+  printf 'carries quick_knowledge_token_budget explicitly.\n'
+  printf '\n'
+  return 0
+}
+
 while [ $# -gt 0 ]; do
   case "$1" in
     --root) PROJECT_ROOT="$2"; shift 2 ;;
@@ -134,6 +184,11 @@ echo "=== Orchestrator Diagnostics ==="
 echo "Project root: $PROJECT_ROOT"
 echo "Date: $(date +%Y-%m-%d)"
 echo ""
+
+# M031/P04/T02: AD-9 compound-change comms (one-time message for pre-M031
+# configs lacking quick_knowledge_token_budget). Always returns 0 — purely
+# observational, does not affect health-check scoring or exit codes.
+m031_compound_change_check "$DOCTOR_CONFIG_PATH"
 
 run_check "Orphaned Artifacts" "$SCRIPT_DIR/check-orphaned.sh" "" "0"
 run_check "Stale Knowledge" "$SCRIPT_DIR/check-stale.sh" "" "0"

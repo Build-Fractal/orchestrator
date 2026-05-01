@@ -7,6 +7,14 @@
 # produces a scored health report, and appends results to doctor-history.jsonl.
 #
 # Bash 3.2 compatible (no associative arrays, no mapfile).
+#
+# Key links (M031/P04):
+#   - templates/orchestrator-config-default.yml (the doctor compares the
+#     active config against the template default to detect pre-M031
+#     projects -- see m031_compound_change_check below; absence of
+#     quick_knowledge_token_budget triggers the AD-9 compound-change
+#     message naming the auto_proceed flip + unconditional Quick
+#     injection + recovery path).
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

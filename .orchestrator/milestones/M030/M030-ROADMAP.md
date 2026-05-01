@@ -54,7 +54,7 @@ updated_at: "2026-04-29"
     - Produces: amended `scripts/diagnostics/metrics-rollup.sh` (`--by-model` flag, FR-15/SC-8); amended `scripts/diagnostics/efficiency-footer.sh` (`model_mix:` line, FR-16); amended `scripts/diagnostics/doctor.sh` (`--config-check` flag for routing-table syntax, FR-17/SC-9); `references/observability.md` schema documentation update (FR-19/CON-5 additive verification)
     - Consumes: P02 JSONL schema (`model_routed`, `model_used`); P01 `cost_rates:` SSOT; P01 routing-table syntax conventions
 
-- [ ] **P06**: Anomaly-driven regression detection — "Synthesizing 20 fixture dispatches per class with engineered verifier-fail rates and running `bash scripts/diagnostics/check-anomalies.sh` produces a `model_routing_regression` anomaly record when a class crosses the configured threshold; the anomaly surfaces through `orchestrator:doctor` per existing M027 conventions; existing anomaly checks are byte-identical when the new records are absent."
+- [x] **P06**: Anomaly-driven regression detection — "Synthesizing 20 fixture dispatches per class with engineered verifier-fail rates and running `bash scripts/diagnostics/check-anomalies.sh` produces a `model_routing_regression` anomaly record when a class crosses the configured threshold; the anomaly surfaces through `orchestrator:doctor` per existing M027 conventions; existing anomaly checks are byte-identical when the new records are absent."
   - Risk: low
   - Depends: P02, P04
   - Boundary Map:

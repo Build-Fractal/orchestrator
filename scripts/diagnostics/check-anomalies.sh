@@ -198,6 +198,114 @@ check_anomalies_render() {
   return 0
 }
 
+# M030/P06/T02 — model_routing_regression check (FR-18).
+#
+# Reads the milestone's execution-log.jsonl for shadow-on dispatch_usage
+# records carrying the additive `character` field (introduced by
+# dispatch-interface.sh under M030/P06/T02). Groups by character class.
+# Computes per-class pass-rate as:
+#   pass_rate = pass_count / sample_count
+#     pass_count   = records with escalation_count=0 AND escalation_reason=""
+#     sample_count = records with character=<C>
+# When sample_count >= min_class_sample AND pass_rate < pass_rate_thresh,
+# emits a `FLAGGED model_routing_regression class=<C> ...` line to stdout
+# AND appends a JSONL anomaly record to the configured emit path.
+#
+# Invariants:
+# - Idempotent stdout per input (timestamp lives on the JSONL append only).
+# - Read-only on execution-log.jsonl. Append-only on anomalies.jsonl.
+# - Exit 0 always (CON-5 never-abort, mirrors check_anomalies_render).
+# - Bash 3.2 compatible: parallel scalars, awk for parsing, no `declare -A`.
+# - MEM004 emitter-internal carve-out: pipes / $(...) / awk permitted.
+#
+# Args:
+#   $1 milestone-or-empty
+#   $2 pass-rate threshold (e.g. "0.5")
+#   $3 min-class-sample floor (e.g. "10")
+#   $4 jsonl emit path
+_ca_model_routing_regression_check() {
+  local milestone="$1"
+  local pass_rate_thresh="$2"
+  local min_class_sample="$3"
+  local jsonl_path="$4"
+  local log_path
+
+  local orch_root="${ORCHESTRATOR_ROOT:-$_CA_PROJECT_ROOT/.orchestrator}"
+  if [ -n "$milestone" ]; then
+    log_path="$orch_root/milestones/$milestone/execution-log.jsonl"
+  else
+    log_path="$orch_root/execution-log.jsonl"
+  fi
+
+  if [ ! -f "$log_path" ]; then
+    return 0
+  fi
+
+  local mech_total=0; local mech_pass=0
+  local std_total=0; local std_pass=0
+  local nov_total=0; local nov_pass=0
+
+  # Single-pass awk: per-class counters, full-quoted-token regex anchors to
+  # avoid cross-class substring leakage (e.g. "standard" containing "stand").
+  local awk_out
+  awk_out="$(awk '
+    BEGIN { mt=0; mp=0; st=0; sp=0; nt=0; np=0; }
+    /"record_type":"dispatch_usage"/ {
+      ch = "";
+      if (match($0, /"character":"mechanical"/)) ch = "mechanical";
+      else if (match($0, /"character":"standard"/)) ch = "standard";
+      else if (match($0, /"character":"novel"/)) ch = "novel";
+      else next;
+      pass = 0;
+      if (match($0, /"escalation_count":0/) && match($0, /"escalation_reason":""/)) pass = 1;
+      if (ch == "mechanical") { mt++; if (pass) mp++; }
+      if (ch == "standard")   { st++; if (pass) sp++; }
+      if (ch == "novel")      { nt++; if (pass) np++; }
+    }
+    END { printf "%d %d %d %d %d %d", mt, mp, st, sp, nt, np; }
+  ' "$log_path")"
+
+  set -- $awk_out
+  mech_total="$1"; mech_pass="$2"
+  std_total="$3"; std_pass="$4"
+  nov_total="$5"; nov_pass="$6"
+
+  local now
+  now="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+  _ca_emit_class_regression() {
+    local class="$1"
+    local total="$2"
+    local pass_count="$3"
+    if [ "$total" -lt "$min_class_sample" ]; then
+      return 0
+    fi
+    local pass_rate
+    pass_rate="$(awk -v p="$pass_count" -v t="$total" 'BEGIN { if (t == 0) { printf "0.00" } else { printf "%.2f", p / t } }')"
+    local below
+    below="$(awk -v r="$pass_rate" -v th="$pass_rate_thresh" 'BEGIN { if (r + 0 < th + 0) print "1"; else print "0" }')"
+    if [ "$below" != "1" ]; then
+      return 0
+    fi
+    local thresh_fmt
+    thresh_fmt="$(awk -v th="$pass_rate_thresh" 'BEGIN { printf "%.2f", th + 0 }')"
+    printf 'FLAGGED model_routing_regression class=%s class_pass_rate=%s sample=%d threshold=%s\n' \
+      "$class" "$pass_rate" "$total" "$thresh_fmt"
+    if [ -n "$jsonl_path" ]; then
+      mkdir -p "$(dirname "$jsonl_path")" 2>/dev/null || true
+      printf '{"record_type":"anomaly","kind":"model_routing_regression","class":"%s","class_pass_rate":%s,"class_sample":%d,"threshold":%s,"milestone":"%s","timestamp":"%s"}\n' \
+        "$class" "$pass_rate" "$total" "$thresh_fmt" "${milestone:-}" "$now" \
+        >> "$jsonl_path" 2>/dev/null || true
+    fi
+  }
+
+  _ca_emit_class_regression "mechanical" "$mech_total" "$mech_pass"
+  _ca_emit_class_regression "standard"   "$std_total"  "$std_pass"
+  _ca_emit_class_regression "novel"      "$nov_total"  "$nov_pass"
+
+  return 0
+}
+
 # CLI entry point — only when invoked as a script (not sourced).
 if [ "${BASH_SOURCE[0]:-$0}" = "$0" ]; then
   MILESTONE=""
@@ -208,17 +316,21 @@ if [ "${BASH_SOURCE[0]:-$0}" = "$0" ]; then
   CONFIG_DEFAULTS=""
   MULT_OVERRIDE=""
   FLOOR_OVERRIDE=""
+  PASS_RATE_THRESH_OVERRIDE=""
+  MIN_CLASS_SAMPLE_OVERRIDE=""
   while [ $# -gt 0 ]; do
     case "$1" in
-      --milestone)        MILESTONE="$2"; shift 2 ;;
-      --project)          PROJECT_FALLBACK=1; shift ;;
-      --no-anomaly)       NO_ANOMALY=1; shift ;;
-      --yes)              YES=1; shift ;;
-      --threshold)        MULT_OVERRIDE="$2"; shift 2 ;;
-      --sample-floor)     FLOOR_OVERRIDE="$2"; shift 2 ;;
-      --config-defaults)  CONFIG_DEFAULTS="$2"; shift 2 ;;
+      --milestone)            MILESTONE="$2"; shift 2 ;;
+      --project)              PROJECT_FALLBACK=1; shift ;;
+      --no-anomaly)           NO_ANOMALY=1; shift ;;
+      --yes)                  YES=1; shift ;;
+      --threshold)            MULT_OVERRIDE="$2"; shift 2 ;;
+      --sample-floor)         FLOOR_OVERRIDE="$2"; shift 2 ;;
+      --threshold-pass-rate)  PASS_RATE_THRESH_OVERRIDE="$2"; shift 2 ;;
+      --min-class-sample)     MIN_CLASS_SAMPLE_OVERRIDE="$2"; shift 2 ;;
+      --config-defaults)      CONFIG_DEFAULTS="$2"; shift 2 ;;
       --help|-h)
-        printf '%s\n' "Usage: check-anomalies.sh [--milestone <Mxxx>] [--project] [--no-anomaly] [--yes] [--threshold <multiplier>] [--sample-floor <N>] [--config-defaults <path>]"
+        printf '%s\n' "Usage: check-anomalies.sh [--milestone <Mxxx>] [--project] [--no-anomaly] [--yes] [--threshold <multiplier>] [--sample-floor <N>] [--threshold-pass-rate <float>] [--min-class-sample <N>] [--config-defaults <path>]"
         exit 0 ;;
       *) shift ;;
     esac
@@ -285,5 +397,30 @@ if [ "${BASH_SOURCE[0]:-$0}" = "$0" ]; then
   if [ "$PROJECT_FALLBACK" -eq 1 ]; then MILESTONE=""; fi
 
   check_anomalies_render "$MILESTONE" "$SUPPRESS" "$MULT" "$RETRY_THRESH" "$PASS_THRESH" "$FLOOR" "$COMPRESSION_FLOOR"
+
+  # M030/P06/T02 — model_routing_regression check (FR-18). Additive: emits
+  # zero stdout AND zero JSONL when no class crosses the threshold; the
+  # legacy anomaly block above is byte-untouched. Threshold defaults:
+  # pass-rate 0.50 floor + 10 min class sample (#Q-4 plan-phase decision).
+  # Suppressed alongside the legacy block when SUPPRESS=1 (--no-anomaly /
+  # --yes / ORCHESTRATOR_AUTO=1 / anomaly_check_enabled=false).
+  if [ "$SUPPRESS" -eq 0 ]; then
+    PASS_RATE_THRESH="$PASS_RATE_THRESH_OVERRIDE"
+    if [ -z "$PASS_RATE_THRESH" ] && [ -x "$_CA_PROJECT_ROOT/scripts/state/read-config.sh" ]; then
+      PASS_RATE_THRESH="$(bash "$_CA_PROJECT_ROOT/scripts/state/read-config.sh" model_routing_regression.pass_rate_threshold 2>/dev/null || true)"
+    fi
+    if [ -z "$PASS_RATE_THRESH" ] || [ "$PASS_RATE_THRESH" = "null" ]; then PASS_RATE_THRESH="0.5"; fi
+
+    MIN_CLASS_SAMPLE="$MIN_CLASS_SAMPLE_OVERRIDE"
+    if [ -z "$MIN_CLASS_SAMPLE" ] && [ -x "$_CA_PROJECT_ROOT/scripts/state/read-config.sh" ]; then
+      MIN_CLASS_SAMPLE="$(bash "$_CA_PROJECT_ROOT/scripts/state/read-config.sh" model_routing_regression.min_class_sample 2>/dev/null || true)"
+    fi
+    if [ -z "$MIN_CLASS_SAMPLE" ] || [ "$MIN_CLASS_SAMPLE" = "null" ]; then MIN_CLASS_SAMPLE="10"; fi
+
+    ANOMALIES_JSONL_PATH="${M030_ANOMALIES_JSONL_PATH:-${ORCHESTRATOR_ROOT:-$_CA_PROJECT_ROOT/.orchestrator}/anomalies.jsonl}"
+
+    _ca_model_routing_regression_check "$MILESTONE" "$PASS_RATE_THRESH" "$MIN_CLASS_SAMPLE" "$ANOMALIES_JSONL_PATH"
+  fi
+
   exit 0
 fi

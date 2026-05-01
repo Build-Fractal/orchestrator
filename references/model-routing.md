@@ -533,6 +533,92 @@ delegates to the doctor surface and asserts both well-formed
 path + lineno emitted to stdout) routing-table behavior holds at P05
 close.
 
+## Anomaly Records
+
+`scripts/diagnostics/check-anomalies.sh` emits a `model_routing_regression`
+anomaly when a class's verifier-fail rate over the rolling window crosses
+the configured threshold. The anomaly surfaces in two places:
+
+1. **Stdout text line** (consumed by `orchestrator:doctor`):
+
+   ```
+   FLAGGED model_routing_regression class=<C> class_pass_rate=<R> sample=<N> threshold=<T>
+   ```
+
+2. **JSONL record** appended to `.orchestrator/anomalies.jsonl` (or the
+   path passed via the `M030_ANOMALIES_JSONL_PATH` env):
+
+   ```json
+   {"record_type":"anomaly","kind":"model_routing_regression","class":"<C>","class_pass_rate":<R>,"class_sample":<N>,"threshold":<T>,"milestone":"<M###>","timestamp":"<ISO8601>"}
+   ```
+
+### Threshold defaults (#Q-4 plan-phase decision)
+
+- `pass_rate_threshold` = `0.50` — class triggers regression when its
+  rolling-window verifier-pass rate falls below 0.50.
+- `min_class_sample` = `10` — the per-class sample size floor; classes
+  with fewer records are silently skipped.
+
+Both defaults are overridable via `.orchestrator/config.yml`:
+
+```yaml
+model_routing_regression:
+  pass_rate_threshold: 0.50
+  min_class_sample: 10
+```
+
+CLI overrides also exist on `check-anomalies.sh` itself
+(`--threshold-pass-rate <float>` and `--min-class-sample <N>`); the CLI
+flag takes precedence over the config-file value, which takes precedence
+over the built-in default.
+
+Operators tuning these values after a milestone or two of live-routed
+data should consider raising `pass_rate_threshold` toward the empirically
+observed pass-rate floor for the runtime-default model — the defaults
+ship conservative.
+
+### Doctor surfacing
+
+The anomaly surfaces through `bash scripts/diagnostics/run-doctor.sh` via
+the existing "Anomaly Detection" advisory check (line 154-159 of
+`run-doctor.sh`). The section header reads `--- Anomaly Detection ---`
+followed by the legacy "Anomaly Detection (Tier 1 baseline)" block,
+followed by zero or more `FLAGGED model_routing_regression class=<C>`
+lines.
+
+The check is **advisory** — `run-doctor.sh` does NOT block on it (the
+`run_check` invocation passes `advisory=1`). This matches the existing
+M027 anomaly-check semantics.
+
+### Append-only invariant
+
+`.orchestrator/anomalies.jsonl` is append-only. `check-anomalies.sh`
+NEVER rewrites prior records. Operators acknowledging or dismissing an
+anomaly do so out-of-band (no UI primitive — the operator-noticed-fact
+convention from `references/observability.md` mirrors this).
+
+### Class derivation
+
+The per-class grouping reads the `character` field on shadow-on
+`dispatch_usage` records (additively introduced in M030/P06). Records
+without the `character` field (pre-P06 records, or records emitted in
+shadow-off mode) are silently skipped — they don't contribute to any
+class's sample count.
+
+### CON-2 / FR-19 / SC-11 contract
+
+When no class crosses the threshold (or when the input contains zero
+shadow-on records carrying `character=`), `check-anomalies.sh` emits
+ZERO additional stdout and appends ZERO JSONL records — preserving
+byte-equality with pre-M030 output. The mechanical gate is
+`tools/verify/p06-sc11-byte-equality.sh`.
+
+The dispatch-interface shadow-OFF emit branch is byte-untouched by the
+P06 amendment — the `character` field appears only when
+`M030_SHADOW_MODE=1 && CLAUDECODE=1` is satisfied. The mechanical gate
+is `tools/verify/p06-shadow-off-byte-equality.sh` (delegate-and-pass-through
+to `p02-additive-schema.sh`).
+
 ## See Also
 
 - `templates/model-routing.yml` — the SSOT this document describes.

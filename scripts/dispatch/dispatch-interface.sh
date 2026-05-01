@@ -236,6 +236,7 @@ _di_resolve_live_routing() {
   _DI_RESOLVED=1
 
   _DI_SHADOW_CONFIDENCE=""
+  _DI_SHADOW_CHARACTER=""
   _DI_SHADOW_ROUTED=""
   _DI_SHADOW_USED=""
   _DI_SHADOW_PARTIAL=""
@@ -264,6 +265,7 @@ _di_resolve_live_routing() {
   local _di_classifier_out _di_shadow_character
   _di_classifier_out="$(bash "$_DI_PROJECT_ROOT/scripts/dispatch/classify-task.sh" "$TASK_PLAN" 2>/dev/null)"
   _di_shadow_character="$(printf '%s\n' "$_di_classifier_out" | grep -E '^character=' | head -n 1 | sed 's/^character=//')"
+  _DI_SHADOW_CHARACTER="$_di_shadow_character"
   _DI_SHADOW_CONFIDENCE="$(printf '%s\n' "$_di_classifier_out" | grep -E '^confidence=' | head -n 1 | sed 's/^confidence=//')"
 
   # Resolve $model the same way the emitter does (runtime-default channel).
@@ -590,13 +592,14 @@ _di_emit_dispatch_usage() {
   # CLAUDECODE=1 — CC-only launch posture). When shadow is off, the helper
   # leaves _DI_SHADOW_* empty; the shadow-off printf branch is unaffected.
   local shadow_routed shadow_used shadow_partial shadow_withheld shadow_confidence
-  local shadow_override_source
+  local shadow_override_source shadow_character
   shadow_routed=""
   shadow_used=""
   shadow_partial=""
   shadow_withheld=""
   shadow_confidence=""
   shadow_override_source=""
+  shadow_character=""
   if [ "${M030_SHADOW_MODE:-0}" = "1" ] && [ "${CLAUDECODE:-0}" = "1" ]; then
     _di_resolve_live_routing
     shadow_confidence="${_DI_SHADOW_CONFIDENCE:-}"
@@ -605,6 +608,10 @@ _di_emit_dispatch_usage() {
     shadow_partial="${_DI_SHADOW_PARTIAL:-false}"
     shadow_withheld="${_DI_SHADOW_WITHHELD:-}"
     shadow_override_source="${_DI_SHADOW_OVERRIDE_SOURCE:-}"
+    shadow_character="${_DI_SHADOW_CHARACTER:-unknown}"
+    if [ -z "$shadow_character" ]; then
+      shadow_character="unknown"
+    fi
     # Disabled path: runtime-default channel — emitter's $model is the
     # authoritative source after pricing-lib resolution at line ~227.
     if [ "$shadow_override_source" = "disabled" ]; then
@@ -620,7 +627,7 @@ _di_emit_dispatch_usage() {
       # Shadow-on emit: pre-M030 fields + 4 P02 additive fields + P03 override_source
       # + P04/T03 escalation_count + escalation_reason (read from shell-scoped
       # parent variables; defaults applied if unset).
-      printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"%s","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":%s,"pricing_version":"%s","filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier2_savings_tokens":%d,"tier1_invocations":%d,"tier3_compression_savings_tokens":%d,"tier3_invocations":%d,"model":"%s","source":"estimate","emission_point":"dispatch-interface","timestamp":"%s","classifier_confidence":"%s","model_routed":"%s","model_used":"%s","partial_flip_active":%s,"withheld_classes":"%s","override_source":"%s","escalation_count":%d,"escalation_reason":"%s"}\n' \
+      printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"%s","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":%s,"pricing_version":"%s","filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier2_savings_tokens":%d,"tier1_invocations":%d,"tier3_compression_savings_tokens":%d,"tier3_invocations":%d,"model":"%s","source":"estimate","emission_point":"dispatch-interface","timestamp":"%s","classifier_confidence":"%s","model_routed":"%s","model_used":"%s","partial_flip_active":%s,"withheld_classes":"%s","override_source":"%s","escalation_count":%d,"escalation_reason":"%s","character":"%s"}\n' \
         "$UNIT_ID" "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" "$BACKEND" \
         "$input_tokens" "$output_tokens" "$cost_usd" \
         "$pricing_version" \
@@ -630,6 +637,7 @@ _di_emit_dispatch_usage() {
         "$shadow_confidence" "$shadow_routed" "$shadow_used" "$shadow_partial" "$shadow_withheld" \
         "$shadow_override_source" \
         "${escalation_count:-0}" "${escalation_reason:-}" \
+        "$shadow_character" \
         >> "$log_file" 2>/dev/null || {
         printf 'dispatch-interface.sh: dispatch_usage append failed on %s\n' "$log_file" >&2
         return 0
@@ -655,7 +663,7 @@ _di_emit_dispatch_usage() {
     if [ "${M030_SHADOW_MODE:-0}" = "1" ] && [ "${CLAUDECODE:-0}" = "1" ]; then
       # Shadow-on degradation emit: pre-M030 fields + 4 P02 additive fields + P03 override_source
       # + P04/T03 escalation_count + escalation_reason.
-      printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"%s","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":null,"pricing_version":"%s","filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier2_savings_tokens":%d,"tier1_invocations":%d,"tier3_compression_savings_tokens":%d,"tier3_invocations":%d,"pricing_warning":"%s","model":"%s","source":"estimate","emission_point":"dispatch-interface","timestamp":"%s","classifier_confidence":"%s","model_routed":"%s","model_used":"%s","partial_flip_active":%s,"withheld_classes":"%s","override_source":"%s","escalation_count":%d,"escalation_reason":"%s"}\n' \
+      printf '{"record_type":"dispatch_usage","unitId":"%s","milestone":"%s","phase":"%s","task":"%s","backend":"%s","input_tokens_estimate":%d,"output_tokens_estimate":%d,"estimated_cost_usd":null,"pricing_version":"%s","filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier2_savings_tokens":%d,"tier1_invocations":%d,"tier3_compression_savings_tokens":%d,"tier3_invocations":%d,"pricing_warning":"%s","model":"%s","source":"estimate","emission_point":"dispatch-interface","timestamp":"%s","classifier_confidence":"%s","model_routed":"%s","model_used":"%s","partial_flip_active":%s,"withheld_classes":"%s","override_source":"%s","escalation_count":%d,"escalation_reason":"%s","character":"%s"}\n' \
         "$UNIT_ID" "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" "$BACKEND" \
         "$input_tokens" "$output_tokens" \
         "$pricing_version" \
@@ -665,6 +673,7 @@ _di_emit_dispatch_usage() {
         "$shadow_confidence" "$shadow_routed" "$shadow_used" "$shadow_partial" "$shadow_withheld" \
         "$shadow_override_source" \
         "${escalation_count:-0}" "${escalation_reason:-}" \
+        "$shadow_character" \
         >> "$log_file" 2>/dev/null || {
         printf 'dispatch-interface.sh: dispatch_usage append failed on %s\n' "$log_file" >&2
         return 0

@@ -14,7 +14,7 @@
 set -euo pipefail
 
 # Valid config keys
-VALID_KEYS="default_tier verification_commands context_verbosity git_isolation dispatch_budget duration_budget budget_enforcement session_weight_limit auto_proceed efficiency_footer predictive_cost_surface anomaly_cost_multiplier anomaly_retry_threshold anomaly_pass_rate_threshold anomaly_check_enabled compression.efficiency_footer.enabled compression.regression_floor"
+VALID_KEYS="default_tier verification_commands context_verbosity git_isolation dispatch_budget duration_budget budget_enforcement session_weight_limit auto_proceed efficiency_footer predictive_cost_surface anomaly_cost_multiplier anomaly_retry_threshold anomaly_pass_rate_threshold anomaly_check_enabled compression.efficiency_footer.enabled compression.regression_floor model_routing_regression.pass_rate_threshold model_routing_regression.min_class_sample"
 
 # Defaults for file paths
 DEFAULTS_FILE=""
@@ -140,6 +140,44 @@ if [[ "$KEY" = "compression.efficiency_footer.enabled" ]] || [[ "$KEY" = "compre
       kf_get_compression_regression_floor "$_PROJECT_ROOT"
       ;;
   esac
+  exit 0
+fi
+
+# M030/P06/T02 — model_routing_regression.* nested keys live under the
+# `model_routing_regression:` block in `.orchestrator/config.yml`. Resolve
+# project-config only (mirrors the compression.* convention above). Falls
+# through to "null" when the block / sub-key is absent so callers apply
+# their built-in defaults.
+if [[ "$KEY" = "model_routing_regression.pass_rate_threshold" ]] || [[ "$KEY" = "model_routing_regression.min_class_sample" ]]; then
+  _MRR_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  _MRR_PROJECT_ROOT="$(cd "$_MRR_SCRIPT_DIR/../.." && pwd)"
+  _MRR_CFG="$_MRR_PROJECT_ROOT/.orchestrator/config.yml"
+  _mrr_val=""
+  if [[ -f "$_MRR_CFG" ]]; then
+    sub_key="${KEY#model_routing_regression.}"
+    _mrr_val="$(awk -v sk="$sub_key" '
+      BEGIN { in_block = 0 }
+      /^model_routing_regression:/      { in_block = 1; next }
+      in_block && /^[a-zA-Z_]/          { exit }
+      in_block && /^[[:space:]]+[a-z_]+:/ {
+        line = $0
+        sub(/^[[:space:]]+/, "", line)
+        split(line, kv, ":")
+        if (kv[1] == sk) {
+          val = kv[2]
+          gsub(/[[:space:]]/, "", val)
+          gsub(/[",]/, "", val)
+          print val
+          exit
+        }
+      }
+    ' "$_MRR_CFG" 2>/dev/null || true)"
+  fi
+  if [[ -n "$_mrr_val" ]]; then
+    echo "$_mrr_val"
+  else
+    echo "null"
+  fi
   exit 0
 fi
 

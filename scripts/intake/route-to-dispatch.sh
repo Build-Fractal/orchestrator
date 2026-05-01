@@ -188,6 +188,12 @@ _r_emit_unit_close() {
 #   sub-dispatch returns".
 #
 #   Returns 0 on success, non-zero on failure.
+#
+#   Key links (M031/P02 — phase-plan must-haves; the parameterized path
+#   below resolves to one of these three literal role templates):
+#     - templates/dispatch-role-research.md — Tier A+ research stage
+#     - templates/dispatch-role-plan.md     — Tier A+ plan stage
+#     - templates/dispatch-role-build.md    — Tier A+ build stage
 _r_dispatch_one_role() {
     _r_role="$1"
     _r_slug="$2"

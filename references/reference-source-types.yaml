@@ -1,0 +1,43 @@
+# references/reference-source-types.yaml
+#
+# M036 SSOT for per-category default extraction tier (FR-17).
+# Consumers:
+#   - scripts/dispatch/extract.sh (P02) — resolves `tier` for
+#     manifest entries that don't declare a per-document override.
+#
+# The keys of `source_types:` MUST match the four categories in
+# references/reference-taxonomy.md exactly (Principle XI). The
+# taxonomy SSOT and this file are kept in lockstep — adding or
+# removing a category requires updating both files in the same
+# commit, gated by the M036 D-row that authorizes the change.
+#
+# `default_tier` is one of {0, 1, 2}. Out-of-enum values are
+# rejected by tools/verify/lib/p00-validate-chunk-frontmatter.sh
+# (T03 deliverable).
+#
+# Default rationales (per spec #Q-8 resolution at planning):
+#   - cms-rule:          2  (small, citation-grade, structure matters)
+#   - training-material: 2  (already prose, cheap LLM upgrade)
+#   - glossary:          2  (definitional, frequently cited)
+#   - regulatory-doc:    1  (long-form, clean conversion expensive;
+#                            grep+read-section is the load-bearing
+#                            retrieval pattern)
+
+schema_version: "1.0"
+type: reference-source-types
+milestone: "M036"
+phase: "P00"
+
+source_types:
+  cms-rule:
+    default_tier: 2
+    rationale: "small, citation-grade, structure matters"
+  training-material:
+    default_tier: 2
+    rationale: "already prose, cheap LLM upgrade"
+  glossary:
+    default_tier: 2
+    rationale: "definitional, frequently cited"
+  regulatory-doc:
+    default_tier: 1
+    rationale: "long-form; grep+read-section retrieval pattern"

@@ -264,3 +264,18 @@ spec OQ #C-1 (embedding-distance, LLM-call-per-comment, two-pass hybrid).
 `action_type` values: `cache-comment`, `classify-comment`, `auto-apply-uat-bug`,
 `auto-apply-decision-append`, `queue-spec-amendment`, `route-ambiguous-to-conversus`,
 `apply-amendment`, `reject-queue-item`.
+
+## Scope-Tag Grammar Cross-Reference
+
+The orchestrator's scope-tag grammar (`[project]`, `[milestone:M###]`,
+`[phase:M###/P##]`, `[source:<cite_id>]`) is declared in
+`references/file-formats.md` `### Scope Tags`. Spec-management
+workflows consume scope tags via `scripts/dispatch/scope-filter.sh`.
+
+The `[source:<cite_id>]` namespace is M036-introduced
+(reference-corpus ingest, spec
+`specs/033-reference-corpus-ingest/spec.md`). Operator-asserted —
+the orchestrator does not factually verify that a chunk tagged
+`[source:cms-pbj-2024-q3]` actually derives from that source (see
+spec #Q-7).
+

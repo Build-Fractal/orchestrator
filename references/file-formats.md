@@ -653,6 +653,7 @@ otherwise it is treated as `unknown`.
 | `project` | Entire project, all milestones |
 | `milestone:M001` | Specific milestone |
 | `phase:M001/P02` | Specific phase |
+| `source:<cite_id>` | Specific reference-corpus source (M036 — see `references/reference-frontmatter-contract.md`) |
 
 ### Append Rules
 

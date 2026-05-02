@@ -25,7 +25,7 @@ This roadmap was substantially restructured 2026-05-01 to reflect the spec amend
 
 ### M036a — Pre-Launch Urgent
 
-- [ ] **P00**: Foundation — taxonomy SSOT + provenance frontmatter contract + tier-policy schema + adapter registry seam + edge-type / tag-namespace declarations — "Operator runs `cat references/reference-taxonomy.md`, `cat references/reference-source-types.yaml`, and `cat scripts/dispatch/adapters/format/registry.tsv` and sees the four-category taxonomy, the per-category default-tier policy, and the four-row live-adapter table; new chunks fail validation if they declare a category outside the taxonomy or a tier outside {0, 1, 2}."
+- [x] **P00**: Foundation — taxonomy SSOT + provenance frontmatter contract + tier-policy schema + adapter registry seam + edge-type / tag-namespace declarations — "Operator runs `cat references/reference-taxonomy.md`, `cat references/reference-source-types.yaml`, and `cat scripts/dispatch/adapters/format/registry.tsv` and sees the four-category taxonomy, the per-category default-tier policy, and the four-row live-adapter table; new chunks fail validation if they declare a category outside the taxonomy or a tier outside {0, 1, 2}."
   - Risk: low
   - Depends: none
   - Blocked by: none

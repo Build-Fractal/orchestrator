@@ -50,6 +50,20 @@ phases_output=$(bash "$READ_ROADMAP" "$roadmap_file" phases 2>/dev/null) || {
   exit 1
 }
 
+# Guard: roadmap parsed to zero phases → format drift, not a real state.
+# Without this guard, all three check loops below execute zero iterations,
+# total_checks stays 0, failed_checks stays 0, and we report
+# "VALIDATE: PASS — 0/0 checks passed" — a silent false-positive that
+# would authorize writing a milestone-complete summary for empty work.
+# Surfaced 2026-05-01 alongside the derive-phase.sh empty-list bug
+# (M036 `**P00 (M036a)**` syntax, parser regex didn't match).
+if [[ -z "${phases_output//[[:space:]]/}" ]]; then
+  echo "ERROR: Roadmap parsed to zero phases — likely format drift" >&2
+  echo "ERROR: file: $roadmap_file" >&2
+  echo "ERROR: expected phase headers like '- [ ] **P00**: ...' (no parenthetical tags inside the bold span)" >&2
+  exit 1
+fi
+
 total_checks=0
 passed_checks=0
 failed_checks=0
@@ -174,6 +188,14 @@ done <<< "$phases_output"
 
 # --- Summary ---
 echo ""
+# Defense in depth: the upstream guard rejects empty phases_output, but a
+# bug in the loops above could still leave total_checks at 0. Refuse to
+# claim PASS without at least one check actually executing — a 0/0 PASS
+# is indistinguishable from a true PASS to the auto-loop rubric.
+if [[ $total_checks -eq 0 ]]; then
+  echo "VALIDATE: FAIL — zero checks executed (no phases enumerated)"
+  exit 1
+fi
 if [[ $failed_checks -eq 0 ]]; then
   echo "VALIDATE: PASS — $passed_checks/$total_checks checks passed"
   exit 0

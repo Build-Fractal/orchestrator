@@ -109,6 +109,23 @@ fi
 # --- Rule 4: Any phase is stale → replanning ---
 # read-roadmap.sh returns "stale" as the status for stale phases
 phases_data=$(bash "$ROADMAP_SCRIPT" "$ROADMAP_FILE" phases 2>/dev/null) || true
+
+# --- Guard: roadmap exists but parser returned zero phases ---
+# This is parser/format drift, not a legitimate state. Without this guard,
+# Rule 8 would silently route to "validating" (its all_phases_complete=true
+# initial value survives a zero-iteration loop) and validate-milestone.sh
+# would then report "0/0 PASS" — a silent false-positive that could close
+# a milestone with no work done. Surfaced 2026-05-01 by M036's
+# `**P00 (M036a)**` syntax (parenthetical tag inside the bold span)
+# which read-roadmap.sh's regex doesn't match. Fail loud so authorial
+# drift becomes a build break, not a phantom completion.
+if [[ -z "${phases_data//[[:space:]]/}" ]]; then
+  echo "derive-phase.sh: roadmap parses to zero phases — likely format drift" >&2
+  echo "derive-phase.sh: file: $ROADMAP_FILE" >&2
+  echo "derive-phase.sh: expected phase headers like '- [ ] **P00**: ...' (no parenthetical tags inside the bold span)" >&2
+  exit 1
+fi
+
 if echo "$phases_data" | grep -q ' stale '; then
   echo "replanning"
   exit 0

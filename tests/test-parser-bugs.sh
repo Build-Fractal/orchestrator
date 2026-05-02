@@ -30,6 +30,9 @@ DECIMAL_FIXTURE="$PROJECT_ROOT/tests/fixtures/parser-bugs/M999"
 DECIMAL_ROADMAP="$DECIMAL_FIXTURE/M999-ROADMAP.md"
 PARENS_FIXTURE="$PROJECT_ROOT/tests/fixtures/parser-bugs/M998"
 PARENS_ROADMAP="$PARENS_FIXTURE/M998-ROADMAP.md"
+EMPTY_PARSE_FIXTURE="$PROJECT_ROOT/tests/fixtures/parser-bugs/M997"
+EMPTY_PARSE_ROADMAP="$EMPTY_PARSE_FIXTURE/M997-ROADMAP.md"
+DERIVE_PHASE="$PROJECT_ROOT/scripts/state/derive-phase.sh"
 
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -108,6 +111,7 @@ fi
 # summary, runs validate, restores. The fixture intentionally ships with the
 # directory empty so this test can layer the file in.
 P02_1_SUMMARY="$DECIMAL_FIXTURE/phases/P02.1/P02.1-SUMMARY.md"
+mkdir -p "$(dirname "$P02_1_SUMMARY")"
 cat > "$P02_1_SUMMARY" <<'EOF'
 ---
 id: P02.1
@@ -149,6 +153,65 @@ if bash "$VALIDATE" "$PARENS_FIXTURE" >/dev/null 2>&1; then
   pass "validate-milestone.sh exits zero on paren-bearing key_files"
 else
   fail "validate-milestone.sh exits zero on paren-bearing key_files (out: '$parens_out')"
+fi
+
+# ---------------------------------------------------------------------------
+# Bug 3 — empty-phase-list false-validation (M036 regression, 2026-05-01)
+# ---------------------------------------------------------------------------
+# read-roadmap.sh's phase-header regex requires `**` immediately after the
+# phase ID; M036's `**P00 (M036a)**` syntax (parenthetical tag inside the
+# bold span) parsed to zero phases. derive-phase.sh's Rule 8 then defaulted
+# all_phases_complete=true and returned `validating`; validate-milestone.sh
+# then reported `0/0 PASS` — a silent path to fabricating a milestone
+# summary for empty work. Both scripts now fail loud when the parse is
+# empty.
+
+# Test 3a: read-roadmap.sh phases on the parenthetical-tag roadmap returns
+# empty output (the upstream parser miss that triggers Bug 3). Confirms the
+# fixture reproduces the parser blind spot.
+empty_phases=$(bash "$READ_ROADMAP" "$EMPTY_PARSE_ROADMAP" phases 2>/dev/null || true)
+if [[ -z "${empty_phases//[[:space:]]/}" ]]; then
+  pass "read-roadmap.sh returns empty phases on '**P## (tag)**' shape (fixture reproduces Bug 3)"
+else
+  fail "read-roadmap.sh returns empty phases on '**P## (tag)**' shape (got: '$empty_phases')"
+fi
+
+# Test 3b: derive-phase.sh fails loud (non-zero exit) on the empty-parse
+# fixture. Pre-fix it would silently return `validating`.
+if bash "$DERIVE_PHASE" "$EMPTY_PARSE_FIXTURE" >/dev/null 2>&1; then
+  derive_out=$(bash "$DERIVE_PHASE" "$EMPTY_PARSE_FIXTURE" 2>&1 || true)
+  fail "derive-phase.sh exits non-zero on empty-parse roadmap (got exit 0, output: '$derive_out')"
+else
+  pass "derive-phase.sh exits non-zero on empty-parse roadmap (Bug 3 false-validation guard)"
+fi
+
+# Test 3c: derive-phase.sh stderr names the format-drift cause so the
+# operator can fix the roadmap rather than chasing the symptom.
+derive_err=$(bash "$DERIVE_PHASE" "$EMPTY_PARSE_FIXTURE" 2>&1 || true)
+if echo "$derive_err" | grep -q "zero phases"; then
+  pass "derive-phase.sh stderr names the empty-parse cause"
+else
+  fail "derive-phase.sh stderr names the empty-parse cause (got: '$derive_err')"
+fi
+
+# Test 3d: validate-milestone.sh fails loud on empty-parse roadmap.
+# Pre-fix it would return `VALIDATE: PASS — 0/0 checks passed` and exit 0.
+if bash "$VALIDATE" "$EMPTY_PARSE_FIXTURE" >/dev/null 2>&1; then
+  validate_empty_out=$(bash "$VALIDATE" "$EMPTY_PARSE_FIXTURE" 2>&1 || true)
+  fail "validate-milestone.sh exits non-zero on empty-parse roadmap (got exit 0, output: '$validate_empty_out')"
+else
+  pass "validate-milestone.sh exits non-zero on empty-parse roadmap (Bug 3 false-PASS guard)"
+fi
+
+# Test 3e: validate-milestone.sh refuses 0/0 PASS even if the upstream
+# guard were bypassed — defense-in-depth. Inject phases_output is hard
+# from a black-box test, so assert the output text rule: no line shaped
+# `VALIDATE: PASS — 0/` should ever appear.
+validate_empty_out=$(bash "$VALIDATE" "$EMPTY_PARSE_FIXTURE" 2>&1 || true)
+if echo "$validate_empty_out" | grep -qE 'VALIDATE: PASS — 0/'; then
+  fail "validate-milestone.sh emits 'PASS — 0/N' on empty-parse (false-positive shape: '$validate_empty_out')"
+else
+  pass "validate-milestone.sh never emits 'PASS — 0/N' shape on empty parse"
 fi
 
 # ---------------------------------------------------------------------------

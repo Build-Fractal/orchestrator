@@ -1,0 +1,5 @@
+# task-18
+category: bugfix
+cost_class: n/a
+touched_files: scripts/diagnostics/check-anomalies.sh
+description: Synthetic bugfix filler: anomaly-check threshold typo

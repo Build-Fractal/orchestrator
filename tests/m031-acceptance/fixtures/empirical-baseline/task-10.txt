@@ -1,0 +1,5 @@
+# task-10
+category: doc
+cost_class: n/a
+touched_files: docs/getting-started.md,docs/recipe-authoring.md,docs/hook-development.md,docs/knowledge-management.md,docs/migrating-from-spec-kit.md
+description: Synthetic doc-only: markdown-only diff across user guides

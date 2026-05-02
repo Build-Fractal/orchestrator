@@ -1,0 +1,5 @@
+# task-16
+category: feature
+cost_class: n/a
+touched_files: scripts/lifecycle/init-project.sh,templates/orchestrator-config-default.yml
+description: Synthetic feature filler: init-project new-knob seeding

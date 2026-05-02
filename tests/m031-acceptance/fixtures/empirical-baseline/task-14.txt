@@ -1,0 +1,5 @@
+# task-14
+category: doc
+cost_class: n/a
+touched_files: references/HOOKS.md,docs/hook-development.md
+description: Synthetic doc filler: hook reference + guide cross-link refresh

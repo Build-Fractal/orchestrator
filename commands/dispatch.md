@@ -18,7 +18,7 @@ Parse the `execute_substeps=` and `skip_substeps=` output and branch:
 
 | Intensity | execute_substeps              | Behavior |
 |-----------|-------------------------------|----------|
-| Quick     | sequential                    | Skip payload assembly (`build-context.sh`). Invoke `dispatch-interface.sh` with a minimal payload containing only the task plan. Run tasks sequentially — no parallel fan-out. |
+| Quick     | sequential                    | Full payload assembly via `build-context.sh --profile=quick` (touched-files-only scope, 1-hop knowledge-graph traversal, no Decisions section, glossary slice over touched terms only) — Quick profile per FR-4. Knowledge + M018 compression apply unconditionally per CON-1. Run tasks sequentially — no parallel fan-out. |
 | Standard  | standard-payload              | Full payload assembly (task plan + upstream summaries + scope-filtered knowledge). Standard dispatch semantics. |
 | Full      | full-context,knowledge-inject | Full payload + graph-traversed knowledge (`traverse-graph.sh`) + explicit provenance chain (`check-graph-health`). Inject full context for high-risk tasks. |
 

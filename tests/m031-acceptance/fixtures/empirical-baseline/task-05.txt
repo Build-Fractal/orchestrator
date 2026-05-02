@@ -1,0 +1,5 @@
+# task-05
+category: bugfix
+cost_class: low
+touched_files: scripts/lifecycle/conversus-bootstrap.sh
+description: M026/P01/T03 historical: conversus-OSS small-touch bootstrap fix (duration_s=8)

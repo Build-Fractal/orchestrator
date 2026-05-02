@@ -1,0 +1,5 @@
+# task-13
+category: doc
+cost_class: n/a
+touched_files: references/ARCHITECTURE.md
+description: Synthetic doc filler: architecture cross-link refresh

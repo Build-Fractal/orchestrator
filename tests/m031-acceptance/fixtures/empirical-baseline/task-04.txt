@@ -1,0 +1,5 @@
+# task-04
+category: feature
+cost_class: medium
+touched_files: scripts/lifecycle/init-project.sh,docs/getting-started.md,packaging/install/install-claude-code.sh
+description: M013/P04/T05 historical: GitHub native integration init wiring + doc (duration_s=3000)

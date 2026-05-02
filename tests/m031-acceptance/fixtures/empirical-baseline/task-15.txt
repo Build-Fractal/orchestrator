@@ -1,0 +1,5 @@
+# task-15
+category: feature
+cost_class: n/a
+touched_files: scripts/dispatch/intensity-recommend.sh
+description: Synthetic feature filler: intensity-recommend confidence-floor knob plumb-through

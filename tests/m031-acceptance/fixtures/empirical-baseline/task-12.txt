@@ -1,0 +1,5 @@
+# task-12
+category: bugfix
+cost_class: n/a
+touched_files: scripts/lock-manager.sh,scripts/util/json-field.sh
+description: Synthetic bugfix filler: lock-manager json-field IFS leak

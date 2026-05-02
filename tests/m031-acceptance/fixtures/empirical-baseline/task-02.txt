@@ -1,0 +1,5 @@
+# task-02
+category: feature
+cost_class: high
+touched_files: scripts/lifecycle/cost-rollup.sh,scripts/lifecycle/quality-rollup.sh,scripts/dispatch/lib/efficiency-footer.sh,templates/orchestrator-config-default.yml,references/EVENTS.md,docs/observability.md,scripts/diagnostics/check-anomalies.sh
+description: M027/P02/T04 historical: cost+quality observability footer wiring (duration_s=5100)

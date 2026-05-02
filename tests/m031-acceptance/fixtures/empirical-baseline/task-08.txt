@@ -1,0 +1,5 @@
+# task-08
+category: feature
+cost_class: n/a
+touched_files: scripts/state/resolve-root.sh,scripts/state/derive-phase.sh,scripts/state/read-config.sh,scripts/state/lock-manager.sh,scripts/util/with-env.sh
+description: Synthetic 5-file: medium fan-out feature touching state-machine surfaces

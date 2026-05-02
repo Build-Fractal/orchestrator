@@ -1,0 +1,5 @@
+# task-03
+category: feature
+cost_class: medium
+touched_files: scripts/knowledge/rebuild-index.sh,scripts/knowledge/promote-entry.sh,scripts/knowledge/update-entry.sh
+description: M020/P04/T02 historical: knowledge-graph promotion + index rebuild (duration_s=3300)

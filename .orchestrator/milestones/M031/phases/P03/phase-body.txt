@@ -1,0 +1,27 @@
+P03 closes the M031 right-sized-entry milestone's universal-entry surface: the operator-facing `orchestrator:do <task>` skill (commands/do.md, 160 lines) plus its backing four-branch routing driver `scripts/intake/do-entry.sh` (346 lines, bash 3.2). The skill maps the four shape-detect.sh × M024 verdict combinations onto orchestrator behaviors — `tier_a_plus` → handoff to the P02 Tier A+ flow; ≤30-word `tier_a` → fast-path direct dispatch via build-context.sh; `tier_bc` → one-shot named-command passthrough (orchestrator:specify | orchestrator:evaluate); low-confidence → interactive prompt with JSONL `unit_close` emission for chosen-shape capture.
+
+3 tasks shipped clean across 3 commits:
+- **T01 do-md-and-entry-script** [`10baff2`] — commands/do.md + scripts/intake/do-entry.sh + 4 shape verifiers (do-md / do-entry / fastpath / passthrough). FR-10 CLI surface (`--task` + `--yes` + `--config` + `--dispatch-stub` + `--scratch-root` + `--no-prompt-mode` + `ORCH_DO_ENTRY_LOG`). FR-11 confidence-floor enum→numeric adapter (`high→1.0`, `low→0.5`) closes A-2 forward-compatibly without modifying M024. FR-12 stderr summary line shape verified end-to-end against production build-context.sh.
+- **T02 acceptance-tests** [`85a4ce9`] — SC-7 (Tier A degenerate fast-path) + SC-8 (low-confidence prompt sub-cases A/B) acceptance tests, 3 fixtures, 2 shape verifiers. Stub-seam pattern mirrors P02/SC-6 one milestone earlier. Empirical low-confidence fixture derivation (9-word boundary band, first-candidate hit on shape-detect.sh:108-114).
+- **T03 phase-suite-and-scope-guard** [`65dd1b4`] — 7-gate `m031-p03-phase-suite.sh` straight-line aggregator (4 T01 + 2 T02 + 1 T03) + `m031-p03-scope-guard.sh` SC-12 block-list verifier inheriting the dual-prefix permissive carve-out (`.orchestrator/observability/` + `.orchestrator/tier-a-plus/`) and the MEM `hit_count`-only carve-out verbatim from P02 (which copied from P01).
+
+**Verification result**: phase-suite green 7/7 (all gates exit 0); scope-guard green (`pass=31 block_list_violations=0`); `check-must-haves.sh` against the phase directory reports 0 FAIL across 8 truths + 30 artifacts + 14 key-links.
+
+**Key decisions**:
+- Confidence-floor adapter: enum→numeric (`high→1.0`, `low→0.5`) inside do-entry.sh rather than mutating M024 — closes A-2 with forward compatibility (consumer survives any future M024 numeric emission unchanged).
+- Word-band split for paragraph verdict: ≤30 words → Tier A degenerate fast-path; >30 → Tier B/C passthrough (no roadmap, no auto, single named command for the operator to run next turn — NG-6 one-shot scope preserved).
+- Tier A+ fast-path uses `eval` inside `run_tier_a_plus_handoff` because the input is fully controlled by the script's own arg parser; verifier discipline gates the AD-19 Truth Check command shape, not implementation internals.
+
+**Patterns established**:
+- Four-branch first-match-wins routing table consolidated as the canonical entry-point shape.
+- Acceptance-test-via-stub-seam (drive end-to-end via `--dispatch-stub` against a canned stub that logs invocations to `ORCH_*_LOG`; assertion is `grep -c` on the log) — now a stable cross-phase utility (P02/SC-6 + P03/SC-7 + P03/SC-8).
+- Phase-suite straight-line N-gate aggregation across M031/P01:9, P02:11, P03:7 — invariant pattern regardless of N.
+- SC-12 scope-guard with dual-prefix permissive carve-out + MEM hit_count-only carve-out function copied verbatim across P01 → P02 → P03 — effectively a stable cross-phase utility now.
+- Paraphrase-the-forbidden-token discipline (e.g., MEM001 `declare -A` callouts paraphrased as "the declare minus-A form") so a verifier's own absence-check does not false-positive on its own MEM-hygiene comment.
+- BSD-grep portability: verifier `check_literal` / `check_absent` helpers use `grep -qF -- "$needle"` so flag-token literals (`--task`, `--yes`, `--no-prompt-mode`) survive macOS BSD grep's flag-rejection.
+
+**Plan-time defects observed for P04 / future**:
+- T03 task plan invokes `check-must-haves.sh` with a file argument (`P03-PLAN.md`); the script demands a directory. Substantive verification passes when invoked with the directory; the auto-loop verify-step extraction caught the shape mismatch. Recorded as observational concern (US3 AS6 DONE_WITH_CONCERNS — proceeded). Future task plans should write the verification command with a directory arg.
+
+**Pre-existing working-tree drift forwarded**:
+- M030 ROADMAP, AGENTS.md, KNOWLEDGE-INDEX.md, knowledge/MEM*.md `hit_count` increments, scripts/dispatch/build-context.sh, templates/orchestrator-config-default.yml, tools/verify/p00-phase-suite.sh, .orchestrator/doctor-history.jsonl, etc. were all present at session entry from prior sessions; carved out as soft `WARN: out-of-allow-list` by the M031 scope-guard's MEM hit_count carve-out. P02's forward-note recommended a housekeeping commit before milestone close; P03 forwards the same recommendation to P04. Recommend a milestone-level housekeeping commit before M031-SUMMARY.md writes.

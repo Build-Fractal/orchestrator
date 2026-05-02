@@ -1,0 +1,5 @@
+# task-09
+category: feature
+cost_class: n/a
+touched_files: scripts/dispatch/build-context.sh,scripts/dispatch/compress-payload.sh,scripts/dispatch/dispatch-interface.sh,scripts/dispatch/lib/payload-transforms.sh,scripts/dispatch/lib/manifest-builder.sh,scripts/dispatch/lib/tier3-llm-call.sh,scripts/dispatch/adapters/backend/claude-code.sh,scripts/dispatch/adapters/backend/codex.sh,scripts/dispatch/adapters/backend/cursor.sh,references/file-formats.md
+description: Synthetic 10-file: largest fan-out feature touching dispatch + adapter tree

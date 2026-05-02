@@ -1,0 +1,5 @@
+# task-01
+category: bugfix
+cost_class: high
+touched_files: scripts/hooks/pre-bash-shape-guard.sh,scripts/verify/lib/shape-classifier.sh,references/ANTIPATTERNS.md,tests/hooks-portability/run-suite.sh,scripts/dispatch/build-context.sh,commands/dispatch.md,scripts/lib/preservation-check.sh,scripts/dispatch/lib/tier3-llm-call.sh
+description: M028/P03/T05 historical: hardening shape-guard rollout across hooks + dispatch surfaces (duration_s=7200)

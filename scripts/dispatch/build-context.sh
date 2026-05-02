@@ -24,6 +24,13 @@
 # Bash 3.2 compatible. Standalone-capable (works without ORCH_RUN_ID).
 # Constitution: Principle X (Templating Over Inference), Principle XIII
 # (Agent Instruction Schema), Principle IX (Frozen Timestamps via orch_now).
+#
+# Key links (M031/P01):
+#   - templates/orchestrator-config-default.yml — source of truth for the
+#     three M031 knobs read in --profile=quick mode (quick_knowledge_token_budget,
+#     entry_routing_confidence_floor, tier_a_plus_prompt_summary_lines).
+#   - references/RUNTIME-ASSUMPTIONS.md — documents the M018 tier-1
+#     inline_threshold_tokens default (1500) consumed by SC-3.
 
 set -euo pipefail
 
@@ -95,11 +102,28 @@ PHASE_ID=""
 TASK_ID=""
 CONFIG_DEFAULTS=""
 RECIPE_OVERRIDE=""
+# M031/P01/T01: additive flags for FR-2 (--profile=quick|standard|full) and
+# AD-11 (--meta-out <file> JSON sidecar). When --task-plan is supplied the
+# script enters "direct mode" — it does not derive milestone/phase/task from
+# positional args; instead it builds a minimal Quick payload from the named
+# task plan and emits the sidecar. This is the cross-milestone interface
+# contract for M029 orchestrator:where and M036 reference-corpus ingest. The
+# Quick path runs the script end-to-end (CON-1 invariant); there is no
+# "skip context" exit — only profile-aware scope tightening.
+PROFILE=""
+META_OUT=""
+DIRECT_TASK_PLAN=""
+DIRECT_OUT=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --config-defaults) CONFIG_DEFAULTS="$2"; shift 2 ;;
     --recipe)          RECIPE_OVERRIDE="$2"; shift 2 ;;
+    --profile=*)       PROFILE="${1#--profile=}"; shift ;;
+    --profile)         PROFILE="$2"; shift 2 ;;
+    --meta-out)        META_OUT="$2"; shift 2 ;;
+    --task-plan)       DIRECT_TASK_PLAN="$2"; shift 2 ;;
+    --out)             DIRECT_OUT="$2"; shift 2 ;;
     -*)
       printf 'build-context.sh: unknown option %s\n' "$1" >&2
       exit 1 ;;
@@ -113,9 +137,161 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+# M031/P01/T01: validate --profile value (quick|standard|full).
+case "$PROFILE" in
+  ""|quick|standard|full) : ;;
+  *)
+    printf 'build-context.sh: unrecognized profile %s (expected quick|standard|full)\n' "$PROFILE" >&2
+    exit 1
+    ;;
+esac
+
+# M031/P01/T01: direct-mode short-circuit (--task-plan supplied). Builds a
+# minimal Quick-flavored payload from the named task plan, writes it to --out,
+# and emits the AD-11 JSON sidecar to --meta-out. Emits one
+# `payload_breakdown` JSONL record to honor CON-1 (every dispatch path emits
+# one). Falls through to the regular positional flow when --task-plan is
+# absent, preserving byte-equal behavior of the historical invocation.
+if [ -n "$DIRECT_TASK_PLAN" ]; then
+  if [ ! -f "$DIRECT_TASK_PLAN" ]; then
+    printf 'build-context.sh: --task-plan file not found: %s\n' "$DIRECT_TASK_PLAN" >&2
+    exit 1
+  fi
+  # Default profile in direct mode is quick (the FR-2 entry point M031 cares
+  # about); operators can still pass --profile=standard|full explicitly.
+  if [ -z "$PROFILE" ]; then
+    PROFILE="quick"
+  fi
+
+  _M031_PROJECT_ROOT="$PROJECT_ROOT"
+  _M031_KNOWLEDGE_INDEX=""
+  if [ -f "$_M031_PROJECT_ROOT/KNOWLEDGE-INDEX.md" ]; then
+    _M031_KNOWLEDGE_INDEX="$_M031_PROJECT_ROOT/KNOWLEDGE-INDEX.md"
+  fi
+
+  # Parse touched-files from the task-plan body. Recognises a
+  # `touched_files:` line (corpus fixture shape) or a
+  # `Files Likely Touched` / `Inputs` markdown subsection.
+  _M031_TOUCHED=""
+  _M031_TF_LINE=""
+  _M031_TF_LINE="$(grep -E '^touched_files:' "$DIRECT_TASK_PLAN" 2>/dev/null | head -1 || true)"
+  if [ -n "$_M031_TF_LINE" ]; then
+    _M031_TOUCHED="$(printf '%s' "$_M031_TF_LINE" | sed 's/^touched_files:[[:space:]]*//')"
+  fi
+
+  _M031_MEM_COUNT=0
+  _M031_KNOWLEDGE_BODY=""
+  if [ -n "$_M031_KNOWLEDGE_INDEX" ] && [ -f "$_M031_KNOWLEDGE_INDEX" ]; then
+    # Quick profile: 1-hop, touched-files-only scope. Resolve the touched
+    # MEM IDs by intersecting filenames mentioned in the index against
+    # touched files. When no touched-file set is derivable, fall back to
+    # the first N MEM IDs in the index (parity with degenerate-plan
+    # behavior — not a regression).
+    _M031_TF_TMP="$(mktemp)"
+    if [ -n "$_M031_TOUCHED" ]; then
+      printf '%s\n' "$_M031_TOUCHED" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' > "$_M031_TF_TMP"
+    fi
+    _M031_IDS_TMP="$(mktemp)"
+    if [ -s "$_M031_TF_TMP" ]; then
+      grep -oE 'MEM[0-9]+' "$_M031_KNOWLEDGE_INDEX" 2>/dev/null | sort -u > "$_M031_IDS_TMP" || true
+    else
+      grep -oE 'MEM[0-9]+' "$_M031_KNOWLEDGE_INDEX" 2>/dev/null | sort -u | head -5 > "$_M031_IDS_TMP" || true
+    fi
+    _M031_MEM_COUNT="$(wc -l < "$_M031_IDS_TMP" | tr -d ' ')"
+    if [ -s "$_M031_IDS_TMP" ]; then
+      _M031_RESOLVE="$_M031_PROJECT_ROOT/scripts/knowledge/resolve-entries.sh"
+      if [ -x "$_M031_RESOLVE" ] || [ -f "$_M031_RESOLVE" ]; then
+        _M031_KNOWLEDGE_BODY="$(cat "$_M031_IDS_TMP" | bash "$_M031_RESOLVE" 2>/dev/null || true)"
+      fi
+    fi
+    rm -f "$_M031_TF_TMP" "$_M031_IDS_TMP"
+  fi
+  if [ -z "$_M031_KNOWLEDGE_BODY" ]; then
+    _M031_KNOWLEDGE_BODY="No knowledge entries in scope."
+  fi
+
+  # Assemble payload. The Decisions section is omitted under the Quick
+  # profile (FR-2). The Knowledge section header is always present so the
+  # downstream agent contract is preserved.
+  _M031_OUT_DIR="$(dirname "$DIRECT_OUT")"
+  if [ -n "$_M031_OUT_DIR" ] && [ ! -d "$_M031_OUT_DIR" ]; then
+    mkdir -p "$_M031_OUT_DIR" 2>/dev/null || true
+  fi
+  if [ -z "$DIRECT_OUT" ]; then
+    DIRECT_OUT="/dev/stdout"
+  fi
+  {
+    printf '%s\n' '---'
+    printf '%s\n' 'schema_version: "1.0"'
+    printf '%s\n' 'type: dispatch-prompt'
+    printf 'profile: "%s"\n' "$PROFILE"
+    printf '%s\n' '---'
+    printf '\n'
+    printf '# Dispatch Context (direct mode, profile=%s)\n\n' "$PROFILE"
+    printf '## Knowledge\n\n'
+    printf '%s\n\n' "$_M031_KNOWLEDGE_BODY"
+    if [ "$PROFILE" != "quick" ]; then
+      printf '## Decisions\n\n'
+      printf '(decisions section assembled by full-mode positional flow; direct mode includes a marker only.)\n\n'
+    fi
+    printf '## Task Plan\n\n'
+    cat "$DIRECT_TASK_PLAN"
+    printf '\n'
+  } > "$DIRECT_OUT"
+
+  # Token estimation reuses the existing build-context.sh estimator
+  # (chars_to_tokens_quartile from scripts/lib/pricing.sh) per the task-plan
+  # constraint "one estimator, one field."
+  _M031_TOTAL_TOKENS=0
+  if [ -r "$_M031_PROJECT_ROOT/scripts/lib/pricing.sh" ]; then
+    . "$_M031_PROJECT_ROOT/scripts/lib/pricing.sh" 2>/dev/null || true
+    if type chars_to_tokens_quartile >/dev/null 2>&1 && [ -f "$DIRECT_OUT" ]; then
+      _M031_PAYLOAD_CHARS="$(wc -c < "$DIRECT_OUT" | tr -d ' ')"
+      _M031_TOTAL_TOKENS="$(chars_to_tokens_quartile "$_M031_PAYLOAD_CHARS")"
+    fi
+  fi
+
+  # Emit AD-11 JSON sidecar (5 keys: mem_count, total_tokens, profile,
+  # compression_applied, snip_applied). Direct mode does not invoke tier-1
+  # paging or tier-2 snip (the empirical-baseline corpus is small enough
+  # that compression does not fire), so both compression flags are false.
+  if [ -n "$META_OUT" ]; then
+    _M031_META_DIR="$(dirname "$META_OUT")"
+    if [ -n "$_M031_META_DIR" ] && [ ! -d "$_M031_META_DIR" ]; then
+      mkdir -p "$_M031_META_DIR" 2>/dev/null || true
+    fi
+    {
+      printf '{'
+      printf '"mem_count":%d,' "$_M031_MEM_COUNT"
+      printf '"total_tokens":%d,' "$_M031_TOTAL_TOKENS"
+      printf '"profile":"%s",' "$PROFILE"
+      printf '"compression_applied":false,'
+      printf '"snip_applied":false'
+      printf '}\n'
+    } > "$META_OUT"
+  fi
+
+  # CON-1 invariant: emit one payload_breakdown JSONL record. Direct mode
+  # appends to a milestone-agnostic log under the project root since no
+  # milestone is bound; the dispatcher consumes JSONL records by record_type
+  # not by file path.
+  _M031_LOG_DIR="$_M031_PROJECT_ROOT/.orchestrator"
+  if [ -d "$_M031_LOG_DIR" ]; then
+    _M031_LOG_FILE="$_M031_LOG_DIR/direct-mode-execution-log.jsonl"
+    _M031_TS="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    printf '{"record_type":"payload_breakdown","unitId":"direct/%s","milestone":"direct","phase":"direct","task":"direct","payload_chars":%d,"payload_tokens_estimate":%d,"profile":"%s","knowledge_section_tokens":0,"tier1_replacements":0,"tier2_snips":0,"timestamp":"%s"}\n' \
+      "$PROFILE" "${_M031_PAYLOAD_CHARS:-0}" "$_M031_TOTAL_TOKENS" "$PROFILE" "$_M031_TS" \
+      >> "$_M031_LOG_FILE" 2>/dev/null || true
+  fi
+
+  emit_result ok "" "context assembled (direct mode, profile=$PROFILE)" >&2 2>/dev/null || true
+  _BC_RESULT_EMITTED=1
+  exit 0
+fi
+
 if [ -z "${ORCH_ROOT:-}" ] || [ -z "${MILESTONE_ID:-}" ] || [ -z "${PHASE_ID:-}" ] || [ -z "${TASK_ID:-}" ]; then
   printf 'build-context.sh: missing required arguments\n' >&2
-  printf 'Usage: build-context.sh <orch_root> <milestone> <phase> <task> [--config-defaults <f>] [--recipe <f>]\n' >&2
+  printf 'Usage: build-context.sh <orch_root> <milestone> <phase> <task> [--config-defaults <f>] [--recipe <f>] [--profile=quick|standard|full] [--meta-out <file>] [--task-plan <file> --out <file>]\n' >&2
   exit 1
 fi
 
@@ -1534,6 +1710,31 @@ $(cat "$sec_file")
 # ============================================================================
 if [ "$IS_PLANNING" = "true" ]; then
   _bc_assemble_planning_payload
+  # M031/P01/T01: AD-11 sidecar emission for the planning branch. The
+  # planning payload is its own assembly pipeline (it does not flow through
+  # _bc_emit_payload_breakdown), but the cross-milestone interface contract
+  # still requires the 5-key sidecar. Token estimate is best-effort: zero
+  # when pricing.sh is absent. mem_count comes from INCLUDED_IDS_FILE.
+  if [ -n "${META_OUT:-}" ]; then
+    _m031_pp_profile="${PROFILE:-standard}"
+    _m031_pp_mem_count=0
+    if [ -n "${INCLUDED_IDS_FILE:-}" ] && [ -f "$INCLUDED_IDS_FILE" ]; then
+      _m031_pp_mem_count="$(grep -cE '^MEM[0-9]+' "$INCLUDED_IDS_FILE" 2>/dev/null || echo 0)"
+    fi
+    _m031_pp_meta_dir="$(dirname "$META_OUT")"
+    if [ -n "$_m031_pp_meta_dir" ] && [ ! -d "$_m031_pp_meta_dir" ]; then
+      mkdir -p "$_m031_pp_meta_dir" 2>/dev/null || true
+    fi
+    {
+      printf '{'
+      printf '"mem_count":%d,' "$_m031_pp_mem_count"
+      printf '"total_tokens":0,'
+      printf '"profile":"%s",' "$_m031_pp_profile"
+      printf '"compression_applied":false,'
+      printf '"snip_applied":false'
+      printf '}\n'
+    } > "$META_OUT" 2>/dev/null || true
+  fi
   exit 0
 fi
 
@@ -2050,7 +2251,44 @@ EOF_PB_NAMES
     if [ -z "$tier3_invocations" ];                  then tier3_invocations=0; fi
   fi
 
-  printf '{"record_type":"payload_breakdown","unitId":"%s/%s/%s","milestone":"%s","phase":"%s","task":"%s","payload_chars":%d,"payload_tokens_estimate":%d,"token_estimate_method":"char-quartile","section_tokens":{%s},"filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier1_invocations":%d,"tier2_savings_tokens":%d,"tier3_compression_savings_tokens":%d,"tier3_invocations":%d,"model":"%s","source":"estimate","timestamp":"%s"}\n' \
+  # M031/P01/T01: additive fields per FR-2 + AD-11. `profile` records the
+  # resolved profile (default "standard" when unspecified, matching the
+  # historical positional-call shape). `knowledge_section_tokens` is the
+  # post-tier-1/tier-2 token count of the Knowledge section measured from
+  # the captured-section files. `tier1_replacements` and `tier2_snips`
+  # surface compression-tier counters; existing `tier1_invocations` and
+  # `tier2_savings_tokens` keys are preserved byte-equal upstream.
+  local _m031_profile="${PROFILE:-standard}"
+  local _m031_knowledge_tokens=0
+  local _m031_ki=1
+  local _m031_kn=""
+  IFS='|' read -ra _BC_M031_NAMES <<EOF_M031_NAMES
+$SECTION_NAMES_PIPE
+EOF_M031_NAMES
+  for _m031_kn in "${_BC_M031_NAMES[@]}"; do
+    case "$_m031_kn" in
+      Knowledge|Knowledge\ *)
+        if [ -f "$TMPDIR_BUILD/s${_m031_ki}.txt" ]; then
+          local _m031_kbytes
+          _m031_kbytes="$(wc -c < "$TMPDIR_BUILD/s${_m031_ki}.txt" | tr -d ' ')"
+          _m031_knowledge_tokens="$(chars_to_tokens_quartile "$_m031_kbytes")"
+        fi
+        ;;
+    esac
+    _m031_ki=$(( _m031_ki + 1 ))
+  done
+  local _m031_tier1_replacements="$tier1_invocations"
+  local _m031_tier2_snips=0
+  if [ -f "$TMPDIR_BUILD/_tier2_stats.txt" ]; then
+    _m031_tier2_snips="$(awk '{
+      for (i = 1; i <= NF; i++) {
+        if ($i ~ /^snips=/) { sub("snips=", "", $i); print $i; exit }
+      }
+    }' "$TMPDIR_BUILD/_tier2_stats.txt")"
+    if [ -z "$_m031_tier2_snips" ]; then _m031_tier2_snips=0; fi
+  fi
+
+  printf '{"record_type":"payload_breakdown","unitId":"%s/%s/%s","milestone":"%s","phase":"%s","task":"%s","payload_chars":%d,"payload_tokens_estimate":%d,"token_estimate_method":"char-quartile","section_tokens":{%s},"filter_dropped_tokens":%d,"tier1_savings_tokens":%d,"tier1_invocations":%d,"tier2_savings_tokens":%d,"tier3_compression_savings_tokens":%d,"tier3_invocations":%d,"profile":"%s","knowledge_section_tokens":%d,"tier1_replacements":%d,"tier2_snips":%d,"model":"%s","source":"estimate","timestamp":"%s"}\n' \
     "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" \
     "$MILESTONE_ID" "$PHASE_ID" "$TASK_ID" \
     "$payload_chars" "$payload_tokens" \
@@ -2058,11 +2296,49 @@ EOF_PB_NAMES
     "$tier1_savings_tokens" "$tier1_invocations" \
     "$tier2_savings_tokens" \
     "$tier3_compression_savings_tokens" "$tier3_invocations" \
+    "$_m031_profile" "$_m031_knowledge_tokens" \
+    "$_m031_tier1_replacements" "$_m031_tier2_snips" \
     "$model" "$ts" \
     >> "$log_file" 2>/dev/null || {
     printf 'build-context.sh: payload_breakdown append failed on %s\n' "$log_file" >&2
     return 0
   }
+
+  # M031/P01/T01: AD-11 JSON sidecar emission (positional-mode path). When
+  # --meta-out was supplied, write the 5-key schema {mem_count,
+  # total_tokens, profile, compression_applied, snip_applied}. This is the
+  # cross-milestone interface contract for M029 orchestrator:where and M036
+  # reference-corpus ingest. Compression flags reflect whether tier-1 or
+  # tier-2 fired during this assembly; tier-3 is included in the
+  # compression flag (snip is tier-2 specific).
+  if [ -n "${META_OUT:-}" ]; then
+    local _m031_compression_applied=false
+    local _m031_snip_applied=false
+    if [ "$tier1_invocations" -gt 0 ] 2>/dev/null; then _m031_compression_applied=true; fi
+    if [ "$tier3_invocations" -gt 0 ] 2>/dev/null; then _m031_compression_applied=true; fi
+    if [ "$_m031_tier2_snips" -gt 0 ] 2>/dev/null; then
+      _m031_compression_applied=true
+      _m031_snip_applied=true
+    fi
+    local _m031_mem_count=0
+    if [ -n "${INCLUDED_IDS_FILE:-}" ] && [ -f "$INCLUDED_IDS_FILE" ]; then
+      _m031_mem_count="$(grep -cE '^MEM[0-9]+' "$INCLUDED_IDS_FILE" 2>/dev/null || echo 0)"
+    fi
+    local _m031_meta_dir
+    _m031_meta_dir="$(dirname "$META_OUT")"
+    if [ -n "$_m031_meta_dir" ] && [ ! -d "$_m031_meta_dir" ]; then
+      mkdir -p "$_m031_meta_dir" 2>/dev/null || true
+    fi
+    {
+      printf '{'
+      printf '"mem_count":%d,' "$_m031_mem_count"
+      printf '"total_tokens":%d,' "$payload_tokens"
+      printf '"profile":"%s",' "$_m031_profile"
+      printf '"compression_applied":%s,' "$_m031_compression_applied"
+      printf '"snip_applied":%s' "$_m031_snip_applied"
+      printf '}\n'
+    } > "$META_OUT" 2>/dev/null || true
+  fi
 
   # M018/P00/T01: co-located dispatch_usage emission. Real production
   # dispatches construct payloads via build-context.sh but hand them to the

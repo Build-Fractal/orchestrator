@@ -1,0 +1,19 @@
+M031/P02 added the Tier A+ middle flow (research → approval → plan → build) end-to-end:
+
+- **T01 (classifier + provenance)** [`92cd6eb`] — extended `scripts/intake/shape-detect.sh` with the `tier_a_plus` verdict for inputs in the 30–80 word band with no structural markers (`^##` heading / Given-When-Then / `^- FR-` bullet). Added `tests/m031-acceptance/fixtures/{FIXTURE-PROVENANCE.md,tier-a-plus-input.txt}` (AD-16 normative grounding citing M031/P01/T01 and M030/P07/T03 unit_close records). SC-5 acceptance test green. Existing 5 verdicts (`idea`, `paragraph`, `fragment`, `spec`, `empty`) byte-equal.
+- **T02 (slug lib + role templates)** [`af7a88d`] — `scripts/intake/lib/task-slug.sh` exposing `derive_task_slug` (5-step base + optional 4-char SHA-1 collision suffix + `untitled` empty-input fallback). Three sibling role templates `templates/dispatch-role-{research,plan,build}.md` (each ≥93 lines) declaring `type: dispatch-role`. Bash 3.2 / MEM001 compliant.
+- **T03 (approval prompt + SC-16)** [`bd5a742`] — `scripts/intake/lib/tier-a-plus-prompt.sh` (273 lines, AD-7 + AD-20). CLI: `--research-path`, `--task-slug`, `--yes`, `--session-id`, `--no-prompt-mode y|n|c`. Exit codes 0/1/2 (proceed/re-research/abort). All 7 AD-20 clauses implemented; 60-second `read` timeout collapses to abort default. SC-16 prompt-UX test green. Open question A4 resolved: session-ID sidecar = single-line `<task-slug>/.session-id`.
+- **T04 (router amend + SC-6)** [`b91f202`] — `scripts/intake/route-to-dispatch.sh` extended additively with `--verdict tier_a_plus` mode. Chains research → approval → plan → build via `build-context.sh --profile=quick` + role templates. Inline JSONL emitter writes one `unit_close` per role with new `tier_a_plus_role` + `aborted` fields (additive optional). SC-6 acceptance test uses `--dispatch-stub` + `--scratch-root` + `ORCH_TIER_A_PLUS_LOG` for hermetic execution. Legacy `--proposal` path byte-equal. Open questions A2 / A3 / A5 resolved.
+- **T05 (phase-suite + SC-12 scope-guard)** [`58e6a2f` + `7624397`] — `tools/verify/m031-p02-phase-suite.sh` (11-gate straight-line aggregator, T01→T05 dependency order, no short-circuit) + `tools/verify/m031-p02-scope-guard.sh` (dual-prefix permissive carve-out: `.orchestrator/observability/` + `.orchestrator/tier-a-plus/`; MEM `hit_count`-only carve-out inherited verbatim from P01). Mid-task remediation (`7624397`) added a `# Key links` doc-comment block to `route-to-dispatch.sh` listing the three literal role-template filenames so the phase-plan key-link must-haves resolve (mirrors the P01 build-context.sh remediation pattern).
+
+**Phase-level verification (Tier 1 + Tier 3)**:
+- `check-must-haves.sh` → 97 PASS / 0 FAIL.
+- `check-boundary-map.sh` → SKIP (no produce items declared in plan).
+- `m031-p02-phase-suite.sh` → `pass=11 fail=0`.
+- `m031-p02-scope-guard.sh` → `pass=31 fail=0 block_list_violations=0 mem_hitcount_carveouts=31`.
+- 3 acceptance tests green (SC-5 classifier, SC-16 prompt-UX, SC-6 flow).
+- M024 regression: `tests/test-paragraph-intake.sh` 3/3 dispatch-path tests pass (3 specify-path failures pre-existing T01 classifier ripple, unrelated to P02).
+
+**Open questions resolved this phase**: A1 (boundary band 30–80 words + zero structural markers, T01); A2 (router CLI surface, T04); A3 (SC-6 stub-vs-real seam, T04); A4 (session-ID sidecar, T03); A5 (`.orchestrator/tier-a-plus/` allow-list prefix, T04). Zero unresolved.
+
+**Forwarded to P03+**: extending `read-config.sh` `VALID_KEYS` to whitelist `tier_a_plus_prompt_summary_lines` (T03 helper currently uses direct YAML grep with hardcoded P00 default 8 — equivalent permitted by task plan); phase-level housekeeping commit to clear pre-existing working-tree drift (M036, CLAUDE.md, spec-033, references/RUNTIME-ASSUMPTIONS.md, scripts/dispatch/build-context.sh, templates/orchestrator-config-default.yml, tools/verify/p00-phase-suite.sh) carried forward from prior sessions.

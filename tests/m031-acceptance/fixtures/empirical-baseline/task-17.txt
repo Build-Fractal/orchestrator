@@ -1,0 +1,5 @@
+# task-17
+category: feature
+cost_class: n/a
+touched_files: scripts/state/derive-phase.sh,scripts/state/lock-manager.sh,scripts/state/read-config.sh
+description: Synthetic feature filler: state-machine new-rule addition

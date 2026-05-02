@@ -119,3 +119,22 @@ exist at plan-authoring time.
   this directly at plan-authoring time when the verdict is load-bearing.
 - `references/ANTIPATTERNS.md` — AP-### table (the rule set this
   carve-out lives outside of).
+
+## M018 Tier-1 inline_threshold_tokens (P00 precondition)
+
+The M018 compression layer's tier-1 microcompact threshold is sourced from the
+active orchestrator config: `compression.tier1.inline_threshold_tokens`. The
+default value pinned in `templates/orchestrator-config-default.yml:87` is
+`1500` tokens (P00 plan time, 2026-05-01).
+
+Consuming SC: SC-3 (M031, amended per AD-17) — the test fixture under
+`tests/m031-acceptance/test-compression-applies-to-quick.sh` MUST construct a
+Quick-profile payload exceeding this threshold so tier-1 records reliably emit.
+The constructed payload's body-tokens minimum is `inline_threshold_tokens + 1`;
+the canonical fixture rounds to `1700` for cushion.
+
+Resolution path at runtime: `compression.tier1.inline_threshold_tokens` in the
+project's active `.orchestrator/config.yml` (or the bundled
+`templates/orchestrator-config-default.yml` if the project hasn't customized).
+M009 (multi-runtime parity, deferred post-launch) is the milestone that
+verifies non-CC runtimes resolve the same value.

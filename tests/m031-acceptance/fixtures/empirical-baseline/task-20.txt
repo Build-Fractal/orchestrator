@@ -1,0 +1,5 @@
+# task-20
+category: feature
+cost_class: n/a
+touched_files: scripts/knowledge/write-summary.sh,scripts/knowledge/rebuild-index.sh
+description: Synthetic feature filler: knowledge summary-writer new field

@@ -1,0 +1,5 @@
+# task-06
+category: feature
+cost_class: n/a
+touched_files: 
+description: Synthetic empty: degenerate plan with no touched files (proves overhead-only floor)

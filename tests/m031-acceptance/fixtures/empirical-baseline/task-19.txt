@@ -1,0 +1,5 @@
+# task-19
+category: doc
+cost_class: n/a
+touched_files: CHANGELOG.md
+description: Synthetic doc filler: CHANGELOG entry for prior milestone close

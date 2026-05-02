@@ -119,7 +119,7 @@ authoritative trigger list):
 writing a compound command inline, extract the logic into a short
 helper script and invoke it as the `Check:` command. Path discipline:
 project-owned per-phase verifiers (slug-bearing filenames like
-`p01-foundation-bundle.sh`) live under `tools/verify/`; framework-owned
+`m036-p01-foundation-bundle.sh`) live under `tools/verify/`; framework-owned
 verifiers that ship in the install bundle (`check-*`, `run-*`,
 `spec-shape-lint`, `validate-*`, `guards/*`) live under `scripts/verify/`.
 Discriminator: any verifier whose filename embeds a phase/task/milestone
@@ -131,6 +131,17 @@ files written there are gitignored AND vulnerable to silent clobber on
 the next `install-claude-code.sh` run. (M032 Finding A; surfaced
 2026-04-29 by pbj-central-mono-repo dogfooding.)
 
+**Naming convention — milestone slug REQUIRED for per-phase verifiers**:
+project-owned verifier filenames MUST embed the milestone slug as the
+first segment (`m###-p##-<descriptor>.sh`), not phase-only
+(`p##-<descriptor>.sh`). Why: every milestone has a P00, every milestone
+has a phase-suite aggregator, and the unprefixed slug `p##-phase-suite.sh`
+silently clobbered prior milestones' aggregators on every new milestone
+P00 close (M030 lost to M031, M031 lost to M036, observed 2026-05-01).
+Phase-only slugs are reserved for genuinely cross-milestone framework
+verifiers (none today). The lint at `scripts/diagnostics/check-plans.sh`
+flags unprefixed `p##-*` plan deliverables as warnings.
+
 ```markdown
 # FORBIDDEN — triggers harness heuristic (plain subshell + source)
 - My truth statement
@@ -140,9 +151,9 @@ the next `install-claude-code.sh` run. (M032 Finding A; surfaced
 - My truth statement
   - Check: `test $(grep -c "pattern" file.txt) -gt 0`
 
-# REQUIRED — single-script-file shape, project-owned path
+# REQUIRED — single-script-file shape, project-owned path, milestone-prefixed
 - My truth statement
-  - Check: `bash tools/verify/p07-my-check.sh`
+  - Check: `bash tools/verify/m036-p07-my-check.sh`
 ```
 
 **Why this matters**: the orchestrator's `speckit.orchestrator.auto`
@@ -215,6 +226,8 @@ These five rules turn known plan-time confabulations into mechanical fail-fast c
 4. **`run-probe.sh` scope discipline.** `scripts/util/run-probe.sh` is the staged-throwaway-probe wrapper — it exits 3 on paths outside `/tmp`, `/var/folders`, and `<repo>/tmp/`. It is **not** a generic invocation harness. For repo-resident verifiers under `scripts/verify/<...>.sh` or `tools/verify/<...>.sh`, invoke directly via `bash scripts/verify/<path>` (or `bash tools/verify/<path>`). Reserve `run-probe.sh` for genuinely staged probes inside the allowed directories. Surfaced 2026-04-29 by M028/P02/T01-T05 self-dogfood: five consecutive task plans wrapped a project-tree verifier path in `run-probe.sh` and uniformly false-FAILed under `auto-loop --step=V`.
 
 5. **Real-DB verification for SQL-bound code.** When a task introduces new SQL reads, schema migrations, or DB-bound integration code, the `## Verification` section MUST include either (a) a real-DB column-existence verifier (a prepared SELECT against a freshly-migrated empty schema, asserting no `no such column` throw), OR (b) an explicit `## Notes` "real-app smoke test pending — confirm before phase close" callout that names the surface to smoke-test and the expected behavior. Mock-only DB integration verification is a known false-pass shape: typed mocks share the planner's vocabulary so they round-trip cleanly even when the runtime schema diverges. Surfaced 2026-04-29 by lakeledger M066/P04 (column-name drift between planner spec vocabulary and persistence-layer schema names; mock tests passed; first app reload threw `no such column` — took two column-name-drift fixes against different tables to clear). Layer-2 fix (boundary-translation decision packet) is queued for M034.
+
+6. **Path-collision check.** Every artifact path the plan declares as `Produces:` (in the Boundary Map) or as a `create` deliverable (in `## Files Likely Touched`) MUST NOT already exist on disk at plan-authoring time. The planner MUST `ls -la` each declared `create` path before authoring. If a path already exists: STOP. Either (a) the convention is wrong (rename the planned artifact to a milestone-prefixed slug — see Naming convention rule above), or (b) the existing file belongs to a closed milestone and the plan is silently overwriting it (escalate to the user; do not proceed). Surfaced 2026-05-01 by M036/P00/T03 (the M031 P00 phase-suite aggregator at `tools/verify/p00-phase-suite.sh` was silently overwritten when M036's T03 plan declared the same path as a `create` deliverable; M030's prior P00 aggregator had been similarly lost weeks earlier without anyone noticing). The planner cannot rely on the executor to catch this — the executor honors the plan literally.
 
 ## Scope Declaration
 

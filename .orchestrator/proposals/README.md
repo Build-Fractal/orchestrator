@@ -9,6 +9,7 @@ These docs are inputs for `orchestrator:specify` (and downstream `orchestrator:e
 | ID | Title | Shape | Standalone? |
 |---|---|---|---|
 | `constitution-amendment-inclusion-criteria.md` | Inclusion-criteria gate + governance log + distribution-surface integrity | Constitution PR (~50 LOC + 1 new doc) | Yes — no milestone needed |
+| `launch-sequencing-amendment-2026-05-03.md` | Risk-ranked launch sequencing: M031 → (M032 + M033 paired) → M029 → M035 P02–P06; adds friendly-tester pass on M033; M036a smoke test before pilot | Operational amendment, not a milestone | Yes — supersedes the headline-sequence line in CLAUDE.md |
 | `M028-autonomous-hardening-v3.md` | Hook portability + 5 new shape classes (AP-014 `xargs-sh-c-compound-body` added 2026-04-28) + investigation-pattern wrappers (incl. `peek-files.sh`) + M025 hook-shim follow-up (bare command names, install dedup, `--repair`) | Milestone (5 phases) or 2 quick PRs | Some phases standalone |
 | `M029-roadmap-visibility-and-cli-ux.md` | `orchestrator:where` tree + invocation-context resolver + headline status (embeds M027 surfaces) | Milestone (3 phases) | No — coherent feature |
 | `M030-adaptive-model-selection.md` | Task-character classifier + model routing table + verifier-fail escalation; surface savings via M027 | Milestone (4 phases) or 2-3 quick PRs depending on classifier complexity | Yes — independent feature |

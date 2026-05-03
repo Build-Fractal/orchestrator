@@ -1,5 +1,5 @@
 # >>> orchestrator:recent-changes >>>
-- 034-right-sized-entry: M031 right-sized entry: restore knowledge graph + compression access for Quick i
+- 035-wiki-distribution-init-integration: M032 Wiki Distribution and Init Integration: make orchestrator:init produce a wo
 # <<< orchestrator:recent-changes <<<
 # CLAUDE.md — spec-kit-orchestrator
 
@@ -9,15 +9,15 @@ A standalone autonomous multi-phase orchestrator. This repo holds the orchestrat
 
 ## Project Status
 
-**v0.9.3** (2026-05-01). 13 commands, 80+ scripts, 24+ templates, 15 reference docs, 6 user guides, `packaging/` layer, runtime + format + backend adapter tree. **Closed**: M011 (spec management), M012 (spec wiki, 2026-04-21), M013 (GitHub native integration), M014 extended (spec management + comment→workflow, 2026-04-25), M015 (standalone cutover), M016 (autonomous hardening), M018 (context compression layer, 2026-04-28), M019 Tier 1+2+3 (observability emitter + cost rollup), M020 (knowledge layer maturation, 2026-04-25), M021 (autonomous hardening v2), M024 (universal intake & routing), M025 (installer coexistence, 2026-04-23), M026 (conversus-OSS migration, 2026-04-25), M027 (cost+quality observability surfaces, 2026-04-27), M028 (autonomous hardening v3, 2026-04-29), **M030 (adaptive model selection, 2026-05-01)**. **Next up**: **M031 (right-sized entry)** — restores knowledge graph + compression access for Quick intensity + adds Tier A+ middle flow (research → plan → build) + universal `orchestrator <task>` entry. Brief at `.orchestrator/proposals/M031-right-sized-entry.md`.
+**v0.9.3** (2026-05-01). 13 commands, 80+ scripts, 24+ templates, 15 reference docs, 6 user guides, `packaging/` layer, runtime + format + backend adapter tree. **Closed**: M011 (spec management), M012 (spec wiki, 2026-04-21), M013 (GitHub native integration), M014 extended (spec management + comment→workflow, 2026-04-25), M015 (standalone cutover), M016 (autonomous hardening), M018 (context compression layer, 2026-04-28), M019 Tier 1+2+3 (observability emitter + cost rollup), M020 (knowledge layer maturation, 2026-04-25), M021 (autonomous hardening v2), M024 (universal intake & routing), M025 (installer coexistence, 2026-04-23), M026 (conversus-OSS migration, 2026-04-25), M027 (cost+quality observability surfaces, 2026-04-27), M028 (autonomous hardening v3, 2026-04-29), M030 (adaptive model selection, 2026-05-01), **M031 (right-sized entry, 2026-05-01)**, **M036a (reference-corpus pre-launch slice, P00–P07, 2026-05-02)**. **Next up**: **M032 + M033 paired** (wiki distribution + init integration; project onboarding experience) — M033/P05 invokes M032's `--with-wiki` gate, so they ship as a paired unit per the 2026-05-03 launch sequencing amendment. Briefs at `.orchestrator/proposals/M032-wiki-distribution-and-init-integration.md` and `.orchestrator/proposals/M033-onboarding-experience.md`.
 
 ## Forward Roadmap (revised 2026-05-03 — post-M036a close)
 
 M028 closed 2026-04-29. M030 (adaptive model selection) closed 2026-05-01: 8 phases (P00–P07), 14 success criteria verified via the M030 acceptance battery (`tests/m030-acceptance/run-acceptance-battery.sh` → `BATTERY: pass=22 fail=0`); `M030-VALIDATED` marker + `M030-SUMMARY.md` + milestone-grain `unit_close` all on disk; `validate-milestone.sh` reports 197/197 PASS. **M036a (P00–P07) closed 2026-05-02** — full reference-corpus pipeline (Tier 0/1/2 extraction + ingest + graph + dispatch injection + supersede chain) live; cross-phase regression spread covers P02 selective + P03/P04/P05/P06/P07 full pass-through. Remaining pre-launch queue, **risk-ranked per the 2026-05-03 launch sequencing amendment** (`.orchestrator/proposals/launch-sequencing-amendment-2026-05-03.md`):
 
-**M031 → (M032 + M033 paired) → M029 → M035 P02–P06**
+**(M032 + M033 paired) → M029 → M035 P02–P06**
 
-(Was: `M031 → M032 → M033 → M029 → M035`. Pairing M032+M033 + adding a friendly-tester pass on M033 before lock is the load-bearing change; risk concentrates in M035-publishing blast radius and M033 cold-start UX, not in dependency order.)
+(Was: `M031 → M032 → M033 → M029 → M035`. M031 closed 2026-05-01. Pairing M032+M033 + adding a friendly-tester pass on M033 before lock is the load-bearing change; risk concentrates in M035-publishing blast radius and M033 cold-start UX, not in dependency order.)
 
 **Parallel pre-launch workstream**: **M036a P03 live-LLM smoke test** before 2026-05-08 — single real LLM extraction end-to-end (not stub) against a representative PBJ fixture. Cheap insurance against arriving at the 2026-05-15 pilot with a path that's only ever been exercised mocked. M036a itself is closed.
 
@@ -32,9 +32,9 @@ The historical hotfix list (with patch shapes inline) is preserved verbatim in t
 
 Launch posture: **CC-only**. Codex CLI / Cursor / Managed Agents are aspirational fast-follows; we ship CC-exclusive and broaden the runtime story when real users arrive with non-CC projects.
 
-Proposal briefs for M029, M031, M032, M033, M035 are at `.orchestrator/proposals/` (each is an input for `orchestrator:specify` when that milestone enters the queue). Brief summaries:
+Proposal briefs for M029, M032, M033, M035 are at `.orchestrator/proposals/` (each is an input for `orchestrator:specify` when that milestone enters the queue). Brief summaries:
 
-- **M031 (right-sized entry)** — restores knowledge graph + compression access for Quick intensity (today `commands/dispatch.md:21` skips `build-context.sh` — load-bearing leak) + adds a Tier A+ middle flow (research → plan → build, no auto/roadmap/consolidate) + a universal `orchestrator <task>` entry that lowers adoption friction for small tasks. Composes with M030 as the thrift-and-ergonomics pair.
+- ~~**M031 (right-sized entry)**~~ — closed 2026-05-01. 5 phases (P00–P04), 14 success criteria verified via the M031 acceptance battery (`tests/m031-acceptance/run-acceptance-battery.sh` → `BATTERY: pass=15 fail=0`); `M031-VALIDATED` marker + `M031-SUMMARY.md` + milestone-grain `unit_close` all on disk; `validate-milestone.sh` reports 117/117 PASS. Shipped surfaces: `build-context.sh --profile=quick|standard|full` + `--meta-out` JSON sidecar; FR-4 collapse of `commands/dispatch.md:21` Skip-payload-assembly branch; Tier A+ middle flow under `.orchestrator/tier-a-plus/<slug>/`; `commands/do.md` universal-entry skill + `scripts/intake/do-entry.sh` driver; `auto_proceed: true` default flip + AD-9 compound-change banner via `run-doctor.sh`; `QUICK_BUDGET_DRIFT` informational warning in `efficiency-footer.sh`. See `.orchestrator/milestones/M031/M031-SUMMARY.md`.
 - ~~**M028 (autonomous hardening v3)**~~ — closed 2026-04-29. Hook portability + 5 shape classes (AP-010..AP-014) + investigation-pattern wrappers + M025 hook-shim follow-up shipped. See `milestones/M028/M028-SUMMARY.md`.
 - ~~**M030 (adaptive model selection)**~~ — closed 2026-05-01. 8 phases (P00–P07), 14 SCs verified via M030 acceptance battery (`BATTERY: pass=22 fail=0`); shadow-mode default, FR-9 programmatic flip-gate enforces shadow-corpus threshold before live routing; CON-3 symbolic-tier closure preserved end-to-end. See `.orchestrator/milestones/M030/M030-SUMMARY.md`.
 - **M032 (wiki distribution + init integration)** — wiki tooling + mkdocs/Giscus templating ship in the install bundle; `orchestrator:wiki-init` + `init --with-wiki [--with-giscus] [--deploy]` produces working wiki for any new project. Promoted to pre-launch because M033 P05 invokes its `--with-wiki` gate.

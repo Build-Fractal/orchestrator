@@ -1,3 +1,3 @@
 # >>> orchestrator:recent-changes >>>
-- 034-right-sized-entry: M031 right-sized entry: restore knowledge graph + compression access for Quick i
+- 035-wiki-distribution-init-integration: M032 Wiki Distribution and Init Integration: make orchestrator:init produce a wo
 # <<< orchestrator:recent-changes <<<

@@ -95,3 +95,20 @@ cost_rates:
   smart:
     input_per_mtok: 15.00
     output_per_mtok: 75.00
+
+# ---------- M036/P03: task_type registration (FR-19) ----------
+#
+# task_type-scoped routing. The default routing path keys on
+# (character × runtime); some task types (notably reference-corpus
+# extraction in M036/P03) bypass the character classifier and resolve
+# directly to a symbolic tier. This section is additive — its absence
+# preserves pre-M036 behavior.
+#
+# CON-3 invariant: hardcoded model IDs MUST appear ONLY in the
+# resolution: section. The task_type: rows below are symbolic.
+
+task_type:
+  extraction:
+    claude-code: smart
+    codex-cli: inherit
+    cursor: inherit

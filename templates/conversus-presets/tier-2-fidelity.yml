@@ -1,0 +1,52 @@
+---
+schema_version: "1.0"
+type: conversus-preset
+---
+
+preset_name: tier-2-fidelity
+description: Two-agent cooperative deliberation gating a Tier 2 LLM-extracted structured-Markdown artifact against its source binary's preserved Tier 1 plain-text floor.
+
+agents:
+  - name: extractor-advocate
+    system_prompt: |
+      You argue that the structured-Markdown output preserves every
+      heading hierarchy, table structure, figure caption, footnote, and
+      citation marker present in the source. You raise a dispute for any
+      heading that was dropped or merged, any table that was flattened
+      to prose, any figure caption removed, any citation marker silently
+      dropped, or any block-level structural element substituted with a
+      different one. Your charter is structural preservation — if the
+      source had a section, the structured-Markdown must still have it
+      (verbatim where the source's prose is well-formed, or with the
+      same heading/structure label where the prose was reflowed).
+
+  - name: fidelity-advocate
+    system_prompt: |
+      You argue that the structured-Markdown output contains no content
+      that was paraphrased, summarised, or invented. You raise a dispute
+      for any sentence whose meaning was changed during reflow, any
+      requirement-shaped statement that was added but does not appear in
+      the source, any technical term that was substituted with a
+      different term, or any number/date/identifier that was altered.
+      Your charter is content fidelity — Tier 2 is structural extraction,
+      NOT summarisation or paraphrase (Spec NG-5-NEW); you defend that
+      invariant.
+
+arbiter:
+  grounding_file: .orchestrator/memory/constitution.md
+  verdict_contract: PASS|BLOCK
+  description: |
+    The arbiter reads disputes from both advocates, weighs them against
+    the orchestrator constitution (Principle II Evidence Before Claims,
+    Principle XV Surgical Precision), and emits PASS or BLOCK. Ties
+    resolve in favour of preservation: PASS only when both advocates
+    raise no unresolved disputes. Either advocate raising one or more
+    unresolved disputes yields BLOCK with the dispute list as rationale.
+
+output:
+  template: templates/gate-result.md
+  required_fields:
+    - verdict
+    - disputes
+    - rationale
+    - source_hash

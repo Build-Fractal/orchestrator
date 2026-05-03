@@ -1,0 +1,76 @@
+---
+schema_version: "1.0"
+type: task-summary
+id: "T03"
+parent: "P07"
+milestone: "M036"
+provides:
+  - "scripts/dispatch/build-context.sh wires the new reference source into all five integration surfaces (display-order map echo 4; display-name map echo Reference; display-priority map widened to knowledge|decisions|spec_context|reference filtered; volatility-by-name map widened to include Reference under stable; omit-empty-section gate at line ~1995 widened to fire when s_source = spec_context OR reference and staging_file is empty); tests/fixtures/m036-p07-task-plans/T-with-topic-tags-PLAN.md (synthetic SC-3 fixture task plan declaring topic_tags: [pbj-staffing] + reference_token_budget: 4000); tests/fixtures/m036-p07-task-plans/T-no-scope-PLAN.md (synthetic SC-7 baseline fixture task plan; NO topic_tags + NO applies_to_field; triggers omit-empty-section path); tests/fixtures/m036-p07-fixture-milestone/ (minimal recipe-flow-driving fixture milestone tree with M-fixture-ROADMAP.md + phases/P-fixture/P-fixture-PLAN.md + phases/P-fixture/tasks/T-no-scope-PLAN.md staged because build-context.sh recipe flow validates roadmap+phase-plan+task-plan presence on disk); tests/fixtures/m036-p07-baseline/payload-no-scope.expected.txt (1048-line pre-feature payload baseline captured pre-edit per M036/P05 pre-edit-baseline-capture sequencing pattern); 8 single-script-file shape verifiers under tools/verify/m036-p07-* (dispatcher-routes-reference 5 token-presence checks; omit-empty-section behavioral verifier driving build-context.sh against a mktemp -d fixture milestone with synthetic mismatch task plan and asserting no ## Reference header in stdout; fixture-task-plans-shape 5 token-presence checks across both fixture task plans; baseline-captured 2 sanity checks asserting baseline file exists+non-empty+contains Manifest header; p02-regression-pass selective 14-of-15 P02 sub-gates excluding m036-p02-tier-2-deferred-error.sh; p03-regression-pass full pass-through of M036/P03 14-gate phase-suite; p04-regression-pass full pass-through of M036/P04 13-gate phase-suite; p05-regression-pass full pass-through of M036/P05 8-gate phase-suite including CON-5 default-mode byte-equality baselines for traverse-graph.sh + scope-filter.sh)"
+requires:
+  - "from:T01 what:templates/context-recipe.yaml declares reference: section + reference: top-level block with default_token_budget: 4000 + scripts/dispatch/lib/section-handlers.sh dispatches reference) arm; from:T02 what:scripts/dispatch/lib/section-handlers.sh::handle_reference filled body + scripts/dispatch/lib/reference-budget.sh + scripts/dispatch/lib/reference-relevance.sh; from:disk what:tools/verify/m036-p02-phase-suite.sh + tools/verify/m036-p03-phase-suite.sh + tools/verify/m036-p04-phase-suite.sh + tools/verify/m036-p05-phase-suite.sh as cross-phase regression baselines"
+affects:
+  - "T04 (acceptance harness consumes T03 verifiers via phase-suite aggregator m036-p07-phase-suite.sh; SC-7 byte-equality harness must use the same positional+fixture-milestone invocation as the Step-3 baseline-capture command per the equivalent-invocation contract; baseline file payload-no-scope.expected.txt is the load-bearing reference for SC-7 byte-equality assertion)"
+key_files:
+  - "scripts/dispatch/build-context.sh,tests/fixtures/m036-p07-task-plans/T-with-topic-tags-PLAN.md,tests/fixtures/m036-p07-task-plans/T-no-scope-PLAN.md,tests/fixtures/m036-p07-fixture-milestone/M-fixture-ROADMAP.md,tests/fixtures/m036-p07-fixture-milestone/phases/P-fixture/P-fixture-PLAN.md,tests/fixtures/m036-p07-fixture-milestone/phases/P-fixture/tasks/T-no-scope-PLAN.md,tests/fixtures/m036-p07-baseline/payload-no-scope.expected.txt,tools/verify/m036-p07-dispatcher-routes-reference.sh,tools/verify/m036-p07-omit-empty-section.sh,tools/verify/m036-p07-fixture-task-plans-shape.sh,tools/verify/m036-p07-baseline-captured.sh,tools/verify/m036-p07-p02-regression-pass.sh,tools/verify/m036-p07-p03-regression-pass.sh,tools/verify/m036-p07-p04-regression-pass.sh,tools/verify/m036-p07-p05-regression-pass.sh"
+key_decisions:
+  - "none"
+patterns_established:
+  - "Pre-edit-baseline-capture sequencing for CON-1/SC-7 (capture dispatcher stdout BEFORE applying map edits; capturing AFTER defeats the byte-equality regression guard); five-arm dispatcher edit shape for new section sources (display-order + display-name + display-priority + volatility-by-name + omit-empty-section gate must all be updated together or the manifest will display the section under default fallback values); synthetic fixture-milestone tree pattern (tests/fixtures/m036-p07-fixture-milestone/ with <root>/<milestone>-ROADMAP.md + <root>/phases/<phase>/<phase>-PLAN.md + <root>/phases/<phase>/tasks/<task>-PLAN.md required because the dispatcher recipe flow validates these on disk before invoking section handlers); selective-gate-list cross-phase regression pattern (third instance in M036 — M036/P03/T03 + M036/P04/T04 + M036/P07/T03 — explicitly enumerate surviving sub-gates and skip the one whose semantics intentionally flipped); equivalent-invocation policy for payload flag-surface drift (when payload verbatim flags do not match the live script flag surface use the equivalent invocation AND ensure the same flag set is used by both producer baseline capture AND consumer downstream byte-equality harness; the contract is the byte-equality not the flag spelling)"
+drill_down_paths:
+  - ".orchestrator/milestones/M036/phases/P07/tasks/T03-dispatcher-integration-and-regression-PAYLOAD.md, .orchestrator/milestones/M036/phases/P07/tasks/T03-dispatcher-integration-and-regression-PLAN.md"
+duration: "45m"
+verification_result: "pass"
+completed_at: "2026-05-02T18:52:23Z"
+---
+
+T03 lands the dispatcher integration for the M036 reference-corpus injection feature. Wires `scripts/dispatch/build-context.sh`'s four map functions (display-order / display-name / display-priority / volatility-by-name) plus the omit-empty-section gate to recognize the new `reference` source authored by T01 + filled by T02. Captures the load-bearing CON-1 / SC-7 pre-feature payload baseline at `tests/fixtures/m036-p07-baseline/payload-no-scope.expected.txt` BEFORE editing build-context.sh, per the M036/P05 pre-edit-baseline-capture sequencing pattern. Authors the two synthetic fixture task plans driving SC-3 and SC-7. Authors the four cross-phase regression verifiers (P02 selective 14-of-15 + P03 + P04 + P05 full pass-through). Closes 8 of the 8 must-have truths T03 owns.
+
+What was built:
+
+- `tests/fixtures/m036-p07-task-plans/T-with-topic-tags-PLAN.md` — synthetic SC-3 fixture task plan declaring `topic_tags: [pbj-staffing]` + `reference_token_budget: 4000`. Drives the reference-injection path against the M036/P04 reference fixture corpus.
+- `tests/fixtures/m036-p07-task-plans/T-no-scope-PLAN.md` — synthetic SC-7 baseline fixture task plan declaring `scope_tags: [project]`. NO `topic_tags`, NO `applies_to_field` — triggers the CON-1 byte-identical pre-feature path through the omit-empty-section gate.
+- `tests/fixtures/m036-p07-fixture-milestone/` — minimal fixture milestone tree (`M-fixture-ROADMAP.md` + `phases/P-fixture/P-fixture-PLAN.md` + `phases/P-fixture/tasks/T-no-scope-PLAN.md`) staged because `build-context.sh`'s recipe-driven flow requires positional args `<orch_root> <milestone> <phase> <task>` plus a roadmap + phase-plan on disk. Required for the recipe-flow baseline capture (the `--task-plan` flag triggers M031 direct-mode which short-circuits the recipe flow entirely and would not exercise the reference-section code path).
+- `tests/fixtures/m036-p07-baseline/payload-no-scope.expected.txt` — pre-feature payload baseline (1048 lines, captured pre-edit). Contains canonical `## Manifest` header. Captured via `bash scripts/dispatch/build-context.sh tests/fixtures/m036-p07-fixture-milestone M-fixture P-fixture T-no-scope`.
+- `scripts/dispatch/build-context.sh` modified — five additive arms across four map functions plus the omit-empty-section gate:
+  - `_bc_display_order()`: added `reference)   echo 4 ;;` between `spec_context)` and `scope)`.
+  - `_bc_display_name()`: added `reference)    echo "Reference" ;;` before the wildcard `*)`.
+  - `_bc_display_priority()`: widened the `knowledge|decisions|spec_context)` arm to include `reference`.
+  - `_bc_section_volatility_by_name()`: added `|"Reference"` to the `stable` arm.
+  - Omit-empty-section gate at line ~1995: extended `[ "$s_source" = "spec_context" ]` to `{ [ "$s_source" = "spec_context" ] || [ "$s_source" = "reference" ]; }` so empty `handle_reference` output drops the section entirely (load-bearing for SC-7 / CON-1).
+- `tools/verify/m036-p07-dispatcher-routes-reference.sh` — token-presence verifier asserting all five tokens above are present in `build-context.sh`. SUMMARY: pass=5 fail=0.
+- `tools/verify/m036-p07-omit-empty-section.sh` — behavioral verifier. Stages a minimal mktemp -d fixture milestone + a synthetic mismatch task plan with `topic_tags: [does-not-match-anything]`; drives `build-context.sh` via positional flow; asserts no `## Reference` header in stdout. Adapted from the verbatim payload form (which used the fictitious `--milestone --phase --task --task-plan` flag set) to the equivalent positional fixture-milestone invocation. SUMMARY: pass=1 fail=0.
+- `tools/verify/m036-p07-fixture-task-plans-shape.sh` — token-presence verifier for the two synthetic fixture task plans. SUMMARY: pass=5 fail=0.
+- `tools/verify/m036-p07-baseline-captured.sh` — sanity verifier asserting the baseline file exists, is non-empty, and contains the `Manifest` header. SUMMARY: pass=2 fail=0.
+- `tools/verify/m036-p07-p02-regression-pass.sh` — selective-gate-list cross-phase regression. Runs 14 of the 15 P02 sub-gates (excludes `m036-p02-tier-2-deferred-error.sh` whose semantics intentionally flipped at P03 close per the M036-canonical selective-gate-list pattern). SUMMARY: pass=14 fail=0.
+- `tools/verify/m036-p07-p03-regression-pass.sh` — full pass-through of M036/P03 phase-suite (14 sub-gates). SUMMARY: pass=1 fail=0.
+- `tools/verify/m036-p07-p04-regression-pass.sh` — full pass-through of M036/P04 phase-suite (13 sub-gates). SUMMARY: pass=1 fail=0.
+- `tools/verify/m036-p07-p05-regression-pass.sh` — full pass-through of M036/P05 phase-suite (8 sub-gates including CON-5 default-mode byte-equality baselines for `traverse-graph.sh` + `scope-filter.sh`). SUMMARY: pass=1 fail=0. Load-bearing assertion that P07 did not perturb either script.
+
+Plan-time correction (build-context.sh flag surface):
+
+The payload's verbatim Step 3 + Step 10 invocations used `--milestone M036 --phase P07 --task T-no-scope --task-plan <path>` flags. These flags do not exist in the current `build-context.sh` argument parser — the parser exits 1 on unknown options. The actual flag surface is positional (`<orch_root> <milestone> <phase> <task>`) for the recipe-driven flow, plus `--task-plan <file>` which triggers the M031 direct-mode short-circuit (which does NOT exercise the recipe flow or section handlers).
+
+Per the payload's Notes section: "If `build-context.sh`'s flag surface differs slightly... use the equivalent invocation. The contract is: the same flag set must be used in T03 Step 3 (baseline capture) AND in T04's SC-7 harness invocation." Adopted the positional + fixture-milestone invocation for both the baseline capture (Step 3) and the omit-empty-section behavioral verifier (Step 10). The baseline-capture command was: `bash scripts/dispatch/build-context.sh tests/fixtures/m036-p07-fixture-milestone M-fixture P-fixture T-no-scope > tests/fixtures/m036-p07-baseline/payload-no-scope.expected.txt`.
+
+T04's SC-7 byte-equality harness must use the same invocation form to honor the contract. Recorded as a forward note for T04.
+
+Cross-task ordering note (M036 standard form): the M036 selective-gate-list cross-phase regression pattern is now applied for the third time (M036/P03/T03 14-of-14 P02; M036/P04/T04 14-of-15 P02; M036/P07/T03 14-of-15 P02 plus full pass-through for P03/P04/P05). The pattern is M036-canonical for any future regression check where one phase's deferred-error verifier is replaced by the next phase's full-implementation verifier. P03/P04/P05 phase-suites have no flipped sub-gates affecting P07 — full pass-through is correct.
+
+Verification (all 8 verifiers exit 0 with fail=0):
+
+- `bash tools/verify/m036-p07-dispatcher-routes-reference.sh` -> SUMMARY: pass=5 fail=0.
+- `bash tools/verify/m036-p07-omit-empty-section.sh` -> SUMMARY: pass=1 fail=0.
+- `bash tools/verify/m036-p07-fixture-task-plans-shape.sh` -> SUMMARY: pass=5 fail=0.
+- `bash tools/verify/m036-p07-baseline-captured.sh` -> SUMMARY: pass=2 fail=0.
+- `bash tools/verify/m036-p07-p02-regression-pass.sh` -> SUMMARY: pass=14 fail=0.
+- `bash tools/verify/m036-p07-p03-regression-pass.sh` -> SUMMARY: pass=1 fail=0.
+- `bash tools/verify/m036-p07-p04-regression-pass.sh` -> SUMMARY: pass=1 fail=0.
+- `bash tools/verify/m036-p07-p05-regression-pass.sh` -> SUMMARY: pass=1 fail=0.
+
+Patterns established (carried into key_decisions: none because all are reusable conventions, not architectural commitments):
+
+- Pre-edit-baseline-capture sequencing for CON-1 / SC-7 (capture the dispatcher's stdout BEFORE applying any of the dispatcher map edits; capturing AFTER the edits defeats the byte-equality regression guard — turns into a tautology). Carried verbatim from M036/P05 (`tests/fixtures/m036-p05-baseline/`). M036-canonical for any phase that adds a new dispatcher section.
+- Synthetic fixture-milestone tree pattern for recipe-flow testing (`tests/fixtures/m036-p07-fixture-milestone/` with `<root>/<milestone>-ROADMAP.md` + `<root>/phases/<phase>/<phase>-PLAN.md` + `<root>/phases/<phase>/tasks/<task>-PLAN.md`). Required because the dispatcher's recipe-driven flow validates roadmap + phase-plan + task-plan presence on disk before invoking section handlers. Reusable for any future verifier or harness driving the recipe flow against a synthetic task plan.
+- Five-arm dispatcher edit shape for new section sources (display-order + display-name + display-priority + volatility-by-name + omit-empty-section gate). Captures the full integration surface of the build-context section dispatcher; any future M-level addition of a new section source MUST update all five surfaces or the manifest will display the section under default fallback values (order 99, name = source string, priority = required, volatility = stable, no omit-empty discipline).
+- Selective-gate-list cross-phase regression pattern (third instance in M036, fourth across the orchestrator after M036/P03/T03 + M036/P04/T04). Explicitly enumerate the surviving sub-gates and skip the one whose semantics intentionally flipped — preserves regression coverage on the unaffected gates while honoring the upstream phase's deferred-error replacement.
+- Equivalent-invocation policy for payload flag-surface drift: when a payload's verbatim invocation specifies flags that do not exist on the live target script, use the equivalent invocation via the actual flag surface AND ensure the same flag set is used by both the producer (baseline capture) AND the consumer (downstream byte-equality harness). The contract is the byte-equality, not the flag spelling.

@@ -1,0 +1,23 @@
+# tests/fixtures/m036-p06-extract-manifest.yaml -- M036 P06 T03.
+#
+# Reference-shape extract manifest for the supersede-fixture document.
+# Used as documentation + a stable shape gate; the SC-6/SC-13 harnesses
+# inline their own manifests into mktemp -d workspaces because the
+# source path here points outside the workspace root.
+schema_version: "1.0"
+type: extract-manifest
+milestone: "M036"
+size_cap_bytes: 10485760
+
+documents:
+  - cite_id: "supersede-fixture"
+    source_path: "../m036-p06-supersede-corpus/original/cms-rule/REF-cms-rule-supersede-fixture.md"
+    category: "cms-rule"
+    source: "internal-test"
+    published: "2026-05-02"
+    version: "1"
+    topic_tags: [pbj-staffing]
+    applies_to_field: [staff_count]
+    tier: 1
+    summary_mode: "operator"
+    summary: "M036 P06 supersede-fixture; the V1 source for the supersede-chain harness."

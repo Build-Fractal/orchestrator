@@ -9,6 +9,13 @@
 #         scope_tags (normalized tag-to-entry mapping).
 #
 # Bash 3.2 compatible.
+#
+# Schema evolution note (M036/P05): the edges.edge_type CHECK enum grew from
+# 2 -> 5 values. SQLite cannot ALTER a CHECK constraint; rebuild-from-source
+# via rebuild-index.sh is the migration path (rebuild always stages a fresh
+# tmp_db before promotion). No long-lived knowledge.db state survives a
+# rebuild, so no destructive migration is needed for the orchestrator's
+# own DB.
 
 # --- Double-sourcing guard ---
 [ -n "${_GRAPH_DB_SOURCED:-}" ] && return 0
@@ -70,7 +77,11 @@ CREATE TABLE IF NOT EXISTS entries (
 CREATE TABLE IF NOT EXISTS edges (
   source_id TEXT NOT NULL,
   target_id TEXT NOT NULL,
-  edge_type TEXT NOT NULL CHECK(edge_type IN ('relates_to', 'supersedes')),
+  -- Edge-type closed enum. SSOT: references/reference-edge-types.md (M036 P00 T02).
+  -- New edge types require: (a) row in the SSOT file, (b) widening this CHECK enum,
+  -- (c) extension in scripts/knowledge/rebuild-index.sh (frontmatter read), (d)
+  -- extension in scripts/knowledge/traverse-graph.sh if directional walking differs.
+  edge_type TEXT NOT NULL CHECK(edge_type IN ('relates_to', 'supersedes', 'cites', 'derived_from', 'applies_to_field')),
   PRIMARY KEY (source_id, target_id, edge_type)
 );
 

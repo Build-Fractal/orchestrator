@@ -37,7 +37,7 @@ done
 fm_field() {
   local file="$1"
   local field="$2"
-  sed -n '/^---$/,/^---$/p' "$file" | grep "^${field}:" | head -1 | sed "s/^${field}:[[:space:]]*//" | sed 's/^"//' | sed 's/"$//' | sed 's/[[:space:]]*$//'
+  sed -n '/^---$/,/^---$/p' "$file" | grep "^${field}:" | head -1 | sed "s/^${field}:[[:space:]]*//" | sed 's/^"//' | sed 's/"$//' | sed 's/[[:space:]]*$//' || true
 }
 
 # --- Resolve project root ---
@@ -79,7 +79,10 @@ for file in "$knowledge_dir"/*/*.md "$knowledge_dir"/*/*/*.md; do
   # Skip .gitkeep or non-MEM files
   basename_file="$(basename "$file" .md)"
   case "$basename_file" in
-    MEM*|SPEC-*)
+    *.text|*.structured)
+      continue
+      ;;
+    MEM*|SPEC-*|REF-*)
       ;;
     *)
       continue
@@ -100,6 +103,9 @@ for file in "$knowledge_dir"/*/*.md "$knowledge_dir"/*/*/*.md; do
   supersedes="$(fm_field "$file" "supersedes")"
   content_hash="$(fm_field "$file" "content_hash")"
   relates_to_raw="$(fm_field "$file" "relates_to")"
+  cites_raw="$(fm_field "$file" "cites")"
+  derived_from_raw="$(fm_field "$file" "derived_from")"
+  applies_to_field_raw="$(fm_field "$file" "applies_to_field")"
 
   # Extract description from heading: # MEM###: <description>
   description="$(grep "^# ${id}:" "$file" | head -1 | sed "s/^# ${id}:[[:space:]]*//")"
@@ -137,6 +143,58 @@ for file in "$knowledge_dir"/*/*.md "$knowledge_dir"/*/*/*.md; do
   if [ -n "$supersedes" ]; then
     db_insert_edge "$tmp_db" "$id" "$supersedes" "supersedes"
     db_edge_count=$((db_edge_count + 1))
+  fi
+
+  # --- Insert edges for cites (M036/P05) ---
+  if [ -n "$cites_raw" ] && [ "$cites_raw" != "[]" ]; then
+    cites_clean="$(printf '%s' "$cites_raw" | tr -d '[]' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')"
+    if [ -n "$cites_clean" ]; then
+      old_ifs="$IFS"
+      IFS=','
+      for cite_target in $cites_clean; do
+        cite_target="$(printf '%s' "$cite_target" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')"
+        if [ -n "$cite_target" ]; then
+          db_insert_edge "$tmp_db" "$id" "$cite_target" "cites"
+          db_edge_count=$((db_edge_count + 1))
+        fi
+      done
+      IFS="$old_ifs"
+    fi
+  fi
+
+  # --- Insert edges for derived_from (M036/P05) ---
+  if [ -n "$derived_from_raw" ] && [ "$derived_from_raw" != "[]" ]; then
+    derived_clean="$(printf '%s' "$derived_from_raw" | tr -d '[]' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')"
+    if [ -n "$derived_clean" ]; then
+      old_ifs="$IFS"
+      IFS=','
+      for derived_target in $derived_clean; do
+        derived_target="$(printf '%s' "$derived_target" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')"
+        if [ -n "$derived_target" ]; then
+          db_insert_edge "$tmp_db" "$id" "$derived_target" "derived_from"
+          db_edge_count=$((db_edge_count + 1))
+        fi
+      done
+      IFS="$old_ifs"
+    fi
+  fi
+
+  # --- Insert edges for applies_to_field (M036/P05) ---
+  # target_id is a field name string (opaque to the edge layer).
+  if [ -n "$applies_to_field_raw" ] && [ "$applies_to_field_raw" != "[]" ]; then
+    field_clean="$(printf '%s' "$applies_to_field_raw" | tr -d '[]' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')"
+    if [ -n "$field_clean" ]; then
+      old_ifs="$IFS"
+      IFS=','
+      for field_target in $field_clean; do
+        field_target="$(printf '%s' "$field_target" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')"
+        if [ -n "$field_target" ]; then
+          db_insert_edge "$tmp_db" "$id" "$field_target" "applies_to_field"
+          db_edge_count=$((db_edge_count + 1))
+        fi
+      done
+      IFS="$old_ifs"
+    fi
   fi
 
   # --- Insert scope_tags ---

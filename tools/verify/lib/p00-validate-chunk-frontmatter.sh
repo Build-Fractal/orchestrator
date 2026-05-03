@@ -29,14 +29,14 @@ set -eu
 
 if [ $# -ge 1 ] && [ -f "$1" ]; then
   INPUT="$1"
-  CATEGORY=$(grep -E '^category:' "$INPUT" | head -n 1 | sed -E 's/^category:[[:space:]]*//' | sed -E 's/[[:space:]]*$//')
-  TIER=$(grep -E '^tier:' "$INPUT" | head -n 1 | sed -E 's/^tier:[[:space:]]*//' | sed -E 's/[[:space:]]*$//')
+  CATEGORY=$(grep -E '^category:' "$INPUT" | head -n 1 | sed -E 's/^category:[[:space:]]*//' | sed -E 's/[[:space:]]*$//' | sed -E 's/^"//; s/"$//; s/^'\''//; s/'\''$//')
+  TIER=$(grep -E '^tier:' "$INPUT" | head -n 1 | sed -E 's/^tier:[[:space:]]*//' | sed -E 's/[[:space:]]*$//' | sed -E 's/^"//; s/"$//; s/^'\''//; s/'\''$//')
 else
   # Read stdin into a temp file (avoid $() with pipe at top level).
   TMP=$(mktemp)
   cat > "$TMP"
-  CATEGORY=$(grep -E '^category:' "$TMP" | head -n 1 | sed -E 's/^category:[[:space:]]*//' | sed -E 's/[[:space:]]*$//')
-  TIER=$(grep -E '^tier:' "$TMP" | head -n 1 | sed -E 's/^tier:[[:space:]]*//' | sed -E 's/[[:space:]]*$//')
+  CATEGORY=$(grep -E '^category:' "$TMP" | head -n 1 | sed -E 's/^category:[[:space:]]*//' | sed -E 's/[[:space:]]*$//' | sed -E 's/^"//; s/"$//; s/^'\''//; s/'\''$//')
+  TIER=$(grep -E '^tier:' "$TMP" | head -n 1 | sed -E 's/^tier:[[:space:]]*//' | sed -E 's/[[:space:]]*$//' | sed -E 's/^"//; s/"$//; s/^'\''//; s/'\''$//')
   rm -f "$TMP"
 fi
 

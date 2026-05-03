@@ -33,7 +33,7 @@ This roadmap was substantially restructured 2026-05-01 to reflect the spec amend
     - Produces: `references/reference-taxonomy.md` (SSOT for the four categories: cms-rule, training-material, glossary, regulatory-doc); `references/reference-frontmatter-contract.md` (required fields per FR-2 + FR-4); `references/reference-source-types.yaml` (per-category default tier per FR-17); `scripts/dispatch/adapters/format/registry.tsv` (markdown=live, pdf=live, docx=live, xlsx=live); declared edge-type list in the existing graph schema doc updated additively for `cites` / `derived_from` / `applies_to_field`; `[source:...]` tag namespace added to `references/spec-management.md` scope-tag grammar section.
     - Consumes: existing graph schema declaration site (for additive edge-type registration); existing scope-tag grammar reference (for namespace addition).
 
-- [ ] **P01**: Tier 1 live format adapters (PDF, DOCX, XLSX, Markdown) — "Operator invokes `bash scripts/dispatch/adapters/format/pdf.sh tests/fixtures/m036/sample.pdf` and gets exit 0 with stdout containing the PDF's body text. Same for `docx.sh`, `xlsx.sh` (emits one CSV per sheet to a temp dir), and `markdown.sh` (passthrough). The registry lists all four `status: live`."
+- [x] **P01**: Tier 1 live format adapters (PDF, DOCX, XLSX, Markdown) — "Operator invokes `bash scripts/dispatch/adapters/format/pdf.sh tests/fixtures/m036/sample.pdf` and gets exit 0 with stdout containing the PDF's body text. Same for `docx.sh`, `xlsx.sh` (emits one CSV per sheet to a temp dir), and `markdown.sh` (passthrough). The registry lists all four `status: live`."
   - Risk: medium
   - Depends: P00
   - Blocked by: none
@@ -41,7 +41,7 @@ This roadmap was substantially restructured 2026-05-01 to reflect the spec amend
     - Produces: `scripts/dispatch/adapters/format/markdown.sh` (live passthrough); `scripts/dispatch/adapters/format/pdf.sh` (live, calls `pdftotext -layout`); `scripts/dispatch/adapters/format/docx.sh` (live, calls `pandoc`); `scripts/dispatch/adapters/format/xlsx.sh` (live, sheet-by-sheet CSV emission with header detection); fixture corpus at `tests/fixtures/m036-tier-1-adapters/` (small samples per format); `tests/test-tier-1-adapters.sh` (SC-9). External-tooling probe at `scripts/lifecycle/probe-extraction-tools.sh` reports presence of `pdftotext`, `pandoc`, and the chosen Excel parser; documents fallback messages.
     - Consumes: P00 adapter registry; existing dispatch adapter convention (`scripts/dispatch/adapters/`); host system's `pdftotext` (poppler-utils), `pandoc`, and Excel parser.
 
-- [ ] **P02**: Tier 0 manifest + `orchestrator:extract` command (synchronous Tier 0/1 path) + binary preservation — "Operator runs `bash scripts/knowledge/extract-reference.sh --manifest tests/fixtures/m036/extract-manifest.yaml` against a 3-doc fixture (1 PDF, 1 DOCX, 1 already-md). Afterwards: each doc has a manifest entry under `knowledge/reference/<cat>/REF-*.md` with summary + tags + content_hash; original binaries exist under `.orchestrator/knowledge/reference/_originals/<source>/`; Tier 1 plain-text files exist alongside; command exits 0 with `EXTRACTED:` lines per doc."
+- [x] **P02**: Tier 0 manifest + `orchestrator:extract` command (synchronous Tier 0/1 path) + binary preservation — "Operator runs `bash scripts/knowledge/extract-reference.sh --manifest tests/fixtures/m036/extract-manifest.yaml` against a 3-doc fixture (1 PDF, 1 DOCX, 1 already-md). Afterwards: each doc has a manifest entry under `knowledge/reference/<cat>/REF-*.md` with summary + tags + content_hash; original binaries exist under `.orchestrator/knowledge/reference/_originals/<source>/`; Tier 1 plain-text files exist alongside; command exits 0 with `EXTRACTED:` lines per doc."
   - Risk: high
   - Depends: P00, P01
   - Blocked by: none
@@ -49,7 +49,7 @@ This roadmap was substantially restructured 2026-05-01 to reflect the spec amend
     - Produces: `commands/extract.md`; `scripts/knowledge/extract-reference.sh` (Bash 3.2); manifest schema at `references/extract-manifest-contract.md`; Tier 0 summary-generation pass (LLM single-call, model declared in source-type config); content-hash + binary-preservation logic (FR-14); size-cap + external-storage hook governance (CON-7); `tests/test-tier-0-manifest.sh` (SC-10); `tests/fixtures/m036/extract-manifest.yaml` + sample binaries.
     - Consumes: P00 source-type config (default tier per category) + frontmatter contract; P01 Tier 1 adapters (called for the Tier 1 leg of any doc declared `tier: 1` or `tier: 2`).
 
-- [ ] **P03**: Tier 2 LLM extraction + M030 routing + conversus fidelity gate — "Operator runs extract on a manifest where 1 doc declares `tier: 2`; the structured Markdown output exists at `knowledge/reference/<cat>/REF-*.structured.md` with PASS verdict file at `_extraction-log/<doc-id>.pass.md`; an `unit_close` JSONL record with non-empty `model` + `cost_usd` exists in the M030 ledger. A second run with a manifest forcing BLOCK (via mocked low-fidelity extraction) produces the BLOCK rationale on disk and the structured output is NOT in the chunk store."
+- [x] **P03**: Tier 2 LLM extraction + M030 routing + conversus fidelity gate — "Operator runs extract on a manifest where 1 doc declares `tier: 2`; the structured Markdown output exists at `knowledge/reference/<cat>/REF-*.structured.md` with PASS verdict file at `_extraction-log/<doc-id>.pass.md`; an `unit_close` JSONL record with non-empty `model` + `cost_usd` exists in the M030 ledger. A second run with a manifest forcing BLOCK (via mocked low-fidelity extraction) produces the BLOCK rationale on disk and the structured output is NOT in the chunk store."
   - Risk: high
   - Depends: P02
   - Blocked by: none
@@ -57,7 +57,7 @@ This roadmap was substantially restructured 2026-05-01 to reflect the spec amend
     - Produces: Tier 2 extraction logic in `scripts/knowledge/extract-reference.sh` (additive over P02); M030 task-type registration for `extraction` (FR-19); conversus gate adapter wiring (extractor-advocate + fidelity-advocate agents declared at `scripts/knowledge/conversus-tier-2-gate/`); BLOCK retention path under `.orchestrator/knowledge/reference/_extraction-log/` (FR-18); `tests/test-tier-2-extraction-with-gate.sh` (SC-11, SC-12) using **mocked LLM responses** (recorded conversus deliberation transcripts — no live LLM in CI per CON-3).
     - Consumes: P02 manifest + extract-reference.sh baseline; M030 model-selection adapter (closed 2026-05-01); conversus adapter from M011/P07 (`scripts/dispatch/adapters/conversus/`).
 
-- [ ] **P04**: Ingest layer — promote extraction outputs to chunks + classifier — "Operator runs `bash scripts/knowledge/ingest-reference.sh --reference-root knowledge/reference/` after P02/P03 have produced extraction outputs. Afterwards `knowledge/reference/<cat>/REF-*.md` chunks exist for each doc, the index lists them, and the command exits 0 with `CREATED:` lines."
+- [x] **P04**: Ingest layer — promote extraction outputs to chunks + classifier — "Operator runs `bash scripts/knowledge/ingest-reference.sh --reference-root knowledge/reference/` after P02/P03 have produced extraction outputs. Afterwards `knowledge/reference/<cat>/REF-*.md` chunks exist for each doc, the index lists them, and the command exits 0 with `CREATED:` lines."
   - Risk: medium
   - Depends: P02 (Tier 0/1 outputs), P03 (Tier 2 outputs)
   - Blocked by: none
@@ -65,7 +65,7 @@ This roadmap was substantially restructured 2026-05-01 to reflect the spec amend
     - Produces: `commands/ingest-reference.md`; `scripts/knowledge/ingest-reference.sh` (Bash 3.2); `scripts/knowledge/classify-reference.sh` (taxonomy validator); fixture corpus at `tests/fixtures/m036-reference-corpus/`; `tests/test-reference-ingest-fixture.sh` (SC-1, SC-2).
     - Consumes: P02 manifest + Tier 0/1 outputs; P03 Tier 2 outputs (where present); P00 taxonomy + frontmatter-contract docs; P00 adapter registry; existing `scripts/knowledge/rebuild-index.sh` (re-used unmodified per CON-5); existing `knowledge/` directory tree (M011/M020).
 
-- [ ] **P05**: Graph schema extension — new edge types + tag namespace + traverser/scope-filter additive support — "Operator authors a fixture spec chunk `cites: [REF-cms-rule-§483-20]` plus a fixture reference chunk; runs `bash scripts/knowledge/traverse-graph.sh SPEC-requirement-FR-7 --depth 1`; output includes the reference chunk with edge label `cites`. Operator runs `bash scripts/dispatch/scope-filter.sh --tag '[source:cms-pbj-2024-q3]'` and gets matching chunks across spec/memory/reference categories."
+- [x] **P05**: Graph schema extension — new edge types + tag namespace + traverser/scope-filter additive support — "Operator authors a fixture spec chunk `cites: [REF-cms-rule-§483-20]` plus a fixture reference chunk; runs `bash scripts/knowledge/traverse-graph.sh SPEC-requirement-FR-7 --depth 1`; output includes the reference chunk with edge label `cites`. Operator runs `bash scripts/dispatch/scope-filter.sh --tag '[source:cms-pbj-2024-q3]'` and gets matching chunks across spec/memory/reference categories."
   - Risk: high
   - Depends: P00
   - Blocked by: none
@@ -73,7 +73,7 @@ This roadmap was substantially restructured 2026-05-01 to reflect the spec amend
     - Produces: extended `scripts/knowledge/traverse-graph.sh` (recognizes new edge types); extended `scripts/dispatch/scope-filter.sh` (accepts `--tag '[source:...]'`); `tests/test-reference-graph-edges.sh` (SC-4); test that confirms existing `relates_to`/`supersedes` traversal is byte-identical to pre-P05 (regression guard for CON-5).
     - Consumes: P00 graph schema declaration update; existing `relates_to`/`supersedes` traversal code (extended additively).
 
-- [ ] **P06**: Idempotent re-extract + re-ingest + supersede chain mechanism — "Operator runs extract + ingest twice on an unchanged fixture corpus and `git status knowledge/reference/` reports zero modified files (SC-5, SC-13). Operator mutates one fixture body, re-runs extract + ingest; a `REF-cat-id-v2.md` exists, the prior file's frontmatter has gained `superseded_by:`, and a `REVIEW:` line surfaces for any spec/memory chunk that cites the prior version (SC-6)."
+- [x] **P06**: Idempotent re-extract + re-ingest + supersede chain mechanism — "Operator runs extract + ingest twice on an unchanged fixture corpus and `git status knowledge/reference/` reports zero modified files (SC-5, SC-13). Operator mutates one fixture body, re-runs extract + ingest; a `REF-cat-id-v2.md` exists, the prior file's frontmatter has gained `superseded_by:`, and a `REVIEW:` line surfaces for any spec/memory chunk that cites the prior version (SC-6)."
   - Risk: medium
   - Depends: P02, P04
   - Blocked by: none
@@ -81,7 +81,7 @@ This roadmap was substantially restructured 2026-05-01 to reflect the spec amend
     - Produces: content-hash + supersede-chain logic in `scripts/knowledge/extract-reference.sh` and `scripts/knowledge/ingest-reference.sh` (additive over P02/P04 baselines, content-hash gates re-extraction at every tier per FR-9 + FR-16); `REVIEW:` advisory emission for cross-category citation drift (FR-11); `tests/test-reference-reingest-idempotency.sh` (SC-5); `tests/test-extract-idempotency.sh` (SC-13); `tests/test-reference-supersede-chain.sh` (SC-6).
     - Consumes: P02 extract baseline + manifest; P04 ingest baseline + classifier; P05 graph traversal (to detect dangling cites for `REVIEW:` lines).
 
-- [ ] **P07**: Dispatch context-builder injection + token-budget governor — "Operator dispatches a synthetic task whose plan declares `topic_tags: [pbj-staffing]` and `reference_token_budget: 4000`; the dispatched payload's `reference:` section is ≤4000 tokens, contains ≥1 chunk, and chunks are dropped at chunk-level granularity when over budget (SC-3). A task plan with no `topic_tags` and no `applies_to_field` produces a payload byte-identical to the pre-feature payload (SC-7 golden-baseline diff)."
+- [x] **P07**: Dispatch context-builder injection + token-budget governor — "Operator dispatches a synthetic task whose plan declares `topic_tags: [pbj-staffing]` and `reference_token_budget: 4000`; the dispatched payload's `reference:` section is ≤4000 tokens, contains ≥1 chunk, and chunks are dropped at chunk-level granularity when over budget (SC-3). A task plan with no `topic_tags` and no `applies_to_field` produces a payload byte-identical to the pre-feature payload (SC-7 golden-baseline diff)."
   - Risk: high
   - Depends: P04, P05
   - Blocked by: none

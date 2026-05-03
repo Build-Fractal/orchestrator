@@ -1,0 +1,6 @@
+# Knowledge Index
+<!-- Format: id | scope_tags | category | confidence | created_at | verified:date | hits:N | description -->
+
+MEM001 | [project] | patterns | 0.95 | 2026-01-01 | verified:2026-01-01 | hits:1 | A
+MEM002 | [milestone:M001] | patterns | 0.90 | 2026-01-01 | verified:2026-01-01 | hits:1 | B
+MEM003 | [phase:M001/P02] | patterns | 0.95 | 2026-01-01 | verified:2026-01-01 | hits:1 | C

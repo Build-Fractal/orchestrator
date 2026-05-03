@@ -1,0 +1,41 @@
+schema_version: "1.0"
+type: extract-manifest
+milestone: "M036"
+size_cap_bytes: 10485760
+
+documents:
+  - cite_id: "cms-rule-fixture-01"
+    source_path: "sample.pdf"
+    category: "cms-rule"
+    source: "cms"
+    published: "2024-09-01"
+    version: "2024-Q3"
+    topic_tags: ["pbj-staffing", "cms-§483.20"]
+    applies_to_field: ["staff_count"]
+    tier: 1
+    summary_mode: "operator"
+    summary: "Fixture cms-rule PDF for M036 P02 extract harness."
+
+  - cite_id: "training-pbj-fixture-01"
+    source_path: "sample.docx"
+    category: "training-material"
+    source: "sme-pbj-circle"
+    published: "2024-08-15"
+    version: "2024-08"
+    topic_tags: ["pbj-staffing"]
+    applies_to_field: []
+    tier: 1
+    summary_mode: "operator"
+    summary: "Fixture training-material DOCX for M036 P02 extract harness."
+
+  - cite_id: "glossary-fixture-01"
+    source_path: "sample.md"
+    category: "glossary"
+    source: "internal-glossary"
+    published: "2024-01-01"
+    version: "2024-01"
+    topic_tags: ["pbj-staffing", "definitions"]
+    applies_to_field: ["staff_count", "census"]
+    tier: 0
+    summary_mode: "operator"
+    summary: "Fixture glossary markdown for M036 P02 extract harness."

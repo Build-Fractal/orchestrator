@@ -4,6 +4,7 @@
 #
 # Usage: scope-filter.sh <file-path> <scope-context> [--type knowledge|decisions] [--depends P01,P03]
 #                        [--min-confidence CONF] [--category CAT] [--graph] [--include-non-goals]
+#                        [--tag '[source:<cite_id>]']
 #        scope-filter.sh --spec-scope-tags "spec/requirement/SPEC-FR-003,spec/story/SPEC-US-002" [--include-non-goals]
 #   scope-context: M###/P## format (e.g., M001/P02)
 #   --type: auto-detected from filename if not specified
@@ -12,6 +13,9 @@
 #   --category: filter entries by category name (knowledge index only)
 #   --use-effective-confidence: apply staleness decay before confidence filtering (knowledge index only)
 #   --graph: query knowledge.db directly via SQLite instead of parsing flat files
+#   --tag: literal tag-match filter (e.g., '[source:cms-pbj-2024-q3]'); composes
+#          with --type and --include-non-goals but supersedes MILESTONE_ID/PHASE_ID
+#          derivation-based matching. Operator-asserted scope-by-tag.
 #   --spec-scope-tags: comma/space-separated list of spec/<cat>/<SPEC-XX-NNN> tags;
 #                      emits resolved SPEC- IDs + 1-hop relates_to neighbors, one per line
 #
@@ -34,6 +38,7 @@ USE_EFFECTIVE_CONFIDENCE=false
 GRAPH_MODE=false
 INCLUDE_NON_GOALS=false
 SPEC_SCOPE_TAGS=""
+FILTER_TAG=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -51,6 +56,8 @@ while [[ $# -gt 0 ]]; do
       GRAPH_MODE=true; shift ;;
     --include-non-goals)
       INCLUDE_NON_GOALS=true; shift ;;
+    --tag)
+      FILTER_TAG="$2"; shift 2 ;;
     --spec-scope-tags)
       SPEC_SCOPE_TAGS="$2"; shift 2 ;;
     -*)
@@ -150,11 +157,22 @@ filter_knowledge() {
       entry_lines="$line"
       include=false
 
-      # Extract scope tag from the line: [project], [milestone:M001], [phase:M001/P02]
+      # Extract scope tag from the line: [project], [milestone:M001], [phase:M001/P02], [source:cms-pbj-2024-q3]
+      # Character class extended in M036/P05 to include `_`, `.`, `-` for source: namespace
+      # (strict superset — pre-P05 patterns continue to match unchanged).
       local scope_tag
-      scope_tag=$(echo "$line" | grep -oE '\[[a-z]+:[A-Za-z0-9/]+\]|\[project\]' || true)
+      scope_tag=$(echo "$line" | grep -oE '\[[a-z]+:[A-Za-z0-9/_.-]+\]|\[project\]' || true)
 
-      if [[ -z "$scope_tag" ]]; then
+      if [[ -n "$FILTER_TAG" ]]; then
+        # M036/P05: literal-tag mode (operator-asserted scope-by-tag).
+        # Bypasses MILESTONE_ID/PHASE_ID derivation. `grep -qF` is fixed-string
+        # match — bracket characters in $FILTER_TAG are NOT treated as regex.
+        if echo "$line" | grep -qF "$FILTER_TAG"; then
+          include=true
+        else
+          include=false
+        fi
+      elif [[ -z "$scope_tag" ]]; then
         # No scope tag — include by default (project-level)
         include=true
       elif [[ "$scope_tag" = "[project]" ]]; then
@@ -263,7 +281,16 @@ filter_knowledge_index() {
     # --- Scope tag filter (reuse existing matching logic) ---
     local include=false
 
-    if [[ -z "$scope_tag" ]]; then
+    if [[ -n "$FILTER_TAG" ]]; then
+      # M036/P05: literal-tag mode (operator-asserted scope-by-tag).
+      # Bypasses MILESTONE_ID/PHASE_ID derivation. Matches against the parsed
+      # field-2 scope_tag value via `grep -qF` (fixed-string — no regex
+      # interpretation of bracket characters). Substring match covers entries
+      # bearing multiple comma/space-separated tags in the same field.
+      if printf '%s' "$scope_tag" | grep -qF "$FILTER_TAG"; then
+        include=true
+      fi
+    elif [[ -z "$scope_tag" ]]; then
       # No scope tag — include by default (project-level)
       include=true
     elif [[ "$scope_tag" = "[project]" ]]; then
@@ -364,8 +391,15 @@ filter_knowledge_graph() {
   fi
 
   # --- Build scope WHERE clause ---
+  # M036/P05: when --tag is set, replace derivation-based scope_clause with a
+  # literal tag-equality join condition. Operator-asserted; bypasses milestone/
+  # phase derivation entirely. Single-quote-escaped for safe SQL embedding.
   local scope_clause=""
-  if [ -n "$SCOPE_CONTEXT" ]; then
+  if [ -n "$FILTER_TAG" ]; then
+    local safe_tag
+    safe_tag="$(printf '%s' "$FILTER_TAG" | sed "s/'/''/g")"
+    scope_clause="AND st.tag = '${safe_tag}'"
+  elif [ -n "$SCOPE_CONTEXT" ]; then
     scope_clause="AND (st.tag IS NULL OR st.tag = '[project]'"
     if [ -n "$MILESTONE_ID" ]; then
       scope_clause="${scope_clause} OR st.tag = '[milestone:${MILESTONE_ID}]'"

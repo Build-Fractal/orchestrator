@@ -74,6 +74,13 @@ sections:
     filter: scope
     cache_hint: semi-static
 
+  reference:
+    source: reference
+    priority: optional
+    order: 45
+    filter: scope
+    cache_hint: semi-static
+
 # --- Compression Configuration ---
 # Graduated steps applied in order until payload fits within token budget.
 # Token budget is derived from model selection (routing.yaml context_budget).
@@ -108,3 +115,13 @@ manifest:
   include_token_count: true
   include_section_list: true
   include_compression_applied: true
+
+# --- Reference Chunk Injection (M036/P07) ---
+# Token budget for the reference: section. Per-task override via the
+# task plan's frontmatter field `reference_token_budget`. Per FR-8,
+# chunk-level dropping is mandatory (no mid-chunk truncation); per FR-8's
+# at-least-one-chunk invariant, when budget < smallest matched chunk
+# exactly one chunk is still emitted (with a stderr warning).
+
+reference:
+  default_token_budget: 4000

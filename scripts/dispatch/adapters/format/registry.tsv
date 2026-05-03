@@ -1,5 +1,5 @@
 format	adapter_path	status	notes
-markdown	scripts/dispatch/adapters/format/markdown.sh	stub	P01 deliverable -- passthrough adapter (Tier 1 for already-normalized content)
-pdf	scripts/dispatch/adapters/format/pdf.sh	stub	P01 deliverable -- pdftotext -layout (poppler-utils host dependency)
-docx	scripts/dispatch/adapters/format/docx.sh	stub	P01 deliverable -- pandoc plaintext (pandoc host dependency)
-xlsx	scripts/dispatch/adapters/format/xlsx.sh	stub	P01 deliverable -- sheet-by-sheet CSV with header detection (xlsx2csv or python openpyxl shim)
+markdown	scripts/dispatch/adapters/format/markdown.sh	live	markdown -> passthrough (cat)
+pdf	scripts/dispatch/adapters/format/pdf.sh	live	pdf -> pdftotext -layout (poppler-utils host dependency)
+docx	scripts/dispatch/adapters/format/docx.sh	live	docx -> pandoc -t plain (pandoc host dependency)
+xlsx	scripts/dispatch/adapters/format/xlsx.sh	live	xlsx -> per-sheet CSV via openpyxl shim at lib/xlsx-to-csv.py (python3 + openpyxl host dependency)

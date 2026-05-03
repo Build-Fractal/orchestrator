@@ -1790,6 +1790,7 @@ _bc_display_order() {
     decisions)    echo 2 ;;  # static — rarely changes
     constraints)  echo 3 ;;  # static — template-based, same every dispatch
     spec_context) echo 4 ;;  # semi-static — spec chunks scoped to task
+    reference)   echo 4 ;;  # filtered — task-scoped reference chunks (M036/P07)
     scope)        echo 5 ;;  # semi-static — changes per phase, not per task
     upstream)     echo 6 ;;  # dynamic — changes when phases complete
     task_plan)    echo 7 ;;  # dynamic — changes every dispatch
@@ -1807,13 +1808,14 @@ _bc_display_name() {
     state)        echo "State Context" ;;
     constraints)  echo "Constraints" ;;
     spec_context) echo "Spec Context" ;;
+    reference)    echo "Reference" ;;
     *)            echo "$1" ;;
   esac
 }
 _bc_display_priority() {
   # pre-refactor manifest only ever shows "filtered" or "required"
   case "$1" in
-    knowledge|decisions|spec_context) echo "filtered" ;;
+    knowledge|decisions|spec_context|reference) echo "filtered" ;;
     *) echo "required" ;;
   esac
 }
@@ -1954,7 +1956,7 @@ _bc_build_parallel_fanout_block() {
 # ============================================================================
 _bc_section_volatility_by_name() {
   case "$1" in
-    Knowledge|Knowledge\ *|Decisions|Constraints|Scope|"Spec Context") echo "stable" ;;
+    Knowledge|Knowledge\ *|Decisions|Constraints|Scope|"Spec Context"|"Reference") echo "stable" ;;
     "State Context"|"Task Plan"|"Upstream Context"|"First-Turn Completeness"|"Parallel Fan-Out") echo "volatile" ;;
     *) echo "stable" ;;
   esac
@@ -1992,7 +1994,7 @@ while IFS='|' read -r disp_ord s_name s_source s_priority; do
   # Omit-empty: if spec_context produced empty output, skip the section
   # entirely (no manifest row, no payload body). Other section types always
   # commit (they emit their header even when content is empty).
-  if [ "$s_source" = "spec_context" ] && [ ! -s "$staging_file" ]; then
+  if { [ "$s_source" = "spec_context" ] || [ "$s_source" = "reference" ]; } && [ ! -s "$staging_file" ]; then
     rm -f "$staging_file"
     continue
   fi

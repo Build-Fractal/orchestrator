@@ -621,6 +621,172 @@ handle_spec_context() {
   rm -f "$resolved_file"
 }
 
+# handle_reference <orch_root> <milestone> <phase> <task>
+# Emits the `## Reference` section for dispatch payloads. Reads the
+# task-plan's frontmatter `topic_tags` + `applies_to_field` + optional
+# `reference_token_budget`, intersects against ingested
+# knowledge/reference/**/REF-*.md chunks, ranks via reference_rank
+# (reference-relevance.sh), governs by reference_apply_budget
+# (reference-budget.sh), and emits the survivors inline.
+#
+# T01 stubs the body — returns empty stdout. T02 fills the body with
+# the budget governor + relevance ranker invocations. T03 wires the
+# dispatcher in build-context.sh.
+#
+# Empty stdout is honored by build-context.sh's omit-empty-section
+# discipline (carried from handle_spec_context — see build-context.sh
+# line ~1995). When stdout is empty the entire `## Reference` header,
+# manifest row, and section body are dropped — preserving CON-1 /
+# SC-7 byte-identical pre-feature payloads.
+handle_reference() {
+  local orch_root="$1" milestone="$2" phase="$3" task="$4"
+  local ms_dir
+  ms_dir="$(_sh_resolve_milestone_dir "$orch_root" "$milestone")" || return 0
+
+  # Only meaningful for task dispatch, not phase planning.
+  if [ "$task" = "PHASE_PLAN" ]; then
+    return 0
+  fi
+
+  local task_plan="${ms_dir}/phases/${phase}/tasks/${task}-PLAN.md"
+  if [ ! -f "$task_plan" ]; then
+    return 0
+  fi
+
+  # Resolve project root (where knowledge/ lives).
+  local proj_root=""
+  case "$(basename "$orch_root")" in
+    .orchestrator) proj_root="$(dirname "$orch_root")" ;;
+  esac
+  if [ -z "$proj_root" ] || [ ! -d "$proj_root/knowledge" ]; then
+    if [ -d "$(dirname "$orch_root")/knowledge" ]; then
+      proj_root="$(dirname "$orch_root")"
+    fi
+  fi
+  if [ -z "$proj_root" ] || [ ! -d "$proj_root/knowledge" ]; then
+    if [ -n "${PROJECT_ROOT:-}" ] && [ -d "${PROJECT_ROOT}/knowledge" ]; then
+      proj_root="$PROJECT_ROOT"
+    else
+      return 0
+    fi
+  fi
+
+  # Source the budget governor + relevance ranker libs.
+  local lib_dir="$proj_root/scripts/dispatch/lib"
+  if [ ! -f "$lib_dir/reference-budget.sh" ] || [ ! -f "$lib_dir/reference-relevance.sh" ]; then
+    return 0
+  fi
+  # shellcheck disable=SC1090
+  . "$lib_dir/reference-budget.sh"
+  # shellcheck disable=SC1090
+  . "$lib_dir/reference-relevance.sh"
+
+  # Extract task-plan scope from frontmatter.
+  local task_topics task_fields task_budget
+  task_topics="$(awk '/^---$/{c++; next} c==1 && /^topic_tags:/{print; exit}' "$task_plan" 2>/dev/null \
+    | sed 's/^topic_tags:[[:space:]]*//; s/^\[//; s/\]$//; s/"//g; s/,/ /g; s/  */ /g; s/^ *//; s/ *$//' \
+    | tr ' ' ',' \
+    | sed 's/^,//; s/,$//')"
+  task_fields="$(awk '/^---$/{c++; next} c==1 && /^applies_to_field:/{print; exit}' "$task_plan" 2>/dev/null \
+    | sed 's/^applies_to_field:[[:space:]]*//; s/^\[//; s/\]$//; s/"//g; s/,/ /g; s/  */ /g; s/^ *//; s/ *$//' \
+    | tr ' ' ',' \
+    | sed 's/^,//; s/,$//')"
+  task_budget="$(awk '/^---$/{c++; next} c==1 && /^reference_token_budget:/{print; exit}' "$task_plan" 2>/dev/null \
+    | sed 's/^reference_token_budget:[[:space:]]*//')"
+
+  # No scope → CON-1 / SC-7 path: emit empty stdout, omit-empty kicks in.
+  if [ -z "$task_topics" ] && [ -z "$task_fields" ]; then
+    return 0
+  fi
+
+  # Default budget from recipe (resolved by build-context.sh and exported
+  # as REFERENCE_DEFAULT_BUDGET when known; fallback to 4000).
+  if [ -z "$task_budget" ]; then
+    task_budget="${REFERENCE_DEFAULT_BUDGET:-4000}"
+  fi
+
+  # Enumerate REF-* chunks from KNOWLEDGE-INDEX.md (registered by P04).
+  local idx="$proj_root/KNOWLEDGE-INDEX.md"
+  if [ ! -f "$idx" ]; then
+    return 0
+  fi
+
+  local cand_file
+  cand_file="$(mktemp)"
+  local ref_file ref_id ref_topics ref_fields ref_published
+  # Discover REF-* chunks by walking knowledge/reference/**.
+  find "$proj_root/knowledge/reference" -type f -name 'REF-*.md' 2>/dev/null \
+    | while IFS= read -r ref_file; do
+      ref_id="$(awk '/^---$/{c++; next} c==1 && /^chunk_id:/{print; exit}' "$ref_file" 2>/dev/null \
+        | sed 's/^chunk_id:[[:space:]]*//; s/"//g; s/^ *//; s/ *$//')"
+      [ -z "$ref_id" ] && continue
+      ref_topics="$(awk '/^---$/{c++; next} c==1 && /^topic_tags:/{print; exit}' "$ref_file" 2>/dev/null \
+        | sed 's/^topic_tags:[[:space:]]*//; s/^\[//; s/\]$//; s/"//g; s/,/ /g; s/  */ /g; s/^ *//; s/ *$//' \
+        | tr ' ' ',' | sed 's/^,//; s/,$//')"
+      ref_fields="$(awk '/^---$/{c++; next} c==1 && /^applies_to_field:/{print; exit}' "$ref_file" 2>/dev/null \
+        | sed 's/^applies_to_field:[[:space:]]*//; s/^\[//; s/\]$//; s/"//g; s/,/ /g; s/  */ /g; s/^ *//; s/ *$//' \
+        | tr ' ' ',' | sed 's/^,//; s/,$//')"
+      ref_published="$(awk '/^---$/{c++; next} c==1 && /^published:/{print; exit}' "$ref_file" 2>/dev/null \
+        | sed 's/^published:[[:space:]]*//; s/"//g; s/^ *//; s/ *$//')"
+      [ -z "$ref_published" ] && ref_published="0000-00-00"
+      # Match: at least one task topic appears in chunk topics OR at
+      # least one task field appears in chunk fields.
+      local topic_hit=0 field_hit=0
+      topic_hit="$(_ref_overlap_count "$ref_topics" "$task_topics")"
+      field_hit="$(_ref_overlap_count "$ref_fields" "$task_fields")"
+      if [ "$topic_hit" -gt 0 ] || [ "$field_hit" -gt 0 ]; then
+        printf '%s|%s|%s|%s|%s\n' "$ref_id" "$ref_file" "$ref_topics" "$ref_fields" "$ref_published" \
+          >> "$cand_file"
+      fi
+    done
+
+  if [ ! -s "$cand_file" ]; then
+    rm -f "$cand_file"
+    return 0
+  fi
+
+  # Rank, then build a budget-list (chunk_id|token_count|chunk_path).
+  local ranked_file ranked_id ranked_path
+  ranked_file="$(mktemp)"
+  reference_rank "$cand_file" "$task_topics" "$task_fields" > "$ranked_file"
+  rm -f "$cand_file"
+
+  local budget_list
+  budget_list="$(mktemp)"
+  while IFS='|' read -r ranked_id ranked_path _ _ _; do
+    [ -z "$ranked_id" ] && continue
+    # Token estimate: body chars / 4 (M018 convention).
+    local body_chars body_tokens
+    body_chars="$(awk '/^---$/{c++; next} c>=2{print}' "$ranked_path" 2>/dev/null | wc -c | tr -d ' ')"
+    body_tokens=$(( (body_chars + 3) / 4 ))
+    printf '%s|%d|%s\n' "$ranked_id" "$body_tokens" "$ranked_path" >> "$budget_list"
+  done < "$ranked_file"
+  rm -f "$ranked_file"
+
+  local survived_file
+  survived_file="$(mktemp)"
+  reference_apply_budget "$budget_list" "$task_budget" > "$survived_file"
+  rm -f "$budget_list"
+
+  if [ ! -s "$survived_file" ]; then
+    rm -f "$survived_file"
+    return 0
+  fi
+
+  # Emit the section.
+  printf '## Reference\n\n'
+  local s_id s_tok s_path
+  while IFS='|' read -r s_id s_tok s_path; do
+    [ -z "$s_id" ] && continue
+    printf '### %s\n\n' "$s_id"
+    printf '_source: %s | tokens (estimated): %s_\n\n' "$s_path" "$s_tok"
+    awk '/^---$/{c++; next} c>=2{print}' "$s_path"
+    printf '\n'
+  done < "$survived_file"
+  rm -f "$survived_file"
+  return 0
+}
+
 # handle_file <orch_root> <milestone> <phase> <task> <source_filename>
 # Generic filename dispatcher. Routes KNOWLEDGE.md / DECISIONS.md to their
 # dedicated handlers; falls back to a raw cat for anything else at the
@@ -679,6 +845,9 @@ dispatch_section_handler() {
       ;;
     spec_context)
       handle_spec_context "$orch_root" "$milestone" "$phase" "$task"
+      ;;
+    reference)
+      handle_reference "$orch_root" "$milestone" "$phase" "$task"
       ;;
     *.md)
       if [ "$source" = "KNOWLEDGE.md" ] || [ "$source" = "knowledge.md" ]; then

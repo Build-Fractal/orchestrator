@@ -76,3 +76,9 @@ vendor/
 coverage/
 .cache/
 tmp/
+
+# M036 P02: orchestrator-owned binary preservation under Tier 0. CON-7 (b) — operators opt-in by listing exceptions.
+.orchestrator/knowledge/reference/_originals/
+
+# M036 P03: per-doc Tier 2 extraction-log (PASS / BLOCK gate-result records). Transient runtime artifact.
+.orchestrator/knowledge/reference/_extraction-log/

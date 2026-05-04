@@ -61,6 +61,10 @@ WITH_WIKI=0
 WITH_GISCUS=0
 DEPLOY=0
 
+# FR-16 paired-launch flag (M033/P05/T03 additive). Default 0 (off) to
+# preserve P01/P02/P04/T02 behavior verbatim when the flag is not passed.
+WITH_GITHUB=0
+
 DETECTED_FROM=""
 MIT006_ELIGIBLE=0
 INIT_INVOKED=0
@@ -93,7 +97,7 @@ load_detect_state() {
     fi
 }
 
-USAGE='usage: start.sh [--project-dir PATH] [--yes] [--branch NAME] [--stack NAME] [--dry-run] [--no-resume] [--with-wiki] [--with-giscus] [--deploy]'
+USAGE='usage: start.sh [--project-dir PATH] [--yes] [--branch NAME] [--stack NAME] [--dry-run] [--no-resume] [--with-wiki] [--with-giscus] [--deploy] [--with-github]'
 BRANCH_ENUM='greenfield-empty | greenfield-with-materials | existing-codebase | migrating'
 
 # ---------------------------------------------------------------------------
@@ -313,6 +317,10 @@ while [ $# -gt 0 ]; do
             ;;
         --deploy)
             DEPLOY=1
+            shift
+            ;;
+        --with-github)
+            WITH_GITHUB=1
             shift
             ;;
         *)
@@ -679,6 +687,69 @@ wiki_init_passthrough() {
 }
 
 # ---------------------------------------------------------------------------
+# FR-16 github-init paired-launch passthrough (M033/P05/T03 additive).
+#
+# Spec ref: FR-16 / paired-launch ordering rule / CON-1 / MIT-001.
+#
+# Two-mode test contract (MIT-001) -- mirrors FR-15 wiki passthrough:
+#   Stub mode (M033_GHINIT_STUB=1):
+#     Emits 'STUB: github-init invoked --project-dir=<path>'
+#     Returns M033_GHINIT_STUB_EXIT_CODE (default 0). Does NOT invoke
+#     github-init.sh.
+#   Real mode (M033_GHINIT_STUB unset/0):
+#     If scripts/lifecycle/github-init.sh exists (M013 closed), invokes it.
+#     Otherwise, emits 'github-init.sh not found ...' diagnostic and
+#     returns rc=1 (genuine failure, NOT skip -- SC-14 skip=0 invariant).
+#
+# Sequential-atomicity model (FR-16 paired-launch contract):
+#   On non-zero exit, surfaces failure as a github-init failure (NOT a
+#   start failure); preserves all US-1..US-7 sub-flow markers AND wiki-init
+#   marker (no rollback); propagates the underlying exit code verbatim.
+#
+# Ordering rule: github-init MUST fire AFTER wiki-init when both flags
+# are present. Enforced by code ordering -- T03's gate is inserted
+# IMMEDIATELY AFTER T02's wiki gate in main().
+# ---------------------------------------------------------------------------
+
+github_init_passthrough() {
+    # FR-16 paired-launch contract -- mirrors FR-15's failure-propagation
+    # discipline. Must fire AFTER wiki-init (when --with-wiki --with-github
+    # are combined) per the post-wiki-init ordering rule.
+    local project_dir="$1"
+
+    local rc=0
+    local stub_mode="false"
+    if [ "${M033_GHINIT_STUB:-0}" -eq 1 ]; then
+        stub_mode="true"
+        printf 'STUB: github-init invoked --project-dir=%s\n' "$project_dir"
+        rc="${M033_GHINIT_STUB_EXIT_CODE:-0}"
+    elif [ -f "scripts/lifecycle/github-init.sh" ]; then
+        # Real-mode: M013 has shipped github-init.sh.
+        rc=0
+        bash scripts/lifecycle/github-init.sh --project-dir "$project_dir" || rc=$?
+    else
+        # M013 absent AND no stub mode -- genuine failure (not skip).
+        printf 'github-init.sh not found -- M013 must be installed before --with-github real-mode can fire\n' 1>&2
+        rc=1
+    fi
+
+    # FR-22 JSONL emit with downstream exit code threading.
+    local payload
+    payload=$(printf '{"project_dir":"%s","exit_code":%d,"stub_mode":%s}' \
+        "$project_dir" "$rc" "$stub_mode")
+    bash scripts/util/jsonl-event-emitter.sh emit github_init_invoked "$payload" || true
+
+    # Sequential-atomicity model: surface failure as github-init failure;
+    # preserve sub-flow markers (and wiki-init marker if present);
+    # propagate exit code verbatim.
+    if [ "$rc" -ne 0 ]; then
+        printf 'github-init failed; re-run "orchestrator:github-init" independently to complete; all other onboarding outputs preserved\n'
+        return "$rc"
+    fi
+    return 0
+}
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -746,6 +817,21 @@ main() {
         wiki_init_passthrough "$PROJECT_DIR" || WIKI_RC=$?
         if [ "$WIKI_RC" -ne 0 ]; then
             exit "$WIKI_RC"
+        fi
+    fi
+
+    # FR-16 github-init paired-launch passthrough (post-wiki-init gate).
+    # Fires after the wiki gate has completed (or was never invoked).
+    # Code ordering enforces the FR-16 ordering rule: when both flags are
+    # passed and wiki succeeds, the wiki gate returns 0 and falls through
+    # to this block; when wiki fails, the wiki gate exits with WIKI_RC and
+    # this block is unreachable. On non-zero, propagates exit code verbatim
+    # per the sequential-atomicity model (preserves wiki-init marker).
+    if [ "$WITH_GITHUB" -eq 1 ]; then
+        GH_RC=0
+        github_init_passthrough "$PROJECT_DIR" || GH_RC=$?
+        if [ "$GH_RC" -ne 0 ]; then
+            exit "$GH_RC"
         fi
     fi
 

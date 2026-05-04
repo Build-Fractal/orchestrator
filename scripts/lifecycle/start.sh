@@ -675,7 +675,13 @@ wiki_init_passthrough() {
     local payload
     payload=$(printf '{"project_dir":"%s","exit_code":%d,"stub_mode":%s,"with_giscus":%s,"deploy":%s}' \
         "$project_dir" "$rc" "$stub_mode" "$with_giscus_bool" "$deploy_bool")
-    bash scripts/util/jsonl-event-emitter.sh emit wiki_init_invoked "$payload" || true
+    # PROJECT_DIR threading: the emitter writes to <PROJECT_DIR>/.orchestrator/
+    # execution-log.jsonl. Without the explicit prefix, the emitter falls
+    # back to $PWD (the dispatcher cwd, NOT the staged project dir). Same
+    # pattern as migrate_routing's emit at line ~239. Surgically minimal
+    # fix landed in M033/P05/T04 so SC-9 acceptance can read the per-project
+    # JSONL surface.
+    PROJECT_DIR="$project_dir" bash scripts/util/jsonl-event-emitter.sh emit wiki_init_invoked "$payload" || true
 
     # Sequential-atomicity model: surface failure as wiki-init failure;
     # preserve sub-flow markers; propagate exit code verbatim.
@@ -737,7 +743,12 @@ github_init_passthrough() {
     local payload
     payload=$(printf '{"project_dir":"%s","exit_code":%d,"stub_mode":%s}' \
         "$project_dir" "$rc" "$stub_mode")
-    bash scripts/util/jsonl-event-emitter.sh emit github_init_invoked "$payload" || true
+    # PROJECT_DIR threading: same pattern as wiki_init_passthrough's emit
+    # (and migrate_routing's emit at line ~239). Without the explicit
+    # prefix, the emitter falls back to $PWD which is the dispatcher cwd
+    # rather than the staged project dir. Surgically minimal fix landed
+    # in M033/P05/T04 so SC-10 acceptance can read the per-project JSONL.
+    PROJECT_DIR="$project_dir" bash scripts/util/jsonl-event-emitter.sh emit github_init_invoked "$payload" || true
 
     # Sequential-atomicity model: surface failure as github-init failure;
     # preserve sub-flow markers (and wiki-init marker if present);

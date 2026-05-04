@@ -54,6 +54,26 @@ This is the **decision-packet schema + interactive walkthrough + REVIEW.md audit
 
 M034 asks: *can the operator participate in load-bearing decisions at the moment they're being made, with concrete impact framing, instead of reverse-engineering them from a static artifact post-hoc?*
 
+## Adopted external pattern: GSD eval-review (added 2026-05-04)
+
+**Source**: GSD v2.79 PR #5118 (`/gsd eval-review` command + `EVAL-REVIEW` pre-ship soft warning) and surrounding commits. Discovered during the 2026-05-04 GSD-2 adoption scan (`gsd-2-adoption-scan-2026-05-04.md`).
+
+GSD ships a parallel-shaped artifact-auditing surface that makes three load-bearing choices we should adopt:
+
+1. **YAML output contract for the audit verdict.** Each audit produces a structured YAML document with named keys (verdict, scoring breakdown, rationale anchors, alternatives considered). The decision-packet schema (M034 P01) MUST follow the same shape — typed fields, not free-form prose — so downstream tooling can read verdicts without re-parsing.
+
+2. **Named scoring constants as single source of truth.** GSD's 60/40 weighting lives as named constants in `eval-review-schema.ts`; the docs and prompts reference the constants, not magic numbers. The M034 decision-packet schema MUST follow this discipline — any weight, threshold, or severity boundary appears as a named constant in exactly one place; prompts, docs, and tests reference the constant. Prevents the GSD-class drift where two callers disagree on the threshold.
+
+3. **Soft-warning verdict tier (`EVAL-REVIEW` status as pre-ship advisory).** GSD adds a non-blocking warning state distinct from PASS / FAIL / BLOCK. M034 SHOULD add a `WARN-NON-BLOCKING` (or `ADVISE`) tier to the decision-packet `severity` field with these semantics:
+   - Operator sees the finding at decision time; SIGNOFF.md captures acknowledgment
+   - Does NOT block phase progression
+   - Emits a `WARN` JSONL record consumed by `orchestrator:doctor` (recurring warns surface as health findings)
+   - Distinct from M014's review-queue (which is for after-the-fact PR comments) — this fires *during* the gate
+
+**Spec amendment**: P01 decision-packet schema gains a `severity: warn | block` field (default `block`). Plan-frontmatter `auto`-mode policy table (per `Findings § policies`) adds a `warn` row with `defer | accept-with-audit | record-and-continue` choices. The `record-and-continue` policy is the new minimum; `defer` and `accept-with-audit` already cover the existing PASS/FAIL/BLOCK tiers.
+
+**Why post-launch still**: This amendment refines the M034 spec but does NOT change M034's launch posture. M034 stays demand-driven post-launch. The amendment ensures that *when* M034 ships, the decision-packet shape is right the first time.
+
 ## Findings (root-cause analysis)
 
 ### Finding A: SIGNOFF.md is approve-or-don't, not deliberate-then-approve

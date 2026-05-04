@@ -34,3 +34,24 @@ runtime_compatibility:
   - claude-code
   - codex
   - cursor
+# project_assets:
+# Project-owned runtime payload staged into <PROJECT_DIR>/<target> by the
+# installer's project-asset stage (FR-1 / FR-2). Each entry is processed
+# through scripts/lifecycle/install-collision-check.sh (FR-22) and then
+# scripts/lifecycle/install-asset-mode.sh (FR-3). v1 ships only mode: copy
+# in the manifest; mode: symlink is exercised by the --asset-mode-override
+# install flag in P01 and becomes manifest-declarable in P02+ (NG-9 keeps
+# Windows fail-closed regardless).
+project_assets:
+  - source: commands/
+    target: commands/
+    mode: copy
+  - source: scripts/
+    target: scripts/
+    mode: copy
+  - source: references/
+    target: references/
+    mode: copy
+  - source: templates/
+    target: templates/
+    mode: copy

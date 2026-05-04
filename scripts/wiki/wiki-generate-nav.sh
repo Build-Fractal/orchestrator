@@ -276,6 +276,7 @@ emit_leaf 1 "Home" "index.md"
 # a simple flag so we only add the leaf if the corresponding scanner record
 # actually appeared (keeps the nav strictly in-sync with what T03 produced).
 HAS_CONSTITUTION=0
+HAS_GLOSSARY=0
 HAS_DECISIONS=0
 HAS_KNOWLEDGE=0
 HAS_MILSUM=0
@@ -288,6 +289,7 @@ while IFS='|' read -r CAT REL TITLE; do
   [ -n "$CAT" ] || continue
   case "$CAT" in
     top:constitution)      HAS_CONSTITUTION=1 ;;
+    top:glossary)          HAS_GLOSSARY=1 ;;
     top:decisions)         HAS_DECISIONS=1 ;;
     top:knowledge)         HAS_KNOWLEDGE=1 ;;
     top:milestone-summary) HAS_MILSUM=1 ;;
@@ -311,6 +313,12 @@ mv "${TMP_IDS}.sorted" "$TMP_IDS"
 # Emit top-level leaves.
 if [ "$HAS_CONSTITUTION" -eq 1 ]; then
   emit_leaf 1 "Constitution" "constitution.md"
+fi
+# M032/P02/T03 FR-15: Glossary as the second top-level nav entry after
+# Constitution. Path is `glossary.md` relative to docs_dir (the include-markdown
+# stub generator bridges wiki/glossary.md -> wiki/docs/glossary.md).
+if [ "$HAS_GLOSSARY" -eq 1 ]; then
+  emit_leaf 1 "Glossary" "glossary.md"
 fi
 if [ "$HAS_DECISIONS" -eq 1 ]; then
   emit_leaf 1 "Decisions" "decisions.md"

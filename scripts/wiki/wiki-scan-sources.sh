@@ -28,6 +28,7 @@
 set -u
 
 ROOT=""
+INCLUDE_GLOSSARY=1   # default-on per M032/P02/T03 FR-15
 
 # ---- argument parsing -------------------------------------------------------
 while [ $# -gt 0 ]; do
@@ -39,6 +40,22 @@ while [ $# -gt 0 ]; do
         exit 1
       fi
       ROOT="$1"
+      shift
+      ;;
+    --include-glossary)
+      INCLUDE_GLOSSARY=1
+      shift
+      ;;
+    --include-glossary=true)
+      INCLUDE_GLOSSARY=1
+      shift
+      ;;
+    --include-glossary=false)
+      INCLUDE_GLOSSARY=0
+      shift
+      ;;
+    --no-include-glossary)
+      INCLUDE_GLOSSARY=0
       shift
       ;;
     --help|-h)
@@ -181,6 +198,14 @@ scan_tree() {
 
 if [ -f "$ORCH/memory/constitution.md" ]; then
   emit_record "top:constitution" "memory/constitution.md" "$ORCH/memory/constitution.md"
+fi
+
+# M032/P02/T03 FR-15: Glossary emission as the second top-level source after
+# Constitution. The path is repo-root-relative (lives outside .orchestrator/),
+# matching the knowledge:* convention later in this scanner. Default-on; opt
+# out via --no-include-glossary or --include-glossary=false.
+if [ "$INCLUDE_GLOSSARY" = "1" ] && [ -f "$ROOT/wiki/glossary.md" ]; then
+  emit_record "top:glossary" "wiki/glossary.md" "$ROOT/wiki/glossary.md"
 fi
 
 if [ -f "$ORCH/DECISIONS.md" ]; then

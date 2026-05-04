@@ -407,6 +407,23 @@ while IFS='|' read -r CAT REL TITLE; do
       ;;
   esac
 
+  # ---- top:glossary routing (M032/P02/T03 FR-15) ---------------------------
+  # The glossary lives at <repo-root>/wiki/glossary.md (NOT under
+  # .orchestrator/). Route the stub to wiki/docs/glossary.md and resolve the
+  # canonical via build_canonical_repo_rel (the canonical lives at the repo
+  # root). The nav generator emits `- Glossary: glossary.md` (relative to
+  # docs_dir), so the stub MUST land at wiki/docs/glossary.md to match.
+  case "$CAT" in
+    top:glossary)
+      STUB_REL="glossary.md"
+      STUB_ABS="$DOCS/$STUB_REL"
+      CANONICAL=$(build_canonical_repo_rel "$STUB_REL" "$REL")
+      CANONICAL_ABS="$ROOT/$REL"
+      write_stub "$STUB_ABS" "$CANONICAL" "$TITLE" "$CANONICAL_ABS"
+      continue
+      ;;
+  esac
+
   STUB_REL=$(map_record_to_stub_rel "$CAT" "$REL")
   STUB_ABS="$DOCS/$STUB_REL"
   CANONICAL=$(build_canonical "$STUB_REL" "$REL")

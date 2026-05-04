@@ -70,6 +70,7 @@ extra:
 nav:
   - Home: index.md
   - Constitution: constitution.md
+  - Glossary: glossary.md
   - Decisions: decisions.md
   - Knowledge: knowledge.md
   - Knowledge Entries:
@@ -1723,4 +1724,574 @@ nav:
       - archive / P03 / T04-verifier-suite-PAYLOAD: milestones/M027/archive/P03/T04-verifier-suite-PAYLOAD.md
       - archive / P03 / T04-verifier-suite-PLAN: milestones/M027/archive/P03/T04-verifier-suite-PLAN.md
       - archive / P03 / T04-verifier-suite-SUMMARY: milestones/M027/archive/P03/T04-verifier-suite-SUMMARY.md
+    - M028 — Autonomous Hardening v3:
+      - Overview: milestones/M028/index.md
+      - continue: milestones/M028/continue.md
+      - Context: milestones/M028/M028-CONTEXT.md
+      - Evaluation: milestones/M028/M028-EVALUATION.md
+      - Roadmap: milestones/M028/M028-ROADMAP.md
+      - Summary: milestones/M028/M028-SUMMARY.md
+      - P01:
+        - Overview: milestones/M028/phases/P01/index.md
+        - classifier-audit: milestones/M028/phases/P01/classifier-audit.md
+        - Plan: milestones/M028/phases/P01/P01-PLAN.md
+        - Summary: milestones/M028/phases/P01/P01-SUMMARY.md
+        - T01 Classifier-replay-audit-payload: milestones/M028/phases/P01/tasks/T01-classifier-replay-audit-PAYLOAD.md
+        - T01 Classifier-replay-audit-plan: milestones/M028/phases/P01/tasks/T01-classifier-replay-audit-PLAN.md
+        - T01 Classifier-replay-audit-summary: milestones/M028/phases/P01/tasks/T01-classifier-replay-audit-SUMMARY.md
+        - T02 Fixture-snapshot-payload: milestones/M028/phases/P01/tasks/T02-fixture-snapshot-PAYLOAD.md
+        - T02 Fixture-snapshot-plan: milestones/M028/phases/P01/tasks/T02-fixture-snapshot-PLAN.md
+        - T02 Fixture-snapshot-summary: milestones/M028/phases/P01/tasks/T02-fixture-snapshot-SUMMARY.md
+        - T03 Collapse-decision-evidence-payload: milestones/M028/phases/P01/tasks/T03-collapse-decision-evidence-PAYLOAD.md
+        - T03 Collapse-decision-evidence-plan: milestones/M028/phases/P01/tasks/T03-collapse-decision-evidence-PLAN.md
+        - T03 Collapse-decision-evidence-summary: milestones/M028/phases/P01/tasks/T03-collapse-decision-evidence-SUMMARY.md
+      - P02:
+        - Overview: milestones/M028/phases/P02/index.md
+        - Plan: milestones/M028/phases/P02/P02-PLAN.md
+        - Summary: milestones/M028/phases/P02/P02-SUMMARY.md
+        - T01 Hook-self-locate-payload: milestones/M028/phases/P02/tasks/T01-hook-self-locate-PAYLOAD.md
+        - T01 Hook-self-locate-plan: milestones/M028/phases/P02/tasks/T01-hook-self-locate-PLAN.md
+        - T01 Hook-self-locate-summary: milestones/M028/phases/P02/tasks/T01-hook-self-locate-SUMMARY.md
+        - T02 Adapter-absolute-paths-payload: milestones/M028/phases/P02/tasks/T02-adapter-absolute-paths-PAYLOAD.md
+        - T02 Adapter-absolute-paths-plan: milestones/M028/phases/P02/tasks/T02-adapter-absolute-paths-PLAN.md
+        - T02 Adapter-absolute-paths-summary: milestones/M028/phases/P02/tasks/T02-adapter-absolute-paths-SUMMARY.md
+        - T03 Installer-payload-and-dedup-payload: milestones/M028/phases/P02/tasks/T03-installer-payload-and-dedup-PAYLOAD.md
+        - T03 Installer-payload-and-dedup-plan: milestones/M028/phases/P02/tasks/T03-installer-payload-and-dedup-PLAN.md
+        - T03 Installer-payload-and-dedup-summary: milestones/M028/phases/P02/tasks/T03-installer-payload-and-dedup-SUMMARY.md
+        - T04 Repair-flag-payload: milestones/M028/phases/P02/tasks/T04-repair-flag-PAYLOAD.md
+        - T04 Repair-flag-plan: milestones/M028/phases/P02/tasks/T04-repair-flag-PLAN.md
+        - T04 Repair-flag-summary: milestones/M028/phases/P02/tasks/T04-repair-flag-SUMMARY.md
+        - T05 Roundtrip-and-verifiers-payload: milestones/M028/phases/P02/tasks/T05-roundtrip-and-verifiers-PAYLOAD.md
+        - T05 Roundtrip-and-verifiers-plan: milestones/M028/phases/P02/tasks/T05-roundtrip-and-verifiers-PLAN.md
+        - T05 Roundtrip-and-verifiers-summary: milestones/M028/phases/P02/tasks/T05-roundtrip-and-verifiers-SUMMARY.md
+      - P03:
+        - Overview: milestones/M028/phases/P03/index.md
+        - Plan: milestones/M028/phases/P03/P03-PLAN.md
+        - Summary: milestones/M028/phases/P03/P03-SUMMARY.md
+        - T01 Antipatterns-entries-payload: milestones/M028/phases/P03/tasks/T01-antipatterns-entries-PAYLOAD.md
+        - T01 Antipatterns-entries-plan: milestones/M028/phases/P03/tasks/T01-antipatterns-entries-PLAN.md
+        - T01 Antipatterns-entries-summary: milestones/M028/phases/P03/tasks/T01-antipatterns-entries-SUMMARY.md
+        - T02 Classifier-extension-payload: milestones/M028/phases/P03/tasks/T02-classifier-extension-PAYLOAD.md
+        - T02 Classifier-extension-plan: milestones/M028/phases/P03/tasks/T02-classifier-extension-PLAN.md
+        - T02 Classifier-extension-summary: milestones/M028/phases/P03/tasks/T02-classifier-extension-SUMMARY.md
+        - T03 Hook-reject-lookup-payload: milestones/M028/phases/P03/tasks/T03-hook-reject-lookup-PAYLOAD.md
+        - T03 Hook-reject-lookup-plan: milestones/M028/phases/P03/tasks/T03-hook-reject-lookup-PLAN.md
+        - T03 Hook-reject-lookup-summary: milestones/M028/phases/P03/tasks/T03-hook-reject-lookup-SUMMARY.md
+        - T04 Corpus-extension-payload: milestones/M028/phases/P03/tasks/T04-corpus-extension-PAYLOAD.md
+        - T04 Corpus-extension-plan: milestones/M028/phases/P03/tasks/T04-corpus-extension-PLAN.md
+        - T04 Corpus-extension-summary: milestones/M028/phases/P03/tasks/T04-corpus-extension-SUMMARY.md
+        - T05 Replay-harness-and-verifiers-payload: milestones/M028/phases/P03/tasks/T05-replay-harness-and-verifiers-PAYLOAD.md
+        - T05 Replay-harness-and-verifiers-plan: milestones/M028/phases/P03/tasks/T05-replay-harness-and-verifiers-PLAN.md
+        - T05 Replay-harness-and-verifiers-summary: milestones/M028/phases/P03/tasks/T05-replay-harness-and-verifiers-SUMMARY.md
+      - P04:
+        - Overview: milestones/M028/phases/P04/index.md
+        - Plan: milestones/M028/phases/P04/P04-PLAN.md
+        - Summary: milestones/M028/phases/P04/P04-SUMMARY.md
+        - T01 Investigation-wrappers-a-payload: milestones/M028/phases/P04/tasks/T01-investigation-wrappers-A-PAYLOAD.md
+        - T01 Investigation-wrappers-a-plan: milestones/M028/phases/P04/tasks/T01-investigation-wrappers-A-PLAN.md
+        - T01 Investigation-wrappers-a-summary: milestones/M028/phases/P04/tasks/T01-investigation-wrappers-A-SUMMARY.md
+        - T02 Investigation-wrappers-b-payload: milestones/M028/phases/P04/tasks/T02-investigation-wrappers-B-PAYLOAD.md
+        - T02 Investigation-wrappers-b-plan: milestones/M028/phases/P04/tasks/T02-investigation-wrappers-B-PLAN.md
+        - T02 Investigation-wrappers-b-summary: milestones/M028/phases/P04/tasks/T02-investigation-wrappers-B-SUMMARY.md
+        - T03 Investigation-section-payload: milestones/M028/phases/P04/tasks/T03-investigation-section-PAYLOAD.md
+        - T03 Investigation-section-plan: milestones/M028/phases/P04/tasks/T03-investigation-section-PLAN.md
+        - T03 Investigation-section-summary: milestones/M028/phases/P04/tasks/T03-investigation-section-SUMMARY.md
+        - T04 Per-finding-verifiers-payload: milestones/M028/phases/P04/tasks/T04-per-finding-verifiers-PAYLOAD.md
+        - T04 Per-finding-verifiers-plan: milestones/M028/phases/P04/tasks/T04-per-finding-verifiers-PLAN.md
+        - T04 Per-finding-verifiers-summary: milestones/M028/phases/P04/tasks/T04-per-finding-verifiers-SUMMARY.md
+        - T05 Run-all-rollup-payload: milestones/M028/phases/P04/tasks/T05-run-all-rollup-PAYLOAD.md
+        - T05 Run-all-rollup-plan: milestones/M028/phases/P04/tasks/T05-run-all-rollup-PLAN.md
+        - T05 Run-all-rollup-summary: milestones/M028/phases/P04/tasks/T05-run-all-rollup-SUMMARY.md
+      - P05:
+        - Overview: milestones/M028/phases/P05/index.md
+        - Plan: milestones/M028/phases/P05/P05-PLAN.md
+        - Summary: milestones/M028/phases/P05/P05-SUMMARY.md
+        - T01 Downstream-fixture-payload: milestones/M028/phases/P05/tasks/T01-downstream-fixture-PAYLOAD.md
+        - T01 Downstream-fixture-plan: milestones/M028/phases/P05/tasks/T01-downstream-fixture-PLAN.md
+        - T01 Downstream-fixture-summary: milestones/M028/phases/P05/tasks/T01-downstream-fixture-SUMMARY.md
+        - T02 Replay-harness-payload: milestones/M028/phases/P05/tasks/T02-replay-harness-PAYLOAD.md
+        - T02 Replay-harness-plan: milestones/M028/phases/P05/tasks/T02-replay-harness-PLAN.md
+        - T02 Replay-harness-summary: milestones/M028/phases/P05/tasks/T02-replay-harness-SUMMARY.md
+        - T03 Regression-gate-payload: milestones/M028/phases/P05/tasks/T03-regression-gate-PAYLOAD.md
+        - T03 Regression-gate-plan: milestones/M028/phases/P05/tasks/T03-regression-gate-PLAN.md
+        - T03 Regression-gate-summary: milestones/M028/phases/P05/tasks/T03-regression-gate-SUMMARY.md
+        - T04 Close-out-sweep-payload: milestones/M028/phases/P05/tasks/T04-close-out-sweep-PAYLOAD.md
+        - T04 Close-out-sweep-plan: milestones/M028/phases/P05/tasks/T04-close-out-sweep-PLAN.md
+        - T04 Close-out-sweep-summary: milestones/M028/phases/P05/tasks/T04-close-out-sweep-SUMMARY.md
+    - M030 — close → M031 → M032 → M033 → M029 → M035 → launch:
+      - Overview: milestones/M030/index.md
+      - continue: milestones/M030/continue.md
+      - Acceptance-evidence: milestones/M030/M030-ACCEPTANCE-EVIDENCE.md
+      - Context: milestones/M030/M030-CONTEXT.md
+      - Evaluation: milestones/M030/M030-EVALUATION.md
+      - Roadmap: milestones/M030/M030-ROADMAP.md
+      - Summary: milestones/M030/M030-SUMMARY.md
+      - P00:
+        - Overview: milestones/M030/phases/P00/index.md
+        - Plan: milestones/M030/phases/P00/P00-PLAN.md
+        - Summary: milestones/M030/phases/P00/P00-SUMMARY.md
+        - T01 Source-pool-and-skeleton-payload: milestones/M030/phases/P00/tasks/T01-source-pool-and-skeleton-PAYLOAD.md
+        - T01 Source-pool-and-skeleton-plan: milestones/M030/phases/P00/tasks/T01-source-pool-and-skeleton-PLAN.md
+        - T01 Summary: milestones/M030/phases/P00/tasks/T01-SUMMARY.md
+        - T02 Hand-labeling-payload: milestones/M030/phases/P00/tasks/T02-hand-labeling-PAYLOAD.md
+        - T02 Hand-labeling-plan: milestones/M030/phases/P00/tasks/T02-hand-labeling-PLAN.md
+        - T02 Summary: milestones/M030/phases/P00/tasks/T02-SUMMARY.md
+        - T03 Readme-and-gate-payload: milestones/M030/phases/P00/tasks/T03-readme-and-gate-PAYLOAD.md
+        - T03 Readme-and-gate-plan: milestones/M030/phases/P00/tasks/T03-readme-and-gate-PLAN.md
+        - T03 Summary: milestones/M030/phases/P00/tasks/T03-SUMMARY.md
+      - P01:
+        - Overview: milestones/M030/phases/P01/index.md
+        - Plan: milestones/M030/phases/P01/P01-PLAN.md
+        - Summary: milestones/M030/phases/P01/P01-SUMMARY.md
+        - T01 D-a4-timeline-graduation-payload: milestones/M030/phases/P01/tasks/T01-d-a4-timeline-graduation-PAYLOAD.md
+        - T01 D-a4-timeline-graduation-plan: milestones/M030/phases/P01/tasks/T01-d-a4-timeline-graduation-PLAN.md
+        - T01 Summary: milestones/M030/phases/P01/tasks/T01-SUMMARY.md
+        - T02 Classifier-script-payload: milestones/M030/phases/P01/tasks/T02-classifier-script-PAYLOAD.md
+        - T02 Classifier-script-plan: milestones/M030/phases/P01/tasks/T02-classifier-script-PLAN.md
+        - T02 Summary: milestones/M030/phases/P01/tasks/T02-SUMMARY.md
+        - T03 Routing-table-and-docs-payload: milestones/M030/phases/P01/tasks/T03-routing-table-and-docs-PAYLOAD.md
+        - T03 Routing-table-and-docs-plan: milestones/M030/phases/P01/tasks/T03-routing-table-and-docs-PLAN.md
+        - T03 Summary: milestones/M030/phases/P01/tasks/T03-SUMMARY.md
+        - T04 Doctor-config-check-and-suite-payload: milestones/M030/phases/P01/tasks/T04-doctor-config-check-and-suite-PAYLOAD.md
+        - T04 Doctor-config-check-and-suite-plan: milestones/M030/phases/P01/tasks/T04-doctor-config-check-and-suite-PLAN.md
+        - T04 Summary: milestones/M030/phases/P01/tasks/T04-SUMMARY.md
+      - P02:
+        - Overview: milestones/M030/phases/P02/index.md
+        - Plan: milestones/M030/phases/P02/P02-PLAN.md
+        - Summary: milestones/M030/phases/P02/P02-SUMMARY.md
+        - T01 Additive-schema-fixture-payload: milestones/M030/phases/P02/tasks/T01-additive-schema-fixture-PAYLOAD.md
+        - T01 Additive-schema-fixture-plan: milestones/M030/phases/P02/tasks/T01-additive-schema-fixture-PLAN.md
+        - T01 Summary: milestones/M030/phases/P02/tasks/T01-SUMMARY.md
+        - T02 Dispatch-shadow-hook-payload: milestones/M030/phases/P02/tasks/T02-dispatch-shadow-hook-PAYLOAD.md
+        - T02 Dispatch-shadow-hook-plan: milestones/M030/phases/P02/tasks/T02-dispatch-shadow-hook-PLAN.md
+        - T02 Dispatch-shadow-hook-summary: milestones/M030/phases/P02/tasks/T02-dispatch-shadow-hook-SUMMARY.md
+        - T03 Shadow-compare-payload: milestones/M030/phases/P02/tasks/T03-shadow-compare-PAYLOAD.md
+        - T03 Shadow-compare-plan: milestones/M030/phases/P02/tasks/T03-shadow-compare-PLAN.md
+        - T03 Shadow-compare-summary: milestones/M030/phases/P02/tasks/T03-shadow-compare-SUMMARY.md
+        - T04 Phase-suite-and-close-payload: milestones/M030/phases/P02/tasks/T04-phase-suite-and-close-PAYLOAD.md
+        - T04 Phase-suite-and-close-plan: milestones/M030/phases/P02/tasks/T04-phase-suite-and-close-PLAN.md
+        - T04 Phase-suite-and-close-summary: milestones/M030/phases/P02/tasks/T04-phase-suite-and-close-SUMMARY.md
+      - P03:
+        - Overview: milestones/M030/phases/P03/index.md
+        - Plan: milestones/M030/phases/P03/P03-PLAN.md
+        - Summary: milestones/M030/phases/P03/P03-SUMMARY.md
+        - T01 Fixtures-and-enum-gate-payload: milestones/M030/phases/P03/tasks/T01-fixtures-and-enum-gate-PAYLOAD.md
+        - T01 Fixtures-and-enum-gate-plan: milestones/M030/phases/P03/tasks/T01-fixtures-and-enum-gate-PLAN.md
+        - T01 Fixtures-and-enum-gate-summary: milestones/M030/phases/P03/tasks/T01-fixtures-and-enum-gate-SUMMARY.md
+        - T02 Override-resolution-payload: milestones/M030/phases/P03/tasks/T02-override-resolution-PAYLOAD.md
+        - T02 Override-resolution-plan: milestones/M030/phases/P03/tasks/T02-override-resolution-PLAN.md
+        - T02 Override-resolution-summary: milestones/M030/phases/P03/tasks/T02-override-resolution-SUMMARY.md
+        - T03 Sc6-and-conflict-payload: milestones/M030/phases/P03/tasks/T03-sc6-and-conflict-PAYLOAD.md
+        - T03 Sc6-and-conflict-plan: milestones/M030/phases/P03/tasks/T03-sc6-and-conflict-PLAN.md
+        - T03 Sc6-and-conflict-summary: milestones/M030/phases/P03/tasks/T03-sc6-and-conflict-SUMMARY.md
+        - T04 Phase-suite-and-close-payload: milestones/M030/phases/P03/tasks/T04-phase-suite-and-close-PAYLOAD.md
+        - T04 Phase-suite-and-close-plan: milestones/M030/phases/P03/tasks/T04-phase-suite-and-close-PLAN.md
+        - T04 Phase-suite-and-close-summary: milestones/M030/phases/P03/tasks/T04-phase-suite-and-close-SUMMARY.md
+      - P04:
+        - Overview: milestones/M030/phases/P04/index.md
+        - Plan: milestones/M030/phases/P04/P04-PLAN.md
+        - Summary: milestones/M030/phases/P04/P04-SUMMARY.md
+        - T01 Fixtures-and-stubs-payload: milestones/M030/phases/P04/tasks/T01-fixtures-and-stubs-PAYLOAD.md
+        - T01 Fixtures-and-stubs-plan: milestones/M030/phases/P04/tasks/T01-fixtures-and-stubs-PLAN.md
+        - T01 Fixtures-and-stubs-summary: milestones/M030/phases/P04/tasks/T01-fixtures-and-stubs-SUMMARY.md
+        - T02 Live-routing-flip-gate-payload: milestones/M030/phases/P04/tasks/T02-live-routing-flip-gate-PAYLOAD.md
+        - T02 Live-routing-flip-gate-plan: milestones/M030/phases/P04/tasks/T02-live-routing-flip-gate-PLAN.md
+        - T02 Live-routing-flip-gate-summary: milestones/M030/phases/P04/tasks/T02-live-routing-flip-gate-SUMMARY.md
+        - T03 Escalation-loop-payload: milestones/M030/phases/P04/tasks/T03-escalation-loop-PAYLOAD.md
+        - T03 Escalation-loop-plan: milestones/M030/phases/P04/tasks/T03-escalation-loop-PLAN.md
+        - T03 Escalation-loop-summary: milestones/M030/phases/P04/tasks/T03-escalation-loop-SUMMARY.md
+        - T04 Phase-suite-and-close-payload: milestones/M030/phases/P04/tasks/T04-phase-suite-and-close-PAYLOAD.md
+        - T04 Phase-suite-and-close-plan: milestones/M030/phases/P04/tasks/T04-phase-suite-and-close-PLAN.md
+        - T04 Phase-suite-and-close-summary: milestones/M030/phases/P04/tasks/T04-phase-suite-and-close-SUMMARY.md
+      - P05:
+        - Overview: milestones/M030/phases/P05/index.md
+        - Plan: milestones/M030/phases/P05/P05-PLAN.md
+        - Summary: milestones/M030/phases/P05/P05-SUMMARY.md
+        - T01 Fixtures-and-baselines-payload: milestones/M030/phases/P05/tasks/T01-fixtures-and-baselines-PAYLOAD.md
+        - T01 Fixtures-and-baselines-plan: milestones/M030/phases/P05/tasks/T01-fixtures-and-baselines-PLAN.md
+        - T01 Fixtures-and-baselines-summary: milestones/M030/phases/P05/tasks/T01-fixtures-and-baselines-SUMMARY.md
+        - T02 Rollup-and-footer-amendments-payload: milestones/M030/phases/P05/tasks/T02-rollup-and-footer-amendments-PAYLOAD.md
+        - T02 Rollup-and-footer-amendments-plan: milestones/M030/phases/P05/tasks/T02-rollup-and-footer-amendments-PLAN.md
+        - T02 Rollup-and-footer-amendments-summary: milestones/M030/phases/P05/tasks/T02-rollup-and-footer-amendments-SUMMARY.md
+        - T03 Phase-suite-and-close-payload: milestones/M030/phases/P05/tasks/T03-phase-suite-and-close-PAYLOAD.md
+        - T03 Phase-suite-and-close-plan: milestones/M030/phases/P05/tasks/T03-phase-suite-and-close-PLAN.md
+        - T03 Phase-suite-and-close-summary: milestones/M030/phases/P05/tasks/T03-phase-suite-and-close-SUMMARY.md
+      - P06:
+        - Overview: milestones/M030/phases/P06/index.md
+        - Plan: milestones/M030/phases/P06/P06-PLAN.md
+        - Summary: milestones/M030/phases/P06/P06-SUMMARY.md
+        - T01 Fixtures-and-baseline-plan: milestones/M030/phases/P06/tasks/T01-fixtures-and-baseline-PLAN.md
+        - T02 Anomaly-check-and-emit-plan: milestones/M030/phases/P06/tasks/T02-anomaly-check-and-emit-PLAN.md
+        - T03 Phase-suite-and-close-plan: milestones/M030/phases/P06/tasks/T03-phase-suite-and-close-PLAN.md
+      - P07:
+        - Overview: milestones/M030/phases/P07/index.md
+        - Plan: milestones/M030/phases/P07/P07-PLAN.md
+        - Summary: milestones/M030/phases/P07/P07-SUMMARY.md
+        - T01 Corpus-and-verdict-gates-payload: milestones/M030/phases/P07/tasks/T01-corpus-and-verdict-gates-PAYLOAD.md
+        - T01 Corpus-and-verdict-gates-plan: milestones/M030/phases/P07/tasks/T01-corpus-and-verdict-gates-PLAN.md
+        - T01 Corpus-and-verdict-gates-summary: milestones/M030/phases/P07/tasks/T01-corpus-and-verdict-gates-SUMMARY.md
+        - T02 Acceptance-battery-payload: milestones/M030/phases/P07/tasks/T02-acceptance-battery-PAYLOAD.md
+        - T02 Acceptance-battery-plan: milestones/M030/phases/P07/tasks/T02-acceptance-battery-PLAN.md
+        - T02 Acceptance-battery-summary: milestones/M030/phases/P07/tasks/T02-acceptance-battery-SUMMARY.md
+        - T03 Evidence-ledger-and-phase-suite-payload: milestones/M030/phases/P07/tasks/T03-evidence-ledger-and-phase-suite-PAYLOAD.md
+        - T03 Evidence-ledger-and-phase-suite-plan: milestones/M030/phases/P07/tasks/T03-evidence-ledger-and-phase-suite-PLAN.md
+        - T03 Evidence-ledger-and-phase-suite-summary: milestones/M030/phases/P07/tasks/T03-evidence-ledger-and-phase-suite-SUMMARY.md
+        - T04 Milestone-close-ceremony-payload: milestones/M030/phases/P07/tasks/T04-milestone-close-ceremony-PAYLOAD.md
+        - T04 Milestone-close-ceremony-plan: milestones/M030/phases/P07/tasks/T04-milestone-close-ceremony-PLAN.md
+        - T04 Milestone-close-ceremony-summary: milestones/M030/phases/P07/tasks/T04-milestone-close-ceremony-SUMMARY.md
+    - M031 — Right-Sized Entry:
+      - Overview: milestones/M031/index.md
+      - Acceptance-evidence: milestones/M031/M031-ACCEPTANCE-EVIDENCE.md
+      - Context: milestones/M031/M031-CONTEXT.md
+      - Evaluation: milestones/M031/M031-EVALUATION.md
+      - Roadmap: milestones/M031/M031-ROADMAP.md
+      - Summary: milestones/M031/M031-SUMMARY.md
+      - P00:
+        - Overview: milestones/M031/phases/P00/index.md
+        - Plan: milestones/M031/phases/P00/P00-PLAN.md
+        - Summary: milestones/M031/phases/P00/P00-SUMMARY.md
+        - T01 Spec-foldin-payload: milestones/M031/phases/P00/tasks/T01-spec-foldin-PAYLOAD.md
+        - T01 Spec-foldin-plan: milestones/M031/phases/P00/tasks/T01-spec-foldin-PLAN.md
+        - T01 Summary: milestones/M031/phases/P00/tasks/T01-SUMMARY.md
+        - T02 Corpus-and-defaults-payload: milestones/M031/phases/P00/tasks/T02-corpus-and-defaults-PAYLOAD.md
+        - T02 Corpus-and-defaults-plan: milestones/M031/phases/P00/tasks/T02-corpus-and-defaults-PLAN.md
+        - T02 Summary: milestones/M031/phases/P00/tasks/T02-SUMMARY.md
+        - T03 Harness-and-suite-payload: milestones/M031/phases/P00/tasks/T03-harness-and-suite-PAYLOAD.md
+        - T03 Harness-and-suite-plan: milestones/M031/phases/P00/tasks/T03-harness-and-suite-PLAN.md
+        - T03 Summary: milestones/M031/phases/P00/tasks/T03-SUMMARY.md
+      - P01:
+        - Overview: milestones/M031/phases/P01/index.md
+        - Plan: milestones/M031/phases/P01/P01-PLAN.md
+        - Summary: milestones/M031/phases/P01/P01-SUMMARY.md
+        - T01 Build-context-profile-payload: milestones/M031/phases/P01/tasks/T01-build-context-profile-PAYLOAD.md
+        - T01 Build-context-profile-plan: milestones/M031/phases/P01/tasks/T01-build-context-profile-PLAN.md
+        - T01 Build-context-profile-summary: milestones/M031/phases/P01/tasks/T01-build-context-profile-SUMMARY.md
+        - T02 Ad14-capture-and-fr4-payload: milestones/M031/phases/P01/tasks/T02-ad14-capture-and-fr4-PAYLOAD.md
+        - T02 Ad14-capture-and-fr4-plan: milestones/M031/phases/P01/tasks/T02-ad14-capture-and-fr4-PLAN.md
+        - T02 Ad14-capture-and-fr4-summary: milestones/M031/phases/P01/tasks/T02-ad14-capture-and-fr4-SUMMARY.md
+        - T03 Acceptance-tests-payload: milestones/M031/phases/P01/tasks/T03-acceptance-tests-PAYLOAD.md
+        - T03 Acceptance-tests-plan: milestones/M031/phases/P01/tasks/T03-acceptance-tests-PLAN.md
+        - T03 Acceptance-tests-summary: milestones/M031/phases/P01/tasks/T03-acceptance-tests-SUMMARY.md
+        - T04 Phase-suite-and-scope-guard-payload: milestones/M031/phases/P01/tasks/T04-phase-suite-and-scope-guard-PAYLOAD.md
+        - T04 Phase-suite-and-scope-guard-plan: milestones/M031/phases/P01/tasks/T04-phase-suite-and-scope-guard-PLAN.md
+        - T04 Summary: milestones/M031/phases/P01/tasks/T04-SUMMARY.md
+      - P02:
+        - Overview: milestones/M031/phases/P02/index.md
+        - Plan: milestones/M031/phases/P02/P02-PLAN.md
+        - Summary: milestones/M031/phases/P02/P02-SUMMARY.md
+        - T01 Classifier-and-provenance-payload: milestones/M031/phases/P02/tasks/T01-classifier-and-provenance-PAYLOAD.md
+        - T01 Classifier-and-provenance-plan: milestones/M031/phases/P02/tasks/T01-classifier-and-provenance-PLAN.md
+        - T01 Classifier-and-provenance-summary: milestones/M031/phases/P02/tasks/T01-classifier-and-provenance-SUMMARY.md
+        - T02 Slug-and-role-templates-payload: milestones/M031/phases/P02/tasks/T02-slug-and-role-templates-PAYLOAD.md
+        - T02 Slug-and-role-templates-plan: milestones/M031/phases/P02/tasks/T02-slug-and-role-templates-PLAN.md
+        - T02 Slug-and-role-templates-summary: milestones/M031/phases/P02/tasks/T02-slug-and-role-templates-SUMMARY.md
+        - T03 Prompt-and-prompt-ux-test-payload: milestones/M031/phases/P02/tasks/T03-prompt-and-prompt-ux-test-PAYLOAD.md
+        - T03 Prompt-and-prompt-ux-test-plan: milestones/M031/phases/P02/tasks/T03-prompt-and-prompt-ux-test-PLAN.md
+        - T03 Prompt-and-prompt-ux-test-summary: milestones/M031/phases/P02/tasks/T03-prompt-and-prompt-ux-test-SUMMARY.md
+        - T04 Router-and-flow-test-payload: milestones/M031/phases/P02/tasks/T04-router-and-flow-test-PAYLOAD.md
+        - T04 Router-and-flow-test-plan: milestones/M031/phases/P02/tasks/T04-router-and-flow-test-PLAN.md
+        - T04 Router-and-flow-test-summary: milestones/M031/phases/P02/tasks/T04-router-and-flow-test-SUMMARY.md
+        - T05 Phase-suite-and-scope-guard-payload: milestones/M031/phases/P02/tasks/T05-phase-suite-and-scope-guard-PAYLOAD.md
+        - T05 Phase-suite-and-scope-guard-plan: milestones/M031/phases/P02/tasks/T05-phase-suite-and-scope-guard-PLAN.md
+        - T05 Phase-suite-and-scope-guard-summary: milestones/M031/phases/P02/tasks/T05-phase-suite-and-scope-guard-SUMMARY.md
+      - P03:
+        - Overview: milestones/M031/phases/P03/index.md
+        - Plan: milestones/M031/phases/P03/P03-PLAN.md
+        - Summary: milestones/M031/phases/P03/P03-SUMMARY.md
+        - T01 Do-md-and-entry-script-payload: milestones/M031/phases/P03/tasks/T01-do-md-and-entry-script-PAYLOAD.md
+        - T01 Do-md-and-entry-script-plan: milestones/M031/phases/P03/tasks/T01-do-md-and-entry-script-PLAN.md
+        - T01 Do-md-and-entry-script-summary: milestones/M031/phases/P03/tasks/T01-do-md-and-entry-script-SUMMARY.md
+        - T02 Acceptance-tests-payload: milestones/M031/phases/P03/tasks/T02-acceptance-tests-PAYLOAD.md
+        - T02 Acceptance-tests-plan: milestones/M031/phases/P03/tasks/T02-acceptance-tests-PLAN.md
+        - T02 Acceptance-tests-summary: milestones/M031/phases/P03/tasks/T02-acceptance-tests-SUMMARY.md
+        - T03 Phase-suite-and-scope-guard-payload: milestones/M031/phases/P03/tasks/T03-phase-suite-and-scope-guard-PAYLOAD.md
+        - T03 Phase-suite-and-scope-guard-plan: milestones/M031/phases/P03/tasks/T03-phase-suite-and-scope-guard-PLAN.md
+        - T03 Phase-suite-and-scope-guard-summary: milestones/M031/phases/P03/tasks/T03-phase-suite-and-scope-guard-SUMMARY.md
+      - P04:
+        - Overview: milestones/M031/phases/P04/index.md
+        - Plan: milestones/M031/phases/P04/P04-PLAN.md
+        - Summary: milestones/M031/phases/P04/P04-SUMMARY.md
+        - T01 Drift-fix-and-changelog-payload: milestones/M031/phases/P04/tasks/T01-drift-fix-and-changelog-PAYLOAD.md
+        - T01 Drift-fix-and-changelog-plan: milestones/M031/phases/P04/tasks/T01-drift-fix-and-changelog-PLAN.md
+        - T01 Drift-fix-and-changelog-summary: milestones/M031/phases/P04/tasks/T01-drift-fix-and-changelog-SUMMARY.md
+        - T02 Doctor-compound-change-payload: milestones/M031/phases/P04/tasks/T02-doctor-compound-change-PAYLOAD.md
+        - T02 Doctor-compound-change-plan: milestones/M031/phases/P04/tasks/T02-doctor-compound-change-PLAN.md
+        - T02 Doctor-compound-change-summary: milestones/M031/phases/P04/tasks/T02-doctor-compound-change-SUMMARY.md
+        - T03 Budget-drift-warning-payload: milestones/M031/phases/P04/tasks/T03-budget-drift-warning-PAYLOAD.md
+        - T03 Budget-drift-warning-plan: milestones/M031/phases/P04/tasks/T03-budget-drift-warning-PLAN.md
+        - T03 Budget-drift-warning-summary: milestones/M031/phases/P04/tasks/T03-budget-drift-warning-SUMMARY.md
+        - T04 Followup-summary: milestones/M031/phases/P04/tasks/T04-FOLLOWUP-SUMMARY.md
+        - T04 Scope-guard-and-battery-payload: milestones/M031/phases/P04/tasks/T04-scope-guard-and-battery-PAYLOAD.md
+        - T04 Scope-guard-and-battery-plan: milestones/M031/phases/P04/tasks/T04-scope-guard-and-battery-PLAN.md
+        - T04 Scope-guard-and-battery-summary: milestones/M031/phases/P04/tasks/T04-scope-guard-and-battery-SUMMARY.md
+        - T05 Evidence-ledger-and-phase-suite-payload: milestones/M031/phases/P04/tasks/T05-evidence-ledger-and-phase-suite-PAYLOAD.md
+        - T05 Evidence-ledger-and-phase-suite-plan: milestones/M031/phases/P04/tasks/T05-evidence-ledger-and-phase-suite-PLAN.md
+        - T05 Evidence-ledger-and-phase-suite-summary: milestones/M031/phases/P04/tasks/T05-evidence-ledger-and-phase-suite-SUMMARY.md
+    - M032 — Wiki Distribution + Init Integration:
+      - Overview: milestones/M032/index.md
+      - Context: milestones/M032/M032-CONTEXT.md
+      - Evaluation: milestones/M032/M032-EVALUATION.md
+      - Roadmap: milestones/M032/M032-ROADMAP.md
+      - P01:
+        - Overview: milestones/M032/phases/P01/index.md
+        - Plan: milestones/M032/phases/P01/P01-PLAN.md
+        - Summary: milestones/M032/phases/P01/P01-SUMMARY.md
+        - T01 Manifest-and-libraries-payload: milestones/M032/phases/P01/tasks/T01-manifest-and-libraries-PAYLOAD.md
+        - T01 Manifest-and-libraries-plan: milestones/M032/phases/P01/tasks/T01-manifest-and-libraries-PLAN.md
+        - T01 Manifest-and-libraries-summary: milestones/M032/phases/P01/tasks/T01-manifest-and-libraries-SUMMARY.md
+        - T02 Install-claude-code-migration-payload: milestones/M032/phases/P01/tasks/T02-install-claude-code-migration-PAYLOAD.md
+        - T02 Install-claude-code-migration-plan: milestones/M032/phases/P01/tasks/T02-install-claude-code-migration-PLAN.md
+        - T02 Install-claude-code-migration-summary: milestones/M032/phases/P01/tasks/T02-install-claude-code-migration-SUMMARY.md
+        - T03 Install-codex-cursor-migration-payload: milestones/M032/phases/P01/tasks/T03-install-codex-cursor-migration-PAYLOAD.md
+        - T03 Install-codex-cursor-migration-plan: milestones/M032/phases/P01/tasks/T03-install-codex-cursor-migration-PLAN.md
+        - T03 Install-codex-cursor-migration-summary: milestones/M032/phases/P01/tasks/T03-install-codex-cursor-migration-SUMMARY.md
+        - T04 Fixture-and-acceptance-tests-payload: milestones/M032/phases/P01/tasks/T04-fixture-and-acceptance-tests-PAYLOAD.md
+        - T04 Fixture-and-acceptance-tests-plan: milestones/M032/phases/P01/tasks/T04-fixture-and-acceptance-tests-PLAN.md
+        - T04 Fixture-and-acceptance-tests-summary: milestones/M032/phases/P01/tasks/T04-fixture-and-acceptance-tests-SUMMARY.md
+      - P02:
+        - Overview: milestones/M032/phases/P02/index.md
+        - Plan: milestones/M032/phases/P02/P02-PLAN.md
+        - T01 Wiki-init-default-scope-payload: milestones/M032/phases/P02/tasks/T01-wiki-init-default-scope-PAYLOAD.md
+        - T01 Wiki-init-default-scope-plan: milestones/M032/phases/P02/tasks/T01-wiki-init-default-scope-PLAN.md
+        - T01 Wiki-init-default-scope-summary: milestones/M032/phases/P02/tasks/T01-wiki-init-default-scope-SUMMARY.md
+        - T02 Init-with-wiki-passthrough-payload: milestones/M032/phases/P02/tasks/T02-init-with-wiki-passthrough-PAYLOAD.md
+        - T02 Init-with-wiki-passthrough-plan: milestones/M032/phases/P02/tasks/T02-init-with-wiki-passthrough-PLAN.md
+        - T02 Init-with-wiki-passthrough-summary: milestones/M032/phases/P02/tasks/T02-init-with-wiki-passthrough-SUMMARY.md
+        - T03 Glossary-surface-payload: milestones/M032/phases/P02/tasks/T03-glossary-surface-PAYLOAD.md
+        - T03 Glossary-surface-plan: milestones/M032/phases/P02/tasks/T03-glossary-surface-PLAN.md
+        - T04 Glossary-knowledge-adapter-plan: milestones/M032/phases/P02/tasks/T04-glossary-knowledge-adapter-PLAN.md
+        - T05 Acceptance-and-seam-and-suite-plan: milestones/M032/phases/P02/tasks/T05-acceptance-and-seam-and-suite-PLAN.md
+    - M033 — Project Onboarding Experience:
+      - Overview: milestones/M033/index.md
+      - continue: milestones/M033/continue.md
+      - Context: milestones/M033/M033-CONTEXT.md
+      - Evaluation: milestones/M033/M033-EVALUATION.md
+      - Roadmap: milestones/M033/M033-ROADMAP.md
+      - Summary: milestones/M033/M033-SUMMARY.md
+      - P01:
+        - Overview: milestones/M033/phases/P01/index.md
+        - Plan: milestones/M033/phases/P01/P01-PLAN.md
+        - Summary: milestones/M033/phases/P01/P01-SUMMARY.md
+        - T01 Pbj-fixture-and-oracle-payload: milestones/M033/phases/P01/tasks/T01-pbj-fixture-and-oracle-PAYLOAD.md
+        - T01 Pbj-fixture-and-oracle-plan: milestones/M033/phases/P01/tasks/T01-pbj-fixture-and-oracle-PLAN.md
+        - T01 Pbj-fixture-and-oracle-summary: milestones/M033/phases/P01/tasks/T01-pbj-fixture-and-oracle-SUMMARY.md
+        - T02 Branch-detection-ssot-payload: milestones/M033/phases/P01/tasks/T02-branch-detection-ssot-PAYLOAD.md
+        - T02 Branch-detection-ssot-plan: milestones/M033/phases/P01/tasks/T02-branch-detection-ssot-PLAN.md
+        - T02 Branch-detection-ssot-summary: milestones/M033/phases/P01/tasks/T02-branch-detection-ssot-SUMMARY.md
+        - T03 Start-command-and-driver-payload: milestones/M033/phases/P01/tasks/T03-start-command-and-driver-PAYLOAD.md
+        - T03 Start-command-and-driver-plan: milestones/M033/phases/P01/tasks/T03-start-command-and-driver-PLAN.md
+        - T03 Start-command-and-driver-summary: milestones/M033/phases/P01/tasks/T03-start-command-and-driver-SUMMARY.md
+        - T04 Friendly-tester-pass-artifacts-payload: milestones/M033/phases/P01/tasks/T04-friendly-tester-pass-artifacts-PAYLOAD.md
+        - T04 Friendly-tester-pass-artifacts-plan: milestones/M033/phases/P01/tasks/T04-friendly-tester-pass-artifacts-PLAN.md
+        - T04 Friendly-tester-pass-artifacts-summary: milestones/M033/phases/P01/tasks/T04-friendly-tester-pass-artifacts-SUMMARY.md
+        - T05 Acceptance-suite-and-phase-suite-payload: milestones/M033/phases/P01/tasks/T05-acceptance-suite-and-phase-suite-PAYLOAD.md
+        - T05 Acceptance-suite-and-phase-suite-plan: milestones/M033/phases/P01/tasks/T05-acceptance-suite-and-phase-suite-PLAN.md
+        - T05 Acceptance-suite-and-phase-suite-summary: milestones/M033/phases/P01/tasks/T05-acceptance-suite-and-phase-suite-SUMMARY.md
+      - P02:
+        - Overview: milestones/M033/phases/P02/index.md
+        - Plan: milestones/M033/phases/P02/P02-PLAN.md
+        - Summary: milestones/M033/phases/P02/P02-SUMMARY.md
+        - T01 Jsonl-event-emitter-payload: milestones/M033/phases/P02/tasks/T01-jsonl-event-emitter-PAYLOAD.md
+        - T01 Jsonl-event-emitter-plan: milestones/M033/phases/P02/tasks/T01-jsonl-event-emitter-PLAN.md
+        - T01 Jsonl-event-emitter-summary: milestones/M033/phases/P02/tasks/T01-jsonl-event-emitter-SUMMARY.md
+        - T02 Start-state-markers-and-resume-payload: milestones/M033/phases/P02/tasks/T02-start-state-markers-and-resume-PAYLOAD.md
+        - T02 Start-state-markers-and-resume-plan: milestones/M033/phases/P02/tasks/T02-start-state-markers-and-resume-PLAN.md
+        - T02 Start-state-markers-and-resume-summary: milestones/M033/phases/P02/tasks/T02-start-state-markers-and-resume-SUMMARY.md
+        - T03 Grilling-shell-core-payload: milestones/M033/phases/P02/tasks/T03-grilling-shell-core-PAYLOAD.md
+        - T03 Grilling-shell-core-plan: milestones/M033/phases/P02/tasks/T03-grilling-shell-core-PLAN.md
+        - T03 Grilling-shell-core-summary: milestones/M033/phases/P02/tasks/T03-grilling-shell-core-SUMMARY.md
+        - T04 Grilling-shell-glossary-and-contradiction-payload: milestones/M033/phases/P02/tasks/T04-grilling-shell-glossary-and-contradiction-PAYLOAD.md
+        - T04 Grilling-shell-glossary-and-contradiction-plan: milestones/M033/phases/P02/tasks/T04-grilling-shell-glossary-and-contradiction-PLAN.md
+        - T04 Grilling-shell-glossary-and-contradiction-summary: milestones/M033/phases/P02/tasks/T04-grilling-shell-glossary-and-contradiction-SUMMARY.md
+        - T05 Fr21-convention-and-phase-suite-payload: milestones/M033/phases/P02/tasks/T05-fr21-convention-and-phase-suite-PAYLOAD.md
+        - T05 Fr21-convention-and-phase-suite-plan: milestones/M033/phases/P02/tasks/T05-fr21-convention-and-phase-suite-PLAN.md
+        - T05 Fr21-convention-and-phase-suite-summary: milestones/M033/phases/P02/tasks/T05-fr21-convention-and-phase-suite-SUMMARY.md
+      - P03:
+        - Overview: milestones/M033/phases/P03/index.md
+        - Plan: milestones/M033/phases/P03/P03-PLAN.md
+        - Summary: milestones/M033/phases/P03/P03-SUMMARY.md
+        - T01 Standalone-gate-and-starters-payload: milestones/M033/phases/P03/tasks/T01-standalone-gate-and-starters-PAYLOAD.md
+        - T01 Standalone-gate-and-starters-plan: milestones/M033/phases/P03/tasks/T01-standalone-gate-and-starters-PLAN.md
+        - T01 Summary: milestones/M033/phases/P03/tasks/T01-SUMMARY.md
+        - T02 Constitution-author-payload: milestones/M033/phases/P03/tasks/T02-constitution-author-PAYLOAD.md
+        - T02 Constitution-author-plan: milestones/M033/phases/P03/tasks/T02-constitution-author-PLAN.md
+        - T02 Summary: milestones/M033/phases/P03/tasks/T02-SUMMARY.md
+        - T03 Ingest-codebase-core-payload: milestones/M033/phases/P03/tasks/T03-ingest-codebase-core-PAYLOAD.md
+        - T03 Ingest-codebase-core-plan: milestones/M033/phases/P03/tasks/T03-ingest-codebase-core-PLAN.md
+        - T03 Summary: milestones/M033/phases/P03/tasks/T03-SUMMARY.md
+        - T04 Rich-context-import-payload: milestones/M033/phases/P03/tasks/T04-rich-context-import-PAYLOAD.md
+        - T04 Rich-context-import-plan: milestones/M033/phases/P03/tasks/T04-rich-context-import-PLAN.md
+        - T04 Summary: milestones/M033/phases/P03/tasks/T04-SUMMARY.md
+        - T05 Acceptance-and-phase-suite-payload: milestones/M033/phases/P03/tasks/T05-acceptance-and-phase-suite-PAYLOAD.md
+        - T05 Acceptance-and-phase-suite-plan: milestones/M033/phases/P03/tasks/T05-acceptance-and-phase-suite-PLAN.md
+        - T05 Acceptance-and-phase-suite-summary: milestones/M033/phases/P03/tasks/T05-acceptance-and-phase-suite-SUMMARY.md
+      - P04:
+        - Overview: milestones/M033/phases/P04/index.md
+        - Plan: milestones/M033/phases/P04/P04-PLAN.md
+        - Summary: milestones/M033/phases/P04/P04-SUMMARY.md
+        - T01 Materials-intake-payload: milestones/M033/phases/P04/tasks/T01-materials-intake-PAYLOAD.md
+        - T01 Materials-intake-plan: milestones/M033/phases/P04/tasks/T01-materials-intake-PLAN.md
+        - T01 Materials-intake-summary: milestones/M033/phases/P04/tasks/T01-materials-intake-SUMMARY.md
+        - T02 Ideation-payload: milestones/M033/phases/P04/tasks/T02-ideation-PAYLOAD.md
+        - T02 Ideation-plan: milestones/M033/phases/P04/tasks/T02-ideation-PLAN.md
+        - T02 Ideation-summary: milestones/M033/phases/P04/tasks/T02-ideation-SUMMARY.md
+        - T03 Migrate-then-ingest-dup-prevention-payload: milestones/M033/phases/P04/tasks/T03-migrate-then-ingest-dup-prevention-PAYLOAD.md
+        - T03 Migrate-then-ingest-dup-prevention-plan: milestones/M033/phases/P04/tasks/T03-migrate-then-ingest-dup-prevention-PLAN.md
+        - T03 Migrate-then-ingest-dup-prevention-summary: milestones/M033/phases/P04/tasks/T03-migrate-then-ingest-dup-prevention-SUMMARY.md
+        - T04 Migrate-routing-payload: milestones/M033/phases/P04/tasks/T04-migrate-routing-PAYLOAD.md
+        - T04 Migrate-routing-plan: milestones/M033/phases/P04/tasks/T04-migrate-routing-PLAN.md
+        - T04 Migrate-routing-summary: milestones/M033/phases/P04/tasks/T04-migrate-routing-SUMMARY.md
+        - T05 Acceptance-and-phase-suite-payload: milestones/M033/phases/P04/tasks/T05-acceptance-and-phase-suite-PAYLOAD.md
+        - T05 Acceptance-and-phase-suite-plan: milestones/M033/phases/P04/tasks/T05-acceptance-and-phase-suite-PLAN.md
+        - T05 Acceptance-and-phase-suite-summary: milestones/M033/phases/P04/tasks/T05-acceptance-and-phase-suite-SUMMARY.md
+      - P05:
+        - Overview: milestones/M033/phases/P05/index.md
+        - Plan: milestones/M033/phases/P05/P05-PLAN.md
+        - Summary: milestones/M033/phases/P05/P05-SUMMARY.md
+        - T01 Customblock-draft-payload: milestones/M033/phases/P05/tasks/T01-customblock-draft-PAYLOAD.md
+        - T01 Customblock-draft-plan: milestones/M033/phases/P05/tasks/T01-customblock-draft-PLAN.md
+        - T01 Customblock-draft-summary: milestones/M033/phases/P05/tasks/T01-customblock-draft-SUMMARY.md
+        - T02 With-wiki-passthrough-payload: milestones/M033/phases/P05/tasks/T02-with-wiki-passthrough-PAYLOAD.md
+        - T02 With-wiki-passthrough-plan: milestones/M033/phases/P05/tasks/T02-with-wiki-passthrough-PLAN.md
+        - T02 With-wiki-passthrough-summary: milestones/M033/phases/P05/tasks/T02-with-wiki-passthrough-SUMMARY.md
+        - T03 With-github-passthrough-payload: milestones/M033/phases/P05/tasks/T03-with-github-passthrough-PAYLOAD.md
+        - T03 With-github-passthrough-plan: milestones/M033/phases/P05/tasks/T03-with-github-passthrough-PLAN.md
+        - T03 With-github-passthrough-summary: milestones/M033/phases/P05/tasks/T03-with-github-passthrough-SUMMARY.md
+        - T04 Acceptance-and-battery-payload: milestones/M033/phases/P05/tasks/T04-acceptance-and-battery-PAYLOAD.md
+        - T04 Acceptance-and-battery-plan: milestones/M033/phases/P05/tasks/T04-acceptance-and-battery-PLAN.md
+        - T04 Acceptance-and-battery-summary: milestones/M033/phases/P05/tasks/T04-acceptance-and-battery-SUMMARY.md
+        - T05 Milestone-close-payload: milestones/M033/phases/P05/tasks/T05-milestone-close-PAYLOAD.md
+        - T05 Milestone-close-plan: milestones/M033/phases/P05/tasks/T05-milestone-close-PLAN.md
+        - T05 Milestone-close-summary: milestones/M033/phases/P05/tasks/T05-milestone-close-SUMMARY.md
+    - M036 — Reference-Corpus Ingest (deferred post-launch, demand-driven):
+      - Overview: milestones/M036/index.md
+      - continue: milestones/M036/continue.md
+      - Context: milestones/M036/M036-CONTEXT.md
+      - Evaluation: milestones/M036/M036-EVALUATION.md
+      - Roadmap: milestones/M036/M036-ROADMAP.md
+      - P00:
+        - Overview: milestones/M036/phases/P00/index.md
+        - Plan: milestones/M036/phases/P00/P00-PLAN.md
+        - Summary: milestones/M036/phases/P00/P00-SUMMARY.md
+        - T01 Taxonomy-and-contract-payload: milestones/M036/phases/P00/tasks/T01-taxonomy-and-contract-PAYLOAD.md
+        - T01 Taxonomy-and-contract-plan: milestones/M036/phases/P00/tasks/T01-taxonomy-and-contract-PLAN.md
+        - T01 Taxonomy-and-contract-summary: milestones/M036/phases/P00/tasks/T01-taxonomy-and-contract-SUMMARY.md
+        - T02 Edge-types-and-registry-payload: milestones/M036/phases/P00/tasks/T02-edge-types-and-registry-PAYLOAD.md
+        - T02 Edge-types-and-registry-plan: milestones/M036/phases/P00/tasks/T02-edge-types-and-registry-PLAN.md
+        - T02 Edge-types-and-registry-summary: milestones/M036/phases/P00/tasks/T02-edge-types-and-registry-SUMMARY.md
+        - T03 Scope-tag-and-validator-payload: milestones/M036/phases/P00/tasks/T03-scope-tag-and-validator-PAYLOAD.md
+        - T03 Scope-tag-and-validator-plan: milestones/M036/phases/P00/tasks/T03-scope-tag-and-validator-PLAN.md
+        - T03 Scope-tag-and-validator-summary: milestones/M036/phases/P00/tasks/T03-scope-tag-and-validator-SUMMARY.md
+      - P01:
+        - Overview: milestones/M036/phases/P01/index.md
+        - Plan: milestones/M036/phases/P01/P01-PLAN.md
+        - Summary: milestones/M036/phases/P01/P01-SUMMARY.md
+        - T01 Fixtures-and-probe-payload: milestones/M036/phases/P01/tasks/T01-fixtures-and-probe-PAYLOAD.md
+        - T01 Fixtures-and-probe-plan: milestones/M036/phases/P01/tasks/T01-fixtures-and-probe-PLAN.md
+        - T01 Fixtures-and-probe-summary: milestones/M036/phases/P01/tasks/T01-fixtures-and-probe-SUMMARY.md
+        - T02 Markdown-and-pdf-adapters-payload: milestones/M036/phases/P01/tasks/T02-markdown-and-pdf-adapters-PAYLOAD.md
+        - T02 Markdown-and-pdf-adapters-plan: milestones/M036/phases/P01/tasks/T02-markdown-and-pdf-adapters-PLAN.md
+        - T02 Markdown-and-pdf-adapters-summary: milestones/M036/phases/P01/tasks/T02-markdown-and-pdf-adapters-SUMMARY.md
+        - T03 Docx-and-xlsx-adapters-payload: milestones/M036/phases/P01/tasks/T03-docx-and-xlsx-adapters-PAYLOAD.md
+        - T03 Docx-and-xlsx-adapters-plan: milestones/M036/phases/P01/tasks/T03-docx-and-xlsx-adapters-PLAN.md
+        - T03 Docx-and-xlsx-adapters-summary: milestones/M036/phases/P01/tasks/T03-docx-and-xlsx-adapters-SUMMARY.md
+        - T04 Acceptance-harness-and-aggregator-payload: milestones/M036/phases/P01/tasks/T04-acceptance-harness-and-aggregator-PAYLOAD.md
+        - T04 Acceptance-harness-and-aggregator-plan: milestones/M036/phases/P01/tasks/T04-acceptance-harness-and-aggregator-PLAN.md
+        - T04 Acceptance-harness-and-aggregator-summary: milestones/M036/phases/P01/tasks/T04-acceptance-harness-and-aggregator-SUMMARY.md
+      - P02:
+        - Overview: milestones/M036/phases/P02/index.md
+        - Plan: milestones/M036/phases/P02/P02-PLAN.md
+        - Summary: milestones/M036/phases/P02/P02-SUMMARY.md
+        - T01 Manifest-contract-and-fixtures-payload: milestones/M036/phases/P02/tasks/T01-manifest-contract-and-fixtures-PAYLOAD.md
+        - T01 Manifest-contract-and-fixtures-plan: milestones/M036/phases/P02/tasks/T01-manifest-contract-and-fixtures-PLAN.md
+        - T01 Manifest-contract-and-fixtures-summary: milestones/M036/phases/P02/tasks/T01-manifest-contract-and-fixtures-SUMMARY.md
+        - T02 Driver-and-preservation-payload: milestones/M036/phases/P02/tasks/T02-driver-and-preservation-PAYLOAD.md
+        - T02 Driver-and-preservation-plan: milestones/M036/phases/P02/tasks/T02-driver-and-preservation-PLAN.md
+        - T02 Driver-and-preservation-summary: milestones/M036/phases/P02/tasks/T02-driver-and-preservation-SUMMARY.md
+        - T03 Summary-and-command-doc-payload: milestones/M036/phases/P02/tasks/T03-summary-and-command-doc-PAYLOAD.md
+        - T03 Summary-and-command-doc-plan: milestones/M036/phases/P02/tasks/T03-summary-and-command-doc-PLAN.md
+        - T03 Summary-and-command-doc-summary: milestones/M036/phases/P02/tasks/T03-summary-and-command-doc-SUMMARY.md
+        - T04 Acceptance-harness-and-aggregator-payload: milestones/M036/phases/P02/tasks/T04-acceptance-harness-and-aggregator-PAYLOAD.md
+        - T04 Acceptance-harness-and-aggregator-plan: milestones/M036/phases/P02/tasks/T04-acceptance-harness-and-aggregator-PLAN.md
+        - T04 Acceptance-harness-and-aggregator-summary: milestones/M036/phases/P02/tasks/T04-acceptance-harness-and-aggregator-SUMMARY.md
+      - P03:
+        - Overview: milestones/M036/phases/P03/index.md
+        - Plan: milestones/M036/phases/P03/P03-PLAN.md
+        - Summary: milestones/M036/phases/P03/P03-SUMMARY.md
+        - T01 Conversus-preset-and-m030-and-fixtures-payload: milestones/M036/phases/P03/tasks/T01-conversus-preset-and-m030-and-fixtures-PAYLOAD.md
+        - T01 Conversus-preset-and-m030-and-fixtures-plan: milestones/M036/phases/P03/tasks/T01-conversus-preset-and-m030-and-fixtures-PLAN.md
+        - T01 Conversus-preset-and-m030-and-fixtures-summary: milestones/M036/phases/P03/tasks/T01-conversus-preset-and-m030-and-fixtures-SUMMARY.md
+        - T02 Tier-2-llm-helper-and-unit-close-payload: milestones/M036/phases/P03/tasks/T02-tier-2-llm-helper-and-unit-close-PAYLOAD.md
+        - T02 Tier-2-llm-helper-and-unit-close-plan: milestones/M036/phases/P03/tasks/T02-tier-2-llm-helper-and-unit-close-PLAN.md
+        - T02 Tier-2-llm-helper-and-unit-close-summary: milestones/M036/phases/P03/tasks/T02-tier-2-llm-helper-and-unit-close-SUMMARY.md
+        - T03 Gate-helper-and-driver-auto-branch-payload: milestones/M036/phases/P03/tasks/T03-gate-helper-and-driver-auto-branch-PAYLOAD.md
+        - T03 Gate-helper-and-driver-auto-branch-plan: milestones/M036/phases/P03/tasks/T03-gate-helper-and-driver-auto-branch-PLAN.md
+        - T03 Gate-helper-and-driver-auto-branch-summary: milestones/M036/phases/P03/tasks/T03-gate-helper-and-driver-auto-branch-SUMMARY.md
+        - T04 Acceptance-harness-and-aggregator-payload: milestones/M036/phases/P03/tasks/T04-acceptance-harness-and-aggregator-PAYLOAD.md
+        - T04 Acceptance-harness-and-aggregator-plan: milestones/M036/phases/P03/tasks/T04-acceptance-harness-and-aggregator-PLAN.md
+        - T04 Acceptance-harness-and-aggregator-summary: milestones/M036/phases/P03/tasks/T04-acceptance-harness-and-aggregator-SUMMARY.md
+      - P04:
+        - Overview: milestones/M036/phases/P04/index.md
+        - Plan: milestones/M036/phases/P04/P04-PLAN.md
+        - Summary: milestones/M036/phases/P04/P04-SUMMARY.md
+        - T01 Classifier-and-fixture-corpus-payload: milestones/M036/phases/P04/tasks/T01-classifier-and-fixture-corpus-PAYLOAD.md
+        - T01 Classifier-and-fixture-corpus-plan: milestones/M036/phases/P04/tasks/T01-classifier-and-fixture-corpus-PLAN.md
+        - T01 Classifier-and-fixture-corpus-summary: milestones/M036/phases/P04/tasks/T01-classifier-and-fixture-corpus-SUMMARY.md
+        - T02 Driver-and-rebuild-index-payload: milestones/M036/phases/P04/tasks/T02-driver-and-rebuild-index-PAYLOAD.md
+        - T02 Driver-and-rebuild-index-plan: milestones/M036/phases/P04/tasks/T02-driver-and-rebuild-index-PLAN.md
+        - T02 Driver-and-rebuild-index-summary: milestones/M036/phases/P04/tasks/T02-driver-and-rebuild-index-SUMMARY.md
+        - T03 Command-doc-and-block-gating-and-regression-payload: milestones/M036/phases/P04/tasks/T03-command-doc-and-block-gating-and-regression-PAYLOAD.md
+        - T03 Command-doc-and-block-gating-and-regression-plan: milestones/M036/phases/P04/tasks/T03-command-doc-and-block-gating-and-regression-PLAN.md
+        - T03 Command-doc-and-block-gating-and-regression-summary: milestones/M036/phases/P04/tasks/T03-command-doc-and-block-gating-and-regression-SUMMARY.md
+        - T04 Acceptance-harness-and-aggregator-payload: milestones/M036/phases/P04/tasks/T04-acceptance-harness-and-aggregator-PAYLOAD.md
+        - T04 Acceptance-harness-and-aggregator-plan: milestones/M036/phases/P04/tasks/T04-acceptance-harness-and-aggregator-PLAN.md
+        - T04 Acceptance-harness-and-aggregator-summary: milestones/M036/phases/P04/tasks/T04-acceptance-harness-and-aggregator-SUMMARY.md
+      - P05:
+        - Overview: milestones/M036/phases/P05/index.md
+        - Plan: milestones/M036/phases/P05/P05-PLAN.md
+        - Summary: milestones/M036/phases/P05/P05-SUMMARY.md
+        - T01 Schema-and-indexer-payload: milestones/M036/phases/P05/tasks/T01-schema-and-indexer-PAYLOAD.md
+        - T01 Schema-and-indexer-plan: milestones/M036/phases/P05/tasks/T01-schema-and-indexer-PLAN.md
+        - T01 Schema-and-indexer-summary: milestones/M036/phases/P05/tasks/T01-schema-and-indexer-SUMMARY.md
+        - T02 Traverser-extension-payload: milestones/M036/phases/P05/tasks/T02-traverser-extension-PAYLOAD.md
+        - T02 Traverser-extension-plan: milestones/M036/phases/P05/tasks/T02-traverser-extension-PLAN.md
+        - T02 Traverser-extension-summary: milestones/M036/phases/P05/tasks/T02-traverser-extension-SUMMARY.md
+        - T03 Scope-filter-source-tag-payload: milestones/M036/phases/P05/tasks/T03-scope-filter-source-tag-PAYLOAD.md
+        - T03 Scope-filter-source-tag-plan: milestones/M036/phases/P05/tasks/T03-scope-filter-source-tag-PLAN.md
+        - T03 Scope-filter-source-tag-summary: milestones/M036/phases/P05/tasks/T03-scope-filter-source-tag-SUMMARY.md
+        - T04 Sc4-test-and-verifiers-payload: milestones/M036/phases/P05/tasks/T04-sc4-test-and-verifiers-PAYLOAD.md
+        - T04 Sc4-test-and-verifiers-plan: milestones/M036/phases/P05/tasks/T04-sc4-test-and-verifiers-PLAN.md
+        - T04 Sc4-test-and-verifiers-summary: milestones/M036/phases/P05/tasks/T04-sc4-test-and-verifiers-SUMMARY.md
+      - P06:
+        - Overview: milestones/M036/phases/P06/index.md
+        - Plan: milestones/M036/phases/P06/P06-PLAN.md
+        - Summary: milestones/M036/phases/P06/P06-SUMMARY.md
+        - T01 Extract-supersede-payload: milestones/M036/phases/P06/tasks/T01-extract-supersede-PAYLOAD.md
+        - T01 Extract-supersede-plan: milestones/M036/phases/P06/tasks/T01-extract-supersede-PLAN.md
+        - T01 Extract-supersede-summary: milestones/M036/phases/P06/tasks/T01-extract-supersede-SUMMARY.md
+        - T02 Ingest-review-advisory-payload: milestones/M036/phases/P06/tasks/T02-ingest-review-advisory-PAYLOAD.md
+        - T02 Ingest-review-advisory-plan: milestones/M036/phases/P06/tasks/T02-ingest-review-advisory-PLAN.md
+        - T02 Ingest-review-advisory-summary: milestones/M036/phases/P06/tasks/T02-ingest-review-advisory-SUMMARY.md
+        - T03 Supersede-fixture-corpus-payload: milestones/M036/phases/P06/tasks/T03-supersede-fixture-corpus-PAYLOAD.md
+        - T03 Supersede-fixture-corpus-plan: milestones/M036/phases/P06/tasks/T03-supersede-fixture-corpus-PLAN.md
+        - T03 Supersede-fixture-corpus-summary: milestones/M036/phases/P06/tasks/T03-supersede-fixture-corpus-SUMMARY.md
+        - T04 Acceptance-harnesses-and-aggregator-payload: milestones/M036/phases/P06/tasks/T04-acceptance-harnesses-and-aggregator-PAYLOAD.md
+        - T04 Acceptance-harnesses-and-aggregator-plan: milestones/M036/phases/P06/tasks/T04-acceptance-harnesses-and-aggregator-PLAN.md
+        - T04 Acceptance-harnesses-and-aggregator-summary: milestones/M036/phases/P06/tasks/T04-acceptance-harnesses-and-aggregator-SUMMARY.md
+      - P07:
+        - Overview: milestones/M036/phases/P07/index.md
+        - Plan: milestones/M036/phases/P07/P07-PLAN.md
+        - Summary: milestones/M036/phases/P07/P07-SUMMARY.md
+        - T01 Recipe-and-handler-scaffold-payload: milestones/M036/phases/P07/tasks/T01-recipe-and-handler-scaffold-PAYLOAD.md
+        - T01 Recipe-and-handler-scaffold-plan: milestones/M036/phases/P07/tasks/T01-recipe-and-handler-scaffold-PLAN.md
+        - T01 Recipe-and-handler-scaffold-summary: milestones/M036/phases/P07/tasks/T01-recipe-and-handler-scaffold-SUMMARY.md
+        - T02 Budget-governor-and-relevance-payload: milestones/M036/phases/P07/tasks/T02-budget-governor-and-relevance-PAYLOAD.md
+        - T02 Budget-governor-and-relevance-plan: milestones/M036/phases/P07/tasks/T02-budget-governor-and-relevance-PLAN.md
+        - T02 Budget-governor-and-relevance-summary: milestones/M036/phases/P07/tasks/T02-budget-governor-and-relevance-SUMMARY.md
+        - T03 Dispatcher-integration-and-regression-payload: milestones/M036/phases/P07/tasks/T03-dispatcher-integration-and-regression-PAYLOAD.md
+        - T03 Dispatcher-integration-and-regression-plan: milestones/M036/phases/P07/tasks/T03-dispatcher-integration-and-regression-PLAN.md
+        - T03 Dispatcher-integration-and-regression-summary: milestones/M036/phases/P07/tasks/T03-dispatcher-integration-and-regression-SUMMARY.md
+        - T04 Acceptance-harnesses-and-aggregator-payload: milestones/M036/phases/P07/tasks/T04-acceptance-harnesses-and-aggregator-PAYLOAD.md
+        - T04 Acceptance-harnesses-and-aggregator-plan: milestones/M036/phases/P07/tasks/T04-acceptance-harnesses-and-aggregator-PLAN.md
+        - T04 Acceptance-harnesses-and-aggregator-summary: milestones/M036/phases/P07/tasks/T04-acceptance-harnesses-and-aggregator-SUMMARY.md
 # <<< M012-P01 nav end

@@ -18,6 +18,13 @@
 #   --dry-run            no writes; emit `would_write=<path>` lines
 #   --force              overwrite existing hook config and orchestrator config
 #   --verbose            extra debug output on stderr
+#   --asset-mode-override copy|symlink
+#                        TEST-ONLY (M032 P01): overrides per-asset `mode:`
+#                        from packaging/bundle/manifest.yml's project_assets:
+#                        list. Used by P01 acceptance scripts to exercise
+#                        mode: symlink without re-authoring the manifest.
+#                        Will be replaced by manifest-declarable symlink
+#                        mode in P02+.
 #
 # Exit codes:
 #   0 success
@@ -40,6 +47,10 @@ DRY_RUN=0
 FORCE=0
 VERBOSE=0
 UNINSTALL=0
+# --asset-mode-override (TEST-ONLY, P01 surface; FR-3). Allowed values:
+# `copy` or `symlink`. Empty default means manifest mode (`mode: copy`)
+# wins. Will be replaced by manifest-declarable symlink mode in P02+.
+ASSET_MODE_OVERRIDE=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -62,6 +73,24 @@ while [ $# -gt 0 ]; do
       VERBOSE=1; shift ;;
     --uninstall)
       UNINSTALL=1; shift ;;
+    --asset-mode-override)
+      shift
+      if [ $# -eq 0 ]; then
+        echo "FAIL: --asset-mode-override requires copy|symlink" >&2
+        exit 1
+      fi
+      case "$1" in
+        copy|symlink) ASSET_MODE_OVERRIDE="$1" ;;
+        *) echo "FAIL: --asset-mode-override requires copy|symlink" >&2; exit 1 ;;
+      esac
+      shift ;;
+    --asset-mode-override=*)
+      _amo="${1#--asset-mode-override=}"
+      case "$_amo" in
+        copy|symlink) ASSET_MODE_OVERRIDE="$_amo" ;;
+        *) echo "FAIL: --asset-mode-override requires copy|symlink" >&2; exit 1 ;;
+      esac
+      shift ;;
     -h|--help)
       sed -n '2,30p' "$0"
       exit 0 ;;
@@ -227,46 +256,90 @@ else
   config_written=1
 fi
 
-# --- 4.5 Stage runtime (scripts/, templates/, references/, commands/) into project ---
-# See install-claude-code.sh for the rationale (Direction 1 in
-# installer-staging-handoff). Every commands/*.md invokes helpers via
-# project-relative paths, so the runtime must live alongside the project.
-# `commands/` is staged because dispatched-agent prompts reference rubric
-# files like `commands/plan-phase.md` from the project root (auto.md Stage 2).
-RUNTIME_DIRS="scripts templates references commands"
+# --- 4.5 Stage runtime payload via project_assets: manifest schema (FR-2 + FR-3 + FR-4 + FR-22) ---
+# The pre-M032 hardcoded loop is fully replaced by the project_assets:
+# schema in packaging/bundle/manifest.yml. Each tuple from
+# read-project-assets.sh is dispatched through:
+#   1. install-collision-check.sh (FR-22 dual-oracle hierarchy)
+#   2. install-asset-mode.sh      (FR-3 per-mode handler)
+# At mode: copy the per-target file-tree is byte-identical to the pre-M032
+# behavior (CON-4 reference: tools/verify/fixtures/m032-pre-m032-golden.txt).
+# --asset-mode-override flag (TEST-ONLY) lets P01 acceptance scripts
+# exercise mode: symlink without re-authoring the manifest.
 manifest_file="$PROJECT_DIR/.orchestrator/installed-files.txt"
 runtime_staged=0
+project_assets_targets=""
 
-for dir in $RUNTIME_DIRS; do
-  src="$REPO_ROOT/$dir"
-  dst="$PROJECT_DIR/$dir"
-  if [ ! -d "$src" ]; then
-    echo "FAIL: runtime source missing: $src" >&2
+# First pass: collect the project-assets target list (needed by collision check
+# for the bootstrapping oracle's "in the project_assets target list" check).
+while IFS= read -r tuple; do
+  tgt=$(printf '%s\n' "$tuple" | awk -F'\t' '{for(i=1;i<=NF;i++){if($i ~ /^target=/){sub(/^target=/, "", $i); print $i}}}')
+  project_assets_targets="${project_assets_targets}${tgt}\n"
+done < <(bash "$REPO_ROOT/scripts/lifecycle/read-project-assets.sh" "$REPO_ROOT/packaging/bundle/")
+
+# Second pass: dispatch each tuple through collision check + mode handler.
+while IFS= read -r tuple; do
+  src_rel=$(printf '%s\n' "$tuple" | awk -F'\t' '{for(i=1;i<=NF;i++){if($i ~ /^source=/){sub(/^source=/, "", $i); print $i}}}')
+  tgt_rel=$(printf '%s\n' "$tuple" | awk -F'\t' '{for(i=1;i<=NF;i++){if($i ~ /^target=/){sub(/^target=/, "", $i); print $i}}}')
+  mode_val=$(printf '%s\n' "$tuple" | awk -F'\t' '{for(i=1;i<=NF;i++){if($i ~ /^mode=/){sub(/^mode=/, "", $i); print $i}}}')
+
+  # --asset-mode-override (TEST-ONLY) takes precedence over manifest mode.
+  [ -n "${ASSET_MODE_OVERRIDE:-}" ] && mode_val="$ASSET_MODE_OVERRIDE"
+
+  src_abs="$REPO_ROOT/${src_rel%/}"
+  dst_abs="$PROJECT_DIR/${tgt_rel%/}"
+
+  if [ ! -d "$src_abs" ]; then
+    echo "FAIL: project_assets source missing: $src_abs" >&2
     exit 1
   fi
-  if [ "$DRY_RUN" = "1" ]; then
-    find "$src" -type f | while IFS= read -r f; do
-      rel="${f#$src/}"
-      echo "would_write=$dst/$rel"
-    done
-    count=$(find "$src" -type f | wc -l | tr -d ' ')
-    runtime_staged=$((runtime_staged + count))
-    continue
-  fi
-  mkdir -p "$dst"
-  cp -R "$src/." "$dst/"
-  count=$(find "$src" -type f | wc -l | tr -d ' ')
-  runtime_staged=$((runtime_staged + count))
-done
 
+  # FR-22 collision check (skips on collision-clean cases).
+  if ! bash "$REPO_ROOT/scripts/lifecycle/install-collision-check.sh" \
+    "$dst_abs" "$PROJECT_DIR" "$(printf '%b' "$project_assets_targets")"; then
+    rc=$?
+    if [ "$rc" = "4" ]; then
+      echo "FAIL: staged-dirs-collision: project_assets entry $src_rel collides with operator-owned $tgt_rel" >&2
+    fi
+    exit "$rc"
+  fi
+
+  # FR-3 mode dispatch (copy or symlink).
+  if [ "$DRY_RUN" = "1" ]; then
+    find "$src_abs" -type f | while IFS= read -r f; do
+      rel="${f#$src_abs/}"
+      echo "would_write=$dst_abs/$rel"
+    done
+    cnt=$(find "$src_abs" -type f | wc -l | tr -d ' ')
+    runtime_staged=$((runtime_staged + cnt))
+  else
+    bash "$REPO_ROOT/scripts/lifecycle/install-asset-mode.sh" \
+      "$src_abs" "$dst_abs" "$mode_val" "$PROJECT_DIR"
+    handler_rc=$?
+    if [ "$handler_rc" -ne 0 ]; then
+      # FR-3 fail-closed propagation (e.g. M032_FORCE_WINDOWS=1, exit 3
+      # for POSIX-only-in-v1; exit 2 for invalid mode).
+      echo "FAIL: install-asset-mode.sh exited $handler_rc for $src_rel ($mode_val)" >&2
+      exit "$handler_rc"
+    fi
+    cnt=$(find "$src_abs" -type f | wc -l | tr -d ' ')
+    runtime_staged=$((runtime_staged + cnt))
+  fi
+done < <(bash "$REPO_ROOT/scripts/lifecycle/read-project-assets.sh" "$REPO_ROOT/packaging/bundle/")
+
+# FR-4: write installed-files.txt with per-asset mode: field.
 if [ "$DRY_RUN" = "0" ]; then
   mkdir -p "$(dirname "$manifest_file")"
   : > "$manifest_file"
-  for dir in $RUNTIME_DIRS; do
-    if [ -d "$PROJECT_DIR/$dir" ]; then
-      ( cd "$PROJECT_DIR" && find "$dir" -type f ) >> "$manifest_file"
+  while IFS= read -r tuple; do
+    tgt_rel=$(printf '%s\n' "$tuple" | awk -F'\t' '{for(i=1;i<=NF;i++){if($i ~ /^target=/){sub(/^target=/, "", $i); print $i}}}')
+    mode_val=$(printf '%s\n' "$tuple" | awk -F'\t' '{for(i=1;i<=NF;i++){if($i ~ /^mode=/){sub(/^mode=/, "", $i); print $i}}}')
+    [ -n "${ASSET_MODE_OVERRIDE:-}" ] && mode_val="$ASSET_MODE_OVERRIDE"
+    if [ -d "$PROJECT_DIR/${tgt_rel%/}" ]; then
+      ( cd "$PROJECT_DIR" && find "${tgt_rel%/}" -type f ) | \
+        awk -v m="$mode_val" '{printf "%s\tmode:%s\n", $0, m}' >> "$manifest_file"
     fi
-  done
+  done < <(bash "$REPO_ROOT/scripts/lifecycle/read-project-assets.sh" "$REPO_ROOT/packaging/bundle/")
   echo "staged=$runtime_staged files manifest=$manifest_file"
 fi
 

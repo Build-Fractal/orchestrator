@@ -15,6 +15,12 @@
 #     quick_knowledge_token_budget triggers the AD-9 compound-change
 #     message naming the auto_proceed flip + unconditional Quick
 #     injection + recovery path).
+#
+# M033/P03/T04 #Q-11: skip _<sentinel>/ paths from milestone iteration.
+# This dispatcher does NOT enumerate `.orchestrator/milestones/*/` itself —
+# milestone enumeration is delegated to the sub-checks (`check-plans.sh`,
+# `check-constitution.sh`). The `_*`-prefix skip clause is applied at the
+# delegate enumeration sites. See `references/imported-context-sentinel.md`.
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

@@ -45,6 +45,13 @@ else
   milestones_dir="$PROJECT_ROOT/.orchestrator/milestones"
   if [ -d "$milestones_dir" ]; then
     for f in "$milestones_dir"/*/phases/*/tasks/*-PLAN.md; do
+      # M033/P03/T04 #Q-11: skip _<sentinel>/ paths from milestone iteration.
+      # Any `_*`-prefix entry under .orchestrator/milestones/ is a special
+      # non-milestone class (e.g., _imported-context/ from FR-8 import path).
+      _m033_base="$(basename "$(dirname "$(dirname "$(dirname "$(dirname "$f")")")")")"
+      case "$_m033_base" in
+        _*) continue ;;
+      esac
       [ -f "$f" ] && file_list="${file_list}${file_list:+
 }$f"
     done

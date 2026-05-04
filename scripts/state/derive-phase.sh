@@ -37,6 +37,13 @@
 # directory the caller provides. See scripts/state/resolve-root.sh for
 # the authoritative precedence chain (env var, config, existing dir,
 # default).
+#
+# M033/P03/T04 #Q-11: skip _<sentinel>/ paths from milestone iteration.
+# This script accepts a single milestone directory as positional arg —
+# it does NOT enumerate `.orchestrator/milestones/*/`, so the `_*`-prefix
+# skip clause is unnecessary here. Callers MUST not pass `_imported-context`
+# or any `_*`-prefix sentinel as the milestone-dir argument; sentinel
+# directories are not milestones. See `references/imported-context-sentinel.md`.
 
 set -euo pipefail
 

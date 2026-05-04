@@ -17,6 +17,16 @@
 #   --config-defaults: optional config file for context_verbosity, budgets, etc.
 #   --recipe:          optional recipe override (default: templates/context-recipe.yaml)
 #
+# M033/P03/T04 #Q-11: skip _<sentinel>/ paths from milestone iteration.
+# This script resolves a single MILESTONE_ID at $ORCH_ROOT/milestones/<id>/ —
+# it does NOT enumerate `milestones/*/`, so the `_*`-prefix skip clause is
+# unnecessary at the path-resolution sites below. Callers MUST not pass
+# `_imported-context` or any `_*`-prefix sentinel as the milestone arg;
+# sentinel directories are not milestones. A future build-context section
+# handler MAY surface imported-context via dedicated injection (the sentinel
+# filename is grep-discoverable via `context_source: imported-from-existing`).
+# See `references/imported-context-sentinel.md`.
+#
 # Output: assembled dispatch prompt on stdout (with manifest header).
 # Stderr: "Context payload: X bytes (Y% of total artifacts)" + single RESULT: line.
 # Exit 0 on success, 1 on config/state/io error.

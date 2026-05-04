@@ -66,6 +66,13 @@ else
   if [ -d "$milestones_root" ]; then
     for mdir in "$milestones_root"/*/; do
       [ -d "$mdir" ] || continue
+      # M033/P03/T04 #Q-11: skip _<sentinel>/ paths from milestone iteration.
+      # Any `_*`-prefix entry under .orchestrator/milestones/ is a special
+      # non-milestone class (e.g., _imported-context/ from FR-8 import path).
+      _m033_base="$(basename "$mdir")"
+      case "$_m033_base" in
+        _*) continue ;;
+      esac
       if [ -d "${mdir}phases" ]; then
         for f in "${mdir}"phases/*/*.md "${mdir}"phases/*/*/*.md; do
           case "$(basename "$f" 2>/dev/null)" in

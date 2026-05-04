@@ -1,0 +1,14 @@
+commands/
+scripts/
+references/
+templates/
+.orchestrator/
+# FR-3 also requires the bare-name forms so symbolic links (which git
+# treats as non-directories) under mode: symlink are excluded too.
+# Without these, `ln -s ... commands` shows up in `git status --short`
+# even though `commands/` is gitignored.
+commands
+scripts
+references
+templates
+.orchestrator

@@ -183,23 +183,28 @@ fi
 
 rm -rf "$TMP2"
 
-# Check 10: FR-5 --with-giscus rejection (P03 deliverable).
+# Check 10: --with-giscus arg-validation (P03/T01 in-flight repair).
+# Pre-P03: --with-giscus exited 5 with 'reserved for P03'. P03/T01 lands the
+# real implementation; calling --with-giscus WITHOUT --repo / --category now
+# exits 2 with a 'requires both --repo' diagnostic. Mirrors the P01 in-flight
+# repair at commit 4dedb92a where P01 verifiers were relaxed once P02 added
+# the wiki/ project_assets entry.
 err_giscus="$(mktemp -t m032-p02-giscus-err.XXXXXX)"
 set +e
 bash "$WIKI_INIT" --project-dir "$TMP" --with-giscus 2>"$err_giscus"
 rc_giscus=$?
 set -e
 
-if [ "$rc_giscus" -eq 5 ]; then
-  check_pass "wiki-init.sh exits 5 on --with-giscus (P03 deliverable)"
+if [ "$rc_giscus" -eq 2 ]; then
+  check_pass "wiki-init.sh exits 2 on bare --with-giscus (P03/T01: missing --repo / --category)"
 else
-  check_fail "wiki-init.sh exit $rc_giscus on --with-giscus (expected 5)"
+  check_fail "wiki-init.sh exit $rc_giscus on bare --with-giscus (expected 2 post-P03/T01)"
 fi
 
-if grep -q 'reserved for P03' "$err_giscus"; then
-  check_pass "wiki-init.sh stderr names 'reserved for P03' on --with-giscus"
+if grep -q 'requires both --repo' "$err_giscus"; then
+  check_pass "wiki-init.sh stderr names missing --repo / --category on bare --with-giscus"
 else
-  check_fail "wiki-init.sh stderr missing 'reserved for P03' on --with-giscus"
+  check_fail "wiki-init.sh stderr missing 'requires both --repo' diagnostic on bare --with-giscus"
 fi
 
 # Check 11: --deploy rejection.

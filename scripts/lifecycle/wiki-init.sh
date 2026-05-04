@@ -22,8 +22,11 @@
 #   2 — argument error (unknown flag, missing required arg).
 #   3 — toolchain missing (python3 or pip3 not on PATH).
 #   4 — git remote missing or unparseable.
-#   5 — --with-giscus or --deploy passed (P03 deliverable; P02 rejects).
+#   5 — --deploy passed but not implemented (P03/T02 replaces this).
 #   6 — bundle staging failure (read-project-assets.sh or install-asset-mode.sh failed).
+#   7 — --with-giscus invoked without --with-wiki (no <PROJECT_DIR>/wiki/overrides/partials/comments.html).
+#   8 — integration-giscus-config-failed (giscus-ids-from-gh.sh upstream failure or unparseable output).
+#   9 — integration-giscus-config-check-failed (wiki-giscus-config-check.sh post-step failure).
 set -eu
 
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -34,6 +37,8 @@ AUTO_PIP=0
 WITH_GISCUS=0
 WITH_DEPLOY=0
 FORCE=0
+GISCUS_REPO_FLAG=""
+GISCUS_CATEGORY_FLAG=""
 
 # Argument parsing — single-pass loop, no getopts (bash 3.2 portability).
 while [ $# -gt 0 ]; do
@@ -48,6 +53,22 @@ while [ $# -gt 0 ]; do
     --with-giscus) WITH_GISCUS=1; shift ;;
     --deploy) WITH_DEPLOY=1; shift ;;
     --force) FORCE=1; shift ;;
+    --repo)
+      shift
+      if [ $# -eq 0 ]; then
+        echo "FAIL: wiki-init: --repo requires an <owner>/<repo> argument" >&2
+        exit 2
+      fi
+      GISCUS_REPO_FLAG="$1"; shift ;;
+    --repo=*) GISCUS_REPO_FLAG="${1#--repo=}"; shift ;;
+    --category)
+      shift
+      if [ $# -eq 0 ]; then
+        echo "FAIL: wiki-init: --category requires a category-name argument" >&2
+        exit 2
+      fi
+      GISCUS_CATEGORY_FLAG="$1"; shift ;;
+    --category=*) GISCUS_CATEGORY_FLAG="${1#--category=}"; shift ;;
     *) echo "FAIL: wiki-init: unknown argument '$1'" >&2; exit 2 ;;
   esac
 done
@@ -66,9 +87,9 @@ if [ -n "${M032_WIKI_INIT_FORCE_EXIT:-}" ]; then
   exit "$M032_WIKI_INIT_FORCE_EXIT"
 fi
 
-# P02 rejects --with-giscus and --deploy (P03 deliverables).
-if [ "$WITH_GISCUS" = "1" ] || [ "$WITH_DEPLOY" = "1" ]; then
-  echo "FAIL: wiki-init: --with-giscus and --deploy not yet implemented in P02; reserved for P03" >&2
+# P03/T01 lands --with-giscus; --deploy remains reserved until P03/T02 replaces it.
+if [ "$WITH_DEPLOY" = "1" ]; then
+  echo "FAIL: wiki-init: --deploy not yet implemented; reserved for P03/T02" >&2
   exit 5
 fi
 
@@ -312,6 +333,97 @@ if [ -f "$REQ_FILE" ]; then
   else
     echo "wiki-init: Python deps not installed. Run 'pip3 install -r $REQ_FILE' or re-invoke with --auto-pip"
   fi
+fi
+
+# FR-8 --with-giscus scope: substitute the four {{giscus_*}} placeholder tokens
+# in <PROJECT_DIR>/wiki/overrides/partials/comments.html against IDs fetched
+# from giscus-ids-from-gh.sh (or M032_GISCUS_IDS_FROM_GH_STUB stub mode).
+if [ "$WITH_GISCUS" = "1" ]; then
+  if [ -z "$GISCUS_REPO_FLAG" ] || [ -z "$GISCUS_CATEGORY_FLAG" ]; then
+    echo "FAIL: wiki-init: --with-giscus requires both --repo <owner>/<repo> and --category <name>" >&2
+    exit 2
+  fi
+  PARTIAL="$PROJECT_DIR/wiki/overrides/partials/comments.html"
+  if [ ! -f "$PARTIAL" ]; then
+    echo "FAIL: wiki-init: --with-giscus requires --with-wiki to have been run first; missing $PARTIAL" >&2
+    exit 7
+  fi
+
+  # Test-only stub mode envelope per the M026/MEM030 <TOOL>_<NAME> env-var convention.
+  IDS_OUT=""
+  ids_rc=0
+  case "${M032_GISCUS_IDS_FROM_GH_STUB:-}" in
+    1)
+      # Deterministic fixture IDs — do not reach the network.
+      IDS_OUT=$(printf 'export GISCUS_REPO="%s"\nexport GISCUS_REPO_ID="R_kgDOFixture"\nexport GISCUS_CATEGORY="%s"\nexport GISCUS_CATEGORY_ID="DIC_kwDOFixture"\n' "$GISCUS_REPO_FLAG" "$GISCUS_CATEGORY_FLAG")
+      ids_rc=0
+      ;;
+    fail)
+      echo "FAIL: wiki-init: integration-giscus-config-failed: M032_GISCUS_IDS_FROM_GH_STUB=fail (forced failure injection)" >&2
+      exit 8
+      ;;
+    *)
+      # Live path — invoke the real helper.
+      set +e
+      IDS_OUT="$(bash "$REPO_ROOT/scripts/diagnostics/giscus-ids-from-gh.sh" --repo "$GISCUS_REPO_FLAG" --category "$GISCUS_CATEGORY_FLAG" 2>&1)"
+      ids_rc=$?
+      set -e
+      if [ "$ids_rc" -ne 0 ]; then
+        echo "FAIL: wiki-init: integration-giscus-config-failed: giscus-ids-from-gh.sh exited $ids_rc — $IDS_OUT" >&2
+        exit 8
+      fi
+      ;;
+  esac
+
+  # Parse the four export lines into shell variables.
+  GISCUS_REPO_VAL=$(printf '%s' "$IDS_OUT" | sed -n 's/^export GISCUS_REPO="\(.*\)"$/\1/p')
+  GISCUS_REPO_ID_VAL=$(printf '%s' "$IDS_OUT" | sed -n 's/^export GISCUS_REPO_ID="\(.*\)"$/\1/p')
+  GISCUS_CATEGORY_VAL=$(printf '%s' "$IDS_OUT" | sed -n 's/^export GISCUS_CATEGORY="\(.*\)"$/\1/p')
+  GISCUS_CATEGORY_ID_VAL=$(printf '%s' "$IDS_OUT" | sed -n 's/^export GISCUS_CATEGORY_ID="\(.*\)"$/\1/p')
+  if [ -z "$GISCUS_REPO_VAL" ] || [ -z "$GISCUS_REPO_ID_VAL" ] || [ -z "$GISCUS_CATEGORY_VAL" ] || [ -z "$GISCUS_CATEGORY_ID_VAL" ]; then
+    echo "FAIL: wiki-init: integration-giscus-config-failed: could not parse all four GISCUS_* exports from helper output" >&2
+    exit 8
+  fi
+
+  # Sed-substitute the four {{giscus_*}} placeholders. Use | as the sed
+  # delimiter (none of the values contain |); escape \, &, and | in values
+  # for sed-replacement-safety. Bash 3.2 sed-in-place: BSD sed requires
+  # `-i ''`, GNU sed accepts `-i`. Use a temp-file rename pattern to avoid
+  # the difference.
+  TMP_PARTIAL="$(mktemp -t comments.html.XXXXXX)"
+  trap 'rm -f "$TMP_PARTIAL" "$TUPLES_FILE"' EXIT
+  sed_escape() { printf '%s' "$1" | sed -e 's|[\\&|]|\\&|g'; }
+  GR_E=$(sed_escape "$GISCUS_REPO_VAL")
+  GRI_E=$(sed_escape "$GISCUS_REPO_ID_VAL")
+  GC_E=$(sed_escape "$GISCUS_CATEGORY_VAL")
+  GCI_E=$(sed_escape "$GISCUS_CATEGORY_ID_VAL")
+  sed \
+    -e "s|{{giscus_repo}}|$GR_E|g" \
+    -e "s|{{giscus_repo_id}}|$GRI_E|g" \
+    -e "s|{{giscus_category}}|$GC_E|g" \
+    -e "s|{{giscus_category_id}}|$GCI_E|g" \
+    "$PARTIAL" > "$TMP_PARTIAL"
+  cp "$TMP_PARTIAL" "$PARTIAL"
+  rm -f "$TMP_PARTIAL"
+  trap 'rm -f "$TUPLES_FILE"' EXIT
+
+  # FR-8 post-step verifier — wiki-giscus-config-check.sh asserts the four
+  # GISCUS_* env vars are non-empty. Export them from the values we just
+  # substituted so the verifier sees a populated environment.
+  set +e
+  GISCUS_REPO="$GISCUS_REPO_VAL" \
+  GISCUS_REPO_ID="$GISCUS_REPO_ID_VAL" \
+  GISCUS_CATEGORY="$GISCUS_CATEGORY_VAL" \
+  GISCUS_CATEGORY_ID="$GISCUS_CATEGORY_ID_VAL" \
+    bash "$REPO_ROOT/scripts/diagnostics/wiki-giscus-config-check.sh" --quiet
+  check_rc=$?
+  set -e
+  if [ "$check_rc" -ne 0 ]; then
+    echo "FAIL: wiki-init: integration-giscus-config-check-failed: wiki-giscus-config-check.sh exited $check_rc against $PROJECT_DIR" >&2
+    exit 9
+  fi
+
+  echo "wiki-init: --with-giscus done — substituted four giscus IDs in $PARTIAL"
 fi
 
 echo "wiki-init: done (project=$PROJECT_DIR site_name=${SITE_NAME})"

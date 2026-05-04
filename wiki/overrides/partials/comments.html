@@ -14,6 +14,25 @@
   in git. A missing env var defaults to "" and is caught loudly by the
   pre-build gate landed in T02 (scripts/diagnostics/wiki-giscus-config-check.sh).
 #}
+{#
+  M032/P03/T01 — FR-7: dual-template interpolation surface.
+
+  Each data-* attribute carries TWO interpolation forms:
+
+    {{giscus_repo}}                  — M032 placeholder, sed-substituted by
+                                       wiki-init.sh --with-giscus from the
+                                       output of giscus-ids-from-gh.sh.
+    {{ config.extra.giscus.repo }}   — Jinja+!ENV interpolation, resolved at
+                                       mkdocs build time from mkdocs.yml's
+                                       extra.giscus.* !ENV [GISCUS_*, ""] block.
+
+  Bundle-staged copies carry both unrendered. wiki-init.sh --with-giscus
+  rewrites the M032 placeholder; mkdocs build then resolves the Jinja form
+  (which may be empty for projects that drive Giscus IDs entirely through
+  the M032 path). The orchestrator-repo-local copy uses the Jinja+!ENV path
+  (no --with-giscus run against the orchestrator itself) — the M032
+  placeholders resolve to the empty string at mkdocs build.
+#}
 {% if page and page.meta and page.meta.comments == false %}
   {# Per-page opt-out: set `comments: false` in a page's YAML frontmatter
      to suppress Giscus on that page. Used nowhere in P03; reserved for
@@ -22,10 +41,10 @@
   <h2 id="__comments">Comments</h2>
   <script
     src="https://giscus.app/client.js"
-    data-repo="{{ config.extra.giscus.repo }}"
-    data-repo-id="{{ config.extra.giscus.repo_id }}"
-    data-category="{{ config.extra.giscus.category }}"
-    data-category-id="{{ config.extra.giscus.category_id }}"
+    data-repo="{{giscus_repo}}{{ config.extra.giscus.repo }}"
+    data-repo-id="{{giscus_repo_id}}{{ config.extra.giscus.repo_id }}"
+    data-category="{{giscus_category}}{{ config.extra.giscus.category }}"
+    data-category-id="{{giscus_category_id}}{{ config.extra.giscus.category_id }}"
     data-mapping="{{ config.extra.giscus.mapping }}"
     data-strict="1"
     data-reactions-enabled="1"

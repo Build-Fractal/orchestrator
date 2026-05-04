@@ -1,0 +1,9 @@
+# Pre-M032 golden file-tree shape (recorded T02 step 1, before FR-2 migration)
+# Source: bash packaging/install/install-claude-code.sh --dry-run
+# Format: <runtime-dir> file_count=<N>
+commands/ file_count=27
+scripts/ file_count=1149
+references/ file_count=27
+templates/ file_count=47
+# Total pre-M032 RUNTIME_DIRS file count:
+total file_count=1250

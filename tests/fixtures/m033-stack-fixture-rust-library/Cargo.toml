@@ -1,0 +1,10 @@
+[package]
+name = "rust-library-fixture"
+version = "0.0.0"
+edition = "2021"
+
+[lib]
+name = "rust_library_fixture"
+path = "src/lib.rs"
+
+[dev-dependencies]

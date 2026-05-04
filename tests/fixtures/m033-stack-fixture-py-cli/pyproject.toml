@@ -1,0 +1,12 @@
+[project]
+name = "py-cli-fixture"
+version = "0.0.0"
+description = "Synthetic byte-deterministic Python CLI fixture for M033 P03 ingest-codebase verifier"
+requires-python = ">=3.10"
+dependencies = ["click>=8.1"]
+
+[project.scripts]
+py-cli-fixture = "cli.main:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -29,6 +29,10 @@ RUNTIME_CONFIDENCE=""
 DRY_RUN=0
 FORCE=0
 VERBOSE=0
+# M032/P02/T02 — sequential-atomicity passthrough to wiki-init.sh (FR-11 / MIT-011).
+WITH_WIKI=0
+WITH_GISCUS=0
+WITH_DEPLOY=0
 
 # --- 1. Arg parsing ---------------------------------------------------------
 while [ $# -gt 0 ]; do
@@ -46,12 +50,26 @@ while [ $# -gt 0 ]; do
     --dry-run)   DRY_RUN=1; shift ;;
     --force)     FORCE=1;   shift ;;
     --verbose)   VERBOSE=1; shift ;;
+    --with-wiki)    WITH_WIKI=1;   shift ;;
+    --with-giscus)  WITH_GISCUS=1; shift ;;
+    --deploy)       WITH_DEPLOY=1; shift ;;
     -h|--help)   sed -n '2,20p' "$0"; exit 0 ;;
     *) echo "FAIL: unknown argument '$1'" >&2; exit 1 ;;
   esac
 done
 
 [ -d "$PROJECT_DIR" ] || { echo "FAIL: not a directory: $PROJECT_DIR" >&2; exit 1; }
+
+# --- M032/P02/T02 flag composition validation (FR-11) -----------------------
+# --with-giscus and --deploy REQUIRE --with-wiki. Reject with exit 2.
+if [ "$WITH_GISCUS" = "1" ] && [ "$WITH_WIKI" != "1" ]; then
+  echo "FAIL: init: --with-giscus requires --with-wiki" >&2
+  exit 2
+fi
+if [ "$WITH_DEPLOY" = "1" ] && [ "$WITH_WIKI" != "1" ]; then
+  echo "FAIL: init: --deploy requires --with-wiki" >&2
+  exit 2
+fi
 
 log() { [ $VERBOSE -eq 1 ] && echo "$@" >&2; return 0; }
 
@@ -290,4 +308,27 @@ fi
 
 # --- 15. Summary ------------------------------------------------------------
 echo "SUMMARY: project_type=$PROJECT_TYPE runtime=$RUNTIME instruction_file=$INSTRUCTION_FILE config_file=$CONFIG_FILE cap_score=$CAP_SCORE recommended_intensity=$RECOMMENDED_INTENSITY skills_installed=$SKILLS_INSTALLED dual_writes=$DUAL_WRITES next_step=run_orchestrator_evaluate"
+
+# --- 16. M032/P02/T02 — sequential --with-wiki dispatch (FR-11 / MIT-011) ---
+# init outputs are now on disk (instruction file, config.yml, dual-writes,
+# installed skills). Per the sequential-atomicity contract, wiki-init.sh runs
+# as a SECOND sequential step ONLY when --with-wiki is present. If wiki-init.sh
+# exits non-zero, init outputs are PRESERVED on disk and the compound exit
+# code is the LITERAL wiki-init exit code with `init-complete, wiki-pending`
+# diagnostic on stderr. Callers (M033/P05) may re-run wiki-init.sh independently.
+if [ "$WITH_WIKI" = "1" ]; then
+  WIKI_INIT_ARGS="--project-dir \"$PROJECT_DIR\""
+  if [ "$WITH_GISCUS" = "1" ]; then WIKI_INIT_ARGS="$WIKI_INIT_ARGS --with-giscus"; fi
+  if [ "$WITH_DEPLOY" = "1" ]; then WIKI_INIT_ARGS="$WIKI_INIT_ARGS --deploy"; fi
+  # eval used intentionally to preserve the quoted PROJECT_DIR — args are
+  # script-internal state only (PROJECT_DIR is validated above; flags are bools).
+  eval "bash \"$REPO_ROOT/scripts/lifecycle/wiki-init.sh\" $WIKI_INIT_ARGS"
+  WIKI_INIT_RC=$?
+  if [ "$WIKI_INIT_RC" -ne 0 ]; then
+    echo "FAIL: init: wiki-init.sh exited $WIKI_INIT_RC; partial state: init-complete, wiki-pending" >&2
+    echo "      re-run wiki-init independently: bash scripts/lifecycle/wiki-init.sh --project-dir $PROJECT_DIR" >&2
+    exit "$WIKI_INIT_RC"
+  fi
+fi
+
 exit 0

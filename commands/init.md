@@ -75,6 +75,37 @@ The init pipeline has four phases: **detect -> probe -> generate -> verify**.
 - Emit a final `SUMMARY:` line with `project_type=`, `runtime=`,
   `instruction_file=`, `config_file=`, `skills_installed=`, `next_step=`.
 
+### Wiki integration via `--with-wiki [--with-giscus] [--deploy]` (FR-11 / MIT-011)
+
+`orchestrator:init --with-wiki` runs the default `init` flow first, then invokes
+`scripts/lifecycle/wiki-init.sh` as a second sequential step against the same
+`--project-dir`. The two scripts run sequentially, not atomically — the
+`init --with-wiki` compound command is NOT a single transaction.
+
+**Sequential-atomicity contract (MIT-011)**:
+
+- `init-project.sh` writes its outputs first (`.orchestrator/`, `CLAUDE.md`, etc.).
+- `wiki-init.sh` runs second ONLY if `init-project.sh` exits 0.
+- If `wiki-init.sh` exits non-zero:
+  - The init outputs are PRESERVED on disk.
+  - The compound `init --with-wiki` exit code is the LITERAL exit code of
+    `wiki-init.sh` (NOT 0, NOT 1 unless wiki-init exited 1).
+  - The stderr diagnostic names the partial state explicitly: `init-complete, wiki-pending`.
+- Callers (including M033/P05 per CON-3) MAY re-run `wiki-init.sh` independently
+  without re-running `init-project.sh` to complete initialization.
+
+**Pass-through flags**:
+
+- `--with-giscus` — recognized by `init-project.sh` and forwarded verbatim to
+  `wiki-init.sh`. P02 surface: `wiki-init.sh` rejects with exit code 5
+  (`not yet implemented in P02; reserved for P03`). P03 implements the scope.
+- `--deploy` — recognized by `init-project.sh` and forwarded verbatim to
+  `wiki-init.sh`. Same P02-rejects / P03-implements pattern.
+
+The flag chain is independently composable: `--with-wiki` may appear without
+`--with-giscus` or `--deploy`; `--with-giscus` REQUIRES `--with-wiki` (rejected
+otherwise); `--deploy` REQUIRES `--with-wiki` (rejected otherwise).
+
 ## Flags
 
 | Flag | Description |
@@ -128,6 +159,7 @@ Running `orchestrator:init` twice without `--force` results in identical disk st
 - `scripts/dispatch/detect-capabilities.sh` — capability profile.
 - `scripts/state/resolve-root.sh` — state root resolution.
 - `packaging/install/install-claude-code.sh` | `install-codex.sh` | `install-cursor.sh` — per-runtime installer.
+- `scripts/lifecycle/wiki-init.sh` — wiki-init flow invoked under --with-wiki (FR-11).
 
 ## Referenced Templates
 

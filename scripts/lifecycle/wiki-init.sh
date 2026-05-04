@@ -58,6 +58,14 @@ if [ -z "$PROJECT_DIR" ]; then
 fi
 PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"
 
+# M032/P02/T02 test-only failure-injection escape hatch (Seam-B in T05).
+# Env-var-only access keeps it out of the operator-facing surface per the
+# M026/MEM030 <TOOL>_EDITION=<value> env-var convention pattern.
+if [ -n "${M032_WIKI_INIT_FORCE_EXIT:-}" ]; then
+  echo "FAIL: wiki-init: M032_WIKI_INIT_FORCE_EXIT=$M032_WIKI_INIT_FORCE_EXIT (test-only failure injection)" >&2
+  exit "$M032_WIKI_INIT_FORCE_EXIT"
+fi
+
 # P02 rejects --with-giscus and --deploy (P03 deliverables).
 if [ "$WITH_GISCUS" = "1" ] || [ "$WITH_DEPLOY" = "1" ]; then
   echo "FAIL: wiki-init: --with-giscus and --deploy not yet implemented in P02; reserved for P03" >&2
@@ -151,29 +159,21 @@ if [ "$REPO_ROOT" = "$PROJECT_DIR" ]; then
   SELF_APPLICATION=1
 fi
 
-# Idempotency short-circuit: if <project>/wiki/mkdocs.yml already exists AND its
-# four site-identity lines exactly match what we'd compute, skip the bundle
-# staging step (which would otherwise overwrite operator-edited files via cp -R).
-# This is the "no changes" branch consumers see on second invocation.
+# Idempotency / pre-staged short-circuit: skip bundle-staging when wiki/mkdocs.yml
+# already exists at the target. Two cases hit this branch:
+#   (a) Second `wiki-init` invocation (same identity values already match).
+#   (b) `init --with-wiki` flow (FR-11): install-claude-code.sh / install-codex.sh /
+#       install-cursor.sh have already staged wiki/ via the project_assets manifest
+#       loop in their primary install step. By the time wiki-init runs as the
+#       second sequential step under --with-wiki, wiki/ is on disk with bundle
+#       defaults (placeholder mkdocs.yml). The collision-check would otherwise
+#       trip on FR-22 operator-owned oracle (target exists, not in tracking
+#       file, not gitignored). The substitute-templating step below handles
+#       re-templating in both (a) and (b).
 PRE_STAGE_NO_OP=0
 PRE_STAGE_MKDOCS="$PROJECT_DIR/wiki/mkdocs.yml"
-if [ -f "$PRE_STAGE_MKDOCS" ]; then
-  pre_desired_site_name='site_name: "'"${SITE_NAME_OVERRIDE:-$REPO}"'"'
-  pre_desired_site_url='site_url: "'"https://${OWNER_LOWER}.github.io/${REPO}/"'"'
-  pre_desired_repo_url='repo_url: "'"https://github.com/${OWNER}/${REPO}"'"'
-  pre_match=0
-  if grep -qxF "$pre_desired_site_name" "$PRE_STAGE_MKDOCS"; then
-    pre_match=$((pre_match + 1))
-  fi
-  if grep -qxF "$pre_desired_site_url" "$PRE_STAGE_MKDOCS"; then
-    pre_match=$((pre_match + 1))
-  fi
-  if grep -qxF "$pre_desired_repo_url" "$PRE_STAGE_MKDOCS"; then
-    pre_match=$((pre_match + 1))
-  fi
-  if [ "$pre_match" -eq 3 ] && [ "$FORCE" != "1" ]; then
-    PRE_STAGE_NO_OP=1
-  fi
+if [ -f "$PRE_STAGE_MKDOCS" ] && [ "$FORCE" != "1" ]; then
+  PRE_STAGE_NO_OP=1
 fi
 
 # Iterate tuples — stage only entries whose source begins with 'wiki' under wiki-init's responsibility.

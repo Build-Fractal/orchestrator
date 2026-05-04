@@ -1,3 +1,6 @@
+# M032 P01: project_assets entries below are read by scripts/lifecycle/read-project-assets.sh
+# and dispatched by the per-runtime installers (install-{claude-code,codex,cursor}.sh).
+# See P01-PLAN.md key-link for the manifest → reader → installer chain.
 schema_version: "1.0"
 type: bundle-manifest
 name: "spec-kit-orchestrator"
@@ -54,4 +57,7 @@ project_assets:
     mode: copy
   - source: templates/
     target: templates/
+    mode: copy
+  - source: wiki/
+    target: wiki/
     mode: copy

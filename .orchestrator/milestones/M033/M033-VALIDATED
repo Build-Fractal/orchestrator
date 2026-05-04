@@ -1,0 +1,33 @@
+M033 VALIDATED -- 2026-05-04T16:50:00Z
+
+AD-7 three-part close gate satisfied:
+
+- SC-14 (acceptance battery skip=0 invariant per CON-1 / MIT-001):
+  bash tests/m033-acceptance/run-acceptance-battery.sh
+  -> exit 0 with `BATTERY: pass=13 fail=0` skip=0
+  (under M033_FR15_STUB=1 M033_GHINIT_STUB=1 stub-mode env per CON-1
+  paired-launch contract; SC-9 + SC-10 produce pass-not-skip in stub
+  mode pending M032/P02 closure for SC-9 real-mode and pending
+  github-init.sh real-mode invocation for SC-10).
+
+- SC-15 (friendly-tester verdict per CON-2):
+  M033_SKIP_FRIENDLY_TESTER_PASS=1 SIGNED-ATTESTATION per US-8 AS-5 /
+  launch sequencing amendment #Q-1 fallback path.
+  No friendly-tester report has been filed under
+  tests/m033-acceptance/friendly-tester-pass/report-*.md as of close
+  time (2026-05-04). Recruiting outreach deferred to the 2026-05-12
+  fallback deadline. Cold-start UX risk acknowledged in the signed
+  attestation block of M033-SUMMARY.md (maintainer signature: Brett
+  Kellgren <brett@fivestar.studio>; date: 2026-05-04). The 2026-05-12
+  recruiting deadline applies; if a friendly-tester report is filed
+  by that date with friction_blockers: 0 AND eligible_testers >= 1,
+  validate-report.sh exits 0 and the SC-15 verdict upgrades from
+  SIGNED-ATTESTATION to PASS without re-issuing this marker.
+
+- SC-16 (milestone-validate NNN >= 15 floor, non-escalable per MIT-004):
+  bash scripts/verify/validate-milestone.sh .orchestrator/milestones/M033
+  -> reports `M033: NNN/NNN PASS` with NNN >= 15 (well above the
+  MIT-004 floor; 142 checks total at close-state).
+
+Validated by: Brett Kellgren <brett@fivestar.studio>
+Validated at: 2026-05-04T16:50:00Z

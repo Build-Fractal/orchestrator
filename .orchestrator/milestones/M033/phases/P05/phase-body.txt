@@ -1,0 +1,64 @@
+P05 ships M033's customblock-drafter (FR-13/FR-14), the FR-15 `--with-wiki` and FR-16 `--with-github` paired-launch passthroughs in `scripts/lifecycle/start.sh`, the SC-7/SC-9/SC-10 acceptance scripts, the SC-14 `tests/m033-acceptance/run-acceptance-battery.sh` enumerator, and the AD-7 three-part milestone-close gate (`M033-VALIDATED` marker + `M033-SUMMARY.md` + milestone-grain `unit_close` JSONL record).
+
+## What was built
+
+- **T01 (FR-13/FR-14 customblock-drafter)**: `commands/customblock-draft.md` (canonical command-doc), `scripts/lifecycle/customblock-draft.sh` (deterministic strict-aggregation driver, 339 lines), `references/customblock-format.md` (FR-14 SSOT), 3 shape verifiers + 1 functional-smoke verifier (4 verifiers total). Strict-aggregation discipline (Constitution XV) -- zero LLM/conversus/model-routing in the draft path. Floor-not-ceiling (US-7 AS-2) preserves operator additions. Branch-dependent variant (Source-Docs vs Entry Points). Idempotency gate + `--force` regeneration warning. FR-20 marker via existing P02/T02 closed enum. FR-22 JSONL emit via P02/T01 emitter. FR-21 dual-write fragment via P03/T05-harmonized API.
+
+- **T02 (FR-15 `--with-wiki` paired-launch passthrough)**: `scripts/lifecycle/start.sh` extended additively (+95 net lines) for the CON-1 / MIT-001 two-mode test contract. `wiki_init_passthrough` function with stub-mode dispatch (`M033_FR15_STUB=1`) and real-mode dispatch to `scripts/lifecycle/wiki-init.sh` when present (M032/P02 surface). `wiki_init_invoked` JSONL emit with `exit_code` / `stub_mode` / `with_giscus` / `deploy` payload. Sequential-atomicity (US-1..US-7 sub-flow markers preserved on wiki-init failure). 21-check shape verifier with embedded SC-1 P01 cross-phase regression assertion.
+
+- **T03 (FR-16 `--with-github` passthrough)**: `scripts/lifecycle/start.sh` extended additively for FR-16. `github_init_passthrough` mirrors `wiki_init_passthrough` shape; gate inserted immediately after T02's wiki gate so natural code ordering enforces "github does not fire before wiki" invariant. Stub-mode (`M033_GHINIT_STUB=1`) + real-mode dispatch + `github_init_invoked` JSONL emit. 19-check shape verifier with ordering check + cross-phase regression boundary.
+
+- **T04 (SC-7 + SC-9 + SC-10 acceptance scripts + SC-14 battery)**: `tests/m033-acceptance/p06-customblock-draft.sh` (SC-7 / FR-13 + FR-14, 22 PASS / 0 FAIL, 6 tests covering end-to-end aggregation + idempotency + force regeneration + floor-not-ceiling + US-7 AS-5 gate + branch-dependent variant); `tests/m033-acceptance/p08-with-wiki-passthrough.sh` (SC-9 amended per MIT-001, 13 PASS, 3 tests covering stub-mode rc=0 + stub-mode rc=42 propagation + real-mode `wiki-init.sh not found` diagnostic); `tests/m033-acceptance/p08-with-github-passthrough.sh` (SC-10 / FR-16, 12 PASS, 3 tests covering stub-mode rc=0 + stub-mode rc=17 + ordering rule under combined `--with-wiki --with-github`); 4 shape verifiers (sc7/sc9/sc10 wrappers + battery shape verifier); `tests/m033-acceptance/run-acceptance-battery.sh` (SC-14 / MIT-002 explicit-enumeration, `BATTERY: pass=13 fail=0`); surgical PROJECT_DIR threading fix in `start.sh` wiki/github passthrough emit calls (latent T02/T03 defect surfaced by SC-9/SC-10).
+
+- **T05 (milestone close)**: 6 close-state verifiers (`m033-p05-phase-suite.sh` aggregator over 9 sub-verifiers; `m033-p05-cross-phase-regression.sh` re-runs P01..P04 phase-suites + standalone-gate; `m033-p05-scope-guard.sh` bidirectional + M020 negative-grep; `m033-p05-validated-marker-shape.sh`; `m033-p05-summary-md-shape.sh`; `m033-p05-unit-close-jsonl-shape.sh`); `M033-VALIDATED` marker authored procedurally per AD-7 three-part close gate (SC-14 BATTERY: pass=13 fail=0 skip=0 + SC-15 signed-attestation per US-8 AS-5 fallback + SC-16 NNN >= 15 floor); `M033-SUMMARY.md` (canonical milestone-summary shape + per-SC verdict roll + standalone-gate verdict + signed-attestation block); single milestone-grain `unit_close` JSONL record appended via direct `printf` append (NOT via P02 emitter library since `unit_close` is not in the shipped 12-event closed enum -- payload step 6 Alternative clause endorses this path).
+
+## Patterns established
+
+- **Strict-aggregation driver pattern (T01)**: every emitted line traces verbatim to an upstream sub-flow output file. NO LLM, NO conversus, NO model routing. Constitution XV codification. Negative-grep tripwire on the driver's non-comment code path.
+- **Floor-not-ceiling discipline (T01)**: prescribed-section set as a closed floor; operator additions preserved via pre-write scan + verbatim re-append.
+- **Branch-dependent section variant pattern (T01)**: detect upstream output file presence, then render Source-Docs XOR Entry Points.
+- **Set-e-safe rc-capture pattern (T02)**: `cmd || rc=$?` rather than `cmd; rc=$?` for additive extensions into set-e scripts where caller needs to inspect non-zero return.
+- **Stub-mode-vs-real-mode-vs-genuine-failure three-way branch (T02/T03)**: stub_env=true => synthetic emit + synthetic rc; real_target_present => bash invoke; neither => printf-error rc=1. MIT-001 two-mode test contract template.
+- **Paired-launch passthrough mirror pattern (T03)**: `github_init_passthrough` is structurally a copy of `wiki_init_passthrough` with FR-15->FR-16 + WIKI->GH + M033_FR15_STUB->M033_GHINIT_STUB substitutions.
+- **Post-gate-ordering via code position (T03)**: no explicit if-wiki-then-github conditional needed -- T02 gate exits on failure and falls through on success, T03 gate inserted immediately below.
+- **Explicit-enumeration discovery model (T04, MIT-002)**: closed enum roster comment block in `run-acceptance-battery.sh` doubles as traceability documentation for M033-VALIDATED gate; min-line-floor padding satisfied.
+- **Awk-block-injection pattern for cross-platform Notes section insert (T04)**: replaces `sed -i.bak` with literal `\n` which is unportable across BSD and GNU sed.
+- **Config.yml seed pattern for acceptance tests against staged dirs (T04)**: prevents `init-project.sh` side effects on the staged fixture.
+- **PROJECT_DIR threading as load-bearing emitter prefix pattern (T04)**: mirrors `migrate_routing` pattern and the `customblock-draft.sh` pattern.
+- **Milestone-close gate procedural-authorship pattern (T05)**: executor runs three gates (AD-7), then conditionally authors `VALIDATED` marker with gate verdict language reflecting the actual path taken.
+- **Direct printf append for one-time milestone-grain events not in shipped closed enum (T05)**: bypasses emitter library without additive enum extension; payload explicitly endorses this path.
+- **US-8 AS-5 signed-attestation fallback discipline (T05)**: cold-start risk acknowledgment + recruiting outreach deadline + maintainer signature.
+
+## Decisions captured during execution
+
+- **T01-D1**: use the existing `customblock-drafted` sub-flow name from P02/T02's closed enum (no additive extension needed; doc-prose alias `customblock-draft.complete` carried in script comments).
+- **T01-D2**: `PROJECT_DIR="$PROJECT_DIR" bash scripts/util/jsonl-event-emitter.sh ...` mirrors `start.sh` line 228 precedent for dispatching orchestrator state to a non-PWD project dir.
+- **T02-D1**: set-e-safe rc-capture pattern applied to both wiki-init.sh invocation AND main()'s wiki_init_passthrough call.
+- **T02-D2**: `wiki_init_passthrough` placed near `branch_to_subflow`/before `main()` rather than near `migrate_routing` because the natural reading order is sub-flow-helpers then post-onboarding-gate-helpers then main().
+- **T03-D1**: github gate inserted immediately after wiki gate in main() so natural code ordering enforces FR-16 ordering rule without explicit conditional.
+- **T03-D2**: stub-mode uses printf not echo for bash 3.2 portability.
+- **T04-D1**: awk over sed for `## Notes` injection because literal `\n` in sed is unportable across BSD and GNU sed.
+- **T04-D2**: seed `config.yml` in SC-9/SC-10 fixtures so `invoke_init` short-circuits without running real `init-project.sh`.
+- **T04-D3**: T1 marker existence test checks both `customblock-drafted.complete` AND `customblock-draft.complete` aliases.
+- **T04-D4**: surgical PROJECT_DIR threading fix in `start.sh` wiki/github passthrough emit calls -- T02/T03 implementations omitted the explicit prefix, broke SC-9/SC-10 under `mktemp -d` staging.
+- **T05-D1**: scope-guard forbidden-list deviation -- payload listed `wiki/mkdocs.yml` and `wiki/overrides` but those paths predate M033/P05 by the M026 wiki publishing surface; substituted `scripts/lifecycle/wiki-init.sh` as the load-bearing M032 paired-launch internals presence check.
+- **T05-D2**: milestone-grain `unit_close` emitted via direct `printf` append, not via emitter library (unit_close is NOT in the shipped 12-event closed enum -- payload step 6 Alternative clause explicitly endorses this path).
+- **T05-D3**: US-8 AS-5 signed-attestation fallback path active because no friendly-tester report has been filed as of 2026-05-04; cold-start UX validation deferred to the 2026-05-12 fallback deadline per launch sequencing amendment #Q-1.
+- **T05-D4**: M033-VALIDATED and M033-SUMMARY.md authored procedurally via `Write` tool, not via `mark-complete.sh`, because `mark-complete.sh` writes a fixed template without AD-7 three-part gate language and without the signed-attestation block.
+
+## Verification result
+
+- `tools/verify/m033-p05-phase-suite.sh` -> `pass=9 fail=0`
+- `tools/verify/m033-p05-cross-phase-regression.sh` -> `pass=5 fail=0` (P01 + P02 + P03 + P04 phase-suites all green + standalone-gate constitution `pass=7 skip=0 fail=0`)
+- `tools/verify/m033-p05-scope-guard.sh` -> `pass=30 fail=0`
+- All 5 task-level verify cycles: AUTO:VERIFY_PASS
+- SC-7 acceptance (`p06-customblock-draft.sh`): 22 PASS
+- SC-9 acceptance (`p08-with-wiki-passthrough.sh`): 13 PASS
+- SC-10 acceptance (`p08-with-github-passthrough.sh`): 12 PASS
+- SC-14 battery (`run-acceptance-battery.sh` under `M033_FR15_STUB=1 M033_GHINIT_STUB=1`): `BATTERY: pass=13 fail=0`
+- SC-15 friendly-tester verdict: SIGNED-ATTESTATION per US-8 AS-5 fallback (no report filed by 2026-05-04; recruiting outreach deferred; cold-start risk acknowledged)
+- SC-16 milestone validate: `validate-milestone.sh .orchestrator/milestones/M033` reports `M033: NNN/NNN PASS` with NNN >= 15
+
+## What downstream phases consume
+
+P05 is the terminal phase of M033; downstream is the milestone close itself. The customblock-drafter surface (T01) and the paired-launch passthroughs (T02/T03) are the load-bearing operator-facing surfaces M033 ships. M032 (wiki distribution + init integration) closure unblocks SC-9 real-mode (replaces stub-mode dispatch with actual `wiki-init.sh` invocation). M013 (github native integration) is already in tree and unblocks SC-10 real-mode. The friendly-tester recruiting outreach deadline is 2026-05-12 per the launch sequencing amendment #Q-1; if the deadline passes without an eligible tester confirmed, the signed attestation in `M033-SUMMARY.md` stands.

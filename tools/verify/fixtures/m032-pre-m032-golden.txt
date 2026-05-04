@@ -1,9 +1,19 @@
-# Pre-M032 golden file-tree shape (recorded T02 step 1, before FR-2 migration)
+# Pre-M032 golden file-tree shape (originally recorded T02 step 1, refreshed
+# 2026-05-04 post-M033-close, refreshed again 2026-05-04 post-M032/P02/T01
+# to track source-tree growth from wiki-init command landing).
 # Source: bash packaging/install/install-claude-code.sh --dry-run
 # Format: <runtime-dir> file_count=<N>
-commands/ file_count=27
-scripts/ file_count=1149
-references/ file_count=27
-templates/ file_count=47
-# Total pre-M032 RUNTIME_DIRS file count:
-total file_count=1250
+# Refresh policy: re-capture at HEAD whenever a sibling milestone closes and
+# adds files under one of the four runtime dirs (M033 added 6 commands, 11
+# scripts, 5 references, 3 templates between original capture and refresh;
+# M032/P02/T01 added 1 command — wiki-init.md — and 1 script —
+# wiki-init.sh — per FR-6).
+# CON-4 byte-identical invariant means: the project_assets:-driven installer
+# produces the same output as the pre-M032 RUNTIME_DIRS bulk-copy would today,
+# not the same output as a frozen historical snapshot.
+commands/ file_count=34
+scripts/ file_count=1161
+references/ file_count=32
+templates/ file_count=50
+# Total post-refresh RUNTIME_DIRS file count:
+total file_count=1277

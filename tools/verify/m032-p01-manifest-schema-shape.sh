@@ -51,28 +51,33 @@ for key in schema_version type name version description skill_spec skills hooks 
     fi
 done
 
-# 4. Exactly four `^  - source: ` entries.
+# 4. project_assets entries: at-least-four invariant. P01 lands the four
+# runtime dirs (commands/, scripts/, references/, templates/); P02/T01 adds
+# wiki/ as the fifth entry per FR-6, and downstream phases may add more.
+# The load-bearing P01 invariant is "the four runtime dirs are present" —
+# enforced by step 6 below — not the exact count.
 source_count=$(grep -cE '^  - source: ' "$MANIFEST")
-if [ "$source_count" -eq 4 ]; then
-    check "exactly four project_assets entries (source:)" 0
+if [ "$source_count" -ge 4 ]; then
+    check "at least four project_assets entries (source:)" 0
 else
-    printf 'FAIL: expected 4 entries, got %s\n' "$source_count"
+    printf 'FAIL: expected at least 4 entries, got %s\n' "$source_count"
     fail=$((fail + 1))
 fi
 
-# 5. Each entry has matching target: and mode: copy lines.
+# 5. Each entry has matching target: and mode: copy lines (count parity, not
+# absolute count — see step 4 rationale).
 target_count=$(grep -cE '^    target: ' "$MANIFEST")
 mode_copy_count=$(grep -cE '^    mode: copy$' "$MANIFEST")
-if [ "$target_count" -eq 4 ]; then
-    check "four target: lines" 0
+if [ "$target_count" -eq "$source_count" ]; then
+    check "target: lines match source: count" 0
 else
-    printf 'FAIL: expected 4 target: lines, got %s\n' "$target_count"
+    printf 'FAIL: target: lines (%s) != source: count (%s)\n' "$target_count" "$source_count"
     fail=$((fail + 1))
 fi
-if [ "$mode_copy_count" -eq 4 ]; then
-    check "four mode: copy lines" 0
+if [ "$mode_copy_count" -eq "$source_count" ]; then
+    check "mode: copy lines match source: count" 0
 else
-    printf 'FAIL: expected 4 mode: copy lines, got %s\n' "$mode_copy_count"
+    printf 'FAIL: mode: copy lines (%s) != source: count (%s)\n' "$mode_copy_count" "$source_count"
     fail=$((fail + 1))
 fi
 

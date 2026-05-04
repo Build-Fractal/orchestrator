@@ -49,12 +49,15 @@ else
     fail=$((fail + 1))
 fi
 
-# 3. Exactly four output lines.
+# 3. Reader emits at least the four P01 runtime-dir entries. P02/T01 adds
+# wiki/ as a fifth tuple per FR-6; downstream phases may add more. Step 5
+# below enforces the load-bearing P01 invariant ("the four runtime dirs
+# are present"), not the absolute count.
 line_count=$(awk 'END {print NR}' "$out_file")
-if [ "$line_count" -eq 4 ]; then
-    check "reader emits 4 lines" 0
+if [ "$line_count" -ge 4 ]; then
+    check "reader emits at least 4 lines" 0
 else
-    printf 'FAIL: expected 4 lines, got %s\n' "$line_count"
+    printf 'FAIL: expected at least 4 lines, got %s\n' "$line_count"
     fail=$((fail + 1))
 fi
 

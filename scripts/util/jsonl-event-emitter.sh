@@ -10,7 +10,7 @@
 #
 #   {
 #     "schema_version": "1.0",
-#     "event_type":     "<one of 11 closed-enum tokens>",
+#     "event_type":     "<one of 12 closed-enum tokens>",
 #     "timestamp":      "<ISO 8601 UTC, date -u +%Y-%m-%dT%H:%M:%SZ>",
 #     "payload":        <opaque JSON object supplied by caller>
 #   }
@@ -18,7 +18,9 @@
 # Schema version is fixed at 1.0 for M033. Bumping to 1.1 requires a
 # follow-up M033 D-row (M020 D024 reversibility-clause precedent).
 #
-# The 11 documented event types (FR-22 closed enum):
+# The 12 documented event types (FR-22 closed enum, extended 11 -> 12 in
+# M033/P03/T04 to add imported_context_loaded for the FR-8 / MIT-005
+# rich-context import path; SSOT count harmonized in T05 per #Q-11):
 #   - start_branch_detected
 #   - start_init_invoked
 #   - constitution_authored
@@ -30,6 +32,7 @@
 #   - wiki_init_invoked
 #   - github_init_invoked
 #   - friendly_tester_report_validated
+#   - imported_context_loaded
 #
 # Bash 3.2 compatible (MEM001) — no `declare -A`, no process
 # substitution, no `$(...)` containing pipes.
@@ -71,6 +74,7 @@ set -e -u -o pipefail
 # wiki_init_invoked
 # github_init_invoked
 # friendly_tester_report_validated
+# imported_context_loaded
 # <<< event-types <<<
 
 emit() {

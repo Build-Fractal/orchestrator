@@ -91,6 +91,51 @@ fi
 
 cd "$ROOT"
 
+# -------- gate 0: FR-10 cwd-vs-repo_url sanity gate (Finding J counter-pattern) --------
+# Compares repo_url: parsed from <ROOT>/wiki/mkdocs.yml against
+# git -C $ROOT remote get-url origin. Normalizes both to canonical
+# <owner>/<repo> form (case-lowered owner, case-preserved repo;
+# strip .git suffix; strip https://github.com/ or git@github.com:
+# prefixes). Exits non-zero with cross-project-hazard diagnostic on
+# mismatch — protects against the silent cross-project force-push
+# class of bug observed in the 2026-04-28 PBJ pilot session.
+#
+# Test-only override: M032_WIKI_DEPLOY_BYPASS_CWD_GATE=1 skips the gate.
+# Used ONLY by tools/verify/m032-p03-* verifiers and by the SC-5/SC-6
+# acceptance scripts when their fixture has no real GH remote. The
+# operator-facing surface never honors this env-var unset path.
+if [ "${M032_WIKI_DEPLOY_BYPASS_CWD_GATE:-0}" != "1" ]; then
+  if [ ! -f "$ROOT/wiki/mkdocs.yml" ]; then
+    printf 'FAIL: wiki-deploy: FR-10 cwd-gate: %s/wiki/mkdocs.yml missing; cannot run cwd-vs-repo_url sanity gate\n' "$ROOT" >&2
+    exit 1
+  fi
+  REPO_URL_LINE=$(grep -E '^repo_url:' "$ROOT/wiki/mkdocs.yml" | head -n 1)
+  REPO_URL_VAL=$(printf '%s' "$REPO_URL_LINE" | sed -E 's/^repo_url:[[:space:]]*"?([^"]*)"?[[:space:]]*$/\1/')
+  if [ -z "$REPO_URL_VAL" ]; then
+    printf 'FAIL: wiki-deploy: FR-10 cwd-gate: cannot parse repo_url: from %s/wiki/mkdocs.yml\n' "$ROOT" >&2
+    exit 1
+  fi
+  GIT_REMOTE_VAL=$(git -C "$ROOT" remote get-url origin 2>/dev/null || true)
+  if [ -z "$GIT_REMOTE_VAL" ]; then
+    printf 'FAIL: wiki-deploy: FR-10 cwd-gate: no git remote at origin in %s\n' "$ROOT" >&2
+    exit 1
+  fi
+  # Normalize both to <owner>/<repo> form. Strip .git, strip protocol/host prefixes.
+  norm_repo() {
+    printf '%s' "$1" | sed -E 's#^https?://github\.com/##; s#^git@github\.com:##; s#\.git$##; s#/$##'
+  }
+  REPO_URL_NORM=$(norm_repo "$REPO_URL_VAL")
+  GIT_REMOTE_NORM=$(norm_repo "$GIT_REMOTE_VAL")
+  # Owner-lower-case, repo-case-preserved (matches wiki-init.sh's P02 convention).
+  REPO_URL_OWNER=$(printf '%s' "$REPO_URL_NORM" | awk -F/ '{print tolower($1)"/"$2}')
+  GIT_REMOTE_OWNER=$(printf '%s' "$GIT_REMOTE_NORM" | awk -F/ '{print tolower($1)"/"$2}')
+  if [ "$REPO_URL_OWNER" != "$GIT_REMOTE_OWNER" ]; then
+    printf 'FAIL: wiki-deploy: cross-project hazard — mkdocs.yml repo_url=%s does not match git remote origin=%s; aborting before gh-deploy. cwd: %s\n' "$REPO_URL_VAL" "$GIT_REMOTE_VAL" "$ROOT" >&2
+    exit 1
+  fi
+  printf 'GATE: cwd-vs-repo_url PASS (%s)\n' "$REPO_URL_OWNER"
+fi
+
 # -------- gate 1: giscus config-check --------
 if bash scripts/diagnostics/wiki-giscus-config-check.sh --quiet; then
   printf 'GATE: giscus-config PASS\n'

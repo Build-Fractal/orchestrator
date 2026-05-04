@@ -207,17 +207,23 @@ else
   check_fail "wiki-init.sh stderr missing 'requires both --repo' diagnostic on bare --with-giscus"
 fi
 
-# Check 11: --deploy rejection.
+# Check 11: --deploy workflow lands (P03/T02). The reject-stub at exit 5 is
+# replaced by the FR-9 + MIT-007 + MIT-008 four-step workflow. Under
+# M032_DEPLOY_GH_API_STUB=1 the workflow runs hermetically end-to-end and
+# exits 0; without the stub it would reach the live `gh api PATCH` and exit
+# 10 (step 1 failure) since the fixture carries no GH credentials. We
+# assert the stub-mode happy path here so the P02 default-scope verifier
+# tracks the post-T02 surface contract.
 err_deploy="$(mktemp -t m032-p02-deploy-err.XXXXXX)"
 set +e
-bash "$WIKI_INIT" --project-dir "$TMP" --deploy 2>"$err_deploy"
+M032_DEPLOY_GH_API_STUB=1 bash "$WIKI_INIT" --project-dir "$TMP" --deploy 2>"$err_deploy"
 rc_deploy=$?
 set -e
 
-if [ "$rc_deploy" -eq 5 ]; then
-  check_pass "wiki-init.sh exits 5 on --deploy (P03 deliverable)"
+if [ "$rc_deploy" -eq 0 ]; then
+  check_pass "wiki-init.sh --deploy under M032_DEPLOY_GH_API_STUB=1 exits 0 (P03/T02 workflow lands)"
 else
-  check_fail "wiki-init.sh exit $rc_deploy on --deploy (expected 5)"
+  check_fail "wiki-init.sh --deploy under M032_DEPLOY_GH_API_STUB=1 exit $rc_deploy (expected 0)"
 fi
 
 # Check 12: idempotency — second invocation says "no changes".

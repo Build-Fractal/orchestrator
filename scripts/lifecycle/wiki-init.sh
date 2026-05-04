@@ -27,6 +27,10 @@
 #   7 — --with-giscus invoked without --with-wiki (no <PROJECT_DIR>/wiki/overrides/partials/comments.html).
 #   8 — integration-giscus-config-failed (giscus-ids-from-gh.sh upstream failure or unparseable output).
 #   9 — integration-giscus-config-check-failed (wiki-giscus-config-check.sh post-step failure).
+#  10 — --deploy step 1 (gh api PATCH discussions=true) failed.
+#  11 — --deploy step 2 (wiki-deploy.sh) failed.
+#  12 — --deploy step 3 (MIT-007 Pages guard rejected incompatible source).
+#  13 — --deploy step 4 (gh api PUT /pages) failed.
 set -eu
 
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -37,6 +41,7 @@ AUTO_PIP=0
 WITH_GISCUS=0
 WITH_DEPLOY=0
 FORCE=0
+FORCE_PAGES_RECONFIG=0
 GISCUS_REPO_FLAG=""
 GISCUS_CATEGORY_FLAG=""
 
@@ -53,6 +58,7 @@ while [ $# -gt 0 ]; do
     --with-giscus) WITH_GISCUS=1; shift ;;
     --deploy) WITH_DEPLOY=1; shift ;;
     --force) FORCE=1; shift ;;
+    --force-pages-reconfigure) FORCE_PAGES_RECONFIG=1; shift ;;
     --repo)
       shift
       if [ $# -eq 0 ]; then
@@ -87,11 +93,27 @@ if [ -n "${M032_WIKI_INIT_FORCE_EXIT:-}" ]; then
   exit "$M032_WIKI_INIT_FORCE_EXIT"
 fi
 
-# P03/T01 lands --with-giscus; --deploy remains reserved until P03/T02 replaces it.
-if [ "$WITH_DEPLOY" = "1" ]; then
-  echo "FAIL: wiki-init: --deploy not yet implemented; reserved for P03/T02" >&2
-  exit 5
-fi
+# M032/P03/T02 audit-trail helper for the --deploy scope. Defined here so
+# the --deploy workflow block at the script tail can invoke it on any
+# failure path. The helper consults MUT_DISCUSSIONS / MUT_GH_PAGES_BRANCH /
+# MUT_PAGES_CONFIGURED if set; otherwise emits an empty mutations array.
+audit_failure() {
+  _step="$1"
+  _rc="$2"
+  _ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  _muts=""
+  if [ "${MUT_DISCUSSIONS:-0}" -eq 1 ]; then
+    _muts='{"type":"discussions_enabled"}'
+  fi
+  if [ "${MUT_GH_PAGES_BRANCH:-0}" -eq 1 ]; then
+    _muts="${_muts:+$_muts,}"'{"type":"gh_pages_branch_created","ref":"gh-pages"}'
+  fi
+  if [ "${MUT_PAGES_CONFIGURED:-0}" -eq 1 ]; then
+    _muts="${_muts:+$_muts,}"'{"type":"pages_source_configured","source":{"branch":"gh-pages","path":"/"}}'
+  fi
+  printf '{"event_type":"wiki-deploy-mutation","timestamp":"%s","repo":"%s/%s","mutations":[%s],"result":"failure","error":"%s: rc=%s"}\n' \
+    "$_ts" "${OWNER:-unknown}" "${REPO:-unknown}" "$_muts" "$_step" "$_rc" >> "${LOG_FILE:-/dev/null}"
+}
 
 # FR-12: probe python3 + pip3.
 if ! command -v python3 >/dev/null 2>&1 || ! command -v pip3 >/dev/null 2>&1; then
@@ -424,6 +446,169 @@ if [ "$WITH_GISCUS" = "1" ]; then
   fi
 
   echo "wiki-init: --with-giscus done — substituted four giscus IDs in $PARTIAL"
+fi
+
+# FR-9 + MIT-007 + MIT-008 --deploy scope: four-step ordered sequence with
+# read-before-write Pages guard and structured JSONL audit-trail. Composes
+# with the default scope OR with --with-giscus (does NOT depend on
+# --with-giscus having run).
+if [ "$WITH_DEPLOY" = "1" ]; then
+  # JSONL log path: <PROJECT_DIR>/.orchestrator/execution-log.jsonl
+  # (initialized via mkdir -p .orchestrator/ if absent).
+  LOG_DIR="$PROJECT_DIR/.orchestrator"
+  LOG_FILE="$LOG_DIR/execution-log.jsonl"
+  mkdir -p "$LOG_DIR"
+
+  # Track which mutations actually fire so the audit-trail mutations array
+  # reflects the truth on disk. Bash 3.2 — use parallel scalar flags, not
+  # arrays of objects.
+  MUT_DISCUSSIONS=0
+  MUT_GH_PAGES_BRANCH=0
+  MUT_PAGES_CONFIGURED=0
+
+  iso_ts() {
+    date -u +%Y-%m-%dT%H:%M:%SZ
+  }
+
+  # Step 1: enable Discussions via PATCH /repos/<owner>/<repo>.
+  step1_rc=0
+  case "${M032_DEPLOY_GH_API_STUB:-}" in
+    1)
+      step1_rc=0
+      MUT_DISCUSSIONS=1
+      ;;
+    *)
+      set +e
+      gh api --method PATCH "/repos/$OWNER/$REPO" -f has_discussions=true >/dev/null 2>&1
+      step1_rc=$?
+      set -e
+      if [ "$step1_rc" -eq 0 ]; then
+        MUT_DISCUSSIONS=1
+      fi
+      ;;
+  esac
+  if [ "$step1_rc" -ne 0 ]; then
+    audit_failure "discussions_enable" "$step1_rc"
+    echo "FAIL: wiki-init: --deploy step 1: gh api PATCH /repos/$OWNER/$REPO has_discussions=true exited $step1_rc" >&2
+    exit 10
+  fi
+
+  # Step 2: invoke wiki-deploy.sh (it runs the FR-10 cwd-gate + the four
+  # P02-baseline gates + mkdocs gh-deploy --force).
+  step2_rc=0
+  case "${M032_DEPLOY_GH_API_STUB:-}" in
+    1)
+      # Stub mode — skip the deploy invocation entirely (no mkdocs install
+      # required for hermetic verifier coverage).
+      step2_rc=0
+      MUT_GH_PAGES_BRANCH=1
+      ;;
+    *)
+      set +e
+      bash "$PROJECT_DIR/scripts/wiki/wiki-deploy.sh" --root "$PROJECT_DIR"
+      step2_rc=$?
+      set -e
+      if [ "$step2_rc" -eq 0 ]; then
+        MUT_GH_PAGES_BRANCH=1
+      fi
+      ;;
+  esac
+  if [ "$step2_rc" -ne 0 ]; then
+    audit_failure "wiki_deploy" "$step2_rc"
+    echo "FAIL: wiki-init: --deploy step 2: wiki-deploy.sh exited $step2_rc" >&2
+    exit 11
+  fi
+
+  # Step 3: MIT-007 read-before-write Pages guard.
+  # gh api GET /repos/<owner>/<repo>/pages — inspect .source.branch and .source.path.
+  PAGES_RESP=""
+  pages_get_rc=0
+  case "${M032_DEPLOY_GH_API_STUB:-}" in
+    1)
+      # Stub mode — read fixture state from $M032_DEPLOY_GH_API_STUB_DIR/pages-get.json
+      # (or default to "404 / no Pages configured" if file absent).
+      if [ -n "${M032_DEPLOY_GH_API_STUB_DIR:-}" ] && [ -f "$M032_DEPLOY_GH_API_STUB_DIR/pages-get.json" ]; then
+        PAGES_RESP="$(cat "$M032_DEPLOY_GH_API_STUB_DIR/pages-get.json")"
+        pages_get_rc=0
+      else
+        PAGES_RESP=""
+        pages_get_rc=1  # simulates 404 Not Found
+      fi
+      ;;
+    *)
+      set +e
+      PAGES_RESP="$(gh api "/repos/$OWNER/$REPO/pages" 2>/dev/null)"
+      pages_get_rc=$?
+      set -e
+      ;;
+  esac
+
+  PAGES_PUT_NEEDED=1
+  if [ "$pages_get_rc" -eq 0 ] && [ -n "$PAGES_RESP" ]; then
+    # Pages exist — inspect source.
+    EXISTING_BRANCH=$(printf '%s' "$PAGES_RESP" | sed -n 's/.*"source":{[^}]*"branch":"\([^"]*\)".*/\1/p')
+    EXISTING_PATH=$(printf '%s' "$PAGES_RESP" | sed -n 's/.*"source":{[^}]*"path":"\([^"]*\)".*/\1/p')
+    if [ "$EXISTING_BRANCH" = "gh-pages" ] && [ "$EXISTING_PATH" = "/" ]; then
+      # No-op: already configured for our target source.
+      PAGES_PUT_NEEDED=0
+      echo "wiki-init: --deploy step 3: pages-already-configured (gh-pages root) — skipping PUT"
+    else
+      # Incompatible source.
+      if [ "$FORCE_PAGES_RECONFIG" -eq 1 ]; then
+        echo "wiki-init: --deploy step 3: WARNING — overwriting existing Pages source ($EXISTING_BRANCH $EXISTING_PATH) per --force-pages-reconfigure" >&2
+      else
+        audit_failure "pages_guard" "$pages_get_rc"
+        echo "FAIL: wiki-init: Repository has an existing Pages deployment from a different source ($EXISTING_BRANCH $EXISTING_PATH). This source will be overwritten. Pass --force-pages-reconfigure to proceed, or reconfigure Pages manually before running --deploy." >&2
+        exit 12
+      fi
+    fi
+  fi
+
+  # Step 4: PUT /repos/<owner>/<repo>/pages (only if PAGES_PUT_NEEDED).
+  if [ "$PAGES_PUT_NEEDED" -eq 1 ]; then
+    step4_rc=0
+    case "${M032_DEPLOY_GH_API_STUB:-}" in
+      1)
+        step4_rc=0
+        MUT_PAGES_CONFIGURED=1
+        ;;
+      *)
+        set +e
+        gh api --method PUT "/repos/$OWNER/$REPO/pages" -f 'source[branch]=gh-pages' -f 'source[path]=/' >/dev/null 2>&1
+        step4_rc=$?
+        set -e
+        if [ "$step4_rc" -eq 0 ]; then
+          MUT_PAGES_CONFIGURED=1
+        fi
+        ;;
+    esac
+    if [ "$step4_rc" -ne 0 ]; then
+      audit_failure "pages_put" "$step4_rc"
+      echo "FAIL: wiki-init: --deploy step 4: gh api PUT /repos/$OWNER/$REPO/pages exited $step4_rc" >&2
+      exit 13
+    fi
+  fi
+
+  # Step 5: MIT-008 audit-trail append BEFORE live URL print.
+  # NDJSON shape — one line, newline-terminated. mutations array reflects
+  # actual fired steps via parallel scalar flags (bash 3.2 — no declare -A).
+  TS="$(iso_ts)"
+  MUTATIONS=""
+  if [ "$MUT_DISCUSSIONS" -eq 1 ]; then
+    MUTATIONS='{"type":"discussions_enabled"}'
+  fi
+  if [ "$MUT_GH_PAGES_BRANCH" -eq 1 ]; then
+    MUTATIONS="${MUTATIONS:+$MUTATIONS,}"'{"type":"gh_pages_branch_created","ref":"gh-pages"}'
+  fi
+  if [ "$MUT_PAGES_CONFIGURED" -eq 1 ]; then
+    MUTATIONS="${MUTATIONS:+$MUTATIONS,}"'{"type":"pages_source_configured","source":{"branch":"gh-pages","path":"/"}}'
+  fi
+  printf '{"event_type":"wiki-deploy-mutation","timestamp":"%s","repo":"%s/%s","mutations":[%s],"result":"success"}\n' \
+    "$TS" "$OWNER" "$REPO" "$MUTATIONS" >> "$LOG_FILE"
+
+  # Step 6: print live URL.
+  OWNER_LOWER_DEPLOY="$(printf '%s' "$OWNER" | tr '[:upper:]' '[:lower:]')"
+  printf 'https://%s.github.io/%s/\n' "$OWNER_LOWER_DEPLOY" "$REPO"
 fi
 
 echo "wiki-init: done (project=$PROJECT_DIR site_name=${SITE_NAME})"

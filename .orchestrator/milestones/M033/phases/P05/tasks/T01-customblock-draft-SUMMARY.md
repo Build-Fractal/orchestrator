@@ -5,7 +5,7 @@ id: "T01"
 parent: "P05"
 milestone: "M033"
 provides:
-  - "commands/customblock-draft.md (FR-13/FR-14 doc surface);scripts/lifecycle/customblock-draft.sh (FR-13 deterministic strict-aggregation driver: --project-dir/--yes/--force flags + US-7 AS-5 constitution gate + branch-dependent ## Source-Docs vs ## Entry Points variant + 5-section strict aggregation from constitution + knowledge/{architecture,conventions,decisions}/MEM-*.md + intake/<ts>/{reconciled,ideation}-pre-spec.md + floor-not-ceiling extra-H2 preservation per US-7 AS-2 + idempotency gate + --force regeneration warning + FR-20 marker write via customblock-drafted sub-flow + FR-22 customblock_drafted JSONL emit + FR-21 dual-write Recent Changes fragment);references/customblock-format.md (FR-14 SSOT);tools/verify/m033-p05-customblock-draft-md-shape.sh (20-check MEM012 shape verifier);tools/verify/m033-p05-customblock-draft-sh-shape.sh (31-check shape + strict-aggregation negative-grep + bash3.2 negative-grep verifier);tools/verify/m033-p05-customblock-format-ref-shape.sh (16-check FR-14 SSOT shape verifier)"
+  - "commands/customblock-draft.md (FR-13/FR-14 doc surface);scripts/lifecycle/customblock-draft.sh (FR-13 deterministic strict-aggregation driver: --project-dir/--yes/--force flags + US-7 AS-5 constitution gate + branch-dependent ## Source-Docs vs ## Entry Points variant + 5-section strict aggregation from constitution + knowledge/{architecture,conventions,decisions}/MEM-*.md + intake/<ts>/{reconciled,ideation}-pre-spec.md + floor-not-ceiling extra-H2 preservation per US-7 AS-2 + idempotency gate + --force regeneration warning + FR-20 marker write via customblock-drafted sub-flow + FR-22 customblock_drafted JSONL emit + FR-21 dual-write Recent Changes fragment);references/customblock-format.md (FR-14 SSOT);tools/verify/m033-p05-customblock-draft-md-shape.sh (20-check MEM012 shape verifier);tools/verify/m033-p05-customblock-draft-sh-shape.sh (31-check shape + strict-aggregation negative-grep + bash3.2 negative-grep verifier);tools/verify/m033-p05-customblock-format-ref-shape.sh (16-check FR-14 SSOT shape verifier);tools/verify/m033-p05-customblock-draft-functional-smoke.sh (21-check 6-scenario functional smoke against mktemp fixture -- added on retry)"
 requires:
   - "P02/T01 (jsonl-event-emitter.sh closed enum incl customblock_drafted);P02/T02 (start-state-markers.sh closed sub-flow enum incl customblock-drafted);M014 dual-write-runtime-md.sh --root/--marker/--append-entry API;M001 templates/project-instruction.md BEGIN/END CUSTOM marker convention"
 affects:
@@ -36,6 +36,7 @@ T01 ships the FR-13/FR-14 surface for M033/P05: the `orchestrator:customblock-dr
   - `m033-p05-customblock-draft-md-shape.sh` (43 lines, 20 PASS) — 18 load-bearing tokens + min-line-count.
   - `m033-p05-customblock-draft-sh-shape.sh` (74 lines, 31 PASS) — 23 load-bearing tokens + 4 negative-grep strict-aggregation forbidden tokens + bash 3.2 `declare -A` negative-grep + min-line-count.
   - `m033-p05-customblock-format-ref-shape.sh` (41 lines, 16 PASS) — 14 load-bearing tokens + min-line-count.
+  - `m033-p05-customblock-draft-functional-smoke.sh` (added on retry, 21 PASS) — 6 end-to-end scenarios against a self-contained mktemp project fixture (t1 missing-constitution US-7 AS-5 diagnostic; t2 greenfield entry-points + CLAUDE.md + FR-20 marker + FR-22 JSONL; t3 idempotent byte-identical no-force preservation; t4 --force stderr warning; t5 source-docs variant when intake reconciled-pre-spec.md present; t6 floor-not-ceiling ## Notes preservation across --force regeneration). Strict-aggregation discipline (Constitution XV) — no LLM/conversus/model invocation in the smoke; cleanup via `trap`.
 
 ## Patterns established
 
@@ -58,7 +59,8 @@ T01 ships the FR-13/FR-14 surface for M033/P05: the `orchestrator:customblock-dr
 - `bash tools/verify/m033-p05-customblock-draft-md-shape.sh` → `pass=20 fail=0`
 - `bash tools/verify/m033-p05-customblock-draft-sh-shape.sh` → `pass=31 fail=0`
 - `bash tools/verify/m033-p05-customblock-format-ref-shape.sh` → `pass=16 fail=0`
-- 6-test functional smoke (`/tmp/m033-p05-t01-smoke.sh` — out-of-tree exploratory smoke, NOT a project deliverable) passed all 6:
+- `bash tools/verify/m033-p05-customblock-draft-functional-smoke.sh` → `pass=21 fail=0` (added on retry — promoted from out-of-tree exploratory smoke to checked-in project deliverable so the auto-loop's mechanical Verification step finds the file)
+- 6-test functional smoke (now checked-in at `tools/verify/m033-p05-customblock-draft-functional-smoke.sh`) passed all 6:
   - t1: missing-constitution → exit 1 with US-7 AS-5 diagnostic.
   - t2: greenfield → entry-points variant + CLAUDE.md created + FR-20 marker on disk + FR-22 `customblock_drafted` JSONL appended.
   - t3a/t3b: idempotency — `no changes` diagnostic + byte-identical preservation.

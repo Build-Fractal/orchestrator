@@ -107,6 +107,21 @@ records the no-op (`payload.action = "re-ingest"`). Operators who want
 to force re-ingest can manually delete the seeded MEMs (a future
 `--force` flag is demand-driven; out of T03 scope).
 
+## Edge Case: migrate-then-ingest duplicate-MEM prevention (FR-12)
+
+When `ingest-codebase` runs against a project where `orchestrator:migrate`
+has already populated knowledge MEMs at the same stable-ID paths (e.g.,
+`start` routed the project to `migrating` and the post-migration sub-flow
+invoked `ingest-codebase` to fill gaps the migrator did not cover per
+US-6 AS-3 / brief #Q-10), the emit functions detect any pre-existing
+MEM bearing `derived_from_migrate: true` in its frontmatter and skip
+the write with a `skip-duplicate-from-migrate: <stable-id>` diagnostic
+on stdout. The migrate-derived MEM is preserved (provenance-preserving)
+and `ingest-codebase` still emits MEMs at all OTHER stable-ID paths
+that have no migrate-derived match. The contract is one-way: `migrate.sh`
+(M015) is the writer of the sentinel; `ingest-codebase.sh` is the
+reader and never writes `derived_from_migrate: true` itself.
+
 ## Determinism (CON-3 / NG-8)
 
 The extraction path is structural-extraction-only:

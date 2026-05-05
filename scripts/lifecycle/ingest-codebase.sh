@@ -67,6 +67,18 @@ set -o pipefail
 # prior-tooling:.cursor/,.aider/,.claude/,.specify/,.gsd/,.gsd2/
 # <<< ingest-signal-sources <<<
 
+# >>> dup-prevention-sentinel >>>
+# FR-12 / US-6 AS-3 / brief #Q-10 (M033/P04/T03):
+# When ingest-codebase runs after orchestrator:migrate has populated
+# MEMs at the same stable-ID paths, the emit functions skip the write
+# if a pre-existing MEM at the candidate path carries the frontmatter
+# field `derived_from_migrate: true`. The sentinel is the one-way
+# contract from migrate.sh's emitted MEMs to ingest-codebase.sh's
+# check; migrate.sh is M015-closed and not modified by this task.
+#
+# Diagnostic shape: `skip-duplicate-from-migrate: <stable-id>` to stdout.
+# <<< dup-prevention-sentinel <<<
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ORCH_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
@@ -167,6 +179,25 @@ count_existing_seed_mems() {
 }
 
 # ---------------------------------------------------------------------------
+# FR-12 dup-prevention: detect pre-existing migrate-derived MEM at a path.
+# Returns 0 if the file exists AND carries the `derived_from_migrate: true`
+# frontmatter sentinel; returns 1 otherwise. See the
+# `# >>> dup-prevention-sentinel >>>` block above for the contract.
+# Bash 3.2 compatible — plain `grep -qF`, no process substitution, no
+# command substitution containing pipes.
+# ---------------------------------------------------------------------------
+is_migrate_derived_mem() {
+    local mem_path="$1"
+    if [ ! -f "$mem_path" ]; then
+        return 1
+    fi
+    if grep -qF 'derived_from_migrate: true' "$mem_path"; then
+        return 0
+    fi
+    return 1
+}
+
+# ---------------------------------------------------------------------------
 # Per-category MEM emit functions.
 # Each writes one ≤30-line seed MEM with deterministic frontmatter.
 # Body is a direct/structural quotation, not an LLM-summarized digest.
@@ -179,6 +210,11 @@ emit_architecture_mem() {
     local id
     id="$(stable_id "$source_path" "$signal_kind")"
     local out="$KNOWLEDGE_DIR/architecture/MEM-ARCH-$id.md"
+    # FR-12 dup-prevention check (M033/P04/T03).
+    if is_migrate_derived_mem "$out"; then
+        printf 'skip-duplicate-from-migrate: %s\n' "$id"
+        return 0
+    fi
     {
         printf '%s\n' '---'
         printf '%s\n' 'schema_version: "1.0"'
@@ -203,6 +239,11 @@ emit_convention_mem() {
     local id
     id="$(stable_id "$source_path" "$signal_kind")"
     local out="$KNOWLEDGE_DIR/conventions/MEM-CONV-$id.md"
+    # FR-12 dup-prevention check (M033/P04/T03).
+    if is_migrate_derived_mem "$out"; then
+        printf 'skip-duplicate-from-migrate: %s\n' "$id"
+        return 0
+    fi
     {
         printf '%s\n' '---'
         printf '%s\n' 'schema_version: "1.0"'
@@ -227,6 +268,11 @@ emit_decision_mem() {
     local id
     id="$(stable_id "$source_path" "$signal_kind")"
     local out="$KNOWLEDGE_DIR/decisions/MEM-DEC-$id.md"
+    # FR-12 dup-prevention check (M033/P04/T03).
+    if is_migrate_derived_mem "$out"; then
+        printf 'skip-duplicate-from-migrate: %s\n' "$id"
+        return 0
+    fi
     {
         printf '%s\n' '---'
         printf '%s\n' 'schema_version: "1.0"'

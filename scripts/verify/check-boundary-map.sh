@@ -77,10 +77,17 @@ while IFS= read -r line; do
       # Extract items on the same line after "Produces:"
       items=$(echo "$line" | sed 's/.*Produces:[[:space:]]*//')
       if [[ -n "$items" && "$items" != "$line" ]]; then
-        # Strip parenthetical commentary so comma-inside-parens doesn't
-        # explode a single path-with-annotation into fragments. Same pattern
-        # read-roadmap.sh uses on Risk: and Depends: lines.
-        items=$(printf '%s' "$items" | sed 's/([^)]*)//g')
+        # Strip parenthetical commentary AND brace-glob expansions so
+        # comma-inside-parens or comma-inside-braces doesn't explode a
+        # single path-with-annotation into fragments. Same parenthetical
+        # pattern read-roadmap.sh uses on Risk: and Depends: lines; the
+        # brace-glob strip handles roadmap shapes like
+        # `install-{claude-code,codex,cursor}.sh` whose inner commas
+        # otherwise get tokenized as separate produce items. After stripping,
+        # the brace-glob residue collapses to e.g. `install-.sh` which fails
+        # the path-shape regex below and is silently skipped (correct: a
+        # brace-glob is not a single literal disk path).
+        items=$(printf '%s' "$items" | sed 's/([^)]*)//g; s/{[^}]*}//g')
         # Split comma-separated items
         IFS=',' read -ra ITEMS <<< "$items"
         for item in "${ITEMS[@]}"; do

@@ -116,7 +116,7 @@ TMP_POST="/tmp/wiki-nav-post-$$.yml"
 TMP_FINAL="/tmp/wiki-nav-final-$$.yml"
 TMP_IDS="/tmp/wiki-nav-ids-$$.list"
 TMP_PHASE="/tmp/wiki-nav-phase-$$.list"
-trap 'rm -f "$SCAN_OUT" "$NAV_BODY" "$TMP_PRE" "$TMP_POST" "$TMP_FINAL" "$TMP_IDS" "$TMP_PHASE" "/tmp/wiki-nav-titles-$$.tsv" /tmp/wiki-nav-kn-patterns-$$.list /tmp/wiki-nav-kn-conventions-$$.list /tmp/wiki-nav-kn-lessons-$$.list /tmp/wiki-nav-legacy-preserved-$$.yml /tmp/wiki-nav-no-legacy-$$.yml /tmp/wiki-nav-heal-$$.yml' EXIT INT TERM
+trap 'rm -f "$SCAN_OUT" "$NAV_BODY" "$TMP_PRE" "$TMP_POST" "$TMP_FINAL" "$TMP_IDS" "$TMP_PHASE" "/tmp/wiki-nav-titles-$$.tsv" /tmp/wiki-nav-kn-patterns-$$.list /tmp/wiki-nav-kn-conventions-$$.list /tmp/wiki-nav-kn-lessons-$$.list /tmp/wiki-nav-legacy-preserved-$$.yml /tmp/wiki-nav-no-legacy-$$.yml /tmp/wiki-nav-heal-$$.yml /tmp/wiki-nav-extra-dns-$$.list /tmp/wiki-nav-proposals-$$.list /tmp/wiki-nav-flat-$$.list /tmp/wiki-nav-extra-$$.list' EXIT INT TERM
 
 # ---- helpers ---------------------------------------------------------------
 
@@ -290,6 +290,13 @@ HAS_GLOSSARY=0
 HAS_DECISIONS=0
 HAS_KNOWLEDGE=0
 HAS_MILSUM=0
+HAS_PROPOSALS=0          # M032/P04/T01 FR-17
+HAS_KNOWLEDGE_FLAT=0     # M032/P04/T01 FR-19
+
+# Per-extra-dir presence is tracked via a /tmp accumulator because the dirname
+# slot is dynamic. Each line "extra:<dn>" appears once per distinct dirname.
+TMP_EXTRA_DNS="/tmp/wiki-nav-extra-dns-$$.list"
+: > "$TMP_EXTRA_DNS"
 
 # First pass: discover which top-level entries exist, and which milestone/archive
 # IDs appear (in first-seen order — scanner output is lexical). Write the
@@ -303,6 +310,12 @@ while IFS='|' read -r CAT REL TITLE; do
     top:decisions)         HAS_DECISIONS=1 ;;
     top:knowledge)         HAS_KNOWLEDGE=1 ;;
     top:milestone-summary) HAS_MILSUM=1 ;;
+    proposals:*)           HAS_PROPOSALS=1 ;;
+    knowledge-flat)        HAS_KNOWLEDGE_FLAT=1 ;;
+    extra:*)
+      _xdn=$(printf '%s' "$CAT" | sed 's/^extra://')
+      printf '%s\n' "$_xdn" >> "$TMP_EXTRA_DNS"
+      ;;
     milestone:*)
       _mid=$(printf '%s' "$CAT" | sed 's/^milestone://')
       printf 'M:%s\n' "$_mid" >> "$TMP_IDS"
@@ -389,6 +402,92 @@ fi
 
 if [ "$HAS_MILSUM" -eq 1 ]; then
   emit_leaf 1 "Milestone Summary" "milestone-summary.md"
+fi
+
+# ---- Proposals section (M032/P04/T01 FR-17) --------------------------------
+# Emitted after the existing top-level sections and before the milestones
+# section. Section index page (proposals/index.md) is auto-rendered by the
+# stub generator (see wiki-generate-stubs.sh case-arm). Entries sort by
+# proposals:<basename> ascending.
+if [ "$HAS_PROPOSALS" -eq 1 ]; then
+  emit_group 1 "Proposals"
+  emit_leaf 2 "Overview" "proposals/index.md"
+  TMP_PROP="/tmp/wiki-nav-proposals-$$.list"
+  awk -F'|' '
+    $1 ~ /^proposals:/ { print $1 "|" $2 "|" $3 }
+  ' "$SCAN_OUT" | sort > "$TMP_PROP"
+  while IFS='|' read -r PCAT PREL PTITLE; do
+    [ -n "$PREL" ] || continue
+    _pbase=${PCAT#proposals:}
+    _ppath="proposals/${_pbase}.md"
+    _plabel="$_pbase"
+    if [ -n "$PTITLE" ] && [ "$PTITLE" != "$_pbase" ]; then
+      _plabel="$PTITLE"
+    fi
+    emit_leaf 2 "$_plabel" "$_ppath"
+  done < "$TMP_PROP"
+  rm -f "$TMP_PROP"
+fi
+
+# ---- Extra-dirs sections (M032/P04/T01 FR-18) ------------------------------
+# One nav section per declared wiki.extra_dirs entry, labeled Title-Case(<dn>).
+# Sections emitted in declaration (= scanner emit-) order. Empty produces zero
+# sections (no false-positive). HAS_EXTRA_<dn> per-dir flag implicit via the
+# accumulator file's de-duped pass.
+if [ -s "$TMP_EXTRA_DNS" ]; then
+  # de-dup preserving first-seen order
+  TMP_EXTRA_DNS_UNIQ="${TMP_EXTRA_DNS}.uniq"
+  awk '!seen[$0]++ { print }' "$TMP_EXTRA_DNS" > "$TMP_EXTRA_DNS_UNIQ"
+  while IFS= read -r XDN; do
+    [ -n "$XDN" ] || continue
+    # Title-Case the dirname for the nav label.
+    _xfirst=$(printf '%s' "$XDN" | cut -c1 | tr 'a-z' 'A-Z')
+    _xrest=$(printf '%s' "$XDN" | cut -c2-)
+    _xlabel="${_xfirst}${_xrest}"
+    emit_group 1 "$_xlabel"
+    emit_leaf 2 "Overview" "${XDN}/index.md"
+    TMP_EX="/tmp/wiki-nav-extra-$$.list"
+    awk -F'|' -v c="extra:${XDN}" '
+      $1 == c { print $2 "|" $3 }
+    ' "$SCAN_OUT" | sort > "$TMP_EX"
+    while IFS='|' read -r XREL XTITLE; do
+      [ -n "$XREL" ] || continue
+      _xbase=$(basename "$XREL" .md)
+      _xpath="${XDN}/${_xbase}.md"
+      _xitemlabel="$_xbase"
+      if [ -n "$XTITLE" ] && [ "$XTITLE" != "$_xbase" ]; then
+        _xitemlabel="$XTITLE"
+      fi
+      emit_leaf 2 "$_xitemlabel" "$_xpath"
+    done < "$TMP_EX"
+    rm -f "$TMP_EX"
+  done < "$TMP_EXTRA_DNS_UNIQ"
+  rm -f "$TMP_EXTRA_DNS_UNIQ"
+fi
+
+# ---- Knowledge — Flat section (M032/P04/T01 FR-19) -------------------------
+# Sibling to the categorized Knowledge — Patterns/Conventions/Lessons
+# subgroups (which live under "Knowledge Entries"). Emitted only when the
+# scanner observed at least one knowledge-flat record (suppressed when zero).
+if [ "$HAS_KNOWLEDGE_FLAT" -eq 1 ]; then
+  emit_group 1 "Knowledge — Flat"
+  TMP_KFL="/tmp/wiki-nav-flat-$$.list"
+  awk -F'|' '
+    $1 == "knowledge-flat" { print $2 "|" $3 }
+  ' "$SCAN_OUT" | sort > "$TMP_KFL"
+  while IFS='|' read -r KFREL KFTITLE; do
+    [ -n "$KFREL" ] || continue
+    _kfbase=$(basename "$KFREL" .md)
+    # KFREL is "knowledge/<file>" relative to .orchestrator/. Stub lives at
+    # wiki/docs/knowledge/<file>.md, so the nav path mirrors KFREL.
+    _kfpath="$KFREL"
+    _kflabel="$_kfbase"
+    if [ -n "$KFTITLE" ] && [ "$KFTITLE" != "$_kfbase" ]; then
+      _kflabel="$KFTITLE"
+    fi
+    emit_leaf 2 "$_kflabel" "$_kfpath"
+  done < "$TMP_KFL"
+  rm -f "$TMP_KFL"
 fi
 
 # ---- Milestones group ------------------------------------------------------

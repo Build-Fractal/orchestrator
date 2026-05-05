@@ -28,7 +28,8 @@
 set -u
 
 ROOT=""
-INCLUDE_GLOSSARY=1   # default-on per M032/P02/T03 FR-15
+INCLUDE_GLOSSARY=1    # default-on per M032/P02/T03 FR-15
+INCLUDE_PROPOSALS=1   # default-on per M032/P04/T01 FR-17
 
 # ---- argument parsing -------------------------------------------------------
 while [ $# -gt 0 ]; do
@@ -56,6 +57,22 @@ while [ $# -gt 0 ]; do
       ;;
     --no-include-glossary)
       INCLUDE_GLOSSARY=0
+      shift
+      ;;
+    --include-proposals)
+      INCLUDE_PROPOSALS=1
+      shift
+      ;;
+    --include-proposals=true)
+      INCLUDE_PROPOSALS=1
+      shift
+      ;;
+    --include-proposals=false)
+      INCLUDE_PROPOSALS=0
+      shift
+      ;;
+    --no-include-proposals)
+      INCLUDE_PROPOSALS=0
       shift
       ;;
     --help|-h)
@@ -257,6 +274,228 @@ if [ -d "$ROOT/knowledge" ]; then
     done < "$_klist"
     rm -f "$_klist"
   done
+fi
+
+# ---- FR-17 (M032/P04/T01) — proposals enumeration --------------------------
+# Emits one record per .orchestrator/proposals/*.md entry (excluding README.md
+# via should_exclude). Title field is "<H1> [stage]" where <stage> derives from
+# the YAML frontmatter `stage:` field if present; otherwise [unknown] (US-7
+# AS-1, no exclusion). Default-on; opt out via --no-include-proposals or
+# --include-proposals=false.
+#
+# extract_proposal_stage <abs-path>
+# Prints stage value (stub|brief|specified|active|closed) or "unknown" if
+# either no frontmatter or no `stage:` field. Uses awk to scan the leading
+# YAML block delimited by `---` lines.
+extract_proposal_stage() {
+  _p="$1"
+  [ -f "$_p" ] || { printf 'unknown'; return 0; }
+  _s=$(awk '
+    BEGIN { state="pre"; out="" }
+    NR == 1 {
+      if ($0 == "---") { state="in"; next }
+      else { exit }
+    }
+    state == "in" {
+      if ($0 == "---") { exit }
+      # match: stage: value   (allow optional quotes/whitespace)
+      if ($0  ~ /^[[:space:]]*stage[[:space:]]*:[[:space:]]*/) {
+        v=$0
+        sub(/^[[:space:]]*stage[[:space:]]*:[[:space:]]*/, "", v)
+        sub(/^["'"'"']/, "", v)
+        sub(/["'"'"'][[:space:]]*$/, "", v)
+        sub(/[[:space:]]+$/, "", v)
+        out=v
+        exit
+      }
+    }
+    END {
+      if (out == "") { print "unknown" } else { print out }
+    }
+  ' "$_p" 2>/dev/null)
+  if [ -z "$_s" ]; then
+    _s="unknown"
+  fi
+  printf '%s' "$_s"
+}
+
+if [ "$INCLUDE_PROPOSALS" = "1" ] && [ -d "$ORCH/proposals" ]; then
+  _plist="/tmp/wiki-scan-proposals.$$"
+  find "$ORCH/proposals" -maxdepth 1 -type f -name '*.md' 2>/dev/null | LC_ALL=C sort > "$_plist"
+  while IFS= read -r _ppath; do
+    [ -n "$_ppath" ] || continue
+    _prel=${_ppath#"$ROOT/.orchestrator/"}
+    if should_exclude "$_prel"; then
+      continue
+    fi
+    _pbase=$(basename "$_ppath" .md)
+    _ptitle=$(extract_title "$_ppath")
+    _pstage=$(extract_proposal_stage "$_ppath")
+    printf '%s|%s|%s [%s]\n' "proposals:$_pbase" "$_prel" "$_ptitle" "$_pstage"
+    COUNT=$((COUNT + 1))
+  done < "$_plist"
+  rm -f "$_plist"
+fi
+
+# ---- FR-18 (M032/P04/T01) — wiki.extra_dirs enumeration --------------------
+# Reads <ROOT>/.orchestrator/config.yml for the wiki.extra_dirs: YAML list.
+# Inline form: `wiki: { extra_dirs: [specs/, decisions/] }` or
+#              `wiki.extra_dirs: [specs/, decisions/]`.
+# Block form:  `wiki:` then nested `extra_dirs:` list.
+# Empty/absent config produces zero records (no false-positive section).
+# For each declared path, walks it (find -type f -name '*.md' | LC_ALL=C sort)
+# and emits `extra:<dirname>|<rel>|<title>` records. <dirname> is the path
+# with trailing slash stripped and path separators replaced with `-`.
+parse_extra_dirs_inline() {
+  _cfg="$1"
+  # Look for `extra_dirs:` followed by `[...]` on the same line — covers both
+  # `wiki.extra_dirs:` and the nested `extra_dirs:` case after `wiki:`.
+  awk '
+    /^[[:space:]]*(wiki\.)?extra_dirs[[:space:]]*:[[:space:]]*\[/ {
+      sub(/^[^[]*\[/, "", $0)
+      sub(/\].*$/, "", $0)
+      gsub(/[[:space:]]/, "", $0)
+      n=split($0, a, ",")
+      for (i=1; i<=n; i++) {
+        v=a[i]
+        # strip optional surrounding quotes
+        sub(/^['"'"'"]/, "", v)
+        sub(/['"'"'"]$/, "", v)
+        if (v != "") print v
+      }
+      exit
+    }
+  ' "$_cfg"
+}
+
+parse_extra_dirs_block() {
+  _cfg="$1"
+  # Walk lines: when we see `wiki:` (no `[`), enter wiki-block; inside, when
+  # we see `extra_dirs:` (no `[`), enter list; collect leading `- value` lines
+  # at deeper indent until indent decreases or non-list line appears.
+  awk '
+    BEGIN { state="pre"; wiki_indent=-1; list_indent=-1 }
+    function indent_of(line) {
+      n=match(line, /[^[:space:]]/)
+      if (n == 0) return -1
+      return n - 1
+    }
+    {
+      ind=indent_of($0)
+      if (ind == -1) next
+      if (state == "pre") {
+        if ($0 ~ /^[[:space:]]*wiki[[:space:]]*:[[:space:]]*$/) {
+          state="wiki"; wiki_indent=ind; next
+        }
+        next
+      }
+      if (state == "wiki") {
+        if (ind <= wiki_indent) {
+          # Left wiki block.
+          if ($0 ~ /^[[:space:]]*wiki[[:space:]]*:[[:space:]]*$/) {
+            state="wiki"; wiki_indent=ind; next
+          }
+          state="pre"; next
+        }
+        if ($0 ~ /^[[:space:]]*extra_dirs[[:space:]]*:[[:space:]]*$/) {
+          state="list"; list_indent=ind; next
+        }
+        # inline-list form inside wiki block
+        if ($0 ~ /^[[:space:]]*extra_dirs[[:space:]]*:[[:space:]]*\[/) {
+          line=$0
+          sub(/^[^[]*\[/, "", line)
+          sub(/\].*$/, "", line)
+          gsub(/[[:space:]]/, "", line)
+          n=split(line, a, ",")
+          for (i=1; i<=n; i++) {
+            v=a[i]
+            sub(/^['"'"'"]/, "", v)
+            sub(/['"'"'"]$/, "", v)
+            if (v != "") print v
+          }
+          state="wiki"; next
+        }
+        next
+      }
+      if (state == "list") {
+        if (ind <= list_indent) {
+          # left list block
+          state="wiki"; list_indent=-1
+          # fall through to re-process
+        } else {
+          if ($0 ~ /^[[:space:]]*-[[:space:]]+/) {
+            v=$0
+            sub(/^[[:space:]]*-[[:space:]]+/, "", v)
+            sub(/[[:space:]]+$/, "", v)
+            sub(/^['"'"'"]/, "", v)
+            sub(/['"'"'"]$/, "", v)
+            if (v != "") print v
+          }
+          next
+        }
+      }
+    }
+  ' "$_cfg"
+}
+
+# scan_extra_dir <abs-dir> <dirname-record>
+# Emits extra:<dirname>|<rel-from-ROOT>|<title> records.
+scan_extra_dir() {
+  _abs="$1"
+  _dn="$2"
+  [ -d "$_abs" ] || return 0
+  _xlist="/tmp/wiki-scan-extra.$$"
+  find "$_abs" -type f -name '*.md' 2>/dev/null | LC_ALL=C sort > "$_xlist"
+  while IFS= read -r _xpath; do
+    [ -n "$_xpath" ] || continue
+    _xrel=${_xpath#"$ROOT/"}
+    _xtitle=$(extract_title "$_xpath")
+    printf '%s|%s|%s\n' "extra:$_dn" "$_xrel" "$_xtitle"
+    COUNT=$((COUNT + 1))
+  done < "$_xlist"
+  rm -f "$_xlist"
+}
+
+_cfgfile="$ORCH/config.yml"
+if [ -f "$_cfgfile" ]; then
+  _edlist="/tmp/wiki-scan-extra-dirs.$$"
+  : > "$_edlist"
+  parse_extra_dirs_inline "$_cfgfile" >> "$_edlist" 2>/dev/null || :
+  parse_extra_dirs_block  "$_cfgfile" >> "$_edlist" 2>/dev/null || :
+  while IFS= read -r _edentry; do
+    [ -n "$_edentry" ] || continue
+    # Compute dirname-record (path with trailing slash stripped + / -> -).
+    _ed_clean="$_edentry"
+    case "$_ed_clean" in
+      */) _ed_clean=${_ed_clean%/} ;;
+    esac
+    _ed_dn=$(printf '%s' "$_ed_clean" | tr '/' '-')
+    _ed_abs="$ROOT/$_ed_clean"
+    scan_extra_dir "$_ed_abs" "$_ed_dn"
+  done < "$_edlist"
+  rm -f "$_edlist"
+fi
+
+# ---- FR-19 (M032/P04/T01) — knowledge-flat enumeration ---------------------
+# Emits knowledge-flat|knowledge/<file>|<title> per FLAT *.md file under
+# .orchestrator/knowledge/ (no category subdir). The existing
+# knowledge:patterns|conventions|lessons emission above is unchanged.
+# `-maxdepth 1` keeps this strictly to flat files; subdirs (reference/,
+# patterns/, conventions/, lessons/) are out of scope for FR-19.
+if [ -d "$ORCH/knowledge" ]; then
+  _kflist="/tmp/wiki-scan-knowledge-flat.$$"
+  find "$ORCH/knowledge" -maxdepth 1 -type f -name '*.md' 2>/dev/null | LC_ALL=C sort > "$_kflist"
+  while IFS= read -r _kfpath; do
+    [ -n "$_kfpath" ] || continue
+    _kfrel="knowledge/$(basename "$_kfpath")"
+    if should_exclude "$_kfrel"; then
+      continue
+    fi
+    _kftitle=$(extract_title "$_kfpath")
+    printf '%s|%s|%s\n' "knowledge-flat" "$_kfrel" "$_kftitle"
+    COUNT=$((COUNT + 1))
+  done < "$_kflist"
+  rm -f "$_kflist"
 fi
 
 # ---- trailer ----------------------------------------------------------------

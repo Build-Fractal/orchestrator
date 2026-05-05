@@ -424,6 +424,56 @@ while IFS='|' read -r CAT REL TITLE; do
       ;;
   esac
 
+  # ---- proposals:* routing (M032/P04/T01 FR-17) ----------------------------
+  # proposals:<basename> records route to wiki/docs/proposals/<basename>.md.
+  # The canonical source lives at .orchestrator/proposals/<basename>.md, so we
+  # use build_canonical (which prepends .orchestrator/). REL is "proposals/<file>".
+  case "$CAT" in
+    proposals:*)
+      _pbase=${CAT#proposals:}
+      STUB_REL="proposals/${_pbase}.md"
+      STUB_ABS="$DOCS/$STUB_REL"
+      CANONICAL=$(build_canonical "$STUB_REL" "$REL")
+      CANONICAL_ABS="$ROOT/.orchestrator/$REL"
+      write_stub "$STUB_ABS" "$CANONICAL" "$TITLE" "$CANONICAL_ABS"
+      register_child "proposals" "${_pbase}.md" "$TITLE"
+      continue
+      ;;
+  esac
+
+  # ---- knowledge-flat routing (M032/P04/T01 FR-19) -------------------------
+  # knowledge-flat records route to wiki/docs/knowledge/<basename>.md.
+  # The canonical source lives at .orchestrator/knowledge/<basename>.md.
+  # REL is "knowledge/<file>" (relative to .orchestrator/).
+  case "$CAT" in
+    knowledge-flat)
+      _kfbase=$(basename "$REL" .md)
+      STUB_REL="knowledge/${_kfbase}.md"
+      STUB_ABS="$DOCS/$STUB_REL"
+      CANONICAL=$(build_canonical "$STUB_REL" "$REL")
+      CANONICAL_ABS="$ROOT/.orchestrator/$REL"
+      write_stub "$STUB_ABS" "$CANONICAL" "$TITLE" "$CANONICAL_ABS"
+      continue
+      ;;
+  esac
+
+  # ---- extra:* routing (M032/P04/T01 FR-18) --------------------------------
+  # extra:<dn> records route to wiki/docs/<dn>/<basename>.md. The canonical
+  # source lives at <repo-root>/<rel> (REL already carries the repo-root-
+  # relative path emitted by the scanner — e.g., specs/foo.md).
+  case "$CAT" in
+    extra:*)
+      _xdn=${CAT#extra:}
+      _xbase=$(basename "$REL" .md)
+      STUB_REL="${_xdn}/${_xbase}.md"
+      STUB_ABS="$DOCS/$STUB_REL"
+      CANONICAL=$(build_canonical_repo_rel "$STUB_REL" "$REL")
+      CANONICAL_ABS="$ROOT/$REL"
+      write_stub "$STUB_ABS" "$CANONICAL" "$TITLE" "$CANONICAL_ABS"
+      continue
+      ;;
+  esac
+
   STUB_REL=$(map_record_to_stub_rel "$CAT" "$REL")
   STUB_ABS="$DOCS/$STUB_REL"
   CANONICAL=$(build_canonical "$STUB_REL" "$REL")

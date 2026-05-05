@@ -89,19 +89,29 @@ if ! bash "$NAVGEN" --root "$ROOT" >/dev/null 2>&1; then
   exit 1
 fi
 
-# Locate the marker line.
-MARKER_LINE=$(grep -n '^# >>> M012-P01 nav' "$CONFIG" | head -1 | cut -d: -f1)
+# Locate the marker line. Recognize either the legacy M012-P01 marker shape
+# (pre-P03/T03) OR the new auto-nav marker shape (post-P03/T03 region split).
+# Per the in-flight repair convention from P03/T01 and P03/T02: when a
+# downstream task lands the surface a placeholder upstream check was guarding,
+# the same task amends the upstream check from deferred-state assertion to
+# live-surface assertion.
+MARKER_LINE=$(grep -n '^# >>> auto-nav' "$CONFIG" | head -1 | cut -d: -f1)
+MARKER_END_PAT='^# <<< auto-nav end'
 if [ -z "$MARKER_LINE" ]; then
-  echo "FAIL: '# >>> M012-P01 nav' marker not found in regenerated $CONFIG"
+  MARKER_LINE=$(grep -n '^# >>> M012-P01 nav' "$CONFIG" | head -1 | cut -d: -f1)
+  MARKER_END_PAT='^# <<< M012-P01 nav end'
+fi
+if [ -z "$MARKER_LINE" ]; then
+  echo "FAIL: neither '# >>> auto-nav' nor '# >>> M012-P01 nav' marker found in regenerated $CONFIG"
   exit 1
 fi
 
 # Extract the ordered list of top-level nav entries (lines starting with `^  - `
 # under the marker, in document order). Stop at the marker-end sentinel.
 ENTRIES_FILE="$TMP/entries.txt"
-awk -v start="$MARKER_LINE" '
+awk -v start="$MARKER_LINE" -v endpat="$MARKER_END_PAT" '
   NR > start {
-    if ($0 ~ /^# <<< M012-P01 nav end/) { exit }
+    if ($0 ~ endpat) { exit }
     if ($0 ~ /^  - /) { print NR ":" $0 }
   }
 ' "$CONFIG" > "$ENTRIES_FILE"

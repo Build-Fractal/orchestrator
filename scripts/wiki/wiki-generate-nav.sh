@@ -94,9 +94,19 @@ if [ ! -d "$DOCS" ]; then
   exit 2
 fi
 
-# ---- markers ---------------------------------------------------------------
-MARKER_START="# >>> M012-P01 nav (auto-generated — do not edit by hand)"
-MARKER_END="# <<< M012-P01 nav end"
+# ---- markers (FR-14 region split) ------------------------------------------
+# Two regions:
+#   auto-nav: regenerated on every invocation (Constitution, Decisions, etc.)
+#   custom-nav: preserved verbatim across regenerates (operator-owned)
+MARKER_AUTO_START="# >>> auto-nav (auto-generated — do not edit by hand)"
+MARKER_AUTO_END="# <<< auto-nav end"
+MARKER_CUSTOM_START="# >>> custom-nav"
+MARKER_CUSTOM_END="# <<< custom-nav end"
+
+# Legacy markers (M012/P01 baseline). On first regenerate against a legacy
+# block, migrate the markers in-place to the new shape per FR-14 / MIT-005.
+LEGACY_MARKER_START="# >>> M012-P01 nav (auto-generated — do not edit by hand)"
+LEGACY_MARKER_END="# <<< M012-P01 nav end"
 
 # ---- temp files / cleanup --------------------------------------------------
 SCAN_OUT="/tmp/wiki-nav-scan-$$.list"
@@ -106,7 +116,7 @@ TMP_POST="/tmp/wiki-nav-post-$$.yml"
 TMP_FINAL="/tmp/wiki-nav-final-$$.yml"
 TMP_IDS="/tmp/wiki-nav-ids-$$.list"
 TMP_PHASE="/tmp/wiki-nav-phase-$$.list"
-trap 'rm -f "$SCAN_OUT" "$NAV_BODY" "$TMP_PRE" "$TMP_POST" "$TMP_FINAL" "$TMP_IDS" "$TMP_PHASE" "/tmp/wiki-nav-titles-$$.tsv" /tmp/wiki-nav-kn-patterns-$$.list /tmp/wiki-nav-kn-conventions-$$.list /tmp/wiki-nav-kn-lessons-$$.list' EXIT INT TERM
+trap 'rm -f "$SCAN_OUT" "$NAV_BODY" "$TMP_PRE" "$TMP_POST" "$TMP_FINAL" "$TMP_IDS" "$TMP_PHASE" "/tmp/wiki-nav-titles-$$.tsv" /tmp/wiki-nav-kn-patterns-$$.list /tmp/wiki-nav-kn-conventions-$$.list /tmp/wiki-nav-kn-lessons-$$.list /tmp/wiki-nav-legacy-preserved-$$.yml /tmp/wiki-nav-no-legacy-$$.yml /tmp/wiki-nav-heal-$$.yml' EXIT INT TERM
 
 # ---- helpers ---------------------------------------------------------------
 
@@ -266,7 +276,7 @@ milestone_label() {
 # ---- assemble nav body -----------------------------------------------------
 : > "$NAV_BODY"
 
-printf '%s\n' "$MARKER_START" >> "$NAV_BODY"
+printf '%s\n' "$MARKER_AUTO_START" >> "$NAV_BODY"
 printf 'nav:\n' >> "$NAV_BODY"
 
 # Top-level fixed entries.
@@ -668,7 +678,7 @@ if [ "$HAS_ANY_ARCHIVE" -eq 1 ]; then
   done
 fi
 
-printf '%s\n' "$MARKER_END" >> "$NAV_BODY"
+printf '%s\n' "$MARKER_AUTO_END" >> "$NAV_BODY"
 
 # ---- dry-run short-circuit -------------------------------------------------
 if [ "$DRY_RUN" -eq 1 ]; then
@@ -676,24 +686,135 @@ if [ "$DRY_RUN" -eq 1 ]; then
   exit 0
 fi
 
-# ---- splice into wiki/mkdocs.yml via marker state machine ------------------
-# If the start marker is absent, append a synthetic pair at EOF so the splice
-# logic has something to replace. We use ensure-markers-then-splice so first
-# run and subsequent runs converge on the same file shape.
+# ---- ensure markers + migrate from legacy + preserve custom region --------
+# FR-14 + MIT-005 region split (T03).
+# Branches:
+#   (1) Brand-new mkdocs.yml — no auto-nav markers AND no legacy markers.
+#       Append both region pairs at EOF: auto-nav (will be filled by the
+#       splice that follows) + empty custom-nav region.
+#   (2) Already-migrated — auto-nav markers present.
+#       Preserve the existing custom-nav region (or self-heal an empty one
+#       per US-5 AS-3 if it has been deleted).
+#   (3) Legacy migration — legacy markers present, no auto-nav markers yet.
+#       (3a) Empty legacy content: rename markers in-place, append empty
+#            custom-nav block. Zero behavior change. No diagnostic.
+#       (3b) Non-empty legacy content (MIT-005): rename markers in-place,
+#            move non-empty content verbatim into a new custom-nav region.
+#            Emit stdout diagnostic naming the preserved-entry count.
 
-if ! grep -qF "$MARKER_START" "$CONFIG"; then
-  # Append markers with an empty block to make subsequent awk splitting clean.
-  {
-    printf '\n'
-    printf '%s\n' "$MARKER_START"
-    printf '%s\n' "$MARKER_END"
-  } >> "$CONFIG"
+HAS_AUTO_NAV=0
+HAS_LEGACY_NAV=0
+HAS_CUSTOM_NAV=0
+LEGACY_LINE_COUNT=0
+
+if grep -qF "$MARKER_AUTO_START" "$CONFIG"; then
+  HAS_AUTO_NAV=1
+fi
+if grep -qF "$LEGACY_MARKER_START" "$CONFIG"; then
+  HAS_LEGACY_NAV=1
+fi
+if grep -qF "$MARKER_CUSTOM_START" "$CONFIG"; then
+  HAS_CUSTOM_NAV=1
 fi
 
-# Split the existing config into pre-marker and post-marker halves. The
-# marker lines themselves are dropped here; the freshly assembled NAV_BODY
-# already includes both marker lines, so concat = pre + NAV_BODY + post.
-awk -v s="$MARKER_START" -v e="$MARKER_END" \
+# Helper: count non-blank, non-comment lines between two markers in $CONFIG.
+count_between_markers() {
+  _ms="$1"
+  _me="$2"
+  awk -v s="$_ms" -v e="$_me" '
+    BEGIN { state="pre"; n=0 }
+    {
+      if (state == "pre") { if ($0 == s) state="in"; next }
+      if (state == "in")  { if ($0 == e) { state="post"; next }
+                            if ($0 ~ /^[[:space:]]*$/) next
+                            if ($0 ~ /^[[:space:]]*#/) next
+                            n++; next }
+    }
+    END { print n }
+  ' "$CONFIG"
+}
+
+# Helper: extract content between two markers in $CONFIG to a temp file.
+# Strips the markers themselves; preserves all other lines verbatim.
+extract_between_markers() {
+  _ms="$1"
+  _me="$2"
+  _out="$3"
+  awk -v s="$_ms" -v e="$_me" -v out="$_out" '
+    BEGIN { state="pre" }
+    {
+      if (state == "pre") { if ($0 == s) state="in"; next }
+      if (state == "in")  { if ($0 == e) { state="post"; next }; print > out; next }
+    }
+  ' "$CONFIG"
+  [ -f "$_out" ] || : > "$_out"
+}
+
+# Branch dispatcher.
+LEGACY_PRESERVED=""  # path to temp file holding non-empty legacy content (set by branch 3b)
+if [ "$HAS_AUTO_NAV" -eq 0 ] && [ "$HAS_LEGACY_NAV" -eq 1 ]; then
+  # Branch 3 — legacy migration.
+  LEGACY_LINE_COUNT=$(count_between_markers "$LEGACY_MARKER_START" "$LEGACY_MARKER_END")
+  if [ "$LEGACY_LINE_COUNT" -gt 0 ]; then
+    # 3b: MIT-005 non-empty migration. Preserve content for the custom-nav region.
+    LEGACY_PRESERVED="/tmp/wiki-nav-legacy-preserved-$$.yml"
+    extract_between_markers "$LEGACY_MARKER_START" "$LEGACY_MARKER_END" "$LEGACY_PRESERVED"
+    printf 'Migrated %d custom nav entries from legacy markers to custom-nav region\n' "$LEGACY_LINE_COUNT"
+  fi
+  # Strip the legacy markers + any between-marker content from $CONFIG.
+  TMP_DELEG="/tmp/wiki-nav-no-legacy-$$.yml"
+  awk -v s="$LEGACY_MARKER_START" -v e="$LEGACY_MARKER_END" '
+    BEGIN { state="pre" }
+    {
+      if (state == "pre") { if ($0 == s) { state="in"; next }; print; next }
+      if (state == "in")  { if ($0 == e) { state="post"; next }; next }
+      print
+    }
+  ' "$CONFIG" > "$TMP_DELEG"
+  mv "$TMP_DELEG" "$CONFIG"
+  HAS_LEGACY_NAV=0
+fi
+
+if [ "$HAS_AUTO_NAV" -eq 0 ]; then
+  # Append the new auto-nav region pair at EOF (will be replaced by the
+  # splice that follows). Append the custom-nav region pair immediately after.
+  # If LEGACY_PRESERVED is set, use its content for the custom-nav region.
+  {
+    printf '\n'
+    printf '%s\n' "$MARKER_AUTO_START"
+    printf '%s\n' "$MARKER_AUTO_END"
+    printf '%s\n' "$MARKER_CUSTOM_START"
+    if [ -n "$LEGACY_PRESERVED" ] && [ -f "$LEGACY_PRESERVED" ]; then
+      cat "$LEGACY_PRESERVED"
+      rm -f "$LEGACY_PRESERVED"
+    fi
+    printf '%s\n' "$MARKER_CUSTOM_END"
+  } >> "$CONFIG"
+  HAS_AUTO_NAV=1
+  HAS_CUSTOM_NAV=1
+fi
+
+# Branch 2: AS-3 self-healing — auto-nav exists but custom-nav does not.
+if [ "$HAS_AUTO_NAV" -eq 1 ] && [ "$HAS_CUSTOM_NAV" -eq 0 ]; then
+  # Insert empty custom-nav region immediately after MARKER_AUTO_END.
+  TMP_HEAL="/tmp/wiki-nav-heal-$$.yml"
+  awk -v e="$MARKER_AUTO_END" -v cs="$MARKER_CUSTOM_START" -v ce="$MARKER_CUSTOM_END" '
+    {
+      print
+      if ($0 == e) {
+        print cs
+        print ce
+      }
+    }
+  ' "$CONFIG" > "$TMP_HEAL"
+  mv "$TMP_HEAL" "$CONFIG"
+  HAS_CUSTOM_NAV=1
+fi
+
+# Splice: replace content between MARKER_AUTO_START and MARKER_AUTO_END with
+# the freshly-rendered NAV_BODY (which itself begins with MARKER_AUTO_START and
+# ends with MARKER_AUTO_END). Same awk-split-concat pattern as the legacy splice.
+awk -v s="$MARKER_AUTO_START" -v e="$MARKER_AUTO_END" \
     -v pre="$TMP_PRE" -v post="$TMP_POST" '
   BEGIN { state = "pre" }
   {

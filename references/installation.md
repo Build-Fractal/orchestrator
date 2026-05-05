@@ -324,3 +324,68 @@ bash -n scripts/state/derive-phase.sh && echo "derive-phase.sh OK"
 # Check that read-config.sh works
 bash scripts/state/read-config.sh default_tier && echo "read-config.sh OK"
 ```
+
+## `--with-<feature>` Progressive Opt-In Flag Pattern
+
+The orchestrator's installer commands honor a project-wide convention for
+progressive-opt-in feature flags shaped as `--with-<feature>`. Each flag
+follows three invariants:
+
+- **Default-off** — the consumer never receives the feature surface unless
+  they explicitly request it. This is Constitution I (Context Minimization)
+  applied to the consumer-facing install surface: extra capability is an
+  operator decision, not an installer default.
+- **Independently composable** — every `--with-` flag is order-invariant
+  and stateless with respect to every other `--with-` flag. Presence of
+  one flag does not change the semantics of another. Composition is
+  defined by the per-flag contract, not by flag-presence interactions.
+- **Opt-in is reversible** — every `--with-<feature>` flag has a documented
+  reversibility path (the inverse of the feature surface) that operators
+  can run after the fact. Feature surfaces that cannot be cleanly removed
+  do not qualify for the `--with-` pattern; they require a new gating
+  primitive.
+
+### Canonical M032 prior art (FR-13)
+
+The first three flags landing under this pattern are M032's wiki tooling
+trio:
+
+- `--with-wiki` (FR-11) — installs `wiki/` tooling alongside the default
+  `init` surface. Composes with `init`'s default flag set; reversibility
+  is `rm -rf <project>/wiki/` plus removal of the corresponding
+  `installed-files.txt` entries.
+- `--with-giscus --repo <owner>/<repo> --category <name>` (FR-8) —
+  configures Giscus comments against the consumer's own GitHub Discussions.
+  Composes with `--with-wiki`; reversibility is re-running `--with-giscus`
+  against a different repo/category, or manually editing the partial.
+- `--deploy [--force-pages-reconfigure]` (FR-9 / MIT-007) — first GH Pages
+  push. Composes with `--with-wiki --with-giscus`; reversibility is
+  `gh repo edit --enable-pages=false` plus deleting the `gh-pages` branch.
+  The `--force-pages-reconfigure` opt-in inside this flag handles the
+  case where Pages was already configured for a different source on the
+  consumer's repo (MIT-007 read-before-write Pages guard).
+
+### Future flags (forward-compatibility commitments)
+
+The `--with-` pattern is the documented precedent for future feature
+surfaces. Anticipated additions:
+
+- `--with-github-integration` (M013/M014 progressive opt-in fold-in) —
+  enables GitHub-native sidecar tooling (issues/PRs/discussions adapter
+  shim).
+- `--with-design-layer` (M023, post-launch) — installs the design-layer
+  fan-out tooling (`orchestrator:design` and the renderer adapter tree).
+
+Each future flag will inherit the three invariants above. Adding a new
+`--with-<feature>` flag requires (a) explicit documentation in this
+section, (b) integration tests asserting the flag composes cleanly with
+every existing `--with-` flag, and (c) a documented reversibility path.
+
+### See also
+
+- `commands/wiki-init.md` — the canonical `--with-wiki` / `--with-giscus`
+  / `--deploy` flag-chain command surface.
+- `tests/m032-acceptance/throwaway-fixture-protocol.md` — the live-deploy
+  test discipline (`--deploy` is the highest-blast-radius `--with-` flag
+  in M032; CON-5 mandates live-fixture testing rather than synthetic
+  stubs).

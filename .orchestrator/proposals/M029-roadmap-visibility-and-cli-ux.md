@@ -173,6 +173,52 @@ Captured 2026-04-30 during a sweep of `mattpocock/skills` (MIT). The skill `zoom
 
 `zoom-out` shipped ahead of M029 as a low-risk standalone utility — it's read-only, has no state contract, and consumes the knowledge graph + the M032 Finding K glossary if present. M029 doesn't need to revisit it; just be aware that M029's headline output (§ Render shape) and `zoom-out`'s output should use the *same* domain vocabulary so users moving between the two commands don't context-switch terminology. The shared anchor is the project glossary at `wiki/glossary.md` (M032 Finding K).
 
+## Adopted external pattern: `--auto-chain` flag (added 2026-05-04)
+
+**Source**: GSD v2.79 commit `4eb53e9` (`/gsd new-project --deep`). Discovered during the 2026-05-04 GSD-2 adoption scan (`gsd-2-adoption-scan-2026-05-04.md` §2). Folded into M029 because it's a UX-on-top-of-existing-commands shape — same lane as `orchestrator:where`.
+
+GSD ships a single command that auto-chains the project-discovery flow with explicit user gates between stages. Our equivalent multi-step chain (`evaluate → discuss → roadmap → plan-phase`) currently requires the user to invoke each stage by name. M029 SHOULD add an `--auto-chain` flag (or `--deep`) to `orchestrator:start` (or `orchestrator:do`) that:
+
+- After detecting a Tier C greenfield project, auto-chains `evaluate → discuss → roadmap → plan-phase` end-to-end with explicit user gates between stages
+- Preserves the grilling-protocol discipline (CON-5 sequential-not-batched, recommendation-not-interrogation)
+- Reuses M033/P02's marker-file convention (`.orchestrator/start-state/<stage>.complete`) so interruption resumes from the last completed stage
+- Is OFF by default — opt-in via flag, never automatic
+
+**Effort estimate**: small wrapper shell script orchestrating existing commands with gate prompts; ~1 day's planner-task-breakdown shape.
+
+**Why fold into M029** (rather than ship as a standalone post-M033 paper-cut): M029 is touching CLI UX surfaces anyway (`orchestrator:where` headline + invocation-context resolver). Adding `--auto-chain` here keeps the start-time UX work in one milestone instead of two. M029's `orchestrator:specify` step should treat this as a discrete FR (e.g., FR-N: `--auto-chain` flag with stage-gate marker convention).
+
+## Scope tightening — wiki-is-the-view (added 2026-05-05)
+
+Captured at the M032 close → M029 entry handoff. Today is 2026-05-05; M032 closed earlier this session, M033 closed pending the friendly-tester pass (US-8 AS-5 fallback active until ≤ 2026-05-12). Decision before opening `orchestrator:specify` on M029:
+
+**The launch project-management surface is the wiki, not GitHub.**
+
+Out of the box, M032 ships: roadmap projection, phase-summary projection, decisions register, knowledge graph, glossary, proposals nav, knowledge-flat nav, custom-nav region for operator additions, and Giscus comments under any page. That *is* the launch visualization layer for the 2026-05-15 PBJ pilot. M013 (GitHub Issues / Milestones / Projects v2 sync) is already opt-in and reversible — it stays available, but it's not the primary viewing surface and won't be deepened pre-launch.
+
+Concrete scope cuts for M029 vs. the v1 brief above:
+
+- **Drop the `GitHub: …` line from the `where` tree headline.** The v1 sample render (above, § Render shape) shows a `GitHub: orchestrator-tracking#142 (Issue) | Project board: "In progress"` line read from `.orchestrator/integrations/github.json`. Cut it for v1. The M013 sidecar stays readable by `orchestrator:github-status` and `orchestrator:github-sync` — those skills don't change. The launch tree just doesn't surface a GitHub fold-in.
+- **`--refresh-github` flag is also out** for v1. Drop it from the P03 deliverable list. The orchestrator is not in the GitHub-sync-on-render business pre-launch.
+- **No deeper GitHub Projects v2 / Issues / dashboard surface area.** This was already implicit in the original "Strict non-goals" section but is now explicit: any deeper GitHub UX work waits for real-user demand-signal post-launch.
+
+Where this work goes if a user asks for it post-launch: the `external-tool-adapters` track in `.orchestrator/proposals/post-launch-wiki-ux-and-adapters.md`. GitHub Projects, Trello, Notion, Linear are all the same shape — pluggable adapters that read orchestrator state and project to whichever tool the consumer's team already uses. The orchestrator stays the source of truth; the renderers are pluggable. That's the right shape and it's strictly post-launch.
+
+Headline-block content stays as the original recommendation in OQ5 below (milestone ID + name, phase index, % complete, lock status, last-dispatch recency, last-verify result, embedded `efficiency-footer.sh` line). Just drop the GitHub line from the v1 sample.
+
+**Why this tightening pays off**: M035 (packaging & distribution) is launch readiness, not launch polish. Every day spent deepening GitHub UX pre-launch is a day not spent on M035 P02–P06 (npm + homebrew + curl-pipe-bash publishing pipelines). The wiki+Giscus surface is sufficient to validate the launch first-impression with the friendly-tester pass; if that pass surfaces "I need GitHub Projects sync to evaluate this," that's a real demand signal that justifies the milestone. Speculatively building it now serves an audience that doesn't exist.
+
+### Open-question resolutions (2026-05-05)
+
+Recorded here so `orchestrator:specify` doesn't re-litigate them:
+
+- **OQ1 — Skill name**: `orchestrator:where`. Matches user mental model.
+- **OQ2 — Live-tail mechanism**: poll via `tail -f` over JSONL. POSIX-portable across Mac/Linux/WSL with zero extra deps. JSONL append cadence is bursty in seconds; polling overhead is invisible. `inotify`/`fswatch` adds platform branching for no perceptible latency win.
+- **OQ3 — GitHub refresh**: never auto-refresh, and `--refresh-github` is cut entirely for v1 per the scope tightening above. The launch posture is `where` reads disk only.
+- **OQ4 — Roadmap grouping**: cross-milestone is the target render. When a feature spans multiple milestones (e.g. 030-context-compression-layer might cover M018 + future M0XX), `where` should show the full feature view and let the user spot the active milestone within it. Specify's job: define the rollup shape so cross-milestone aggregation reads cleanly without overloading the at-a-glance view.
+- **OQ5 — Headline block content**: hold the original recommendation — milestone ID + name, current phase index, % complete, lock status, last-dispatch recency, last-verify result, plus the `efficiency-footer.sh` line embedded verbatim. Discipline: headline = "is this on track?", status = "what specifically is going on?". Anything more leaks from `status`'s job.
+- **OQ6 — Compression-savings threshold**: keep static at 5% per the original recommendation. Configurability adds complexity for marginal value; M027's `anomaly_cost_multiplier` knob convention is available if a knob ever gets requested.
+
 ## Out of scope
 
 - A "live dashboard" or web UI — terminal-only.
@@ -180,6 +226,7 @@ Captured 2026-04-30 during a sweep of `mattpocock/skills` (MIT). The skill `zoom
 - Any change to the `orchestrator:auto` loop logic itself — M027 only *reads* what auto already emits.
 - Replacing `orchestrator:status` — `where` is the tree view, `status` is the flat-section view. Both keep their roles.
 - Implementing a Rich/TUI library binding — bash + ANSI is sufficient; pulling in a TUI dep adds runtime cost we don't need.
+- **GitHub fold-in in `where` headline / `--refresh-github` flag / any deeper GitHub Projects v2 surface area** (per § Scope tightening 2026-05-05 above). Demand-driven post-launch via `external-tool-adapters` track.
 
 ## Open questions for `orchestrator:specify`
 

@@ -15,8 +15,10 @@ title: "M032 — Wiki Distribution + Init Integration"
 
 ## Contents
 
+- [continue](continue.md)
 - [M032-CONTEXT](M032-CONTEXT.md)
 - [M032 Evaluation](M032-EVALUATION.md)
 - [M032-ROADMAP](M032-ROADMAP.md)
 - [P01](phases/P01/index.md)
 - [P02](phases/P02/index.md)
+- [P03](phases/P03/index.md)

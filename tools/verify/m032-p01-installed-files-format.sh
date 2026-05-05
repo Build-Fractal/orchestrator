@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # tools/verify/m032-p01-installed-files-format.sh -- M032 P01 T04 (supersedes T01).
 #
+# Verifies FR-4 (installed-files.txt per-asset mode tracking).
+#
 # Actually-asserting-format-on-disk verifier (replaces T01's documentation-only
 # stub). Stages the fresh-project fixture into mktemp -d, runs
 # install-claude-code.sh, then reads <fixture>/.orchestrator/installed-files.txt

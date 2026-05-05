@@ -1,0 +1,40 @@
+## P03 — Wiki Composition Layer (Giscus + Deploy + Custom Nav + FR-13 Doc + Phase Close)
+
+P03 closes the M032 wiki composition layer. Five tasks shipped end-to-end, each verified and committed atomically; the phase-suite aggregator (10/10 PASS) and SC-13 scope-guard (4/4 PASS, 0 denylist hits) gate the phase close.
+
+### What was built
+
+- **T01 (FR-7 + FR-8 + SC-4)** — Giscus partial templating + `--with-giscus` scope on `wiki-init.sh`. Dual-template interpolation (mkdocs.yml extras block + `wiki/overrides/partials/comments.html`). `<TOOL>_<HELPER>_STUB=<1|fail>` failure-injection envelope established as the canonical P03+ shape.
+- **T02 (FR-9 + FR-10 + MIT-007 + MIT-008)** — `--deploy` scope on `wiki-init.sh` (four-step ordered remote-state mutation: `gh api PATCH discussions=true` → `wiki-deploy.sh` → MIT-007 read-before-write Pages guard → `gh api PUT /pages`). FR-10 cwd-vs-`repo_url` gate-0 sanity check on `wiki-deploy.sh` (Finding J counter-pattern). Structured wiki-deploy-mutation JSONL audit-trail BEFORE side-effect-print (Constitution VI applied to remote-state mutations). `--force-pages-reconfigure` escape hatch. `M032_DEPLOY_GH_API_STUB[_DIR]` + `M032_WIKI_DEPLOY_BYPASS_CWD_GATE` test envelopes per M026/MEM030.
+- **T03 (FR-14 + MIT-005 + SC-6)** — Region split on `scripts/wiki/wiki-generate-nav.sh`: `# >>> auto-nav` regenerated wholly; `# >>> custom-nav` preserved verbatim across regenerates; legacy `# >>> M012-P01 nav` markers recognized only for one-time migration. Four-branch migration dispatcher (US-5 AS-2 empty-legacy + MIT-005 non-empty-legacy + AS-3 self-healing). Self-application against orchestrator-local `wiki/mkdocs.yml` (legacy markers migrated, fresh auto-nav populated by splice via 27 milestones, idempotent on second run).
+- **T04 (FR-13 + AD-7/CON-5 + SC-5)** — FR-13 progressive-opt-in `--with-<feature>` flag-pattern documentation appended to `references/installation.md` (default-off + independently composable + reversibility invariants + Constitution I rationale + `--with-wiki`/`--with-giscus`/`--deploy` named as canonical M032 prior art + future-flag commitments for `--with-github-integration` and `--with-design-layer`). AD-7/CON-5 throwaway-fixture-protocol document (`tests/m032-acceptance/throwaway-fixture-protocol.md`) with timestamp-prefix naming, `gh repo create --private --add-readme` creation contract, trap-EXIT teardown contract, four no-orphan-state invariants, and recovery-on-partial-failure runbook. SC-5 live-deploy acceptance with three-category exit semantics (0/77/non-zero per MIT-001).
+- **T05 (phase-suite + SC-13 + baseline-ref)** — `tools/verify/m032-p03-phase-suite.sh` straight-line aggregator chaining all ten P03 sub-gates per AD-19 single-script-file shape (10/10 PASS). `tools/verify/m032-p03-scope-guard.sh` SC-13 scope-guard with regex-allowlist (P03-owned paths) + regex-denylist (P00/P01/P02-owned paths) + first-run baseline-ref capture mirroring P01/P02 convention. `tools/verify/fixtures/m032-p03-baseline-ref.txt` baseline at HEAD `a5f90e64` (T04 close commit) per the committed-history-only diff lesson from P01.
+
+### Key decisions
+
+FR-7, FR-8, FR-9, FR-10, FR-13, FR-14, FR-21, MIT-001, MIT-005, MIT-007, MIT-008, AD-7, AD-19, CON-3, CON-5, CON-6, US-3-AS-3, US-5, SC-4, SC-5, SC-6, SC-13, Finding-I, Finding-J, MEM001, MEM013, MEM030, M026.
+
+### Patterns established
+
+- **In-flight repair convention (extended)** — Verifier-contract drift caused by sibling-phase task landings repaired in the same task that surfaces it; cheaper than separate hardening tasks or phase-boundary catch-up. Applied to P01 verifiers (T03 in-flight repair to `m032-p02-glossary-scanner-and-nav.sh`) and P02 verifier check 11 (T02 in-flight repair). Established P03/T01, extended T02/T03/T05.
+- **`<TOOL>_<HELPER>_STUB=<1|fail>` envelope** — canonical failure-injection seam per M026/MEM030, used by T01 (GISCUS) and T02 (`M032_DEPLOY_GH_API_STUB`).
+- **Verifier-contract-over-verifier-skeleton** — When plan-stated expectation conflicts with on-disk reality (T03's "empty legacy content" vs ~2200-line auto-generated block; T05's `git status --porcelain` vs `git diff --name-only baseline_ref HEAD`), ship the contract by manually preparing inputs the contract expects or by adopting the surrounding-phase pattern that survives dogfood-loop noise.
+- **Four-step ordered remote-state mutation with read-before-write guard + structured JSONL audit-trail BEFORE side-effect-print** — Constitution VI applied to remote-state mutations (T02).
+- **Two-region marker split (auto-* regenerated wholly; custom-* preserved verbatim) + one-time legacy migration with mandatory diagnostic on non-empty content** — silent migration is precisely the failure mode MIT-005 was authored to prevent (T03).
+- **Three-category exit semantics for live-network acceptance (0=pass / 77=POSIX-skip / non-zero=fail)** — distinguishes test-environment-not-ready from test-failed; lets battery aggregators report `pass=N skip=M fail=K` rather than collapsing skip into pass (T04).
+- **Trap-EXIT cleanup pattern + explicit-cleanup-then-trap-disarm** — `cleanup()` with `set +e` + `2>/dev/null` + `|| true` so trap firing on script failure-path never propagates a secondary failure that masks the primary; explicit `cleanup() && trap - EXIT INT TERM` before post-teardown invariant checks so the invariant-verification phase is hermetic from any second trap firing (T04).
+- **Progressive-opt-in `--with-<feature>` convention codified at `references/installation.md`** — three invariants (default-off + independently composable + reversibility) + future-flag commitments documented up front so M013/M014 fold-in (M035 era) and M023 design-layer (post-launch) inherit the contract (T04).
+- **Deferred-cleanup-recovery escape hatch** — when `gh repo delete` silently fails inside trap due to `delete_repo` scope absence on the token, operator runs `gh auth refresh -h github.com -s delete_repo && gh repo delete <owner>/<ts>-m032-fixture --yes` manually (T04).
+- **First-run-captures-HEAD-as-baseline + regex-allowlist + regex-denylist twin-check** — single-pass `git diff` iteration; each diff path checked against `ALLOWED_RE` for in-scope-membership and against `DENIED_RE` for SC-13 violation surface; thin-aggregator phase-suite chains existing verifiers without adding new logic, matching M030/M031/M032 P00-P02 phase-suite-aggregator pattern (T05).
+
+### Verification results
+
+- **Phase-suite aggregator** (`tools/verify/m032-p03-phase-suite.sh`): **10/10 PASS** (FR-7 + FR-8 + FR-9 + FR-10 + FR-14 + FR-13 + AD-7 + SC-4 + SC-5 + SC-6).
+- **SC-13 scope-guard** (`tools/verify/m032-p03-scope-guard.sh`): **4/4 PASS**, `in_scope=4 denylist_hits=0` (T05 commits within P03 allowlist; no P00/P01/P02 denylist hits).
+- **Baseline-ref captured** at HEAD `a5f90e64` (T04 close commit).
+- **Sibling-phase regression check**: P02 phase-suite remains 12/12 PASS post-T03 in-flight repair to `m032-p02-glossary-scanner-and-nav.sh`. P01 phase-suite known-pre-existing failures (`m032-p01-install-cc-byte-identical.sh`, `m032-p01-installers-parity.sh`, `m032-p01-acceptance-shape-sc1.sh`) are NOT P03-caused — verified via stash compare in T03 dispatch.
+
+### Operator follow-ups (out-of-scope, surfaced during P03)
+
+- **Sibling-phase ship-shape gap**: `wiki-init.sh` rejects `--with-wiki` as unknown argument (T01/T02 implementation surface). Surfaced in T04 SC-5 live branch but does not block P03 close (T04's three required verifiers are green; T05's verifiers do not exercise the live `--with-wiki` flag path). Will need a P04 in-flight repair or carry-forward fix before SC-5's live branch can pass end-to-end against a real PBJ test environment.
+- **Leaked GitHub fixture**: `bkellgren/1777950218-m032-fixture` created during T04 SC-5 dry-run; trap cleanup failed silently because the auth token lacks `delete_repo` scope. Operator action: `gh auth refresh -h github.com -s delete_repo && gh repo delete bkellgren/1777950218-m032-fixture --yes` (per the documented recovery runbook in `tests/m032-acceptance/throwaway-fixture-protocol.md`).

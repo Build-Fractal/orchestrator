@@ -10,7 +10,10 @@
 # Strategy: stage the committed fresh-project fixture into a `mktemp -d` dir,
 # bootstrap a `.git/` via `git init`, run the claude-code installer twice with
 # HOME pinned to a tempdir (so $HOME/.claude/ writes do not leak), then sha256
-# the four runtime-dir file-trees on each run and compare.
+# the four runtime-dir file-trees on each run and compare. Idempotency check
+# uses `cmp -s` for byte-equality (cheaper than `diff -r` and sufficient when
+# both trees are sha256-identical; a `diff -r` walk is the fallback when cmp
+# reports drift and a per-file delta is needed).
 #
 # Output:
 #   RESULT: ok p01-managed-bundle-shape.sh

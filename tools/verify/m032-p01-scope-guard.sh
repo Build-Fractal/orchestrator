@@ -80,51 +80,21 @@ FORBIDDEN_PATTERNS='^wiki/
 ^\.orchestrator/proposals/.*\.md$
 '
 
-# Collect the working-tree-vs-baseline tracked diff. This covers BOTH
-# committed-on-top-of-baseline AND unstaged/staged working-tree changes
-# against the baseline -- the union that captures all of T01..T04's
-# tracked modifications regardless of commit status.
+# Collect the committed-history diff between baseline and HEAD. The
+# scope-guard's invariant is "the commits that ship P01 don't touch
+# out-of-scope paths" -- working-tree dirt (uncommitted operator notes,
+# untracked drafts, half-staged WIP) is operator state, not P01's diff.
+# Comparing committed history is the semantic match: ambient working-
+# tree edits do not pollute the signal, and post-baseline commits that
+# legitimately ship P01 deliverables are exactly what's checked.
 #
-# We deliberately do NOT consider untracked files (`?? ` lines from
-# `git status --porcelain`). Pre-existing untracked operator artifacts
-# (e.g. proposals or notes that pre-date T01) are not P01's diff
-# concern; the scope-guard flags out-of-scope CHANGES, not pre-existing
-# working-tree noise. T04's new files (fixture, acceptance scripts,
-# verifiers) are tracked through `git add` semantics; if the operator
-# adds them to the index BEFORE running this verifier they appear in
-# the tracked diff. If they are not yet `git add`-ed, the working-tree
-# diff above captures them via the `--diff-filter` machinery only
-# partially -- so the verifier ALSO walks `git ls-files --others
-# --exclude-standard` filtered by the in-scope known-T04 directories
-# whitelist.
-diff_paths=$( git -C "$PROJECT_ROOT" diff --name-only "$baseline_ref" 2>/dev/null )
+# Earlier shape compared working-tree-vs-baseline (`git diff $baseline_ref`)
+# plus an `ls-files --others` walk for untracked files. That conflated
+# "P01 didn't touch X" with "the operator has nothing else pending in
+# the tree." Replaced 2026-05-04 during M032/P01 re-verification.
+diff_paths=$( git -C "$PROJECT_ROOT" diff --name-only "$baseline_ref" HEAD 2>/dev/null )
 
-# Whitelist of directories that T01..T04 are EXPECTED to introduce new
-# files under. Untracked paths NOT under one of these prefixes are
-# treated as pre-existing operator noise and ignored by the scope-guard.
-# Untracked paths UNDER one of these prefixes are added to the diff
-# set so we can intersect them with the forbidden patterns.
-T04_NEW_PATH_PREFIXES='^tools/verify/m032-
-^tools/verify/fixtures/m032-
-^tests/fixtures/m032-fresh-project-fixture/
-^tests/m032-acceptance/
-^scripts/lifecycle/(install-asset-mode|install-collision-check|read-project-assets)\.sh$
-^\.orchestrator/milestones/M032/
-'
-
-untracked_in_scope=""
-while IFS= read -r u; do
-    [ -z "$u" ] && continue
-    for pre in $T04_NEW_PATH_PREFIXES; do
-        if printf '%s\n' "$u" | grep -qE "$pre"; then
-            untracked_in_scope="${untracked_in_scope}${u}
-"
-            break
-        fi
-    done
-done < <( git -C "$PROJECT_ROOT" ls-files --others --exclude-standard )
-
-all_paths=$( printf '%s\n%s\n' "$diff_paths" "$untracked_in_scope" | sort -u | grep -v '^$' )
+all_paths=$( printf '%s\n' "$diff_paths" | sort -u | grep -v '^$' )
 
 violation_count=0
 violation_log="${TMPDIR:-/tmp}/m032-p01-scope-guard-violations-$$.log"

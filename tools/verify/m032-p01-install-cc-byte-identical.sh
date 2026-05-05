@@ -11,7 +11,9 @@
 #      templates/).
 #   6. Post-migration `--dry-run` produces a `would_write=` set whose per-dir
 #      counts equal the golden's per-dir counts (CON-4 byte-identical at
-#      mode: copy).
+#      mode: copy). This is a count-comparison gate, not a literal `diff` of
+#      the file trees — the count check catches drift cheaply; a full file-
+#      tree `diff -r` would be the deeper check if drift is suspected.
 #
 # Bash 3.2 compatible.
 

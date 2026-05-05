@@ -162,6 +162,12 @@ Total ~1 day of work instead of a 5-phase milestone. P01 is the gating data.
 
 **Slot recommendation** (per `.orchestrator/proposals/README.md`): after M014 (extended), before M020.
 
+## Post-close follow-ups identified after milestone shipped
+
+(Added 2026-05-04. M028 closed 2026-04-29. These follow-ups did not exist when M028 was scoped; if a future autonomous-hardening milestone (M028 v4 / similar) is opened, these are pre-identified inputs.)
+
+- **Lease-based locks for `orchestrator:auto`** — adopted from GSD v2.79+v2.80 DB-authoritative migration (the *lease* pattern, not the DB migration itself; Principle VI conflict precludes the latter). Replace file-based `auto.lock` with `.orchestrator/locks/auto.lease` carrying `{owner_pid, owner_started_at, heartbeat_ts, ttl_seconds}`. Heartbeat update every N seconds. Lock acquisition: read TTL → if `now - heartbeat_ts > ttl + grace`, claim is stale → break-and-claim (with recovery briefing per `orchestrator:resume`). Replaces existing stale-lock detection in `orchestrator:resume`. Source: `gsd-2-adoption-scan-2026-05-04.md` §6. Effort: ~1–2 days. Captured here (not in a separate proposal) because it's natural autonomous-hardening territory and the closed M028 brief is the right archaeological pointer when the next hardening milestone plans.
+
 ## Out of scope
 
 - Re-opening M021's matrix (10-pattern set is stable; M026 *adds*, doesn't revise).

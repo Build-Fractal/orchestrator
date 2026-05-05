@@ -75,6 +75,12 @@ while [ $# -gt 0 ]; do
       fi
       GISCUS_CATEGORY_FLAG="$1"; shift ;;
     --category=*) GISCUS_CATEGORY_FLAG="${1#--category=}"; shift ;;
+    --with-wiki) shift ;;  # M032/P04/T02 in-flight repair: --with-wiki is consumed
+                           # by init-project.sh's FR-11 passthrough; wiki-init.sh
+                           # itself IS the wiki-init step, so the flag is structurally
+                           # redundant here but accepted for FR-11 passthrough symmetry.
+                           # Surfaced in P03/T04 SC-5 dry-run; documented in
+                           # P03-SUMMARY.md operator follow-ups.
     *) echo "FAIL: wiki-init: unknown argument '$1'" >&2; exit 2 ;;
   esac
 done

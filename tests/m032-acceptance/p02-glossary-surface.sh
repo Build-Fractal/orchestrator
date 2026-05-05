@@ -38,8 +38,8 @@ grep -q '^top:glossary|wiki/glossary.md' "$TMP/sources.txt" || {
 # inspect the existing wiki/mkdocs.yml (already templated by the nav generator
 # on prior runs) and assert the line FOLLOWING the Constitution entry contains
 # "Glossary".
-MARKER_LINE="$(grep -n '^# >>> M012-P01 nav' wiki/mkdocs.yml | head -1 | cut -d: -f1)"
-[ -n "$MARKER_LINE" ] || { echo "FAIL: SC-7 nav marker not found in wiki/mkdocs.yml"; exit 1; }
+MARKER_LINE="$(grep -n '^# >>> auto-nav' wiki/mkdocs.yml | head -1 | cut -d: -f1)"
+[ -n "$MARKER_LINE" ] || { echo "FAIL: SC-7 nav marker not found in wiki/mkdocs.yml (looking for '# >>> auto-nav' per P03/T03 region split)"; exit 1; }
 
 CONSTITUTION_LINE="$(awk -v start="$MARKER_LINE" 'NR>start && /^  - Constitution:/ {print NR; exit}' wiki/mkdocs.yml)"
 [ -n "$CONSTITUTION_LINE" ] || { echo "FAIL: SC-7 Constitution top-level entry not found after nav marker"; exit 1; }

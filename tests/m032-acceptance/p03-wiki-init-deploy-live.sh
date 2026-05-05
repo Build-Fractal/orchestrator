@@ -44,6 +44,21 @@ if [ -z "$GH_OWNER" ]; then
   exit 77
 fi
 
+# Fixture-completeness precondition per MIT-001: wiki-init.sh's --deploy
+# branch invokes "$PROJECT_DIR/scripts/wiki/wiki-deploy.sh", but the
+# m032-fresh-project-fixture does NOT carry scripts/ (the fixture is the
+# pre-orchestrator-installer baseline; scripts/ lands at install time).
+# Without scripts/wiki/wiki-deploy.sh in the fixture, --deploy step 2
+# fails with rc=11 ("No such file or directory"). This is an environmental
+# precondition — the test cannot run hermetically without operator-side
+# scripts/ pre-staging, which the SC-5 protocol does not specify. Treat
+# as SKIP_REASON per MIT-001 three-category exit semantics. P04/T05
+# in-flight repair on the established M032 P02/P03 convention.
+if [ ! -f "$FIXTURE/scripts/wiki/wiki-deploy.sh" ]; then
+  printf 'SKIP_REASON: fixture lacks scripts/wiki/wiki-deploy.sh (operator-side install required for --deploy)\n'
+  exit 77
+fi
+
 # Throwaway fixture creation per AD-7 / throwaway-fixture-protocol.md.
 TS="$(date +%s)"
 FIXTURE_NAME="${TS}-m032-fixture"

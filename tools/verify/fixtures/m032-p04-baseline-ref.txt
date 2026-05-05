@@ -1,0 +1,3 @@
+# M032/P04 scope-guard baseline ref -- captured at first scope-guard run.
+# To re-baseline (e.g. after milestone close), delete this file and re-run.
+089adf15da0d6ecfe6269d894696da55bfdccee1

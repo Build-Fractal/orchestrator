@@ -257,3 +257,38 @@ The full risk register table is at `conversus/arbiter/resolution.md` (RISK-1 thr
 - **`external-tool-adapters` (post-launch, demand-driven)**: the GitHub Projects / Trello / Notion / Linear adapters proposed at `.orchestrator/proposals/post-launch-wiki-ux-and-adapters.md` consume the `--format=json` schema to project orchestrator state into third-party tools. M029's schema-versioning policy (#Q-4) is the load-bearing dependency.
 - **Future `orchestrator:zoom-out` integration**: the shipped `commands/zoom-out.md` skill should adopt the same domain vocabulary as M029's headline output so users moving between `where` and `zoom-out` do not context-switch terminology. Shared anchor: `wiki/glossary.md` (M032 Finding K).
 - **CI/GitHub Actions consumers**: any CI pipeline that wants to read orchestrator state without scraping markdown gains a stable `--format=json` surface.
+
+## Spec Amendment Record
+
+### 2026-05-06 — AD-4 SC-8 oracle interface clarification (#Q-G2 P0 resolution)
+
+**Original SC-8 oracle as drafted in spec.md** (lines ~152):
+
+> `bash scripts/dispatch/predictive-surface.sh --milestone <M###>` output
+
+**Issue surfaced at orchestrator:discuss**: `scripts/dispatch/predictive-surface.sh` does NOT accept `--milestone`. The shipped surface is `--description <text> --intensity quick|standard|full [--no-predict] [--yes] [--config-defaults <path>]`. Captured as RISK-2 / `#Q-G2` at the conversus gate.
+
+**Decision (AD-4, finalized at orchestrator:discuss 2026-05-05)**: Amend SC-8 to use the shipped surface via an M029-owned wrapper rather than extend `predictive-surface.sh` (which is closed under M027 / CON-7 knowledge-layer boundary).
+
+**Amended SC-8 oracle wrapper**:
+
+```bash
+bash scripts/dispatch/predictive-surface.sh \
+  --description "$(bash scripts/diagnostics/summarize-milestone.sh M### --format=keys)" \
+  --intensity standard
+```
+
+`scripts/diagnostics/summarize-milestone.sh` is a P02-owned read-only helper that emits a deterministic four-key `key=value` block (`phase_count`, `phases_complete`, `tasks_remaining`, `intensity`) for a given milestone. The block becomes the `--description` argument to `predictive-surface.sh`.
+
+**Why `--no-predict` is NOT used in the oracle invocation**: `scripts/dispatch/predictive-surface.sh:124` short-circuits to zero stdout when `--no-predict` is set (`NO_PREDICT=1` causes `SUPPRESS=1`). The byte-identity contract operates on the un-suppressed cost block — specifically the `cost_standard_usd=` line, extracted via `grep -F 'cost_standard_usd=' | cut -d= -f2`. The SC-8 acceptance script asserts the FR-9 preflight block's `predicted_cost` numeric value matches this scalar byte-for-byte.
+
+**Effective SC-8 (re-stated)**:
+
+> `orchestrator:auto` at Standard intensity invoked against the SC-8 fixture milestone emits a preflight block on stderr whose `predicted_cost` numeric value matches the `cost_standard_usd=` scalar emitted by `bash scripts/dispatch/predictive-surface.sh --description "$(bash scripts/diagnostics/summarize-milestone.sh M### --format=keys)" --intensity standard`. With `--yes` set, the auto loop proceeds without prompting.
+
+**References**:
+
+- `.orchestrator/milestones/M029/M029-CONTEXT.md` AD-4 (full discussion).
+- `commands/auto.md` `## Preflight Summary` section (AD-3 + AD-4 contract surface).
+- `tests/m029-acceptance/p03-sc8-auto-preflight.sh` (SC-8 acceptance script).
+- `scripts/diagnostics/summarize-milestone.sh` (P02 deliverable; oracle wrapper input).

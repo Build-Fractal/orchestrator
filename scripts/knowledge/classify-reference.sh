@@ -10,8 +10,8 @@
 #     missing field(s).
 #
 #   classify_reference_file <chunk-file>
-#     Composes the FR-2 required-field check with the existing P00 T03
-#     taxonomy + tier validator (tools/verify/lib/p00-validate-chunk-
+#     Composes the FR-2 required-field check with the M036 P00 T03
+#     taxonomy + tier validator (scripts/knowledge/lib/validate-chunk-
 #     frontmatter.sh). Returns 0 if both pass, 1 if either fails.
 #
 # Bash 3.2 / POSIX-sh per CON-2. No top-level I/O — sourceable from any
@@ -60,9 +60,12 @@ classify_reference_file() {
     return 1
   fi
   # FR-1 taxonomy + tier validator (delegates to existing P00 T03 lib).
-  local root
-  root="${ORCHESTRATOR_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
-  local validator="$root/tools/verify/lib/p00-validate-chunk-frontmatter.sh"
+  # The validator lives alongside this classifier under scripts/knowledge/lib/
+  # so it ships in the install bundle. Resolve relative to BASH_SOURCE so
+  # sourced helpers find it regardless of caller cwd.
+  local here
+  here="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+  local validator="$here/lib/validate-chunk-frontmatter.sh"
   if [ ! -f "$validator" ]; then
     echo "classify-reference: validator missing: $validator" >&2
     return 1

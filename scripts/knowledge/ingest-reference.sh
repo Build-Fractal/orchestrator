@@ -127,8 +127,14 @@ for category in cms-rule training-material glossary regulatory-doc; do
     fi
 
     # FR-1 + FR-2 classifier check. Per-chunk rejection — partial success.
+    # The grep pattern enumerates every reason string emitted by
+    # scripts/knowledge/classify-reference.sh: missing required field,
+    # taxonomy/tier rejection, or a missing validator binary. The latter
+    # surfaces the install-time "validator missing" failure that pre-fix
+    # was silently bucketed as `unknown-classifier-error`, which actively
+    # hid the most common breakage in installed projects.
     if ! classify_reference_file "$chunk" 2>/tmp/m036-p04-classify-err.$$.txt; then
-      reason="$(grep -E 'required field|taxonomy' /tmp/m036-p04-classify-err.$$.txt | head -n 1 | sed -E 's/^[^:]*: //')"
+      reason="$(grep -E 'required field|taxonomy|validator missing' /tmp/m036-p04-classify-err.$$.txt | head -n 1 | sed -E 's/^[^:]*: //')"
       [ -z "$reason" ] && reason="unknown-classifier-error"
       echo "REJECTED: $chunk_id reason=$reason"
       rejected=$((rejected + 1))

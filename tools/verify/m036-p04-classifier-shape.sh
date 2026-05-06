@@ -32,7 +32,7 @@ checkpat() {
 }
 checkpat "classify_reference_required_fields()"
 checkpat "classify_reference_file()"
-checkpat "p00-validate-chunk-frontmatter.sh"
+checkpat "lib/validate-chunk-frontmatter.sh"
 checkpat "source published version cite_id topic_tags applies_to_field"
 checkpat "MEM004"
 echo "SUMMARY: m036-p04-classifier-shape.sh fail=$fail"

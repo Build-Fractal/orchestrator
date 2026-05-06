@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# tools/verify/lib/p00-validate-chunk-frontmatter.sh — M036 P00 T03
+# scripts/knowledge/lib/validate-chunk-frontmatter.sh — M036 P00 T03
 # chunk-frontmatter validator. Reads a YAML frontmatter block from
 # stdin (or a file path argument) and rejects entries whose category
 # is outside the M036 taxonomy or whose tier is outside {0, 1, 2}.
@@ -13,16 +13,23 @@
 # SSOT side; this validator catches the validator side.
 #
 # Usage:
-#   bash tools/verify/lib/p00-validate-chunk-frontmatter.sh < frontmatter.yaml
-#   bash tools/verify/lib/p00-validate-chunk-frontmatter.sh path/to/frontmatter.yaml
+#   bash scripts/knowledge/lib/validate-chunk-frontmatter.sh < frontmatter.yaml
+#   bash scripts/knowledge/lib/validate-chunk-frontmatter.sh path/to/frontmatter.yaml
 #
 # Exit: 0 if valid, 1 if any rejection. Emits ACCEPT: / REJECT: lines
 # to stdout. Errors to stderr.
 #
+# Relocated 2026-05-06 from tools/verify/lib/p00-validate-chunk-frontmatter.sh
+# so the validator ships in the install bundle (scripts/ is in
+# packaging/bundle/manifest.yml's project_assets, tools/ is not). The
+# runtime classifier scripts/knowledge/classify-reference.sh delegates
+# its FR-1 taxonomy + tier check here at ingest time; before the move,
+# installed projects failed every chunk with reason=unknown-classifier-error.
+#
 # Note on internal pipeline: the harness shape-classifier
 # (scripts/verify/lib/shape-classifier.sh::classify_command) inspects
 # only the *invocation* form. The single-script-file invocation
-# `bash tools/verify/lib/p00-validate-chunk-frontmatter.sh` classifies
+# `bash scripts/knowledge/lib/validate-chunk-frontmatter.sh` classifies
 # clean; the grep|head|sed pipeline below lives inside the script body
 # and never surfaces to the classifier. Bash 3.2 compatible.
 set -eu

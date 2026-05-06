@@ -53,7 +53,7 @@ Re-running on an unchanged manifest produces zero modifications under `<referenc
 - `summary_mode: operator` without a `summary:` field: exit 1, names the doc.
 - `summary_mode: auto`: exit 1 with stderr "P03 not implemented" pointer (Tier 2 wires in P03).
 - Tier 1 adapter exit 2 (host tool absent): driver bails with a stderr hint pointing at `scripts/lifecycle/probe-extraction-tools.sh`.
-- Out-of-taxonomy `category:`: rejected by `tools/verify/lib/p00-validate-chunk-frontmatter.sh` defence-in-depth check.
+- Out-of-taxonomy `category:`: rejected by `scripts/knowledge/lib/validate-chunk-frontmatter.sh` defence-in-depth check.
 
 ## Referenced Scripts
 

@@ -14,7 +14,7 @@ Run `orchestrator:ingest-reference` after a successful `orchestrator:extract` pa
 
 1. **Reference root populated** — a directory tree at `knowledge/reference/<category>/` (default) or a custom path passed via `--reference-root`. The four taxonomy categories (`cms-rule`, `training-material`, `glossary`, `regulatory-doc`) are walked; any other top-level directory under the reference root is silently skipped (e.g., `_originals/`, `_extraction-log/`, `_negative/`).
 2. **Knowledge tree initialized** — the `knowledge/` directory must exist at the orchestrator root. Created by `scripts/lifecycle/scaffold.sh` during `orchestrator:evaluate`. This command does not bootstrap the tree.
-3. **Classifier helper present** — `scripts/knowledge/classify-reference.sh` (M036 P04 deliverable) and `tools/verify/lib/p00-validate-chunk-frontmatter.sh` (M036 P00 deliverable) must be present.
+3. **Classifier helper present** — `scripts/knowledge/classify-reference.sh` (M036 P04 deliverable) and `scripts/knowledge/lib/validate-chunk-frontmatter.sh` (M036 P00 deliverable; relocated 2026-05-06 from `tools/verify/lib/p00-validate-chunk-frontmatter.sh` so it ships in the install bundle) must be present.
 4. **Index rebuilder present** — `scripts/knowledge/rebuild-index.sh` (M011/M020 deliverable) must be present and recognize `REF-*` basenames (extended in M036 P04 — basename filter `MEM*|SPEC-*|REF-*`).
 
 No prior orchestrator state beyond the knowledge tree is required — `orchestrator:ingest-reference` is safe to run before or after `orchestrator:evaluate`.
@@ -62,7 +62,7 @@ Re-running `orchestrator:ingest-reference` is fully supported and is the expecte
 - `scripts/knowledge/ingest-reference.sh` — the production driver.
 - `scripts/knowledge/classify-reference.sh` — taxonomy + required-field classifier helper (sourced by the driver).
 - `scripts/knowledge/rebuild-index.sh` — index rebuilder (invoked at end unless `--no-index-rebuild`).
-- `tools/verify/lib/p00-validate-chunk-frontmatter.sh` — taxonomy + tier validator delegated to by the classifier helper.
+- `scripts/knowledge/lib/validate-chunk-frontmatter.sh` — taxonomy + tier validator delegated to by the classifier helper.
 
 ## Reference Files
 

@@ -9,7 +9,7 @@
 #   B: category=cms-rule + tier=5    -> reject (out-of-enum tier)
 #   C: category=cms-rule + tier=2    -> accept (in-policy)
 set -eu
-VALIDATOR="${1:-tools/verify/lib/p00-validate-chunk-frontmatter.sh}"
+VALIDATOR="${1:-scripts/knowledge/lib/validate-chunk-frontmatter.sh}"
 pass=0
 fail=0
 if [ ! -f "$VALIDATOR" ]; then

@@ -28,6 +28,10 @@ set -eu
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="${ORCHESTRATOR_ROOT:-$(cd "$HERE/../.." && pwd)}"
+# Export so sourced helpers (classify-reference.sh) and any subprocess
+# dispatch (rebuild-index.sh) re-resolve to the SAME ROOT instead of
+# falling back to $0-relative resolution. See extract-reference.sh.
+export ORCHESTRATOR_ROOT="$ROOT"
 
 # shellcheck disable=SC1091
 . "$HERE/classify-reference.sh"

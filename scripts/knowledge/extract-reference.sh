@@ -23,6 +23,11 @@ set -eu
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="${ORCHESTRATOR_ROOT:-$(cd "$HERE/../.." && pwd)}"
+# Export so subprocess helpers (Tier 1 adapters, classify-reference, etc.)
+# re-resolve to the SAME ROOT instead of falling back to $0-relative
+# resolution — which silently misbehaves when this script is invoked from
+# a parent project that has the orchestrator installed under it.
+export ORCHESTRATOR_ROOT="$ROOT"
 
 # shellcheck disable=SC1091
 . "$HERE/lib/extract-manifest.sh"
@@ -231,6 +236,8 @@ while [ "$i" -le "$DOC_COUNT" ]; do
     else
       printf 'version: "%s"\n' "$(extract_manifest_doc_field "$MANIFEST" "$i" version)"
     fi
+    printf 'topic_tags: %s\n' "$(extract_manifest_doc_list_field "$MANIFEST" "$i" topic_tags)"
+    printf 'applies_to_field: %s\n' "$(extract_manifest_doc_list_field "$MANIFEST" "$i" applies_to_field)"
     printf 'tier: %s\n' "$tier"
     printf 'content_hash: "%s"\n' "$hash"
     printf 'size_bytes: %s\n' "$size"

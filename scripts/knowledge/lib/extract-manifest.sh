@@ -46,6 +46,55 @@ extract_manifest_doc_field() {
   ' "$m"
 }
 
+# extract_manifest_doc_list_field <manifest-path> <doc-index-1based> <field-name>
+#   Echoes a YAML inline-list ("[a, b, c]") reconstructed from either inline
+#   (`field: [a, b]`) or block (`field:\n  - a\n  - b`) form within the
+#   doc record at index <idx>. Empty / missing list -> "[]". Output is
+#   safe to embed directly in printf-emitted frontmatter (inline form is
+#   valid YAML and grep-detectable by classify-reference.sh).
+#
+#   This is the list-aware sibling of extract_manifest_doc_field, which
+#   only handles scalar values and would mangle inline-list syntax.
+extract_manifest_doc_list_field() {
+  local m="$1"
+  local idx="$2"
+  local field="$3"
+  awk -v idx="$idx" -v field="$field" '
+    BEGIN { current=0; in_block=0; items=""; printed=0 }
+    /^[[:space:]]+-[[:space:]]+cite_id:/ { current++; in_block=0 }
+    current==idx {
+      # Inline form: field: [a, b, c]
+      if (match($0, "^[[:space:]]+(-[[:space:]]+)?" field ":[[:space:]]*\\[")) {
+        line=$0
+        sub(".*\\[", "", line)
+        sub("\\].*", "", line)
+        print "[" line "]"
+        printed=1
+        exit
+      }
+      # Block-list start: field:  (with nothing else on the line)
+      if (match($0, "^[[:space:]]+(-[[:space:]]+)?" field ":[[:space:]]*$")) {
+        in_block=1
+        next
+      }
+      # Inside a block list, accumulate items until the next field key.
+      if (in_block) {
+        if ($0 ~ /^[[:space:]]+-[[:space:]]+/) {
+          v=$0
+          sub("^[[:space:]]+-[[:space:]]+", "", v)
+          sub("[[:space:]]+$","", v)
+          items = (items=="" ? v : items ", " v)
+        } else if ($0 ~ /^[[:space:]]+[A-Za-z_]+:/) {
+          print "[" items "]"
+          printed=1
+          exit
+        }
+      }
+    }
+    END { if (!printed) { if (in_block) print "[" items "]"; else print "[]" } }
+  ' "$m"
+}
+
 # extract_manifest_resolve_tier <category> <source-types-yaml-path>
 #   Echoes the default tier for a category from the source-types SSOT.
 extract_manifest_resolve_tier() {

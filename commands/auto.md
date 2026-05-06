@@ -6,6 +6,88 @@ description: "Use when running fully autonomous execution on a Tier C project. A
 
 Run the autonomous dispatch loop for a Tier C milestone. This command owns the full execution cycle — it acquires a lock, dispatches tasks one at a time in fresh contexts with verification between each, handles pause/stuck/budget gates, and releases the lock on any exit path.
 
+## Preflight Summary
+
+<!-- M029 / FR-9 / AD-3 / AD-4 — preflight summary block. -->
+
+At **Standard** or **Full** intensity, before entering the auto-loop (and
+specifically before dispatching the first task of the run), the auto
+surface emits a four-line preflight block on **stderr** so the operator
+can see at a glance how big the impending run is and roughly what it will
+cost. The block has exactly four labeled lines:
+
+```
+Preflight Summary
+phase_count: <N>
+dispatch_count_estimate: <M>
+predicted_cost: est. ~$X.YY ± $Z.ZZ
+```
+
+At **Quick** intensity, the preflight is suppressed entirely. Quick intensity suppresses the block — `Preflight Summary` does NOT appear on stderr before `AUTO:READY` (SC-9 byte-stable invariant). This keeps the right-sized-entry small-task flow (M031) free of preflight chatter.
+
+### Non-interactive policy (AD-3, #Q-G1)
+
+In priority order:
+
+1. **`--yes` flag present** → emit preflight on stderr, do not prompt,
+   proceed.
+2. **`auto_proceed: true` in `.orchestrator/config.yml`** (M031 default) →
+   emit preflight on stderr, do not prompt, proceed. The compound-change
+   banner emitted by `run-doctor.sh` already informs the operator that
+   `auto_proceed` is active for the session.
+3. **Non-TTY stdin** (CI, piped) with neither flag nor config → emit
+   preflight on stderr, then exit non-zero with the byte-stable string
+   `M029_PREFLIGHT_NEEDS_CONFIRMATION` on stderr. CI consumers MUST opt
+   in via `--yes` or `auto_proceed: true`. **No silent CI auto-accept.**
+4. **TTY + neither flag nor config** → emit preflight, prompt for
+   confirmation, block on the prompt.
+
+The TTY / non-TTY discrimination reads `scripts/state/detect-invocation-context.sh`'s
+`renderer` field per AD-1 single-resolve. The auto surface MUST NOT
+re-derive TTY / CI / runtime — only consume the resolver's three-line
+env block.
+
+### Oracle wrapper (AD-4 — SC-8 byte-identity contract)
+
+The `predicted_cost` field is byte-identical to the `cost_standard_usd=`
+line emitted by the documented oracle invocation:
+
+```bash
+bash scripts/dispatch/predictive-surface.sh \
+  --description "$(bash scripts/diagnostics/summarize-milestone.sh M### --format=keys)" \
+  --intensity standard
+```
+
+Extract the cost scalar via:
+
+```bash
+ORACLE=$(bash scripts/dispatch/predictive-surface.sh \
+  --description "$(bash scripts/diagnostics/summarize-milestone.sh M### --format=keys)" \
+  --intensity standard)
+COST=$(printf '%s\n' "$ORACLE" | grep -F 'cost_standard_usd=' | cut -d= -f2)
+```
+
+Why **`--no-predict` is NOT in the oracle invocation**:
+`scripts/dispatch/predictive-surface.sh:124` suppresses ALL stdout when
+`--no-predict` is set (`NO_PREDICT=1 → SUPPRESS=1`). The byte-identity
+contract operates on the un-suppressed `cost_standard_usd=` line. The
+spec amendment record entry per AD-4 (P03/T05) captures this clarification
+so a future planner who tries to add `--no-predict` back can cross-check
+the suppression semantics first.
+
+### Cost format (#Q-2)
+
+`predicted_cost: est. ~$X.YY ± $Z.ZZ` — range form derived from the
+predictive surface's confidence interval. The center value `$X.YY` is the
+`cost_standard_usd=` scalar; the spread `± $Z.ZZ` is computed from the
+spread bounds the oracle's `cost_*_in_tokens` / `cost_*_out_tokens` rows
+imply.
+
+The preflight surface is **read-only** (CON-1 / FR-14): it never writes
+to `.orchestrator/`. The `display_thresholds.compression_savings_pct`
+operator-knob defined alongside the P03/T01 `--live` savings marker is
+adjacent context only — it is not consumed at preflight render time.
+
 ## Intensity Behavior
 
 This command is an intensity-aware stage. At entry of every loop iteration, call:

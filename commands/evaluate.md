@@ -62,7 +62,7 @@ A feature spec must exist at `specs/{NNN}-{name}/spec.md`. Since the project may
 1. **List available specs**: Scan `specs/` for directories matching the `{NNN}-{name}` pattern. For each, check if `spec.md` exists inside it.
 2. **If exactly one spec exists**: Use it, but confirm with the user: "Found spec at `specs/{NNN}-{name}/spec.md`. Proceeding with this spec."
 3. **If multiple specs exist**: Present them as a numbered list and ask the user to select: "Multiple specs found:\n  1. specs/001-feature-a/spec.md\n  2. specs/002-feature-b/spec.md\nWhich spec should be evaluated?"
-4. **If no specs exist**: Exit with error: "No feature specs found in `specs/`. Run `speckit.specify` first to create a feature spec."
+4. **If no specs exist**: Exit with error: "No feature specs found in `specs/`. Run `/orchestrator-specify` first to create a feature spec."
 5. **If a spec path was provided as an argument**: Use it directly after verifying the file exists.
 
 Record the confirmed spec path — it will be written to the evaluation output and used by all downstream commands.
@@ -89,7 +89,7 @@ Analyze the feature spec to determine the scope of work:
    - Number of functional requirements (FR-### items or numbered requirements)
 
    Record `metrics_source: raw_spec` in the evaluation output.
-3. **Estimate SDD flow count**: Determine how many complete spec-kit process flows (specify → clarify → plan → tasks → implement) the work requires:
+3. **Estimate SDD flow count**: Determine how many complete Spec-Driven Development (SDD) process flows (specify → clarify → plan → tasks → implement) the work requires:
    - **1 flow inline** = everything fits in ~1 context window
    - **1 flow, multiple contexts** = each SDD step needs its own context window, tasks dispatch separately
    - **2+ flows** = multiple distinct SDD cycles, requiring roadmap decomposition and cross-phase coordination
@@ -187,7 +187,7 @@ toolchain changes since the last run).
 
 4. **Report to the user**:
    - Tier classification (A, B, or C) with reasoning
-   - Next recommended command: `speckit.orchestrator.roadmap` (Tier B) or `speckit.orchestrator.discuss` (Tier C)
+   - Next recommended command: `/orchestrator-roadmap` (Tier B) or `/orchestrator-discuss` (Tier C)
 
 ## Override Support
 
@@ -211,7 +211,7 @@ This satisfies R012 (idempotent commands) — running `evaluate` twice with no i
 
 ## Error Handling
 
-- If no feature spec is found at the expected path, exit with error: "Feature spec not found. Run speckit.specify first."
+- If no feature spec is found at the expected path, exit with error: "Feature spec not found. Run `/orchestrator-specify` first."
 - If extension scripts are not installed (see Extension Availability Check above), exit with the installation error message. Do NOT attempt to manually create scaffold directories.
 - If `scripts/lifecycle/scaffold.sh` fails, report the error and do not write partial state.
 - If `scripts/state/read-config.sh` is unavailable, proceed with auto-classification (no config override).
@@ -219,7 +219,7 @@ This satisfies R012 (idempotent commands) — running `evaluate` twice with no i
 ## Gotchas
 
 - **Tier A produces zero orchestrator state**: Promotion to Tier B/C requires a fresh evaluate with `--tier` override — there is no upgrade path from existing Tier A artifacts because none exist.
-- **Re-evaluation with --force overwrites tier metadata**: If a roadmap already exists, the tier classification changes but the roadmap becomes inconsistent with the new tier's expectations. Re-run `speckit.orchestrator.roadmap` after a tier change.
+- **Re-evaluation with --force overwrites tier metadata**: If a roadmap already exists, the tier classification changes but the roadmap becomes inconsistent with the new tier's expectations. Re-run `/orchestrator-roadmap` after a tier change.
 - **read-config.sh failure is non-fatal**: Falls back to auto-classification silently. If the config file has a `default_tier` override, that override will be missed — the tier may differ from what the developer expected.
 - **The state machine (derive-phase.sh) is not tier-aware**: After evaluation, `derive-phase.sh` returns `planning` regardless of tier. For Tier C, the discussion gate is enforced by the `roadmap` command (which reads the tier from `M###-EVALUATION.md` and refuses to proceed without a finalized context draft), not by the state machine. This is intentional — the state machine derives state from file presence, and the tier is a policy overlay applied by commands.
 - **The EVALUATION.md file is the tier authority**: All downstream commands (`discuss`, `roadmap`, `plan-phase`, etc.) should read the tier from `M###-EVALUATION.md` in the milestone directory. Do not rely on config alone — the evaluated tier may differ from the default_tier config if auto-classification or --tier override was used.

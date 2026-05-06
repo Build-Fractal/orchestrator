@@ -16,7 +16,7 @@ Use the Agent tool to dispatch tasks in fresh contexts. Pass the assembled dispa
 Agent(prompt=<assembled dispatch payload>, subagent_type="orchestrator-agent")
 ```
 
-Fall back to `subagent_type='general-purpose'` only when `orchestrator-agent` is not in the discovery list (older install). **Never pick framework-named agents** like `gsd-planner`, `gsd-executor`, etc. from the discovery list — their system prompts impose framework conventions on the dispatch and corrupt the orchestrator's output shape. (Observed in bbt-companion dogfood, FU-7, 2026-04-24.)
+Fall back to `subagent_type='general-purpose'` only when `orchestrator-agent` is not in the discovery list (older install). **Never pick framework-named agents from other tools that may also be installed on the user's machine** — their system prompts impose framework conventions on the dispatch and corrupt the orchestrator's output shape. (Observed in bbt-companion dogfood, FU-7, 2026-04-24.)
 
 Each dispatched task runs in a fresh context with zero prior codebase knowledge. The payload assembled by `build-context.sh` is the task's entire world.
 
@@ -72,7 +72,7 @@ Valid outcomes: `success`, `failure`, `retry`, `blocked`, `timeout`, `stuck`.
 
 ## Autonomous Loop Mechanics
 
-When running in autonomous mode (`speckit.orchestrator.auto`), the mechanical loop driver handles pre-dispatch and post-dispatch steps:
+When running in autonomous mode (`/orchestrator-auto`), the mechanical loop driver handles pre-dispatch and post-dispatch steps:
 
 ### Pre-Dispatch (Stage 1)
 

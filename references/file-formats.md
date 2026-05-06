@@ -320,7 +320,7 @@ created_at: "2026-03-22T10:00:00Z"          # ISO 8601
 ## Classification
 - **Tier**: C
 - **Source**: auto
-- **Next command**: speckit.orchestrator.discuss
+- **Next command**: /orchestrator-discuss
 
 ## Metrics
 | Metric | Count |

@@ -11,7 +11,7 @@ preserves: [
   "absolute and project-relative paths",
   "scaffold-placeholder markers ({{ ... }})",
   "URLs",
-  "command names like orchestrator:auto / speckit.* / gsd:*",
+  "orchestrator command names (slash-prefixed `/orchestrator-*`, colon-form `orchestrator:*`, or namespaced `speckit.orchestrator.*` aliases) and other slash-command tokens",
   "in-band compression markers (<!-- compressed:tierN ... -->)"
 ]
 ---
@@ -42,7 +42,7 @@ Produce a summary that:
    - Absolute and project-relative paths (e.g., `scripts/dispatch/build-context.sh`).
    - Scaffold-placeholder markers (e.g., `{{milestone_id}}`).
    - URLs (e.g., `https://example.com/path`).
-   - Command names (e.g., `orchestrator:auto`, `speckit.orchestrator.dispatch`).
+   - Orchestrator command names — slash form (`/orchestrator-auto`), colon form (`orchestrator:auto`), or namespaced alias (`speckit.orchestrator.dispatch`).
    - In-band compression markers from earlier tiers.
 4. **Compresses prose** between preserved patterns: paraphrase verbose narrative into terse bullet form; collapse redundant sentences; cite section / decision / MEM IDs rather than restating their content.
 5. **Stays under** the output token budget named in the orchestrator's invocation. The orchestrator discards summaries that exceed `output_max_ratio` (default 0.80) of input bytes.

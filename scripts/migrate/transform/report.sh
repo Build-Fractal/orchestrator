@@ -202,7 +202,7 @@ cat >> "$tmp_report" <<'REPORT'
 ## Next Steps
 1. Review the migrated knowledge entries in `knowledge/`
 2. Check DECISIONS.md for accuracy
-3. Run `/speckit.orchestrator.status` to verify orchestrator state
+3. Run `/orchestrator-status` to verify orchestrator state
 4. Begin your next milestone with the orchestrator
 REPORT
 

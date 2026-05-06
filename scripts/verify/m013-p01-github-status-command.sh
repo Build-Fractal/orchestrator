@@ -40,7 +40,7 @@ grep -q -i 'read-only' "$CMD"
 assert_ok $? "description mentions read-only"
 
 # 5. Title heading present
-grep -q '^# speckit.orchestrator.github-status' "$CMD"
+grep -q '^# orchestrator:github-status' "$CMD"
 assert_ok $? "has title heading"
 
 # 6. Prerequisites section

@@ -7,7 +7,7 @@
 
 The orchestrator classifies every project into one of three execution tiers (A, B, or C) based on the number of complete spec-driven-development process flows (specify → clarify → plan → tasks → implement) the work requires. The tier determines which orchestrator features are active, which state machine states apply, and how much overhead is introduced.
 
-Tier classification happens automatically during `speckit.orchestrator.evaluate` but can be overridden by the developer at any time (FR-002).
+Tier classification happens automatically during `/orchestrator-evaluate` but can be overridden by the developer at any time (FR-002).
 
 ---
 
@@ -86,14 +86,14 @@ pre-planning → planning → executing → summarizing → complete
 
 A subset of orchestrator commands — those that support the linear flow:
 
-- `speckit.orchestrator.evaluate` — Tier classification
-- `speckit.orchestrator.roadmap` — Generate roadmap
-- `speckit.orchestrator.plan-phase` — Generate phase plans
-- `speckit.orchestrator.dispatch` — Dispatch tasks
-- `speckit.orchestrator.verify` — Verify must-haves
-- `speckit.orchestrator.status` — Show progress
+- `/orchestrator-evaluate` — Tier classification
+- `/orchestrator-roadmap` — Generate roadmap
+- `/orchestrator-plan-phase` — Generate phase plans
+- `/orchestrator-dispatch` — Dispatch tasks
+- `/orchestrator-verify` — Verify must-haves
+- `/orchestrator-status` — Show progress
 
-Not available in Tier B: `speckit.orchestrator.auto`, `speckit.orchestrator.resume`, `speckit.orchestrator.consolidate`, `speckit.orchestrator.discuss`
+Not available in Tier B: `/orchestrator-auto`, `/orchestrator-resume`, `/orchestrator-consolidate`, `/orchestrator-discuss`
 
 ### Typical Projects
 
@@ -142,16 +142,16 @@ pre-planning → discussing → planning → [replanning] → executing →
 
 All orchestrator commands:
 
-- `speckit.orchestrator.evaluate` — Tier classification
-- `speckit.orchestrator.discuss` — Context draft discussion
-- `speckit.orchestrator.roadmap` — Generate roadmap
-- `speckit.orchestrator.plan-phase` — Generate phase plans
-- `speckit.orchestrator.dispatch` — Dispatch tasks
-- `speckit.orchestrator.verify` — Verify must-haves
-- `speckit.orchestrator.status` — Show progress
-- `speckit.orchestrator.auto` — Autonomous execution
-- `speckit.orchestrator.resume` — Resume after crash/pause
-- `speckit.orchestrator.consolidate` — Knowledge consolidation
+- `/orchestrator-evaluate` — Tier classification
+- `/orchestrator-discuss` — Context draft discussion
+- `/orchestrator-roadmap` — Generate roadmap
+- `/orchestrator-plan-phase` — Generate phase plans
+- `/orchestrator-dispatch` — Dispatch tasks
+- `/orchestrator-verify` — Verify must-haves
+- `/orchestrator-status` — Show progress
+- `/orchestrator-auto` — Autonomous execution
+- `/orchestrator-resume` — Resume after crash/pause
+- `/orchestrator-consolidate` — Knowledge consolidation
 
 ### Typical Projects
 

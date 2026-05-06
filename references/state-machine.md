@@ -19,7 +19,7 @@ The derivation script (`scripts/state/derive-phase.sh`) evaluates conditions in 
 
 **What it means for the developer**: The milestone has been identified but no work has started. The developer needs to either begin a discussion (Tier C) or jump straight to planning.
 
-**What it means for the orchestrator**: No state files to read. The next action is either `speckit.orchestrator.discuss` (Tier C) or `speckit.orchestrator.roadmap` (Tier B/C).
+**What it means for the orchestrator**: No state files to read. The next action is either `/orchestrator-discuss` (Tier C) or `/orchestrator-roadmap` (Tier B/C).
 
 **Tier availability**: All tiers (Tier B and C).
 
@@ -43,7 +43,7 @@ The derivation script (`scripts/state/derive-phase.sh`) evaluates conditions in 
 
 **What it means for the developer**: The roadmap needs to be generated from the spec, or the next phase needs its detailed plan (task decomposition, must-haves, boundary map).
 
-**What it means for the orchestrator**: Generate the roadmap via `speckit.orchestrator.roadmap`, then generate phase plans via `speckit.orchestrator.plan-phase` for each phase before execution begins.
+**What it means for the orchestrator**: Generate the roadmap via `/orchestrator-roadmap`, then generate phase plans via `/orchestrator-plan-phase` for each phase before execution begins.
 
 **Tier availability**: All tiers (Tier B and C).
 
@@ -67,7 +67,7 @@ The derivation script (`scripts/state/derive-phase.sh`) evaluates conditions in 
 
 **What it means for the developer**: Tasks are being dispatched and worked on. Each task is an atomic unit that fits in one context window.
 
-**What it means for the orchestrator**: Dispatch the next incomplete task via `speckit.orchestrator.dispatch`, verify its must-haves on completion, and persist the task summary. In autonomous mode (Tier C), this loops automatically.
+**What it means for the orchestrator**: Dispatch the next incomplete task via `/orchestrator-dispatch`, verify its must-haves on completion, and persist the task summary. In autonomous mode (Tier C), this loops automatically.
 
 **Tier availability**: All tiers (Tier B and C).
 
@@ -79,7 +79,7 @@ The derivation script (`scripts/state/derive-phase.sh`) evaluates conditions in 
 
 **What it means for the developer**: All tasks are complete. Before the phase can be summarized, the 4-tier verification pipeline must run to confirm that must-haves are met.
 
-**What it means for the orchestrator**: Run `speckit.orchestrator.verify` on the active phase. This executes static checks (Tier 1), configured commands (Tier 2), behavioral checks (Tier 3), and human review (Tier 4 if applicable). Write the verification report to `P##-VERIFICATION.md`. On pass, the state advances to `summarizing`. On failure, the report documents what failed for remediation.
+**What it means for the orchestrator**: Run `/orchestrator-verify` on the active phase. This executes static checks (Tier 1), configured commands (Tier 2), behavioral checks (Tier 3), and human review (Tier 4 if applicable). Write the verification report to `P##-VERIFICATION.md`. On pass, the state advances to `summarizing`. On failure, the report documents what failed for remediation.
 
 **Tier availability**: All tiers (Tier B and C).
 

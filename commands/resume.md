@@ -93,8 +93,8 @@ rm <milestone-dir>/continue.md
 ### A4. Execute the Next Action
 
 Perform the action described in the Next Action section. This is typically one of:
-- Dispatch the next task via `speckit.orchestrator.dispatch`
-- Run verification on a completed task via `speckit.orchestrator.verify`
+- Dispatch the next task via `/orchestrator-dispatch`
+- Run verification on a completed task via `/orchestrator-verify`
 - Generate a phase summary
 - Finalize a specific step that was in progress
 
@@ -102,7 +102,7 @@ Perform the action described in the Next Action section. This is typically one o
 
 After executing the immediate next action, if the user wants to continue in autonomous mode, suggest:
 
-> "Immediate action complete. To resume autonomous execution, run `speckit.orchestrator.auto`."
+> "Immediate action complete. To resume autonomous execution, run `/orchestrator-auto`."
 
 ## Path B — Crash Recovery (FR-021, FR-023)
 
@@ -174,16 +174,16 @@ bash scripts/lifecycle/stuck-detector.sh <milestone-dir>/execution-log.jsonl <la
 ### B4. Resume Execution
 
 If the unit is not stuck, re-dispatch the task that was in progress:
-- Use `speckit.orchestrator.dispatch` to re-execute the incomplete task
+- Use `/orchestrator-dispatch` to re-execute the incomplete task
 - The dispatch command's idempotency check will detect if the task actually completed before the crash (summary file exists) and skip re-execution
 
-If the user wants to continue in autonomous mode after recovery, suggest running `speckit.orchestrator.auto`.
+If the user wants to continue in autonomous mode after recovery, suggest running `/orchestrator-auto`.
 
 ## Idempotency (FR-066)
 
 Resume is designed to be safely re-callable:
 
-- **No lock file, no continue file, state is `executing`**: Report current state and suggest: "No crash or pause detected. Use `speckit.orchestrator.dispatch` to execute the next task, or `speckit.orchestrator.auto` for autonomous mode."
+- **No lock file, no continue file, state is `executing`**: Report current state and suggest: "No crash or pause detected. Use `/orchestrator-dispatch` to execute the next task, or `/orchestrator-auto` for autonomous mode."
 - **Milestone is `complete`**: Report "Nothing to resume — milestone is complete."
 - **Running resume twice after a pause**: The first resume deletes the continue file. The second resume finds no continue file and no stale lock, so it falls through to the "no recovery needed" case above.
 - **Running resume twice after a crash**: The first resume breaks the lock and re-dispatches. The second resume finds no stale lock and no continue file, so it falls through to the "no recovery needed" case.
@@ -194,9 +194,9 @@ Resume is designed to be safely re-callable:
 - **Recovery briefing script fails** (exit code non-zero): Warn "Recovery briefing generation failed." Fall back to reporting raw state:
   - Output of `bash scripts/state/derive-phase.sh <milestone-dir>`
   - Contents of the lock file (if readable) for manual inspection
-  - Suggest running `speckit.orchestrator.status` for a full state report.
+  - Suggest running `/orchestrator-status` for a full state report.
 - **Lock file cannot be broken** (lock-manager.sh break returns non-zero): Report "Failed to break stale lock at .orchestrator/orchestrator.lock. Manual removal may be required." and exit 1.
-- **Both recovery paths fail**: If neither the continue file nor the recovery briefing provides actionable information, report: "Unable to determine recovery path. Run `speckit.orchestrator.status` for current state." and exit 1.
+- **Both recovery paths fail**: If neither the continue file nor the recovery briefing provides actionable information, report: "Unable to determine recovery path. Run `/orchestrator-status` for current state." and exit 1.
 
 ## Gotchas
 

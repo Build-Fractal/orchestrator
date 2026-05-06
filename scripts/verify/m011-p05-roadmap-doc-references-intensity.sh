@@ -19,8 +19,8 @@ if ! grep -Fq "collaborative-loop" "$DOC"; then
   exit 1
 fi
 
-if ! grep -Fq "speckit.orchestrator.discuss" "$DOC"; then
-  echo "FAIL: roadmap.md missing delegation to speckit.orchestrator.discuss"
+if ! grep -Fq "/orchestrator-discuss" "$DOC"; then
+  echo "FAIL: roadmap.md missing delegation to /orchestrator-discuss"
   exit 1
 fi
 

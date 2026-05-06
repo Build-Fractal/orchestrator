@@ -605,7 +605,7 @@ $ROADMAP_SECTION"
 - **Tier**: $TIER"
   local SEC_INSTRUCTIONS="## Instructions
 
-Plan phase $PHASE_ID for milestone $MILESTONE_ID following the speckit.orchestrator.plan-phase command.
+Plan phase $PHASE_ID for milestone $MILESTONE_ID following the /orchestrator-plan-phase command.
 Produce a phase plan (${PHASE_ID}-PLAN.md) with goal, demo, must-haves, and task breakdown.
 Each task plan should be self-contained with zero-context assumptions."
 

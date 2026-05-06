@@ -167,12 +167,12 @@ fi
 # --- Build recovery plan ---
 recovery_plan="1. Break the stale lock: \`bash scripts/lifecycle/lock-manager.sh break $LOCK_FILE\`
 2. Review incomplete work above for partial artifacts
-3. Resume dispatch: run \`speckit.orchestrator.resume\` to continue from the crash point"
+3. Resume dispatch: run \`/orchestrator-resume\` to continue from the crash point"
 
 if [[ "$lock_status" = "not found" ]]; then
   recovery_plan="1. No lock file found — previous session may have completed or been cleaned up
 2. Derive current state and resume from the next pending unit
-3. Run \`speckit.orchestrator.auto\` to start or continue autonomous dispatch"
+3. Run \`/orchestrator-auto\` to start or continue autonomous dispatch"
 fi
 
 # --- Output structured briefing ---

@@ -29,7 +29,7 @@ check_heading() {
   fi
 }
 
-check_heading "# speckit.orchestrator.ingest"
+check_heading "# orchestrator:ingest"
 check_heading "## Prerequisites"
 check_heading "## Reference Files"
 

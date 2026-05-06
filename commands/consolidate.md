@@ -30,7 +30,7 @@ All phases in the roadmap must have phase summaries. The consolidation script en
 bash scripts/state/read-roadmap.sh <milestone-dir>/<milestone-id>-ROADMAP.md phases
 ```
 
-For each phase listed, confirm `<milestone-dir>/phases/<P##>/<P##>-SUMMARY.md` exists. If any phase lacks a summary, report: "Phase <P##> is incomplete — run `speckit.orchestrator.verify` on remaining phases before consolidating." and exit.
+For each phase listed, confirm `<milestone-dir>/phases/<P##>/<P##>-SUMMARY.md` exists. If any phase lacks a summary, report: "Phase <P##> is incomplete — run `/orchestrator-verify` on remaining phases before consolidating." and exit.
 
 ## Core Workflow
 
@@ -135,7 +135,7 @@ This satisfies R012 (idempotent commands).
 
 ### Incomplete Phases
 
-If any phase lacks a `P##-SUMMARY.md`, the consolidation script exits non-zero with a message naming the incomplete phase. Resolution: complete the phase via `speckit.orchestrator.verify` and write the phase summary before re-attempting consolidation.
+If any phase lacks a `P##-SUMMARY.md`, the consolidation script exits non-zero with a message naming the incomplete phase. Resolution: complete the phase via `/orchestrator-verify` and write the phase summary before re-attempting consolidation.
 
 ### Partial Consolidation Failure
 

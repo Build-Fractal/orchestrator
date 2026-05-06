@@ -12,11 +12,11 @@ Before generating a roadmap:
 
 1. **Derive current state** by running `bash scripts/state/derive-phase.sh <milestone-dir>`. The state must be `pre-planning` or `planning`.
 
-2. **Read the tier and spec path from the evaluation file** at `<milestone-dir>/M###-EVALUATION.md`. Extract the `tier` and `feature_spec` fields from the YAML frontmatter. If the evaluation file doesn't exist, exit with error: "No evaluation found. Run `speckit.orchestrator.evaluate` first."
+2. **Read the tier and spec path from the evaluation file** at `<milestone-dir>/M###-EVALUATION.md`. Extract the `tier` and `feature_spec` fields from the YAML frontmatter. If the evaluation file doesn't exist, exit with error: "No evaluation found. Run `/orchestrator-evaluate` first."
 
    **Note on the state machine gap**: `derive-phase.sh` returns `planning` when no roadmap exists, regardless of tier. It is intentionally not tier-aware — the state machine derives state purely from file presence. The Tier C discussion gate is enforced here in the roadmap command, not in the state machine. This means a Tier C project in `pre-planning` or `planning` state must have its discussion check performed by this command.
 
-3. **For Tier C**: A finalized context draft (`M###-CONTEXT.md` with `status: finalized` in frontmatter) is required per FR-056. If the context draft does not exist or is still `status: draft`, block and report: "Tier C requires a finalized context draft before roadmap generation. Run `speckit.orchestrator.discuss` first to capture architectural context."
+3. **For Tier C**: A finalized context draft (`M###-CONTEXT.md` with `status: finalized` in frontmatter) is required per FR-056. If the context draft does not exist or is still `status: draft`, block and report: "Tier C requires a finalized context draft before roadmap generation. Run `/orchestrator-discuss` first to capture architectural context."
 
 4. **For Tier B**: The context draft is optional and skippable. If no context draft exists, proceed directly with the feature spec.
 
@@ -31,7 +31,7 @@ Before generating a roadmap:
    Parse the `execute_substeps=` output. The values are one of:
    - `single-pass` (Quick) — directive: produce the roadmap in one pass, present it as "Here's your roadmap. Accept, refine, or override."
    - `basic-decomp,rationale` (Standard) — semi-directive: present phase decomposition with rationale per phase, ask the developer to accept or refine specific phases.
-   - `basic-decomp,rationale,collaborative-loop` (Full) — collaborative: delegate the walk-through to the `speckit.orchestrator.discuss` Tier C pattern, iterating phase-by-phase with the developer.
+   - `basic-decomp,rationale,collaborative-loop` (Full) — collaborative: delegate the walk-through to the `/orchestrator-discuss` Tier C pattern, iterating phase-by-phase with the developer.
 
 ## Spec Analysis
 
@@ -62,7 +62,7 @@ The interaction style is gated by the resolved intensity substeps from the Prere
 
 - **single-pass (Quick)**: produce the full roadmap in one pass without intermediate confirmation; present the final roadmap with "Accept, refine, or override." No rationale walk-through.
 - **basic-decomp,rationale (Standard)**: present phase decomposition with a one-sentence rationale per phase; ask the developer to accept, refine, or request a re-decomposition before writing the roadmap.
-- **basic-decomp,rationale,collaborative-loop (Full)**: invoke the `speckit.orchestrator.discuss` Tier C collaborative loop to walk through each candidate phase with the developer. The output of the discussion seeds the roadmap.
+- **basic-decomp,rationale,collaborative-loop (Full)**: invoke the `/orchestrator-discuss` Tier C collaborative loop to walk through each candidate phase with the developer. The output of the discussion seeds the roadmap.
 
 ### Phase Decomposition
 
@@ -140,11 +140,11 @@ This satisfies R012 (idempotent commands) — running `roadmap` twice without co
 
 ## Error Handling
 
-- If the milestone directory doesn't exist, exit with error: "Milestone directory not found. Run speckit.orchestrator.evaluate first."
+- If the milestone directory doesn't exist, exit with error: "Milestone directory not found. Run `/orchestrator-evaluate` first."
 - If state is not `pre-planning` or `planning`, report: "Cannot generate roadmap in state '{state}'. Expected pre-planning or planning."
 - If Tier C context draft is not finalized, block and report as described in Prerequisites.
 - If the feature spec is missing or unreadable, exit with error: "Feature spec not found at {path}."
-- **Edge case — state is `planning` but context draft is not finalized (Tier C)**: `derive-phase.sh` returns `planning` when no roadmap exists, regardless of tier or context draft status (this is intentional — see design note in the script). If state is `planning` but the Tier C context draft exists with `status: draft` (not finalized), treat as `discussing` and block: "Tier C context draft exists but is not finalized. Run `speckit.orchestrator.discuss` to finalize before generating a roadmap."
+- **Edge case — state is `planning` but context draft is not finalized (Tier C)**: `derive-phase.sh` returns `planning` when no roadmap exists, regardless of tier or context draft status (this is intentional — see design note in the script). If state is `planning` but the Tier C context draft exists with `status: draft` (not finalized), treat as `discussing` and block: "Tier C context draft exists but is not finalized. Run `/orchestrator-discuss` to finalize before generating a roadmap."
 
 ## Gotchas
 

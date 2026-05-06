@@ -37,8 +37,8 @@ Discussion is valid when the state is:
 - `discussing` — a context draft exists with `status: draft`; update or finalize it
 
 If the state is anything else, report: "Discussion is not available in the current state (`{state}`). Suggested command: `{appropriate_command}`." Use this mapping:
-- `planning` or `executing` → suggest `speckit.orchestrator.status` or `speckit.orchestrator.dispatch`
-- `complete` → suggest `speckit.orchestrator.status`
+- `planning` or `executing` → suggest `/orchestrator-status` or `/orchestrator-dispatch`
+- `complete` → suggest `/orchestrator-status`
 
 ### 2. Read the Tier
 
@@ -48,12 +48,12 @@ Read the tier classification from the evaluation file in the milestone directory
 <milestone-dir>/M###-EVALUATION.md
 ```
 
-Extract the `tier` field from the YAML frontmatter. If the evaluation file doesn't exist, warn: "No evaluation found. Run `speckit.orchestrator.evaluate` first to classify the project tier." and exit.
+Extract the `tier` field from the YAML frontmatter. If the evaluation file doesn't exist, warn: "No evaluation found. Run `/orchestrator-evaluate` first to classify the project tier." and exit.
 
 Report the tier to inform behavior:
 
-- **Tier A** — Discussion is not applicable. Tier A bypasses the orchestrator entirely. Report: "Tier A project — discussion is not applicable. Use standard spec-kit commands directly."
-- **Tier B** — Discussion is optional and skippable. Report: "Tier B project — discussion is optional. You can skip this and proceed directly to `speckit.orchestrator.roadmap`." Then proceed if the developer wants to continue.
+- **Tier A** — Discussion is not applicable. Tier A bypasses the orchestrator entirely. Report: "Tier A project — discussion is not applicable. Proceed with your host runtime's native single-context workflow."
+- **Tier B** — Discussion is optional and skippable. Report: "Tier B project — discussion is optional. You can skip this and proceed directly to `/orchestrator-roadmap`." Then proceed if the developer wants to continue.
 - **Tier C** — Discussion is a required gate before roadmap generation (FR-056). Report: "Tier C project — discussion is required before roadmap generation. The roadmap command will not proceed until the context draft is finalized." Then proceed.
 
 ### 3. Read the Feature Spec
@@ -136,20 +136,20 @@ When the developer indicates the context is complete:
 
 This transitions the state machine from `discussing` to `planning` — `derive-phase.sh` will no longer match the discussing rule (rule 2) because the context file now has `status: finalized`.
 
-After finalizing, suggest: "Context finalized. Run `speckit.orchestrator.roadmap` to generate the execution roadmap."
+After finalizing, suggest: "Context finalized. Run `/orchestrator-roadmap` to generate the execution roadmap."
 
 ## Idempotency (FR-066)
 
 - **Creating a draft when one already exists**: Do NOT overwrite the existing draft. Report: "Context draft already exists at `<M###>-CONTEXT.md` with status: {status}." Then:
   - If `status: draft` → offer to update or finalize: "Would you like to update the draft with additional context, or finalize it to proceed to planning?"
-  - If `status: finalized` → report: "Context already finalized. Proceed to `speckit.orchestrator.roadmap`."
-- **Finalizing an already-finalized context**: Report "Context already finalized at {finalized_at}. Proceed to `speckit.orchestrator.roadmap`." Do not modify the file.
+  - If `status: finalized` → report: "Context already finalized. Proceed to `/orchestrator-roadmap`."
+- **Finalizing an already-finalized context**: Report "Context already finalized at {finalized_at}. Proceed to `/orchestrator-roadmap`." Do not modify the file.
 - **Running discuss twice with no changes**: Safe — the file is re-read and presented without modification.
 
 ## Error Handling
 
 - **State is not `pre-planning` or `discussing`**: Report current state and suggest the appropriate command (see Prerequisites section above).
-- **Evaluation file missing**: Report "No evaluation found at `<M###>-EVALUATION.md`. Run `speckit.orchestrator.evaluate` first." and exit.
+- **Evaluation file missing**: Report "No evaluation found at `<M###>-EVALUATION.md`. Run `/orchestrator-evaluate` first." and exit.
 - **Context file has malformed frontmatter** (missing `---` delimiters or missing `status` field): Warn "Context file has malformed frontmatter. Attempting to repair." Re-add the frontmatter block with `status: draft`, preserving the existing body content. If repair fails, report the error and suggest manual inspection.
 - **Template file missing** (`templates/context-draft.md` not found): Report "Context draft template not found at `templates/context-draft.md`. Cannot create context draft." and exit 1.
 - **Developer provides empty content**: Warn "No content provided. The context draft sections are empty." Allow the draft to be created (it can be updated later), but warn that finalizing an empty draft provides no value for planning.

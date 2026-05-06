@@ -54,14 +54,14 @@ The installer registers `orchestrator:*` skills/commands into the active runtime
 In your project directory:
 
 ```
-orchestrator:init
+/orchestrator-init
 ```
 
 `init` probes the project, detects host capabilities, generates `.orchestrator/config.yml` with sensible defaults, and writes a runtime-appropriate instruction file. Completes in ~1 second.
 
 ### 3. Create project configuration (optional)
 
-`orchestrator:init` writes a default config. To customize, edit `.orchestrator/config.yml` or start from the template:
+`/orchestrator-init` writes a default config. To customize, edit `.orchestrator/config.yml` or start from the template:
 
 ```bash
 cp templates/orchestrator-config-default.yml .orchestrator/config.yml
@@ -93,7 +93,7 @@ mkdir -p specs/001-your-feature
 # Write your spec at specs/001-your-feature/spec.md
 ```
 
-The spec should contain user stories, acceptance criteria, and functional requirements. The orchestrator analyzes these to determine scope and plan phases. The orchestrator reads spec-kit-shaped specs via `scripts/dispatch/adapters/format/speckit.sh`, but you do not need spec-kit installed to use it.
+The spec should contain user stories, acceptance criteria, and functional requirements. The orchestrator analyzes these to determine scope and plan phases. Specs are read via pluggable format adapters at `scripts/dispatch/adapters/format/`; the orchestrator runs standalone with no external tool dependency. (See [Migrating from spec-kit](migrating-from-speckit.md) if you have an existing spec-kit project to onboard.)
 
 ### 5. Verify the installation
 
@@ -116,7 +116,7 @@ The orchestrator commands follow a sequential workflow. Each step produces files
 ### Step 1: Evaluate
 
 ```
-orchestrator:evaluate
+/orchestrator-evaluate
 ```
 
 This is always the first orchestrator command. It reads your feature spec, counts user stories, acceptance scenarios, and functional requirements, then classifies your project into one of three tiers:
@@ -132,7 +132,7 @@ If the evaluation classifies your project as Tier A, you are done with the orche
 ### Step 2: Discuss (Tier C only)
 
 ```
-orchestrator:discuss
+/orchestrator-discuss
 ```
 
 For Tier C projects, discussion is a required gate before roadmap generation. This command creates and manages a context draft (`M001-CONTEXT.md`) that captures architectural decisions, scope boundaries, design constraints, and open questions.
@@ -149,7 +149,7 @@ For Tier B projects, discussion is optional. You can skip directly to the roadma
 ### Step 3: Roadmap
 
 ```
-orchestrator:roadmap
+/orchestrator-roadmap
 ```
 
 This command decomposes your feature spec into an ordered sequence of phases. It reads the spec (and the finalized context draft for Tier C) and produces a roadmap file (`M001-ROADMAP.md`) that defines:
@@ -164,7 +164,7 @@ The roadmap drives all downstream orchestration. Phase ordering, dependency reso
 ### Step 4: Plan Phase
 
 ```
-orchestrator:plan-phase
+/orchestrator-plan-phase
 ```
 
 This command plans a single phase by generating a detailed phase plan (`P01-PLAN.md`) with:
@@ -184,7 +184,7 @@ Run this command once for each phase. The orchestrator identifies the next phase
 For Tier B, dispatch tasks one at a time:
 
 ```
-orchestrator:dispatch
+/orchestrator-dispatch
 ```
 
 This command picks the next incomplete task in the active phase, assembles a context payload from the task plan and relevant state files, dispatches execution, verifies the output against must-haves, and records the result in the execution log.
@@ -192,7 +192,7 @@ This command picks the next incomplete task in the active phase, assembles a con
 For Tier C, you can run tasks autonomously:
 
 ```
-orchestrator:auto
+/orchestrator-auto
 ```
 
 The auto command acquires a session lock, then loops through the full lifecycle: derive state, check budget and stuck detection, dispatch the next task, verify results, record outcomes, and advance to the next task or phase. It continues until:
@@ -322,7 +322,7 @@ When a session crashes (process killed, machine restart, network failure):
 ### How to resume
 
 ```
-orchestrator:resume
+/orchestrator-resume
 ```
 
 The resume command detects the type of interruption:
@@ -345,7 +345,7 @@ The orchestrator includes a diagnostics subsystem for detecting common problems.
 ### Status check
 
 ```
-orchestrator:status
+/orchestrator-status
 ```
 
 This is a read-only command that reports:
@@ -384,7 +384,7 @@ Each check emits a structured line: `DOCTOR:<CHECK> status=ok|warn|fail detail="
 You can also run the doctor through the command interface:
 
 ```
-orchestrator:doctor
+/orchestrator-doctor
 ```
 
 ---

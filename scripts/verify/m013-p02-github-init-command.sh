@@ -55,9 +55,9 @@ if [ -f "$CMD" ]; then
     echo "DIAG: missing YAML frontmatter opener on line 1"
   fi
   # Title line
-  if ! grep -q '^# speckit\.orchestrator\.github-init' "$CMD"; then
+  if ! grep -q '^# orchestrator:github-init' "$CMD"; then
     a2_ok=0
-    echo "DIAG: missing Title heading '# speckit.orchestrator.github-init'"
+    echo "DIAG: missing Title heading '# orchestrator:github-init'"
   fi
   # Required section headers
   for section in \

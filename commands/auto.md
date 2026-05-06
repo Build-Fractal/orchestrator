@@ -54,7 +54,7 @@ The finder validates that `M026` exists, is tier C, and is in an auto-eligible s
 **State validation:**
 - `executing`, `planning`, `summarizing`, `validating`, `completing` — valid, proceed
 - `complete` — report "Milestone already complete" and exit without acquiring a lock
-- `pre-planning`, `discussing` — report "Milestone is not ready for autonomous execution — run `speckit.orchestrator.evaluate` first" and exit
+- `pre-planning`, `discussing` — report "Milestone is not ready for autonomous execution — run `/orchestrator-evaluate` first" and exit
 
 **Tier validation** (already handled by the finder, but for explicit invocation):
 
@@ -62,7 +62,7 @@ The finder validates that `M026` exists, is tier C, and is in an auto-eligible s
 bash scripts/state/read-roadmap.sh <roadmap-file> tier
 ```
 
-Auto mode is only available for **Tier C** (FR-054). Tier B → "Use `speckit.orchestrator.dispatch`". Tier A → "Use spec-kit commands directly."
+Auto mode is only available for **Tier C** (FR-054). Tier B → "Use `/orchestrator-dispatch`". Tier A → "Tier A projects bypass the orchestrator entirely — proceed with your host runtime's native single-context workflow."
 
 **IMPORTANT — No compound bash:** Do NOT use `for` loops, `if/elif/else` chains, or `$()` substitution in inline bash commands. The harness safety heuristic (AD-19) flags these patterns and triggers interactive prompts that block unattended execution. Always use single-script invocations.
 
@@ -72,8 +72,8 @@ Auto mode is only available for **Tier C** (FR-054). Tier B → "Use `speckit.or
 bash scripts/lifecycle/lock-manager.sh status .orchestrator/orchestrator.lock
 ```
 
-- **LOCK:ACTIVE** — Another session owns execution. Report "Lock held by PID {pid} since {started_at} on unit {unit_id}. Autonomous mode cannot start while another session is active." and exit. **Note for Claude Code (`CLAUDECODE=1`):** ACTIVE under CC is ambiguous — it could be a concurrent session OR a previous interrupted session whose per-tool-call shell already exited. If you suspect interruption, run `speckit.orchestrator.resume`; its B1 step prompts for confirmation before breaking the lock.
-- **LOCK:STALE** — A previous session crashed. Report "Stale lock detected (PID {pid} not running). Run `speckit.orchestrator.resume` for crash recovery." and exit. Do NOT auto-break the lock — crash recovery via `resume` ensures no work is lost.
+- **LOCK:ACTIVE** — Another session owns execution. Report "Lock held by PID {pid} since {started_at} on unit {unit_id}. Autonomous mode cannot start while another session is active." and exit. **Note for Claude Code (`CLAUDECODE=1`):** ACTIVE under CC is ambiguous — it could be a concurrent session OR a previous interrupted session whose per-tool-call shell already exited. If you suspect interruption, run `/orchestrator-resume`; its B1 step prompts for confirmation before breaking the lock.
+- **LOCK:STALE** — A previous session crashed. Report "Stale lock detected (PID {pid} not running). Run `/orchestrator-resume` for crash recovery." and exit. Do NOT auto-break the lock — crash recovery via `resume` ensures no work is lost.
 - **LOCK:NONE** — No lock exists, safe to proceed.
 
 ### 3. Verify Tier C
@@ -84,9 +84,9 @@ Already verified by `find-active-milestone.sh` in step 1. For explicit check:
 bash scripts/state/read-roadmap.sh <roadmap-file> tier
 ```
 
-Auto mode is only available for **Tier C** projects (FR-054). If the tier is B, report "Autonomous mode is only available for Tier C projects. Use `speckit.orchestrator.dispatch` for guided execution." and exit.
+Auto mode is only available for **Tier C** projects (FR-054). If the tier is B, report "Autonomous mode is only available for Tier C projects. Use `/orchestrator-dispatch` for guided execution." and exit.
 
-If the tier is A, report "Tier A projects do not use orchestrator dispatch. Use spec-kit commands directly." and exit.
+If the tier is A, report "Tier A projects bypass the orchestrator entirely — proceed with your host runtime's native single-context workflow." and exit.
 
 ### 4. Permission Pre-Flight
 
@@ -174,7 +174,7 @@ If `git_isolation` is configured to `true`, check the config value via a single-
 bash scripts/state/read-config.sh git_isolation
 ```
 
-Read the stdout output directly (it prints `true` or `false`). When it prints `true`, dispatched tasks execute within a git worktree created by `scaffold.sh` at `.worktrees/<M###>`. This isolates orchestrator work from the main branch. The worktree is merged back during `speckit.orchestrator.consolidate`.
+Read the stdout output directly (it prints `true` or `false`). When it prints `true`, dispatched tasks execute within a git worktree created by `scaffold.sh` at `.worktrees/<M###>`. This isolates orchestrator work from the main branch. The worktree is merged back during `/orchestrator-consolidate`.
 
 If it prints `false` (default), tasks execute in the current working tree.
 
@@ -223,7 +223,7 @@ Then read `<milestone-dir>/auto-loop-result.txt` to get milestone, phase, task, 
 **a. Dispatch**: Read the payload file from the `payload_file` path in the `AUTO:READY` output. Pass its contents directly as the Agent tool prompt — do NOT manually read task plans, upstream summaries, knowledge files, or decisions yourself. The payload is pre-assembled by `build-context.sh` with scope-filtered context.
 
 **Capability self-check**: Check your own toolkit to determine the dispatch method:
-- If you have the **Agent tool** available: Use it with the payload as prompt and `subagent_type='orchestrator-agent'` (registered by `orchestrator:init` into `~/.claude/agents/`). If `orchestrator-agent` is not in the discovery list (older install or non-CC runtime), fall back to `subagent_type='general-purpose'`. **Do NOT pick framework-named agents like `gsd-*` from the discovery list** — they impose framework conventions on the dispatch and corrupt the output shape. See `templates/claude-code-appendix.md`.
+- If you have the **Agent tool** available: Use it with the payload as prompt and `subagent_type='orchestrator-agent'` (registered by `orchestrator:init` into `~/.claude/agents/`). If `orchestrator-agent` is not in the discovery list (older install or non-CC runtime), fall back to `subagent_type='general-purpose'`. **Do NOT pick framework-named agents from other tools that may also be installed on the user's machine** — their system prompts impose framework conventions on the dispatch and corrupt the orchestrator's output shape. See `templates/claude-code-appendix.md`.
 - If you have **CLI access** to `claude` or `cursor`: Use CLI subagent dispatch.
 - If neither is available: Execute sequentially in current context.
 
@@ -237,7 +237,7 @@ bash scripts/lifecycle/auto-loop.sh <milestone-dir> --step=V --phase=P## --task=
 
 Then read `<milestone-dir>/verify-result.txt` for the result. The script extracts verification commands from the task plan's Verification / Must-Haves section and runs each one. It reports `AUTO:VERIFY_PASS` or `AUTO:VERIFY_FAIL` with check counts.
 
-The full `speckit.orchestrator.verify` command (4-tier verification pipeline) runs only at **phase boundaries** — see the Phase Transition section below. Running it after every task would be wasteful.
+The full `/orchestrator-verify` command (4-tier verification pipeline) runs only at **phase boundaries** — see the Phase Transition section below. Running it after every task would be wasteful.
 
 - **Pass** → proceed to Stage 3 with `outcome=success`, `verification_result=pass`
 - **Fail (first attempt)** → retry dispatch. Construct the retry payload by appending a verification failure section to the original dispatch payload:
@@ -274,14 +274,14 @@ When `auto-loop.sh` returns `AUTO:PLANNING phase=P## milestone=M###`, the active
 
 2. **Dispatch planning**: Use the Agent tool (or equivalent) with a prompt that includes:
    - The assembled context from step 1
-   - Instructions to follow the `speckit.orchestrator.plan-phase` command (reference `commands/plan-phase.md`)
+   - Instructions to follow the `/orchestrator-plan-phase` command (reference `commands/plan-phase.md`)
    - The target phase ID and milestone directory path
 
    ```
-   Agent(prompt="Plan phase P## for milestone M### following the speckit.orchestrator.plan-phase command (rubric at commands/plan-phase.md, staged at project root by orchestrator:init).\n\n<assembled context>\n\nMilestone directory: <milestone-dir>", subagent_type="orchestrator-agent")
+   Agent(prompt="Plan phase P## for milestone M### following the orchestrator-plan-phase command (rubric at commands/plan-phase.md, staged at project root by orchestrator-init).\n\n<assembled context>\n\nMilestone directory: <milestone-dir>", subagent_type="orchestrator-agent")
    ```
 
-   Fall back to `subagent_type="general-purpose"` only if `orchestrator-agent` is not in the discovery list. **Do NOT pick `gsd-*` or other framework-named agents** — their system prompts impose conventions incompatible with orchestrator output shape (observed in bbt-companion dogfood, FU-7).
+   Fall back to `subagent_type="general-purpose"` only if `orchestrator-agent` is not in the discovery list. **Do NOT pick framework-named agents from other tools** that may share the discovery list — their system prompts impose conventions incompatible with orchestrator output shape (observed in bbt-companion dogfood, FU-7).
 
 3. **Verify planning completed**: After the planning agent returns, check that the phase plan and task plans exist. Do NOT use compound boolean chains or pipe chains — use the dedicated helper script:
 
@@ -303,7 +303,7 @@ When a pause is detected:
 
 1. **Write continue file** following `templates/continue-file.md` with current position, completed work (from the lock file's `completedUnits`), remaining tasks, and next action.
 2. **Release the lock**: `bash scripts/lifecycle/lock-manager.sh break .orchestrator/orchestrator.lock`
-3. **Report**: "Autonomous execution paused at {position}. Continue file written. Run `speckit.orchestrator.resume` to resume."
+3. **Report**: "Autonomous execution paused at {position}. Continue file written. Run `/orchestrator-resume` to resume."
 4. **Exit cleanly** with exit code 0.
 
 ## Phase Transition
@@ -324,7 +324,7 @@ Parse the file to extract the derived field values, then review them before writ
 
 ### Two-Stage Review (FR-015 / FR-059 / FR-060)
 
-1. **Stage 1 — Phase Verification**: Run `speckit.orchestrator.verify` on the phase to execute the full 4-tier verification pipeline. This is the only point where the full verification command runs — NOT after individual tasks.
+1. **Stage 1 — Phase Verification**: Run `/orchestrator-verify` on the phase to execute the full 4-tier verification pipeline. This is the only point where the full verification command runs — NOT after individual tasks.
 
 2. **Stage 2 — Phase Summary**: If verification passes, produce the phase summary using `phase-transition.sh --write`. This derives all mechanical fields from task summaries and writes the summary in one call. Only `--body` and `--observability_surfaces` require agent judgment.
 
@@ -380,7 +380,7 @@ Parse the file to extract the derived field values, then review them before writ
       - **Completed Work**: List all phases completed in this session (from the lock file's `completedUnits`)
       - **Remaining Work**: List remaining incomplete phases from the roadmap
       - **Context**: "Proactive context rotation — no errors. Session weight {weight}/{limit}, next phase estimated at {next_est} units."
-      - **Next Action**: "Run `speckit.orchestrator.auto` to continue autonomous execution from the next incomplete phase."
+      - **Next Action**: "Run `/orchestrator-auto` to continue autonomous execution from the next incomplete phase."
 
    d. Release the lock: `bash scripts/lifecycle/lock-manager.sh break .orchestrator/orchestrator.lock`
 
@@ -390,10 +390,10 @@ Parse the file to extract the derived field values, then review them before writ
       ✓ Phase {completed_phase} complete.
       ⚠ Context rotation — session weight at {weight}/{limit}. Next phase est. {next_est} units.
         Completed: {completed_count}/{total_count} phases in this session.
-        Run `speckit.orchestrator.auto` to continue from {next_phase}.
+        Run `/orchestrator-auto` to continue from {next_phase}.
       ```
 
-   f. Exit cleanly. The developer runs `speckit.orchestrator.auto` again, which picks up seamlessly — `derive-phase.sh` identifies the next incomplete phase, task scanning finds the next incomplete task, and the loop resumes in a fresh context.
+   f. Exit cleanly. The developer runs `/orchestrator-auto` again, which picks up seamlessly — `derive-phase.sh` identifies the next incomplete phase, task scanning finds the next incomplete task, and the loop resumes in a fresh context.
 
    **Note:** Context rotation is a proactive reliability measure, not an error. The orchestrator exits *between* phases (never mid-task), so all state is on disk and no work is lost. The continue file is informational — `auto` does not require it to resume because state derivation from disk is authoritative.
 
@@ -524,8 +524,8 @@ If `lock-manager.sh` returns a non-zero exit code:
 
 ## Gotchas
 
-- **Only Tier C projects can use auto mode**: Tier B uses guided dispatch via `speckit.orchestrator.dispatch`. Tier A bypasses the orchestrator entirely.
-- **Stale lock requires `resume`, not re-invocation**: Auto mode refuses to start with a stale lock — it does not auto-break it. Run `speckit.orchestrator.resume` for crash recovery to ensure no work is lost.
+- **Only Tier C projects can use auto mode**: Tier B uses guided dispatch via `/orchestrator-dispatch`. Tier A bypasses the orchestrator entirely.
+- **Stale lock requires `resume`, not re-invocation**: Auto mode refuses to start with a stale lock — it does not auto-break it. Run `/orchestrator-resume` for crash recovery to ensure no work is lost.
 - **Pause detection is checked between tasks, not during**: A `pause-requested` file created while a task is executing will not take effect until that task completes and the loop returns to Stage 1.
 - **DONE_WITH_CONCERNS evaluation**: Concerns affecting correctness or scope block advancement; observational concerns are noted in the task summary and the loop proceeds (US3 AS6).
 

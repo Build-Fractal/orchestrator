@@ -156,7 +156,7 @@ flags unprefixed `p##-*` plan deliverables as warnings.
   - Check: `bash tools/verify/m036-p07-my-check.sh`
 ```
 
-**Why this matters**: the orchestrator's `speckit.orchestrator.auto`
+**Why this matters**: the orchestrator's `/orchestrator-auto`
 command runs unattended. Every harness prompt interrupts that
 unattended run — even for commands the developer has allow-listed.
 Writing `Check:` commands in the script-file shape keeps auto mode
@@ -255,7 +255,7 @@ Write the plan files to the phase directory:
 After writing the phase plan and all task plans:
 
 1. **Verify state transition**: Run `bash scripts/state/derive-phase.sh <milestone-dir>`. The state should now be `executing` (task plans exist without summaries).
-2. **Report next step**: Inform the developer that the phase is ready for execution via `speckit.orchestrator.dispatch` (one task at a time) or `speckit.orchestrator.auto` (autonomous execution).
+2. **Report next step**: Inform the developer that the phase is ready for execution via `/orchestrator-dispatch` (one task at a time) or `/orchestrator-auto` (autonomous execution).
 3. **Report deliverables accurately**: when listing what the plan delivers, frame the report as "deliverables the plan **schedules**" — regardless of which agent actually authors the artifact at execution time. Do NOT report "authored N verifier scripts" if the scripts are scheduled as executor-task deliverables in plan bodies; planner has *scheduled* their authorship, not *performed* it. Misleading reporting muddies plan/exec accounting and makes verification gaps harder to spot. Surfaced 2026-04-29 by lakeledger M066/P02 dogfooding.
 
 Note: Running `plan-phase` again without `--phase P##` would attempt to re-plan the same phase since it is still the active phase. Use `--phase` to target a different phase.
@@ -273,8 +273,8 @@ This satisfies R012 (idempotent commands) — running `plan-phase` twice without
 
 ## Error Handling
 
-- If the milestone directory doesn't exist, exit with error: "Milestone directory not found. Run speckit.orchestrator.evaluate first."
-- If no roadmap exists, exit with error: "No roadmap found. Run speckit.orchestrator.roadmap first."
+- If the milestone directory doesn't exist, exit with error: "Milestone directory not found. Run `/orchestrator-evaluate` first."
+- If no roadmap exists, exit with error: "No roadmap found. Run `/orchestrator-roadmap` first."
 - If state is not `planning`, report: "Cannot plan phases in state '{state}'. Expected planning."
 - If the specified phase doesn't exist in the roadmap, exit with error: "Phase {P##} not found in roadmap."
 - If upstream dependencies are not satisfied (missing summaries), report: "Phase {P##} depends on {P##} which is not yet complete."

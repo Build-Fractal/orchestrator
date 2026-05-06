@@ -38,7 +38,7 @@ bash scripts/migrate/migrate.sh --path <source-path> [--source gsd2|gsd1|speckit
 
 After migration completes:
 1. Review `MIGRATION-REPORT.md` for statistics and warnings
-2. Run `speckit.orchestrator.status` to verify state
+2. Run `/orchestrator-status` to verify state
 3. Begin orchestrator work from the migrated milestone
 
 ## State Root Resolution (AD-13)

@@ -154,7 +154,7 @@ The execution log is append-only (JSONL format) and provides the audit trail for
 
 After the dispatched task completes:
 
-1. **Run verification**: Invoke `speckit.orchestrator.verify` on the completed task to confirm must-haves are met.
+1. **Run verification**: Invoke `/orchestrator-verify` on the completed task to confirm must-haves are met.
 2. **Record result**: Record the verification outcome using `record-result.sh` with `--verification_result=<pass|fail|skipped>` and `--outcome=<success|failure>`.
 3. **State transition**: If verification passes, the task is marked complete. The orchestrator state may transition based on remaining incomplete tasks.
 

@@ -80,7 +80,7 @@ When an artifact says "see `.orchestrator/DECISIONS.md` D009" or "see `M011-SUMM
 
 **Why this priority**: Cross-references are how orchestrator artifacts already convey structure (`DECISIONS.md` references milestone summaries, summaries reference decisions, knowledge entries reference both). If they render as broken links on the wiki, readers fall back to raw markdown and the wiki loses its value. Priority P2 rather than P1 because the site is still usable without cross-link rewriting (sidebar navigation gets you there) — just less pleasant.
 
-**Independent Test**: Open a rendered artifact that contains a link like `[D009](../DECISIONS.md#d009)` or `[M011 summary](milestones/M011/M011-SUMMARY.md)`. Click the link. It loads the rendered version of that target. The browser URL reflects the rendered route, not a raw `.md` path.
+**Independent Test**: Open a rendered artifact that contains a link like `[D009](../DECISIONS.md#dr-code-009)` or `[M011 summary](milestones/M011/M011-SUMMARY.md)`. Click the link. It loads the rendered version of that target. The browser URL reflects the rendered route, not a raw `.md` path.
 
 **Acceptance Scenarios**:
 

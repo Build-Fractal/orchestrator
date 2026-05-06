@@ -1,8 +1,44 @@
 # Brief — M032 cross-link rewrite warnings (B5)
 
-**Status:** Deferred — needs hypothesis validation before patching.
+**Status:** Partially shipped 2026-05-06 — fragment-only passthrough fix
+landed in the round-2 paper-cut sweep
+(`papercut-sweep-m032-pbj-dogfood-round2.md`). Broader cross-doc rewrite
+semantics for non-fragment links inside top-level singletons remains
+deferred — see "What landed" + "What's still deferred" sections below.
 **Authored:** 2026-05-06.
 **Surfaced by:** PBJ-central-mono-repo wiki-init dogfood, 2026-05-06.
+
+## What landed (round-2 sweep, 2026-05-06)
+
+Per-routing-arm `rewrite-relative-urls` toggle in `write_stub()`. The
+following routing arms now emit `rewrite-relative-urls=false`,
+preserving fragment-only `#anchor` links untouched:
+
+- `top:constitution` / `top:decisions` / `top:knowledge` /
+  `top:milestone-summary` / `top:glossary`
+- `proposals:*`
+- `knowledge-flat`
+- `extra:*` default include path
+
+`milestone:*` / `archive:*` records keep `rewrite-relative-urls=true`
+because they have many sibling-doc cross-references that depend on
+rewriting.
+
+Regression fixture:
+`tests/m032-acceptance/p0X-pbj-b5-fragment-only-passthrough.sh`.
+
+## What's still deferred
+
+Cross-doc references inside top-level singletons (e.g.,
+`[D004](knowledge/MEM004.md)` in `DECISIONS.md`) no longer get
+rewritten by include-markdown. In practice these top-level docs have
+very few such links — most cross-refs are anchor-based. Consumers can
+inline the link target as text, switch to absolute repo-root paths, or
+accept the broken link. The cost of this trade-off is strictly less
+than the silent runtime breakage of the previous behavior. A more
+principled fix (sibling-file projection or a deterministic
+post-projection rewriter) belongs to a future wiki-shape pass — none
+of the three M036a pre-pilot consumers have flagged it as blocking.
 
 ## Problem
 

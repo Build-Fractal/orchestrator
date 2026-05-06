@@ -510,6 +510,15 @@ parse_extra_dir_labels() {
 
 # scan_extra_dir <abs-dir> <dirname-record>
 # Emits extra:<dirname>|<rel-from-ROOT>|<title> records.
+#
+# PBJ-dogfood B7: when `<basename>.md` and `<basename>.text.md` coexist in
+# the same dir, suppress the `<basename>.text.md` record. M036 reference-
+# corpus chunks pair a metadata `.md` (frontmatter + `|` body placeholder)
+# with a Tier-1-extracted `.text.md` sibling carrying the real content.
+# Without this carve-out the scanner emits two records (REF-foo and
+# REF-foo.text) and the wiki nav grows duplicate sibling entries. The
+# stub generator's extra:* arm is responsible for splicing the sibling's
+# body into the canonical chunk's stub at projection time.
 scan_extra_dir() {
   _abs="$1"
   _dn="$2"
@@ -518,6 +527,15 @@ scan_extra_dir() {
   find "$_abs" -type f -name '*.md' 2>/dev/null | LC_ALL=C sort > "$_xlist"
   while IFS= read -r _xpath; do
     [ -n "$_xpath" ] || continue
+    # B7 sibling-suppression: skip *.text.md when <basename>.md exists.
+    case "$_xpath" in
+      *.text.md)
+        _xstem=${_xpath%.text.md}
+        if [ -f "${_xstem}.md" ]; then
+          continue
+        fi
+        ;;
+    esac
     _xrel=${_xpath#"$ROOT/"}
     _xtitle=$(extract_title "$_xpath")
     printf '%s|%s|%s\n' "extra:$_dn" "$_xrel" "$_xtitle"

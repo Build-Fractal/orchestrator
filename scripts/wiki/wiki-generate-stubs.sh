@@ -168,17 +168,27 @@ map_record_to_stub_rel() {
   esac
 }
 
-# write_stub <target-abs-path> <canonical-path> <title> [<canonical-abs-path>]
+# write_stub <target-abs-path> <canonical-path> <title> [<canonical-abs-path>] [<rewrite-relative-urls>]
 # When <canonical-abs-path> is provided and the file begins with `---`, the
 # include directive emits `start="\n---\n"` to skip past YAML frontmatter so
 # the rendered body starts at the H1 instead of dumping the frontmatter as
 # prose. Plugin's interpret_escapes resolves `\n` → newline (verified against
 # mkdocs-include-markdown-plugin v7.1.2).
+#
+# PBJ-dogfood B5: <rewrite-relative-urls> param (default "true") controls the
+# include directive's relative-URL rewrite behavior. Set to "false" by callers
+# whose canonical doc primarily uses fragment-only (`#anchor`) intra-doc
+# links — include-markdown-plugin's rewrite-relative-urls=true rewrites
+# fragment-only hrefs by prepending the source-relative path
+# (e.g., `#foo` → `../../.orchestrator#foo`), producing silent 404s.
+# Singleton top-level docs (constitution, decisions, knowledge,
+# milestone-summary, glossary, knowledge-flat, proposals) opt out.
 write_stub() {
   _target="$1"
   _canonical="$2"
   _title="$3"
   _canonical_abs="${4:-}"
+  _rewrite_rel_urls="${5:-true}"
   if [ "$DRY_RUN" -eq 1 ]; then
     printf 'WOULD-WRITE: %s\n' "$_target" >&2
     STUBS_WRITTEN=$((STUBS_WRITTEN + 1))
@@ -212,7 +222,7 @@ write_stub() {
       printf '  start="\\n---\\n"\n'
     fi
     printf '  heading-offset=0\n'
-    printf '  rewrite-relative-urls=true\n'
+    printf '  rewrite-relative-urls=%s\n' "$_rewrite_rel_urls"
     printf '%%}\n'
   } > "$_target"
   if [ ! -f "$_target" ]; then
@@ -221,6 +231,218 @@ write_stub() {
   fi
   printf 'STUB: %s\n' "$_target" >&2
   STUBS_WRITTEN=$((STUBS_WRITTEN + 1))
+}
+
+# body_is_empty <abs-path> -> exits 0 if body is empty, 1 if non-empty
+#
+# PBJ-dogfood B7: M036 reference-corpus chunks pair a metadata `.md`
+# (frontmatter + literal `|` body placeholder) with a Tier-1-extracted
+# `.text.md` sibling carrying the real content. Body-empty heuristic:
+# strip frontmatter (if present), strip whitespace and any single-`|`
+# placeholder line, return "empty" if remaining body has zero non-blank
+# chars. Bash 3.2 / awk-only — no bash 4 features.
+body_is_empty() {
+  _p="$1"
+  [ -f "$_p" ] || return 1
+  _r=$(awk '
+    BEGIN { state="pre"; body_chars=0 }
+    NR == 1 && $0 == "---" { state="fm"; next }
+    NR == 1 { state="body" }
+    state == "fm" {
+      if ($0 == "---") { state="body"; next }
+      next
+    }
+    state == "body" {
+      line=$0
+      sub(/^[[:space:]]+/, "", line)
+      sub(/[[:space:]]+$/, "", line)
+      if (line == "" || line == "|") next
+      body_chars += length(line)
+    }
+    END { print (body_chars == 0 ? "empty" : "nonempty") }
+  ' "$_p" 2>/dev/null)
+  if [ "$_r" = "empty" ]; then
+    return 0
+  fi
+  return 1
+}
+
+# emit_frontmatter_metadata_table <abs-path> <out-file>
+#
+# Reads YAML frontmatter from <abs-path> and appends a Markdown table of
+# field|value pairs to <out-file>. No-op when the file has no frontmatter.
+# Used by the B7 metadata-table fallback for body-empty extra:* records
+# whose `.text.md` sibling is absent (e.g., M036 Tier 0 chunks where the
+# real content lives behind external_pointer:). Bash 3.2 / awk-only.
+emit_frontmatter_metadata_table() {
+  _p="$1"
+  _out="$2"
+  [ -f "$_p" ] || return 0
+  awk '
+    BEGIN { state="pre"; have=0 }
+    NR == 1 && $0 == "---" { state="fm"; next }
+    state == "fm" && $0 == "---" { exit }
+    state == "fm" {
+      if (match($0, /^[[:space:]]*[A-Za-z_][A-Za-z0-9_-]*[[:space:]]*:[[:space:]]*/)) {
+        k=$0
+        sub(/^[[:space:]]*/, "", k)
+        sub(/[[:space:]]*:.*$/, "", k)
+        v=$0
+        sub(/^[^:]*:[[:space:]]*/, "", v)
+        sub(/[[:space:]]+$/, "", v)
+        # collapse pipes in value to keep markdown table cells safe.
+        gsub(/\|/, "/", v)
+        # strip optional surrounding quotes
+        sub(/^["'"'"']/, "", v)
+        sub(/["'"'"']$/, "", v)
+        if (k != "" && v != "") {
+          if (have == 0) {
+            print "| Field | Value |"
+            print "|-------|-------|"
+            have=1
+          }
+          print "| " k " | " v " |"
+        }
+      }
+    }
+  ' "$_p" >> "$_out" 2>/dev/null
+}
+
+# write_stub_extra_with_sibling <target> <sibling-canonical> <title> <metadata-abs>
+#
+# B7 emission: stub for an extra:* record whose source body is empty AND
+# a `<basename>.text.md` sibling exists in the same dir. Renders frontmatter
+# from <metadata-abs> as a "Source metadata" admonition, then includes the
+# sibling's body via include-markdown. rewrite-relative-urls=false because
+# Tier-1-extracted text often contains plain-text references that should
+# pass through untouched.
+write_stub_extra_with_sibling() {
+  _target="$1"
+  _sibling_canonical="$2"
+  _title="$3"
+  _metadata_abs="$4"
+  if [ "$DRY_RUN" -eq 1 ]; then
+    printf 'WOULD-WRITE: %s\n' "$_target" >&2
+    STUBS_WRITTEN=$((STUBS_WRITTEN + 1))
+    return 0
+  fi
+  _dir=$(dirname "$_target")
+  if ! mkdir -p "$_dir"; then
+    printf 'ERROR: mkdir failed: %s\n' "$_dir" >&2
+    exit 2
+  fi
+  _title_esc=$(printf '%s' "$_title" | sed 's/"/\\"/g')
+  _meta_tmp="/tmp/wiki-stubs-meta-$$.tbl"
+  : > "$_meta_tmp"
+  emit_frontmatter_metadata_table "$_metadata_abs" "$_meta_tmp"
+  {
+    printf -- '---\n'
+    printf 'title: "%s"\n' "$_title_esc"
+    printf -- '---\n\n'
+    printf '<!-- Auto-generated by scripts/wiki/wiki-generate-stubs.sh. Do not hand-edit.\n'
+    printf '     Source metadata: %s. Source body: %s (Tier-1 sibling). -->\n\n' \
+      "$_metadata_abs" "$_sibling_canonical"
+    if [ -s "$_meta_tmp" ]; then
+      printf '!!! info "Source metadata"\n\n'
+      while IFS= read -r _row; do
+        printf '    %s\n' "$_row"
+      done < "$_meta_tmp"
+      printf '\n'
+    fi
+    printf '{%%\n'
+    printf '  include-markdown "%s"\n' "$_sibling_canonical"
+    printf '  heading-offset=0\n'
+    printf '  rewrite-relative-urls=false\n'
+    printf '%%}\n'
+  } > "$_target"
+  rm -f "$_meta_tmp"
+  if [ ! -f "$_target" ]; then
+    printf 'ERROR: write failed: %s\n' "$_target" >&2
+    exit 2
+  fi
+  printf 'STUB: %s (B7 metadata+sibling)\n' "$_target" >&2
+  STUBS_WRITTEN=$((STUBS_WRITTEN + 1))
+}
+
+# write_stub_extra_metadata_only <target> <title> <metadata-abs> <external-pointer-or-empty>
+#
+# B7 fallback: body-empty extra:* record with NO `.text.md` sibling
+# (typical of M036 Tier 0 chunks where the real content lives behind
+# external_pointer:). Renders frontmatter as a metadata table + a callout
+# linking to external_pointer: when present. Graceful degradation —
+# better than rendering a literal `|` body.
+write_stub_extra_metadata_only() {
+  _target="$1"
+  _title="$2"
+  _metadata_abs="$3"
+  _external_pointer="${4:-}"
+  if [ "$DRY_RUN" -eq 1 ]; then
+    printf 'WOULD-WRITE: %s\n' "$_target" >&2
+    STUBS_WRITTEN=$((STUBS_WRITTEN + 1))
+    return 0
+  fi
+  _dir=$(dirname "$_target")
+  if ! mkdir -p "$_dir"; then
+    printf 'ERROR: mkdir failed: %s\n' "$_dir" >&2
+    exit 2
+  fi
+  _title_esc=$(printf '%s' "$_title" | sed 's/"/\\"/g')
+  _meta_tmp="/tmp/wiki-stubs-meta-$$.tbl"
+  : > "$_meta_tmp"
+  emit_frontmatter_metadata_table "$_metadata_abs" "$_meta_tmp"
+  {
+    printf -- '---\n'
+    printf 'title: "%s"\n' "$_title_esc"
+    printf -- '---\n\n'
+    printf '<!-- Auto-generated by scripts/wiki/wiki-generate-stubs.sh. Do not hand-edit.\n'
+    printf '     Source metadata: %s. No Tier-1 sibling on disk. -->\n\n' "$_metadata_abs"
+    if [ -s "$_meta_tmp" ]; then
+      printf '!!! info "Source metadata"\n\n'
+      while IFS= read -r _row; do
+        printf '    %s\n' "$_row"
+      done < "$_meta_tmp"
+      printf '\n'
+    fi
+    if [ -n "$_external_pointer" ]; then
+      printf '!!! note "Source content"\n\n'
+      printf '    Tier-1 extraction not available on disk. See:\n\n'
+      printf '    `%s`\n' "$_external_pointer"
+    else
+      printf '!!! note "Source content"\n\n'
+      printf '    No body content extracted; metadata only.\n'
+    fi
+  } > "$_target"
+  rm -f "$_meta_tmp"
+  if [ ! -f "$_target" ]; then
+    printf 'ERROR: write failed: %s\n' "$_target" >&2
+    exit 2
+  fi
+  printf 'STUB: %s (B7 metadata-only)\n' "$_target" >&2
+  STUBS_WRITTEN=$((STUBS_WRITTEN + 1))
+}
+
+# extract_external_pointer <abs-path>
+#
+# Reads YAML frontmatter from <abs-path> and prints the `external_pointer:`
+# value (if any). Empty stdout when absent. Used by the metadata-only
+# fallback to surface a Tier 0 source path.
+extract_external_pointer() {
+  _p="$1"
+  [ -f "$_p" ] || return 0
+  awk '
+    BEGIN { state="pre" }
+    NR == 1 && $0 == "---" { state="fm"; next }
+    state == "fm" && $0 == "---" { exit }
+    state == "fm" && $0 ~ /^[[:space:]]*external_pointer[[:space:]]*:[[:space:]]*/ {
+      v=$0
+      sub(/^[^:]*:[[:space:]]*/, "", v)
+      sub(/[[:space:]]+$/, "", v)
+      sub(/^["'"'"']/, "", v)
+      sub(/["'"'"']$/, "", v)
+      print v
+      exit
+    }
+  ' "$_p" 2>/dev/null
 }
 
 # write_index <target-abs-path> <title> <body-file> [<include-canonical>]
@@ -436,7 +658,8 @@ while IFS='|' read -r CAT REL TITLE; do
       STUB_ABS="$DOCS/$STUB_REL"
       CANONICAL=$(build_canonical_repo_rel "$STUB_REL" "$REL")
       CANONICAL_ABS="$ROOT/$REL"
-      write_stub "$STUB_ABS" "$CANONICAL" "$TITLE" "$CANONICAL_ABS"
+      # B5: glossary is a self-contained singleton — fragment-only passthrough.
+      write_stub "$STUB_ABS" "$CANONICAL" "$TITLE" "$CANONICAL_ABS" "false"
       continue
       ;;
   esac
@@ -452,7 +675,8 @@ while IFS='|' read -r CAT REL TITLE; do
       STUB_ABS="$DOCS/$STUB_REL"
       CANONICAL=$(build_canonical "$STUB_REL" "$REL")
       CANONICAL_ABS="$ROOT/.orchestrator/$REL"
-      write_stub "$STUB_ABS" "$CANONICAL" "$TITLE" "$CANONICAL_ABS"
+      # B5: proposals are self-contained docs — fragment-only passthrough.
+      write_stub "$STUB_ABS" "$CANONICAL" "$TITLE" "$CANONICAL_ABS" "false"
       register_child "proposals" "${_pbase}.md" "$TITLE"
       continue
       ;;
@@ -469,7 +693,9 @@ while IFS='|' read -r CAT REL TITLE; do
       STUB_ABS="$DOCS/$STUB_REL"
       CANONICAL=$(build_canonical "$STUB_REL" "$REL")
       CANONICAL_ABS="$ROOT/.orchestrator/$REL"
-      write_stub "$STUB_ABS" "$CANONICAL" "$TITLE" "$CANONICAL_ABS"
+      # B5: knowledge-flat docs (KNOWLEDGE.md siblings) use fragment-only
+      # intra-doc anchors heavily — fragment-only passthrough.
+      write_stub "$STUB_ABS" "$CANONICAL" "$TITLE" "$CANONICAL_ABS" "false"
       continue
       ;;
   esac
@@ -486,7 +712,34 @@ while IFS='|' read -r CAT REL TITLE; do
       STUB_ABS="$DOCS/$STUB_REL"
       CANONICAL=$(build_canonical_repo_rel "$STUB_REL" "$REL")
       CANONICAL_ABS="$ROOT/$REL"
-      write_stub "$STUB_ABS" "$CANONICAL" "$TITLE" "$CANONICAL_ABS"
+      # PBJ-dogfood B7: M036 reference-corpus chunks pair a metadata `.md`
+      # with a `<basename>.text.md` Tier-1-extracted sibling. When the
+      # canonical body is empty (frontmatter + literal `|` placeholder
+      # only), splice the sibling's content in via include-markdown and
+      # render the frontmatter as a metadata admonition. When no sibling
+      # exists, fall through to a metadata-only stub with an
+      # external_pointer: callout when present (Tier 0 graceful
+      # degradation). When body is non-empty, fall through to the
+      # default include-canonical stub (operator-authored alongside
+      # frontmatter — preserve current behavior).
+      _xsibling="${CANONICAL_ABS%.md}.text.md"
+      if body_is_empty "$CANONICAL_ABS"; then
+        if [ -f "$_xsibling" ]; then
+          # Build sibling-canonical relative to stub via build_canonical_repo_rel.
+          _xsibling_rel="${REL%.md}.text.md"
+          _xsibling_canonical=$(build_canonical_repo_rel "$STUB_REL" "$_xsibling_rel")
+          write_stub_extra_with_sibling "$STUB_ABS" "$_xsibling_canonical" "$TITLE" "$CANONICAL_ABS"
+        else
+          _xext=$(extract_external_pointer "$CANONICAL_ABS")
+          write_stub_extra_metadata_only "$STUB_ABS" "$TITLE" "$CANONICAL_ABS" "$_xext"
+        fi
+      else
+        # B5: extra:* projections are typically self-contained per-chunk
+        # docs (operator-authored alongside frontmatter) — fragment-only
+        # passthrough is the safer default than rewriting all relative
+        # links to source-relative.
+        write_stub "$STUB_ABS" "$CANONICAL" "$TITLE" "$CANONICAL_ABS" "false"
+      fi
       # PBJ-dogfood B1 fix: register under the extra-dir section so the
       # post-loop write_section_index_for emitter writes
       # wiki/docs/<dn>/index.md. Without this, wiki-generate-nav.sh's
@@ -501,7 +754,16 @@ while IFS='|' read -r CAT REL TITLE; do
   CANONICAL=$(build_canonical "$STUB_REL" "$REL")
   # All non-knowledge records carry rel-paths under .orchestrator/.
   CANONICAL_ABS="$ROOT/.orchestrator/$REL"
-  write_stub "$STUB_ABS" "$CANONICAL" "$TITLE" "$CANONICAL_ABS"
+  # B5: top:* singletons (constitution/decisions/knowledge/milestone-summary)
+  # opt out of include-markdown rewrite-relative-urls so fragment-only intra-
+  # doc anchor links pass through untouched. milestone:* / archive:* records
+  # keep the default (true) — they have many sibling-doc cross-references
+  # that depend on rewriting.
+  _rru="true"
+  case "$CAT" in
+    top:*) _rru="false" ;;
+  esac
+  write_stub "$STUB_ABS" "$CANONICAL" "$TITLE" "$CANONICAL_ABS" "$_rru"
 
   # Register for section indexes.
   # Determine which section(s) this stub belongs to based on category.
@@ -799,9 +1061,18 @@ rm -f "$UNIQUE_SECTIONS"
 # write_knowledge_sub_index_from_list <sub> <list-file>
 #   Builds a bullet-body tmp file from mem_id|title records sorted lexically,
 #   then calls write_index to emit wiki/docs/knowledge/<sub>/index.md.
+#
+# PBJ-dogfood B8: skip emission entirely when the source list is empty (no
+# MEM stubs were produced for this category in the current run). Without
+# this gate the script writes a title-only `# Knowledge — Patterns` page
+# that mkdocs flags as orphan — see the "empty-subdir section indexes"
+# finding in the round-2 PBJ dogfood report.
 write_knowledge_sub_index_from_list() {
   _sub="$1"
   _list="$2"
+  if [ ! -s "$_list" ]; then
+    return 0
+  fi
   _body="/tmp/wiki-stubs-kn-body-$$.list"
   : > "$_body"
   if [ -f "$_list" ]; then
@@ -840,7 +1111,20 @@ write_knowledge_top_index() {
   rm -f "$_body"
 }
 
-write_knowledge_top_index
+# PBJ-dogfood B8: only emit the top-level knowledge/index.md when at least
+# one of the three category lists has content. Without this gate, projects
+# that have no knowledge/<cat>/MEM*.md files still get a top-level index
+# linking to three empty (or skipped) sub-indexes. The nav generator's
+# Knowledge — Flat group + top-level Knowledge: knowledge.md leaf cover the
+# flat-knowledge surface; the per-category index tree only earns its keep
+# when at least one MEM stub exists.
+_kn_any=0
+if [ -s "$KN_PATTERNS_LIST" ] || [ -s "$KN_CONVENTIONS_LIST" ] || [ -s "$KN_LESSONS_LIST" ]; then
+  _kn_any=1
+fi
+if [ "$_kn_any" -eq 1 ]; then
+  write_knowledge_top_index
+fi
 write_knowledge_sub_index_from_list "patterns"    "$KN_PATTERNS_LIST"
 write_knowledge_sub_index_from_list "conventions" "$KN_CONVENTIONS_LIST"
 write_knowledge_sub_index_from_list "lessons"     "$KN_LESSONS_LIST"

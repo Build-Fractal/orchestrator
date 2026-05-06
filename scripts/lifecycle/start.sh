@@ -65,6 +65,12 @@ DEPLOY=0
 # preserve P01/P02/P04/T02 behavior verbatim when the flag is not passed.
 WITH_GITHUB=0
 
+# M029 / FR-10 / #Q-3 -- --auto-chain flag (default 0). When 1, the
+# chain-driver walks evaluate -> discuss -> roadmap -> plan-phase one
+# stage at a time, writing .orchestrator/start-state/<stage>.complete
+# after each success. Failed stages leave the marker absent (#Q-3).
+AUTO_CHAIN=0
+
 DETECTED_FROM=""
 MIT006_ELIGIBLE=0
 INIT_INVOKED=0
@@ -97,7 +103,7 @@ load_detect_state() {
     fi
 }
 
-USAGE='usage: start.sh [--project-dir PATH] [--yes] [--branch NAME] [--stack NAME] [--dry-run] [--no-resume] [--with-wiki] [--with-giscus] [--deploy] [--with-github]'
+USAGE='usage: start.sh [--project-dir PATH] [--yes] [--branch NAME] [--stack NAME] [--dry-run] [--no-resume] [--with-wiki] [--with-giscus] [--deploy] [--with-github] [--auto-chain]'
 BRANCH_ENUM='greenfield-empty | greenfield-with-materials | existing-codebase | migrating'
 
 # ---------------------------------------------------------------------------
@@ -321,6 +327,10 @@ while [ $# -gt 0 ]; do
             ;;
         --with-github)
             WITH_GITHUB=1
+            shift
+            ;;
+        --auto-chain)
+            AUTO_CHAIN=1
             shift
             ;;
         *)
@@ -844,6 +854,92 @@ main() {
         if [ "$GH_RC" -ne 0 ]; then
             exit "$GH_RC"
         fi
+    fi
+
+    # M029 / FR-10 / #Q-3 -- --auto-chain entry-chain walker.
+    # Walks evaluate -> discuss -> roadmap -> plan-phase one stage at a time,
+    # writing .orchestrator/start-state/<stage>.complete after each success.
+    # The four canonical marker filenames are:
+    #   - .orchestrator/start-state/evaluate.complete
+    #   - .orchestrator/start-state/discuss.complete
+    #   - .orchestrator/start-state/roadmap.complete
+    #   - .orchestrator/start-state/plan-phase.complete
+    # Failed stages leave the marker absent (#Q-3); re-runs re-execute.
+    # AD-3 priority order between stages: --yes > auto_proceed:true >
+    # non-TTY refusal (M029_AUTOCHAIN_NEEDS_CONFIRMATION) > TTY prompt.
+    # See commands/auto.md AD-3 section for the canonical four-tier policy.
+    # Fires AFTER --with-wiki / --with-github passthrough gates so wiki /
+    # github initialization (when requested) lands before the chain walks.
+    if [ "${AUTO_CHAIN:-0}" -eq 1 ]; then
+        START_STATE_DIR="$PROJECT_DIR/.orchestrator/start-state"
+        mkdir -p "$START_STATE_DIR"
+
+        # Resolve auto_proceed from config (4-layer per
+        # scripts/state/read-config.sh). Empty / failure -> empty string.
+        AUTO_PROCEED_VAL=""
+        if [ -r scripts/state/read-config.sh ]; then
+            AUTO_PROCEED_VAL=$(bash scripts/state/read-config.sh auto_proceed 2>/dev/null || true)
+        fi
+
+        for STAGE in evaluate discuss roadmap plan-phase; do
+            MARKER="$START_STATE_DIR/${STAGE}.complete"
+            if [ -f "$MARKER" ]; then
+                printf 'SKIP: %s (marker present)\n' "$STAGE"
+                continue
+            fi
+
+            # AD-3 between-stage gate.
+            PROCEED=0
+            if [ "${YES:-0}" -eq 1 ]; then
+                PROCEED=1
+            elif [ "$AUTO_PROCEED_VAL" = "true" ]; then
+                PROCEED=1
+            elif [ -t 0 ]; then
+                # TTY -- prompt for confirmation between each stage.
+                printf 'Proceed with %s? [y/N] ' "$STAGE"
+                read -r REPLY
+                case "$REPLY" in
+                    y|Y|yes|YES) PROCEED=1 ;;
+                    *) PROCEED=0 ;;
+                esac
+            else
+                printf 'M029_AUTOCHAIN_NEEDS_CONFIRMATION\n' 1>&2
+                exit 2
+            fi
+
+            if [ "$PROCEED" -ne 1 ]; then
+                printf 'START_AUTO_CHAIN_ABORTED stage=%s\n' "$STAGE" 1>&2
+                exit 1
+            fi
+
+            # Invoke the stage's skill. For SC-10 fixture mode, the
+            # AUTO_CHAIN_STAGE_STUB env var allows fixtures to inject a
+            # no-op stub script that just writes the marker (used by the
+            # SC-10 acceptance script only). In real-mode invocation
+            # (no env var set), the chain-driver assumes the orchestrator
+            # harness (Claude Code, Codex CLI, Cursor) invokes each stage's
+            # skill (orchestrator:<stage>) between successive
+            # start.sh --auto-chain calls; this script's role is to gate,
+            # prompt, mark, and resume.
+            STAGE_RC=0
+            if [ -n "${AUTO_CHAIN_STAGE_STUB:-}" ]; then
+                bash "$AUTO_CHAIN_STAGE_STUB" "$STAGE" || STAGE_RC=$?
+            fi
+
+            if [ "$STAGE_RC" -ne 0 ]; then
+                # #Q-3 -- failed stages leave the .complete marker absent.
+                # No alternate failure-marker is written; re-runs re-execute.
+                printf 'START_AUTO_CHAIN_STAGE_FAILED stage=%s\n' "$STAGE" 1>&2
+                exit 1
+            fi
+
+            # Write the .complete marker (#Q-3 -- only on success).
+            NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+            printf '%s %s\n' "$NOW" "$STAGE" > "$MARKER"
+            printf 'OK: %s -> %s\n' "$STAGE" "$MARKER"
+        done
+
+        printf 'START_AUTO_CHAIN_COMPLETE\n'
     fi
 
     exit 0

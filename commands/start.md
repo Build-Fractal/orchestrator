@@ -143,6 +143,62 @@ dispatch.
 - Disambiguation prompt rejected with non-`Y/n` input → exit non-zero
   with `re-invoke with --branch <name>` diagnostic.
 
+## --auto-chain Flag (FR-10)
+
+<!-- M029 / FR-10 — entry-chain walker with marker-file resume. -->
+
+The `--auto-chain` flag (OFF by default) walks the start-time entry
+chain one stage at a time, in this fixed order:
+
+    evaluate -> discuss -> roadmap -> plan-phase
+
+### Marker files
+
+After each successful stage, the chain-driver writes a single-line
+marker to `.orchestrator/start-state/<stage>.complete` containing the
+ISO-8601 timestamp and the stage name. Example marker contents:
+
+    2026-05-06T01:30:00Z evaluate
+
+On re-invocation, the chain-driver skips any stage whose marker
+already exists. The four stages compose in order; `evaluate.complete`
+must exist before `discuss` runs, and so on.
+
+### #Q-3 — Failed stages leave the marker absent
+
+When a stage fails (its underlying skill exits non-zero), the
+chain-driver leaves the `.complete` marker absent. **No `.failed`
+marker is written.** Re-running `orchestrator:start --auto-chain`
+re-executes the failed stage. Failure status surfaces via
+`orchestrator:status`, which already reads the start-state directory.
+
+### Between-stage gates (AD-3 priority order — see `commands/auto.md`)
+
+The chain-driver honours the same non-interactive policy as the FR-9
+preflight (AD-3):
+
+1. `--yes` flag → proceed without prompt.
+2. `auto_proceed: true` in `.orchestrator/config.yml` → proceed
+   without prompt.
+3. Non-TTY stdin with neither flag/config → exit non-zero with the
+   byte-stable string `M029_AUTOCHAIN_NEEDS_CONFIRMATION` on stderr.
+4. TTY + neither flag/config → prompt for confirmation between each
+   stage.
+
+### Idempotency
+
+Re-invoking `orchestrator:start --auto-chain` on an already-complete
+project is a no-op: every marker exists, every stage prints
+`SKIP: <stage> (marker present)`, and the run exits 0 with
+`START_AUTO_CHAIN_COMPLETE`.
+
+### Composition with `--with-wiki` / `--with-github`
+
+The chain-driver fires AFTER `--with-wiki` and `--with-github`
+passthrough gates so wiki/github initialization (when requested)
+lands before the entry-chain walks. This matches the existing
+`start.sh` ordering invariant.
+
 ## Referenced Scripts
 
 - `scripts/lifecycle/start.sh` — the driver implementing flags,

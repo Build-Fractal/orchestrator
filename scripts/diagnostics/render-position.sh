@@ -1,9 +1,24 @@
 #!/usr/bin/env bash
-# scripts/diagnostics/render-position.sh -- M029 / FR-5 at-rest tree renderer.
+# scripts/diagnostics/render-position.sh -- M029 / FR-5 at-rest tree renderer
+# + FR-7 / FR-8 / #Q-1 / #Q-G8 / AD-5 --live tail mode (P03 extension).
 #
 # At-rest tree renderer for orchestrator:where. Composes M013/M018/M019/M027
 # read-only surfaces into a feature -> milestone -> phase -> task tree using
 # the canonical glyph alphabet from references/cross-milestone-feature-shape.md.
+#
+# P03 / T01 extension (additive --live branch): when --live is passed, the
+# renderer polls the active milestone's execution-log.jsonl via POSIX tail -f
+# (CON-2 -- no inotify, no fswatch), full-re-renders the tree (#Q-1 -- bounded
+# tree size, no incremental row tracking) on every appended dispatch_usage
+# record, and emits the canonical compact savings marker `▽ saved Nk`
+# (#Q-G8 -- the verbose-suffix provenance form is reserved for a future
+# --verbose mode and is NOT shipped in M029) on rows whose
+# (tier1_savings_tokens + tier2_savings_tokens) / dispatch_total_tokens
+# exceeds the AD-5 display_thresholds.compression_savings_pct knob (default
+# 5.0). The threshold knob is read via scripts/state/read-config.sh; on
+# read-failure the renderer falls back to 5.0 and emits a single-line
+# `WARN: display_thresholds.compression_savings_pct fallback to default`
+# advisory on stderr (Principle XI fail-open). FR-7 / FR-8 / FR-13.
 #
 # Glyph alphabet (pinned by AD-6 / cross-milestone-feature-shape.md):
 #   ✓  phase / task complete
@@ -102,9 +117,13 @@ _RP_PROJECT_ROOT="$(cd "$_RP_SCRIPT_DIR/../.." && pwd)"
 _rp_print_usage() {
     cat <<'EOF'
 Usage: render-position.sh [--milestone <M###>] [--expand-all] [--feature <slug>]
-                          [--no-cost] [--root <path>] [-h|--help]
+                          [--no-cost] [--root <path>] [--live] [-h|--help]
 
-At-rest tree renderer for orchestrator:where (M029 / FR-5).
+At-rest tree renderer for orchestrator:where (M029 / FR-5). With --live, polls
+execution-log.jsonl via POSIX tail -f and full-re-renders on every appended
+dispatch_usage record (FR-7 / #Q-1), emitting the canonical compact savings
+marker `▽ saved Nk` (FR-8 / #Q-G8) on rows whose savings ratio crosses the
+AD-5 display_thresholds.compression_savings_pct knob (default 5.0).
 
 Read-only (CON-1 / FR-14). No GitHub API (CON-4 / FR-11). AD-1 single-resolve.
 
@@ -114,6 +133,10 @@ Options:
   --feature <slug>     Override the active feature (testing).
   --no-cost            Suppress per-row cost column (operator override).
   --root <path>        Override the .orchestrator/ root (fixturing).
+  --live               Poll execution-log.jsonl + full-re-render on each
+                       appended dispatch_usage record (FR-7 / #Q-1) and
+                       emit the canonical `▽ saved Nk` marker (FR-8 / #Q-G8)
+                       gated by display_thresholds.compression_savings_pct.
   -h, --help           Show this message.
 EOF
 }
@@ -123,6 +146,7 @@ _RP_EXPAND_ALL=0
 _RP_FEATURE_SLUG=""
 _RP_NO_COST=0
 _RP_ROOT_OVERRIDE=""
+_RP_LIVE_MODE=0
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -134,6 +158,7 @@ while [ $# -gt 0 ]; do
         --no-cost) _RP_NO_COST=1; shift ;;
         --root) shift; _RP_ROOT_OVERRIDE="${1:-}"; shift || true ;;
         --root=*) _RP_ROOT_OVERRIDE="${1#--root=}"; shift ;;
+        --live) _RP_LIVE_MODE=1; shift ;;
         -h|--help) _rp_print_usage; exit 0 ;;
         *)
             printf 'render-position.sh: unknown flag: %s\n' "$1" >&2
@@ -420,6 +445,142 @@ _rp_cost_column() {
     printf '  $%s' "$_num"
 }
 
+# --- P03 / FR-7 / FR-8 / #Q-G8 savings marker helpers ---------------------
+#
+# `▽ saved Nk` canonical compact-form marker (#Q-G8). The verbose suffix
+# form (e.g. naming the savings provenance after the magnitude) is reserved
+# for a future --verbose mode and MUST NOT appear in the renderer body.
+#
+# Read the AD-5 display_thresholds.compression_savings_pct knob via the
+# project's read-config.sh resolver. On any read failure (rc != 0, empty
+# stdout, "null" sentinel), fall back to the hard-coded 5.0 default and
+# emit a single-line stderr advisory (Principle XI fail-open). MEM004
+# carve-out: pipes inside this helper body are permitted; AD-19 applies
+# only at Check: command level.
+_rp_read_savings_threshold() {
+    _rc_script="$_RP_PROJECT_ROOT/scripts/state/read-config.sh"
+    _default="5.0"
+    if [ ! -x "$_rc_script" ]; then
+        printf 'WARN: display_thresholds.compression_savings_pct fallback to default\n' >&2
+        printf '%s' "$_default"
+        return 0
+    fi
+    _rc_out="$_RP_TMP/rc.thresh.out"
+    bash "$_rc_script" display_thresholds.compression_savings_pct \
+        >"$_rc_out" 2>/dev/null
+    _rc_rc=$?
+    _val=""
+    if [ -s "$_rc_out" ]; then
+        _val="$(head -n 1 "$_rc_out" 2>/dev/null || true)"
+    fi
+    if [ "$_rc_rc" -ne 0 ] || [ -z "$_val" ] || [ "$_val" = "null" ]; then
+        printf 'WARN: display_thresholds.compression_savings_pct fallback to default\n' >&2
+        printf '%s' "$_default"
+        return 0
+    fi
+    printf '%s' "$_val"
+}
+
+# Scan execution-log.jsonl for the most-recent `dispatch_usage` record for
+# the given task_id. Emit a space-separated triple `<savings_tokens>
+# <total_tokens> <found>` to stdout. <found> is 1 when a record was located,
+# 0 otherwise. CON-3 silent suppression: NO stderr noise on miss.
+# MEM004 carve-out: awk pipes inside helper bodies are permitted.
+_rp_latest_dispatch_usage_for_task() {
+    _log="$1"
+    _tid="$2"
+    [ -f "$_log" ] || { printf '0 0 0'; return 0; }
+    _line="$(grep -F '"record_type":"dispatch_usage"' "$_log" 2>/dev/null \
+        | grep -F "\"task\":\"$_tid\"" \
+        | tail -n 1 \
+        || true)"
+    if [ -z "$_line" ]; then
+        printf '0 0 0'
+        return 0
+    fi
+    # Pull tier1_savings_tokens, tier2_savings_tokens, and a total-tokens
+    # field from the JSONL line via awk (line is single-line JSON; we use
+    # naive substring extraction since the values are integers).
+    printf '%s' "$_line" | awk '
+        BEGIN { t1 = 0; t2 = 0; total = 0 }
+        {
+            if (match($0, /"tier1_savings_tokens":[ ]*[0-9]+/)) {
+                s = substr($0, RSTART, RLENGTH)
+                sub(/.*:[ ]*/, "", s)
+                t1 = s + 0
+            }
+            if (match($0, /"tier2_savings_tokens":[ ]*[0-9]+/)) {
+                s = substr($0, RSTART, RLENGTH)
+                sub(/.*:[ ]*/, "", s)
+                t2 = s + 0
+            }
+            # Total tokens: prefer dispatch_total_tokens; fall back to
+            # input_tokens_estimate + output_tokens_estimate.
+            if (match($0, /"dispatch_total_tokens":[ ]*[0-9]+/)) {
+                s = substr($0, RSTART, RLENGTH)
+                sub(/.*:[ ]*/, "", s)
+                total = s + 0
+            } else {
+                in_t = 0; out_t = 0
+                if (match($0, /"input_tokens_estimate":[ ]*[0-9]+/)) {
+                    s = substr($0, RSTART, RLENGTH)
+                    sub(/.*:[ ]*/, "", s)
+                    in_t = s + 0
+                }
+                if (match($0, /"output_tokens_estimate":[ ]*[0-9]+/)) {
+                    s = substr($0, RSTART, RLENGTH)
+                    sub(/.*:[ ]*/, "", s)
+                    out_t = s + 0
+                }
+                total = in_t + out_t
+            }
+            printf "%d %d 1", (t1 + t2), total
+        }
+    '
+}
+
+# Compute the savings marker `▽ saved Nk` (canonical compact form per
+# #Q-G8). Returns empty string when:
+#   - no dispatch_usage record exists for the task (CON-3 silent suppression)
+#   - savings_pct < threshold_pct
+#   - total_tokens is zero (avoid divide-by-zero)
+#
+# `N = ceil(savings_tokens / 1000)` via awk integer-ceiling.
+# Float arithmetic uses `printf | awk` (bash 3.2 safe; no <<< herestring).
+# The forbidden verbose suffix form is NOT emitted from this body.
+_rp_savings_marker() {
+    _log="$1"
+    _tid="$2"
+    _thresh="$3"
+    _triple="$(_rp_latest_dispatch_usage_for_task "$_log" "$_tid")"
+    set -- $_triple
+    _savings="${1:-0}"
+    _total="${2:-0}"
+    _found="${3:-0}"
+    if [ "$_found" != "1" ]; then
+        return 0
+    fi
+    if [ "$_total" -le 0 ] 2>/dev/null; then
+        return 0
+    fi
+    if [ "$_savings" -le 0 ] 2>/dev/null; then
+        return 0
+    fi
+    # Compute savings_pct = 100.0 * savings / total via awk float division.
+    _pct="$(printf '%s %s\n' "$_savings" "$_total" \
+        | awk '{ printf "%.2f", (100.0 * $1) / $2 }')"
+    # Compare savings_pct >= threshold via awk.
+    _ok="$(printf '%s %s\n' "$_pct" "$_thresh" \
+        | awk '{ if ($1 + 0.0 >= $2 + 0.0) print "yes"; else print "no" }')"
+    if [ "$_ok" != "yes" ]; then
+        return 0
+    fi
+    # Compute N = ceil(savings / 1000) via awk integer-ceiling.
+    _n="$(printf '%s\n' "$_savings" \
+        | awk '{ s = $1 + 0; printf "%d", int((s + 999) / 1000) }')"
+    printf ' ▽ saved %sk' "$_n"
+}
+
 # Progress-bar string for an inactive milestone. Reads summarize-milestone.sh
 # for phase_count / phases_complete / intensity and renders the canonical
 # `▓░ X% (k/n phases)` tail.
@@ -478,21 +639,27 @@ else
 fi
 
 # --- Render ---------------------------------------------------------------
+#
+# The full tree render is wrapped in `_rp_render_tree` so the --live branch
+# can call it repeatedly on every appended dispatch_usage record (#Q-1
+# full-re-render contract; tree size is bounded so the cost is negligible).
+# At-rest mode calls it exactly once.
 
-if [ -z "$_RP_MILESTONES" ]; then
+_rp_render_tree() {
+  if [ -z "$_RP_MILESTONES" ]; then
     if [ -z "$_RP_FOCUS_MILESTONE" ]; then
         printf 'no active milestone\n'
     else
         printf 'feature <unknown> declares no milestone; nothing to render\n'
     fi
-    exit 0
-fi
+    return 0
+  fi
 
-if [ -n "$_RP_FEATURE" ] && [ -z "$_RP_FILTER_MILESTONE" ]; then
+  if [ -n "$_RP_FEATURE" ] && [ -z "$_RP_FILTER_MILESTONE" ]; then
     printf 'feature: %s\n' "$_RP_FEATURE"
-fi
+  fi
 
-for _mid in $_RP_MILESTONES; do
+  for _mid in $_RP_MILESTONES; do
     _mname="$(_rp_milestone_name "$_mid")"
     _is_active=0
     if [ "$_mid" = "$_RP_ACTIVE_MILESTONE" ]; then
@@ -580,10 +747,80 @@ for _mid in $_RP_MILESTONES; do
                 _tlabel="${_tlabel%-PLAN.md}"
                 _tg="$(_rp_task_glyph "$_tplan")"
                 _cost="$(_rp_cost_column "$_mid" "$_pid" "$_tid")"
-                printf '    %s %s %s%s\n' "$_tg" "$_tid" "$_tlabel" "$_cost"
+                # FR-8 / #Q-G8: emit the canonical compact `▽ saved Nk`
+                # marker only under --live mode (the at-rest renderer is
+                # contractually marker-free per P02 / SC-5).
+                _smark=""
+                if [ "$_RP_LIVE_MODE" -eq 1 ]; then
+                    _smark="$(_rp_savings_marker \
+                        "$_mdir/execution-log.jsonl" \
+                        "$_tid" \
+                        "$_RP_SAVINGS_THRESHOLD")"
+                fi
+                printf '    %s %s %s%s%s\n' "$_tg" "$_tid" "$_tlabel" "$_cost" "$_smark"
             done
         fi
     done
-done
+  done
+}
 
+# --- Mode dispatch: at-rest (default) vs --live (FR-7 / #Q-1) -------------
+
+_RP_SAVINGS_THRESHOLD="5.0"
+
+if [ "$_RP_LIVE_MODE" -eq 1 ]; then
+    # Resolve the AD-5 threshold knob (with stderr WARN fallback).
+    _RP_SAVINGS_THRESHOLD="$(_rp_read_savings_threshold)"
+
+    # Resolve the active milestone's execution-log.jsonl path. --milestone
+    # override wins; otherwise fall back to the focus milestone.
+    _RP_LIVE_TARGET_MID="$_RP_FOCUS_MILESTONE"
+    if [ -n "$_RP_FILTER_MILESTONE" ]; then
+        _RP_LIVE_TARGET_MID="$_RP_FILTER_MILESTONE"
+    fi
+    if [ -z "$_RP_LIVE_TARGET_MID" ]; then
+        printf 'ERROR: --live requires an active or --milestone-supplied milestone\n' >&2
+        exit 1
+    fi
+    _RP_LIVE_LOG="$_RP_ORCH_ROOT/milestones/$_RP_LIVE_TARGET_MID/execution-log.jsonl"
+
+    # Wait up to 5s for the log to appear (0.5s sleeps); spec Edge Case
+    # "Live-tail target file missing" maps to ERROR + exit 1.
+    _RP_LIVE_WAIT=0
+    while [ ! -f "$_RP_LIVE_LOG" ]; do
+        if [ "$_RP_LIVE_WAIT" -ge 10 ]; then
+            printf 'ERROR: no execution log under %s\n' "$_RP_LIVE_LOG" >&2
+            exit 1
+        fi
+        sleep 0.5 2>/dev/null || sleep 1
+        _RP_LIVE_WAIT=$(( _RP_LIVE_WAIT + 1 ))
+    done
+
+    # Trap SIGTERM / SIGINT for clean shutdown of the tail loop.
+    _rp_live_stop() {
+        rm -rf "$_RP_TMP" 2>/dev/null || true
+        exit 0
+    }
+    trap _rp_live_stop INT TERM
+
+    # Initial full re-render at --live entry.
+    _rp_render_tree
+
+    # Tail loop: tail -f -n 0 piped to a while-read loop. On every line
+    # containing the substring `"record_type":"dispatch_usage"`, full-
+    # re-render the tree (#Q-1: no incremental row tracking; tree size
+    # is bounded). MEM004 carve-out applies: this is a renderer-body pipe.
+    tail -f -n 0 "$_RP_LIVE_LOG" 2>/dev/null \
+        | while IFS= read -r _rp_line; do
+            case "$_rp_line" in
+                *'"record_type":"dispatch_usage"'*)
+                    _rp_render_tree
+                    ;;
+            esac
+          done
+    exit 0
+fi
+
+# At-rest mode: single render, no marker emission, no tail loop.
+_rp_render_tree
 exit 0

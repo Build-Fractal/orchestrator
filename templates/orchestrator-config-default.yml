@@ -144,3 +144,14 @@ compression:
 quick_knowledge_token_budget: 800            # FR-5 / AD-5 — advisory ceiling for Quick-profile knowledge inject; M018 tier-2 snip enforces.
 entry_routing_confidence_floor: 0.7          # FR-11 / OQ-4 — universal-entry classifier confidence below which the operator is prompted Tier A vs Tier B.
 tier_a_plus_prompt_summary_lines: 8          # AD-20 — number of leading lines of research.md rendered inline in the Tier A+ pre-plan approval prompt.
+
+# M029 — display_thresholds (AD-5).
+# FR-8 / AD-5 — minimum compression savings ratio (as a percentage of total
+# dispatch tokens) below which the live-tail render suppresses the
+# `▽ saved Nk` marker on a `dispatch_usage` row. Heuristic default.
+# Tune after first 10 milestones of M019 Tier 1 + M018 Tier 2 telemetry.
+# Review trigger: re-evaluate threshold once
+# `metrics-rollup.sh --scope milestone` shows median savings ≥ 3% across
+# closed milestones.
+display_thresholds:
+  compression_savings_pct: 5.0

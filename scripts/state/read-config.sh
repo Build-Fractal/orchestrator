@@ -14,7 +14,7 @@
 set -euo pipefail
 
 # Valid config keys
-VALID_KEYS="default_tier verification_commands context_verbosity git_isolation dispatch_budget duration_budget budget_enforcement session_weight_limit auto_proceed efficiency_footer predictive_cost_surface anomaly_cost_multiplier anomaly_retry_threshold anomaly_pass_rate_threshold anomaly_check_enabled compression.efficiency_footer.enabled compression.regression_floor model_routing_regression.pass_rate_threshold model_routing_regression.min_class_sample"
+VALID_KEYS="default_tier verification_commands context_verbosity git_isolation dispatch_budget duration_budget budget_enforcement session_weight_limit auto_proceed efficiency_footer predictive_cost_surface anomaly_cost_multiplier anomaly_retry_threshold anomaly_pass_rate_threshold anomaly_check_enabled compression.efficiency_footer.enabled compression.regression_floor model_routing_regression.pass_rate_threshold model_routing_regression.min_class_sample display_thresholds.compression_savings_pct"
 
 # Defaults for file paths
 DEFAULTS_FILE=""
@@ -175,6 +175,53 @@ if [[ "$KEY" = "model_routing_regression.pass_rate_threshold" ]] || [[ "$KEY" = 
   fi
   if [[ -n "$_mrr_val" ]]; then
     echo "$_mrr_val"
+  else
+    echo "null"
+  fi
+  exit 0
+fi
+
+# M029/P03/T01 — display_thresholds.compression_savings_pct lives under
+# the `display_thresholds:` block in `templates/orchestrator-config-default.yml`
+# and (when an operator has overridden it) `.orchestrator/config.yml`.
+# Resolve the same way as model_routing_regression.* above: nested-block
+# walker against the project config; defaults file fallback; "null" when
+# absent so the consumer (render-position.sh --live) applies its built-in
+# 5.0 hard-coded fallback (Principle XI fail-open / AD-5).
+if [[ "$KEY" = "display_thresholds.compression_savings_pct" ]]; then
+  _DT_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  _DT_PROJECT_ROOT="$(cd "$_DT_SCRIPT_DIR/../.." && pwd)"
+  _DT_CFG="$_DT_PROJECT_ROOT/.orchestrator/config.yml"
+  _DT_DEFAULTS="$_DT_PROJECT_ROOT/templates/orchestrator-config-default.yml"
+  _dt_val=""
+  for _dt_file in "$_DT_CFG" "$_DT_DEFAULTS"; do
+    if [[ -f "$_dt_file" ]]; then
+      sub_key="${KEY#display_thresholds.}"
+      _dt_val="$(awk -v sk="$sub_key" '
+        BEGIN { in_block = 0 }
+        /^display_thresholds:/             { in_block = 1; next }
+        in_block && /^[a-zA-Z_]/           { exit }
+        in_block && /^[[:space:]]+[a-z_]+:/ {
+          line = $0
+          sub(/^[[:space:]]+/, "", line)
+          split(line, kv, ":")
+          if (kv[1] == sk) {
+            val = kv[2]
+            gsub(/[[:space:]]/, "", val)
+            gsub(/[",]/, "", val)
+            sub(/#.*$/, "", val)
+            print val
+            exit
+          }
+        }
+      ' "$_dt_file" 2>/dev/null || true)"
+      if [[ -n "$_dt_val" ]]; then
+        break
+      fi
+    fi
+  done
+  if [[ -n "$_dt_val" ]]; then
+    echo "$_dt_val"
   else
     echo "null"
   fi

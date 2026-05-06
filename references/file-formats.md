@@ -692,6 +692,36 @@ budget_enforcement: advisory    # advisory (warn only) | enforced (stop-after)
 
 Each key is resolved independently — a local config can override one key while falling through to project config for others.
 
+### Display Thresholds (M029)
+
+The top-level `display_thresholds:` block holds heuristic-default knobs that
+gate operator-facing surfaces. Each key is resolved through the standard
+4-layer fallback (env > local > project > defaults) and is consumed by the
+M029 `orchestrator:where` renderer family. AD-5.
+
+```yaml
+# M029 — display_thresholds (AD-5).
+display_thresholds:
+  compression_savings_pct: 5.0
+```
+
+| Key | Type | Default | Consumer | Description |
+|-----|------|---------|----------|-------------|
+| `display_thresholds.compression_savings_pct` | float | `5.0` | `scripts/diagnostics/render-position.sh --live` | Minimum compression savings ratio (as a percentage of total dispatch tokens) below which the live-tail render suppresses the `▽ saved Nk` marker on a `dispatch_usage` row (FR-8 / #Q-G8). The marker is the canonical compact form `▽ saved Nk` only — the verbose suffix form is reserved for a future `--verbose` mode and MUST NOT appear in v1 deliverables. |
+
+**Heuristic default rationale (AD-5).** Heuristic default. Tune after first 10 milestones of M019 Tier 1 + M018 Tier 2 telemetry. Review trigger: re-evaluate threshold once `metrics-rollup.sh --scope milestone` shows median savings ≥ 3% across closed milestones.
+
+**Fail-open contract (Principle XI).** When the key is absent from every
+config layer or `read-config.sh` exits non-zero, the renderer falls back to
+the hard-coded `5.0` default and emits a single-line stderr advisory
+`WARN: display_thresholds.compression_savings_pct fallback to default`.
+The render itself never blocks on a config read.
+
+**CON-3 silent suppression.** Pre-M019 milestones (no `dispatch_usage`
+records in `execution-log.jsonl`) render with no `▽` marker AND no stderr
+noise — the threshold is only consulted on rows that have a record to
+compare against.
+
 ---
 
 ## Routing Configuration (`routing.yaml`)

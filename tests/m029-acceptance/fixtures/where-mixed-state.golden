@@ -1,0 +1,9 @@
+✗ M998 M998 — SC-5 Mixed-State Fixture Milestone  ▓░ 0% (0/0 phases)
+  ✓ P01 P01 — Completed Fixture Phase
+  ▶ P02 P02 — In-flight Fixture Phase
+    ✓ T01 x  $0.02200000
+    ▶ T02 y  $0.01500000
+    ▶ T03 z  $0.01300000
+    ▶ T04 w  $0.01900000
+  ✗ P03 P03 — Failed Fixture Phase
+  ◇ P04 P04

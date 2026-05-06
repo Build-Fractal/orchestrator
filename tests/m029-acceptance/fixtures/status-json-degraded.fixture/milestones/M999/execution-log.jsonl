@@ -1,0 +1,5 @@
+# SC-3 degraded-state fixture: lines 2 and 5 are intentionally corrupt.
+{"record_type":"dispatch_open","unitId":"M999/P01/T01","milestone":"M999","phase":"P01","task":"T01","timestamp":"2026-05-05T19:00:00Z"}
+{"record_type":"dispatch_close","unitId":"M999/P01/T01","milestone":"M999","phase":"P01","task":"T01","outcome":"success","duration_seconds":42,"timestamp":"2026-05-05T19:30:00Z"
+this is not JSON at all -- garbage line for parse_errors
+{"record_type":"dispatch_usage","unitId":"M999/P01/T01","milestone":"M999","phase":"P01","task":"T01","backend":"claude-code","input_tokens_estimate":1000,"output_tokens_estimate":500,"estimated_cost_usd":0.018,"pricing_version":"2026-04-17","pricing_warning":"","model":"claude-opus-4-7","source":"runtime","emission_point":"dispatch-close","timestamp":"2026-05-05T20:00:00Z"}

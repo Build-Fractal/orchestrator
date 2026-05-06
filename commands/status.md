@@ -6,6 +6,36 @@ description: "Use when checking progress — milestone/phase/task completion, bl
 
 Report the current progress of a milestone — state, phase/task completion, blockers, execution history, and recommended next action. This is a read-only command that never modifies state files.
 
+## Headline Block
+
+> **FR-2 / SC-2 / Principle XI / AD-1 single-resolve.** The headline block is the first three non-blank lines of stdout. When invoked without `--format=json`, the headline renders before the existing flat sections; when invoked with `--format=json`, this block is skipped and `scripts/diagnostics/render-status-json.sh` takes over (FR-3, T04).
+>
+> **Resolution.** Read the resolver's env block at command entry: `eval "$(bash scripts/state/detect-invocation-context.sh)"`. The resolver returns three fields per AD-1 (`renderer`, `exit_code_scheme`, `default_provider`). When `renderer=json`, branch to the JSON renderer (FR-3) and skip the headline+flat-sections path entirely.
+>
+> **Field set + line packing** are documented in `references/status-headline-shape.md`. The implementation MUST emit lines matching the regex documented there byte-for-byte; SC-2 fails on any drift. The five fields packed into three non-blank lines:
+>
+> 1. Line 1: `M### <milestone-name>` (e.g., `M029 Roadmap Visibility & CLI UX`).
+> 2. Line 2: `phase X/N (P##, K%)  |  lock: <state>` where `<state>` is `free` or `held by PID <pid> since <timestamp>`. Separator is exactly two spaces, pipe, two spaces.
+> 3. Line 3: `last_dispatch: <Ns ago | Nm ago | Nh ago | Nd ago | none>  |  last_verify: <pass | fail | none>`. Same separator.
+>
+> **Embedded footer.** Under `efficiency_footer: true` (M027 default), the headline is followed by the `scripts/diagnostics/efficiency-footer.sh --milestone <active-milestone-id>` line verbatim. Under `efficiency_footer: false` or `--quiet`, the footer line disappears with no other side effect (CON-5 suppression-matrix inheritance from M027). M029 introduces NO new suppression knob — M027's resolution chain (env → local config → project config → defaults) governs the footer line.
+>
+> **Flat sections invariant.** Below the headline + blank line + footer line, the existing flat sections (Progress Overview, Blockers, Execution History, Telemetry Metrics, Efficiency Footer, Next Action) render byte-identical to today's pre-M029 output. The headline is additive; existing scrapers do not break.
+>
+> **Test-only seam.** The `M029_DISABLE_HEADLINE=1` environment variable is a TEST-ONLY hook used by the SC-2 baseline-capture path (`tests/m029-acceptance/p01-sc2-headline.sh`) to capture the pre-M029 flat-section rendering. Production callers MUST NOT set this var; it is not a documented end-user knob.
+
+## Format Flag
+
+> **FR-3 / SC-3 / AD-2 / AD-7.** The `--format=<format>` flag selects the rendering mode. Valid values: `tui` (default; the headline+flat-sections markdown path), `json` (the FR-3 JSON object), `plain` (markdown without ANSI; auto-selected by the resolver under non-TTY).
+>
+> **Resolution.** When `--format=json` is present, the resolver returns `renderer=json`; the headline+flat-sections markdown path is SKIPPED and `bash scripts/diagnostics/render-status-json.sh` is invoked. Its stdout becomes the command's stdout.
+>
+> **Schema.** The JSON output validates against `references/status-json-schema.md`. The top-level `schema_version` field is `"1.0"` per AD-7.
+>
+> **ANSI-strip rule (AD-2).** Every string under `sections` is ANSI-stripped unconditionally regardless of TTY. This applies even on interactive TTYs where `--format=json` is invoked manually — the JSON contract is for downstream tooling (`jq`, CI, `external-tool-adapters`), and stripping ANSI universally avoids contract migrations later.
+>
+> **Degraded state.** When `execution-log.jsonl` parses with errors, the JSON output includes `state: "degraded"` and a `parse_errors` array. The renderer never crashes on a corrupt JSONL stream.
+
 ## State Derivation
 
 Determine the current orchestrator state:
@@ -51,7 +81,7 @@ Calculate a single progress percentage across all phases:
 - Sum of completed tasks across all phases / total tasks across all phases
 - Report: "Overall: {completed}/{total} tasks ({percentage}%)"
 
-If no roadmap exists yet, report: "No roadmap generated. Run speckit.orchestrator.evaluate first."
+If no roadmap exists yet, report: "No roadmap generated. Run `/orchestrator-evaluate` first."
 
 ## Blockers
 
@@ -159,15 +189,15 @@ Based on the current state, recommend the next orchestrator command:
 
 | Current State | Recommended Action |
 |---------------|--------------------|
-| `pre-planning` | Run `speckit.orchestrator.evaluate` to classify the project tier. |
-| `discussing` | Run `speckit.orchestrator.discuss` to finalize the context draft. |
-| `planning` | Run `speckit.orchestrator.roadmap` or `speckit.orchestrator.plan-phase` to generate the next plan. |
-| `replanning` | Review and regenerate the stale phase plan via `speckit.orchestrator.plan-phase`. |
-| `executing` | Run `speckit.orchestrator.dispatch` to execute the next task. |
-| `summarizing` | Run `speckit.orchestrator.verify` and write the phase summary. |
+| `pre-planning` | Run `/orchestrator-evaluate` to classify the project tier. |
+| `discussing` | Run `/orchestrator-discuss` to finalize the context draft. |
+| `planning` | Run `/orchestrator-roadmap` or `/orchestrator-plan-phase` to generate the next plan. |
+| `replanning` | Review and regenerate the stale phase plan via `/orchestrator-plan-phase`. |
+| `executing` | Run `/orchestrator-dispatch` to execute the next task. |
+| `summarizing` | Run `/orchestrator-verify` and write the phase summary. |
 | `validating` | Validate milestone success criteria across all phases. |
 | `completing` | Write the milestone summary using `write-summary.sh`, then compress knowledge. |
-| `complete` | Milestone complete. Consider `speckit.orchestrator.consolidate` for knowledge compression. |
+| `complete` | Milestone complete. Consider `/orchestrator-consolidate` for knowledge compression. |
 
 ## Concurrent Safety
 
@@ -184,7 +214,7 @@ Status is inherently idempotent — it only reads from disk and computes derived
 
 ## Error Handling
 
-- If the milestone directory doesn't exist, report: "No milestone directory found. Run speckit.orchestrator.evaluate to start."
+- If the milestone directory doesn't exist, report: "No milestone directory found. Run `/orchestrator-evaluate` to start."
 - If the roadmap is missing, report progress as "No roadmap generated yet" and recommend evaluate.
 - If `scripts/state/derive-phase.sh` is unavailable, report: "State derivation script not found. Orchestrator may not be properly installed."
 - If `execution-log.jsonl` is malformed, skip the execution history section and report: "⚠ Execution log is malformed. History unavailable."
@@ -203,3 +233,7 @@ Status is inherently idempotent — it only reads from disk and computes derived
 - `references/state-machine.md` — state descriptions, transitions, and derivation rules
 - `scripts/telemetry/aggregate-metrics.sh` — computes aggregate telemetry metrics from execution log
 - `scripts/diagnostics/efficiency-footer.sh` — efficiency footer helper (M027/P02). Sources or forks `scripts/diagnostics/metrics-rollup.sh` for milestone-to-date paired cost+quality aggregates. Read-only.
+- `scripts/state/detect-invocation-context.sh` — AD-1 single-resolve invocation-context resolver (M029/P01)
+- `references/status-headline-shape.md` — FR-2 design contract (M029/P01)
+- `references/status-json-schema.md` — FR-3 design contract (M029/P01; consumed by T04 `--format=json` path)
+- `scripts/diagnostics/render-status-json.sh` — FR-3 JSON renderer (M029/P01; consumed by T04)

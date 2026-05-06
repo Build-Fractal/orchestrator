@@ -1,0 +1,5 @@
+# Intentionally empty: P04 has no PLAN, no SUMMARY, and no tasks
+# subdirectory so that scripts/diagnostics/render-position.sh derives the
+# canonical `◇` (pending) glyph for this phase. Without the .gitkeep, git
+# would not track this directory and the SC-5 fixture would silently lose
+# its ◇-glyph branch on a clean clone.

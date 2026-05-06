@@ -1,0 +1,13 @@
+# tests/m029-acceptance/fixtures/context-minimal.fixture/.orchestrator/config.yml
+# Minimal config for the M029 / FR-4 / SC-4 context-skill acceptance test.
+# Only the fields the orchestrator:context skill reads are populated.
+
+default_provider: claude-code
+
+# Intensity defaults — read by scripts/state/read-config.sh fallback path.
+quick:
+  knowledge_token_budget: 800
+standard:
+  dispatch_budget: 64
+full:
+  dispatch_budget: 128

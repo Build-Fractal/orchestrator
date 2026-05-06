@@ -6,6 +6,8 @@ type: conversus-preset
 preset_name: normalize-fidelity
 description: Two-agent cooperative deliberation gating a normalized spec artifact against its source.
 
+mode: cooperative
+
 agents:
   - name: source-advocate
     system_prompt: |

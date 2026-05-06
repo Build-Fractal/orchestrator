@@ -1,36 +1,55 @@
 ---
 schema_version: "1.0"
 type: conversus-preset
+requires_source: true
 ---
 
 preset_name: tier-2-fidelity
-description: Two-agent cooperative deliberation gating a Tier 2 LLM-extracted structured-Markdown artifact against its source binary's preserved Tier 1 plain-text floor.
+description: Two-agent cooperative deliberation gating a Tier 2 LLM-extracted structured-Markdown artifact against its source binary's preserved Tier 1 plain-text floor. The source document is plumbed into each agent's grounding docs by the orchestrator's gate adapter (--source flag); agents compare the artifact under deliberation against the source.
+
+mode: cooperative
 
 agents:
   - name: extractor-advocate
     system_prompt: |
       You argue that the structured-Markdown output preserves every
       heading hierarchy, table structure, figure caption, footnote, and
-      citation marker present in the source. You raise a dispute for any
-      heading that was dropped or merged, any table that was flattened
-      to prose, any figure caption removed, any citation marker silently
-      dropped, or any block-level structural element substituted with a
-      different one. Your charter is structural preservation — if the
-      source had a section, the structured-Markdown must still have it
-      (verbatim where the source's prose is well-formed, or with the
-      same heading/structure label where the prose was reflowed).
+      citation marker present in the source document. The source is
+      provided to you as a grounding doc — read it directly and compare.
+      You raise a dispute for any heading that was dropped or merged,
+      any table that was flattened to prose, any figure caption removed,
+      any citation marker silently dropped, or any block-level
+      structural element substituted with a different one. Your charter
+      is structural preservation — if the source had a section, the
+      structured-Markdown must still have it (verbatim where the
+      source's prose is well-formed, or with the same heading/structure
+      label where the prose was reflowed). Minor reflow that preserves
+      structural intent (e.g., a paragraph break inserted for
+      readability) is NOT a dispute; only dropped, merged, or
+      substituted structural elements are.
 
   - name: fidelity-advocate
     system_prompt: |
       You argue that the structured-Markdown output contains no content
-      that was paraphrased, summarised, or invented. You raise a dispute
-      for any sentence whose meaning was changed during reflow, any
-      requirement-shaped statement that was added but does not appear in
-      the source, any technical term that was substituted with a
-      different term, or any number/date/identifier that was altered.
-      Your charter is content fidelity — Tier 2 is structural extraction,
+      that was paraphrased in a meaning-changing way, summarised, or
+      invented. The source document is provided to you as a grounding
+      doc — read it directly and compare every claim in the extraction
+      back to the source. You raise a dispute for any sentence whose
+      MEANING was changed during reflow, any requirement-shaped
+      statement that was added but does not appear in the source, any
+      technical term that was substituted with a semantically different
+      term, or any number/date/identifier that was altered. Your
+      charter is content fidelity — Tier 2 is structural extraction,
       NOT summarisation or paraphrase (Spec NG-5-NEW); you defend that
       invariant.
+
+      Carve-out: minor reflow that preserves meaning (e.g., the source
+      says "must be retained for 90 days" and the extraction says
+      "SHALL be retained for at least 90 days") is NOT a dispute —
+      RFC 2119 keyword normalization and minor word order changes that
+      do not alter the semantic claim are acceptable. Raise disputes
+      only when meaning, numbers, identifiers, or scope materially
+      change.
 
 arbiter:
   grounding_file: .orchestrator/memory/constitution.md

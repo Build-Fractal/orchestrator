@@ -4,15 +4,25 @@
 # PASS/BLOCK retention logic. Sourced by extract-reference.sh.
 # No top-level I/O (MEM004). Bash 3.2 / POSIX-sh per CON-2.
 
-# extract_tier_2_invoke_gate <structured-md-path> <gate-output-path>
+# extract_tier_2_invoke_gate <source-path> <structured-md-path> <gate-output-path>
 #   Invokes scripts/dispatch/adapters/tool/conversus.sh with the
 #   tier-2-fidelity preset; writes gate-result.md to <gate-output-path>.
+#   The source-path is plumbed via --source so the fidelity-advocate
+#   can compare the structured-md extraction against the actual source
+#   document (the Tier 1 plain-text floor for binary sources, or the
+#   source markdown directly for markdown sources). Without --source,
+#   tier-2-fidelity refuses to run (requires_source: true).
 #   Returns: 0 on PASS, 2 on BLOCK, 1 on adapter error or missing inputs.
 extract_tier_2_invoke_gate() {
-  local artifact="$1"
-  local out="$2"
+  local source_doc="$1"
+  local artifact="$2"
+  local out="$3"
   local root="${ORCHESTRATOR_ROOT:-$(pwd)}"
   local adapter="$root/scripts/dispatch/adapters/tool/conversus.sh"
+  if [ ! -f "$source_doc" ]; then
+    echo "extract_tier_2_invoke_gate: source missing at $source_doc" >&2
+    return 1
+  fi
   if [ ! -f "$artifact" ]; then
     echo "extract_tier_2_invoke_gate: structured-md missing at $artifact" >&2
     return 1
@@ -25,7 +35,7 @@ extract_tier_2_invoke_gate() {
   # extraction may legitimately contain TODO-shaped strings if the
   # source did. Tests + this gate path always run with the bypass.
   CONVERSUS_GATE_SKIP_TODO_CHECK=1 \
-    bash "$adapter" gate tier-2-fidelity "$artifact" "$out"
+    bash "$adapter" gate --source "$source_doc" tier-2-fidelity "$artifact" "$out"
   local rc=$?
   case "$rc" in
     0) return 0 ;;   # PASS

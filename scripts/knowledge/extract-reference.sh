@@ -185,8 +185,17 @@ while [ "$i" -le "$DOC_COUNT" ]; do
       rm -f "$tmp_struct" "$gate_out" "$metrics_file"
       exit 1
     }
+    # Source-doc grounding for the fidelity gate: prefer the Tier 1
+    # plain-text floor (deterministic shell-adapter output for binary
+    # sources). Tier 2 implies tier>=1, so $text_file should always be
+    # populated by extract_tier_1_via_registry above. Fall back to the
+    # raw source if Tier 1 didn't produce a text floor.
+    gate_source="$text_file"
+    if [ -z "$gate_source" ] || [ ! -f "$gate_source" ]; then
+      gate_source="$src_abs"
+    fi
     set +e
-    extract_tier_2_invoke_gate "$tmp_struct" "$gate_out"
+    extract_tier_2_invoke_gate "$gate_source" "$tmp_struct" "$gate_out"
     gate_rc=$?
     set -e
     case "$gate_rc" in

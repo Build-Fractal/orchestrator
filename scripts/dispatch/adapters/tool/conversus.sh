@@ -9,9 +9,16 @@
 #
 # Subcommands:
 #   check                                   Probe for the conversus binary.
-#   gate [--strict] <preset> <artifact> <output>
+#   gate [--strict] [--source <path>] <preset> <artifact> <output>
 #                                           Run the fidelity gate, write
 #                                           gate-result.md to <output>.
+#                                           --source: optional grounding
+#                                           document; appended to each
+#                                           agent's docs: list so the
+#                                           fidelity-advocate can compare
+#                                           against the source. Required
+#                                           for presets with frontmatter
+#                                           `requires_source: true`.
 #   parse-verdict <gate-result-path>        Emit `verdict=PASS|BLOCK` from a
 #                                           gate-result.md frontmatter.
 #
@@ -287,6 +294,27 @@ _read_preset_edition_required() {
   ' "$_rper_file"
 }
 
+# _read_preset_requires_source <preset-file-path>
+# Emits the value of the top-level `requires_source:` key in the YAML
+# frontmatter (sibling of edition_required). Empty when absent.
+_read_preset_requires_source() {
+  _rprs_file="$1"
+  [ -f "$_rprs_file" ] || { echo ""; return 0; }
+  awk '
+    /^---[[:space:]]*$/ { fm++; next }
+    fm == 1 && /^requires_source:[[:space:]]*/ {
+      val = $0
+      sub(/^requires_source:[[:space:]]*/, "", val)
+      sub(/[[:space:]]*$/, "", val)
+      gsub(/"/, "", val)
+      gsub(/\x27/, "", val)
+      print val
+      exit
+    }
+    fm >= 2 { exit }
+  ' "$_rprs_file"
+}
+
 # --- subcommand dispatch ---
 
 SUBCMD="${1:-}"
@@ -301,14 +329,35 @@ case "$SUBCMD" in
     ;;
 
   gate)
-    # gate [--strict] <preset-name> <artifact-path> <output-path>
+    # gate [--strict] [--source <path>] <preset-name> <artifact-path> <output-path>
     _strict="${CONVERSUS_STRICT:-0}"
-    if [ "${1:-}" = "--strict" ]; then
-      _strict=1
-      shift
-    fi
+    _source=""
+    # Flag-parse loop: accept --strict / --source in any order before positionals.
+    while [ $# -gt 0 ]; do
+      case "${1:-}" in
+        --strict)
+          _strict=1
+          shift
+          ;;
+        --source)
+          if [ $# -lt 2 ]; then
+            _emit_fail "--source requires a path argument"
+            exit 1
+          fi
+          _source="$2"
+          shift 2
+          ;;
+        --source=*)
+          _source="${1#--source=}"
+          shift
+          ;;
+        *)
+          break
+          ;;
+      esac
+    done
     if [ $# -lt 3 ]; then
-      _emit_fail "usage: gate [--strict] <preset-name> <artifact-path> <output-path>"
+      _emit_fail "usage: gate [--strict] [--source <path>] <preset-name> <artifact-path> <output-path>"
       exit 1
     fi
     _preset_name="$1"
@@ -322,6 +371,21 @@ case "$SUBCMD" in
     fi
     if [ ! -r "$_artifact" ]; then
       _emit_fail "artifact not found: ${_artifact}"
+      exit 1
+    fi
+
+    # Preset-level requires_source enforcement: presets that declare
+    # `requires_source: true` in their orchestrator frontmatter must
+    # receive a --source path. Tier 2 fidelity is the canonical case —
+    # the fidelity-advocate is meaningless without the source to compare
+    # extraction against.
+    _preset_requires_source="$(_read_preset_requires_source "$_preset_file")"
+    if [ "$_preset_requires_source" = "true" ] && [ -z "$_source" ]; then
+      _emit_fail "preset '${_preset_name}' declares requires_source: true; pass --source <path>"
+      exit 1
+    fi
+    if [ -n "$_source" ] && [ ! -r "$_source" ]; then
+      _emit_fail "source not found: ${_source}"
       exit 1
     fi
 
@@ -458,11 +522,20 @@ case "$SUBCMD" in
     _conv_tmp="$(mktemp -d -t conversus-gate.XXXXXX)"
     trap 'rm -rf "$_conv_tmp"' EXIT
     _conv_config="${_conv_tmp}/conversus.yml"
-    "$_venv_py" "${_SCRIPT_DIR}/conversus-synth.py" \
-      --preset "$_preset_file" \
-      --artifact "$_artifact" \
-      --output-dir "$_run_output_dir" \
-      --out "$_conv_config"
+    if [ -n "$_source" ]; then
+      "$_venv_py" "${_SCRIPT_DIR}/conversus-synth.py" \
+        --preset "$_preset_file" \
+        --artifact "$_artifact" \
+        --output-dir "$_run_output_dir" \
+        --out "$_conv_config" \
+        --source "$_source"
+    else
+      "$_venv_py" "${_SCRIPT_DIR}/conversus-synth.py" \
+        --preset "$_preset_file" \
+        --artifact "$_artifact" \
+        --output-dir "$_run_output_dir" \
+        --out "$_conv_config"
+    fi
     _rc=$?
     if [ $_rc -ne 0 ]; then
       _emit_fail "conversus-synth.py failed (rc=${_rc})"
@@ -538,13 +611,26 @@ print("SUMMARY=%s" % data.get("summary", "").replace("\n", " "))
       _verdict="BLOCK"
     fi
 
-    # Source hash for the audit trail.
+    # Source hash for the audit trail. Despite the name, this is the
+    # hash of the artifact under deliberation (kept for backward compat
+    # with verifiers that grep `^source_hash:`). When --source is set,
+    # the grounding doc gets its own grounding_source_hash field below.
     if command -v shasum >/dev/null 2>&1; then
       _source_hash="$(shasum -a 256 "$_artifact" | awk '{print $1}')"
     elif command -v sha256sum >/dev/null 2>&1; then
       _source_hash="$(sha256sum "$_artifact" | awk '{print $1}')"
     else
       _source_hash="unavailable"
+    fi
+    _grounding_hash=""
+    if [ -n "$_source" ]; then
+      if command -v shasum >/dev/null 2>&1; then
+        _grounding_hash="$(shasum -a 256 "$_source" | awk '{print $1}')"
+      elif command -v sha256sum >/dev/null 2>&1; then
+        _grounding_hash="$(sha256sum "$_source" | awk '{print $1}')"
+      else
+        _grounding_hash="unavailable"
+      fi
     fi
 
     _preset_name="$(basename "$_preset_file" .yml)"
@@ -582,7 +668,23 @@ print("SUMMARY=%s" % data.get("summary", "").replace("\n", " "))
       _rationale="verdict=${_verdict} derived from surviving_disputes=${_surviving} in ${_mode_label} deliberation"
     fi
     mkdir -p "$(dirname "$_output")"
-    cat > "$_output" <<EOF
+    if [ -n "$_source" ]; then
+      cat > "$_output" <<EOF
+---
+verdict: "${_verdict}"
+disputes: ${_surviving}
+rationale: "${_rationale}"
+source_hash: "${_source_hash}"
+preset: "${_preset_name}"
+artifact: "${_artifact}"
+grounding_source: "${_source}"
+grounding_source_hash: "${_grounding_hash}"
+conversus_output_dir: "${_run_output_dir}"
+conversus_config: "${_conv_config_preserved}"
+---
+EOF
+    else
+      cat > "$_output" <<EOF
 ---
 verdict: "${_verdict}"
 disputes: ${_surviving}
@@ -593,6 +695,9 @@ artifact: "${_artifact}"
 conversus_output_dir: "${_run_output_dir}"
 conversus_config: "${_conv_config_preserved}"
 ---
+EOF
+    fi
+    cat >> "$_output" <<EOF
 # Gate Result: ${_preset_name}
 
 **Verdict:** ${_verdict}
@@ -630,13 +735,15 @@ EOF
 conversus.sh — Conversus cooperative-deliberation tool adapter
 
 Subcommands:
-  check                                          Probe for the conversus binary.
-  gate [--strict] <preset> <artifact> <output>   Run the fidelity gate.
-  parse-verdict <gate-result-path>               Emit verdict=PASS|BLOCK.
+  check                                                                 Probe for the conversus binary.
+  gate [--strict] [--source <path>] <preset> <artifact> <output>        Run the fidelity gate.
+  parse-verdict <gate-result-path>                                      Emit verdict=PASS|BLOCK.
 
 Flags:
   --strict        Treat missing binary as FAIL (exit 1) instead of SKIPPED+exit-0.
                   Also enabled via CONVERSUS_STRICT=1.
+  --source <path> Grounding document; appended to each agent's docs: list.
+                  Required for presets with `requires_source: true`.
 
 Resolver order: CONVERSUS_STUB, PATH, CONVERSUS_HOME, ~/Sites/conversus.
 USAGE

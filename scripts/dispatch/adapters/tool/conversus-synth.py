@@ -21,6 +21,10 @@ Args:
   --artifact <path>    file being deliberated over
   --output-dir <path>  where conversus should write its output tree
   --out <path>         where to write the synthesized conversus.yml
+  --source <path>      (optional) grounding source document; when set, the
+                       path is appended to each agent's `docs:` list so
+                       the fidelity-advocate can compare the artifact
+                       against its source. Used by tier-2-fidelity.
 
 Exit codes: 0 on success, 1 on parse/write error.
 """
@@ -66,7 +70,12 @@ def _derive_role(agent_name: str, mode: str) -> str | None:
     return None
 
 
-def synthesize(preset_path: Path, artifact: Path, output_dir: Path) -> dict:
+def synthesize(
+    preset_path: Path,
+    artifact: Path,
+    output_dir: Path,
+    source: Path | None = None,
+) -> dict:
     raw = preset_path.read_text(encoding="utf-8")
     body = _strip_orchestrator_frontmatter(raw)
     preset = yaml.safe_load(body)
@@ -81,16 +90,21 @@ def synthesize(preset_path: Path, artifact: Path, output_dir: Path) -> dict:
     if not preset_agents:
         raise ValueError(f"preset has no agents: {preset_path}")
 
+    source_abs = str(source.resolve()) if source is not None else None
+
     conv_agents = []
     for a in preset_agents:
         name = a.get("name")
         prompt = a.get("system_prompt") or a.get("prompt")
         if not name or not prompt:
             raise ValueError(f"agent missing name/system_prompt in {preset_path}")
-        entry = {"name": name, "prompt": prompt}
+        entry: dict = {"name": name, "prompt": prompt}
         role = _derive_role(name, mode)
         if role is not None:
             entry["role"] = role
+        if source_abs is not None:
+            preset_docs = a.get("docs") or []
+            entry["docs"] = list(preset_docs) + [source_abs]
         conv_agents.append(entry)
 
     config: dict = {
@@ -134,15 +148,19 @@ def main() -> int:
     ap.add_argument("--artifact", required=True, type=Path)
     ap.add_argument("--output-dir", required=True, type=Path)
     ap.add_argument("--out", required=True, type=Path)
+    ap.add_argument("--source", required=False, type=Path, default=None)
     args = ap.parse_args()
 
     for label, path in (("preset", args.preset), ("artifact", args.artifact)):
         if not path.exists():
             print(f"error: {label} not found: {path}", file=sys.stderr)
             return 1
+    if args.source is not None and not args.source.exists():
+        print(f"error: source not found: {args.source}", file=sys.stderr)
+        return 1
 
     try:
-        config = synthesize(args.preset, args.artifact, args.output_dir)
+        config = synthesize(args.preset, args.artifact, args.output_dir, args.source)
     except (ValueError, yaml.YAMLError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1

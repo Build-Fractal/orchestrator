@@ -200,6 +200,17 @@ write_stub() {
   _title="$3"
   _canonical_abs="${4:-}"
   _rewrite_rel_urls="${5:-true}"
+  # M037/P01/T02 MIT-01 P0: operator escape hatch. When an existing stub
+  # carries `auto_generated: false` in its frontmatter, do NOT overwrite.
+  if existing_stub_is_protected "$_target"; then
+    printf 'STUB-PRESERVED: %s (auto_generated: false)\n' "$_target" >&2
+    return 0
+  fi
+  # M037/P01/T02 FR-5: read source chunk `version:` and project to stub
+  # title:. Falls back to caller-supplied $_title when version: absent.
+  if [ -n "$_canonical_abs" ] && [ -f "$_canonical_abs" ]; then
+    _title=$(derive_stub_title "$_canonical_abs" "$_title")
+  fi
   if [ "$DRY_RUN" -eq 1 ]; then
     printf 'WOULD-WRITE: %s\n' "$_target" >&2
     STUBS_WRITTEN=$((STUBS_WRITTEN + 1))
@@ -332,6 +343,15 @@ write_stub_extra_with_sibling() {
   _sibling_canonical="$2"
   _title="$3"
   _metadata_abs="$4"
+  # M037/P01/T02 MIT-01 P0: operator escape hatch.
+  if existing_stub_is_protected "$_target"; then
+    printf 'STUB-PRESERVED: %s (auto_generated: false)\n' "$_target" >&2
+    return 0
+  fi
+  # M037/P01/T02 FR-5: project source `version:` to stub title:.
+  if [ -n "$_metadata_abs" ] && [ -f "$_metadata_abs" ]; then
+    _title=$(derive_stub_title "$_metadata_abs" "$_title")
+  fi
   if [ "$DRY_RUN" -eq 1 ]; then
     printf 'WOULD-WRITE: %s\n' "$_target" >&2
     STUBS_WRITTEN=$((STUBS_WRITTEN + 1))
@@ -387,6 +407,15 @@ write_stub_extra_metadata_only() {
   _title="$2"
   _metadata_abs="$3"
   _external_pointer="${4:-}"
+  # M037/P01/T02 MIT-01 P0: operator escape hatch.
+  if existing_stub_is_protected "$_target"; then
+    printf 'STUB-PRESERVED: %s (auto_generated: false)\n' "$_target" >&2
+    return 0
+  fi
+  # M037/P01/T02 FR-5: project source `version:` to stub title:.
+  if [ -n "$_metadata_abs" ] && [ -f "$_metadata_abs" ]; then
+    _title=$(derive_stub_title "$_metadata_abs" "$_title")
+  fi
   if [ "$DRY_RUN" -eq 1 ]; then
     printf 'WOULD-WRITE: %s\n' "$_target" >&2
     STUBS_WRITTEN=$((STUBS_WRITTEN + 1))
@@ -454,6 +483,83 @@ extract_external_pointer() {
       exit
     }
   ' "$_p" 2>/dev/null
+}
+
+# read_frontmatter_field <abs-path> <field-name>
+#
+# M037/P01/T02 FR-5: reads a single YAML frontmatter field's value from
+# <abs-path> and prints it on stdout. Empty stdout when the file does not
+# exist, has no frontmatter, or the field is absent. Strips one layer of
+# surrounding single- or double-quotes (matches the existing
+# extract_external_pointer pattern). Bash 3.2 / awk-only.
+read_frontmatter_field() {
+  _p="$1"
+  _f="$2"
+  [ -f "$_p" ] || return 0
+  [ -n "$_f" ] || return 0
+  awk -v field="$_f" '
+    BEGIN {
+      state="pre"
+      pat="^[[:space:]]*" field "[[:space:]]*:[[:space:]]*"
+    }
+    NR == 1 && $0 == "---" { state="fm"; next }
+    state == "fm" && $0 == "---" { exit }
+    state == "fm" && $0 ~ pat {
+      v=$0
+      sub(/^[^:]*:[[:space:]]*/, "", v)
+      sub(/[[:space:]]+$/, "", v)
+      sub(/^["'"'"']/, "", v)
+      sub(/["'"'"']$/, "", v)
+      print v
+      exit
+    }
+  ' "$_p" 2>/dev/null
+}
+
+# derive_stub_title <canonical-abs> <fallback-title> [<chunk-id-slug>]
+#
+# M037/P01/T02 FR-5: returns the title to use for a stub's frontmatter.
+# Reads the source chunk's `version:` field; on absent, falls back to
+# <chunk-id-slug> when provided, else <fallback-title>. Empty stdout
+# triggers the caller's own fallback. Emits a debug-level diagnostic to
+# stderr when WIKI_DEBUG=1 is set.
+derive_stub_title() {
+  _canon="$1"
+  _fallback="$2"
+  _slug="${3:-}"
+  _ver=""
+  if [ -n "$_canon" ] && [ -f "$_canon" ]; then
+    _ver=$(read_frontmatter_field "$_canon" "version")
+  fi
+  if [ -n "$_ver" ]; then
+    printf '%s' "$_ver"
+    return 0
+  fi
+  if [ -n "$_slug" ]; then
+    if [ "${WIKI_DEBUG:-0}" = "1" ]; then
+      printf 'DEBUG: derive_stub_title: no version: in %s, fell back to chunk-id slug %s\n' \
+        "$_canon" "$_slug" >&2
+    fi
+    printf '%s' "$_slug"
+    return 0
+  fi
+  printf '%s' "$_fallback"
+}
+
+# existing_stub_is_protected <target-abs>
+#
+# M037/P01/T02 FR-5 MIT-01 P0: returns 0 (true) if <target-abs> exists AND
+# carries `auto_generated: false` in its frontmatter. Operator escape
+# hatch — generator MUST NOT overwrite a stub the operator has marked as
+# hand-edited.
+existing_stub_is_protected() {
+  _t="$1"
+  [ -f "$_t" ] || return 1
+  _ag=$(read_frontmatter_field "$_t" "auto_generated")
+  if [ "$_ag" = "false" ]; then
+    return 0
+  fi
+  return 1
 }
 
 # write_index <target-abs-path> <title> <body-file> [<include-canonical>]
@@ -786,6 +892,16 @@ clean_phase() {
     -print > "$_list" 2>/dev/null || true
   while IFS= read -r _f; do
     [ -n "$_f" ] || continue
+    # M037/P01/T02 MIT-01 P0: skip stubs the operator has marked
+    # auto_generated: false. The clean_phase + main-loop write sequence
+    # would otherwise wipe operator edits before write_stub's escape-hatch
+    # gate could fire. Both gates are required: clean_phase to preserve
+    # across re-runs, write_stub to preserve when the source chunk would
+    # otherwise re-generate the stub.
+    if existing_stub_is_protected "$_f"; then
+      printf 'STUB-PRESERVED: %s (auto_generated: false, clean_phase)\n' "$_f" >&2
+      continue
+    fi
     REMOVED=$((REMOVED + 1))
     if [ "$DRY_RUN" -eq 1 ]; then
       printf 'WOULD-REMOVE: %s\n' "$_f" >&2

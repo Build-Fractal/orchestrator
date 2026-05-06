@@ -161,11 +161,58 @@ indent() {
   printf '%s' "$_out"
 }
 
+# read_stub_title <stub-abs-path>
+#
+# M037/P01/T02 FR-6: reads the projected stub's frontmatter `title:` field
+# and prints it on stdout. Empty stdout when the stub does not exist or
+# carries no title:. The stub generator (FR-5) is the projection authority
+# for chunk `version:` → stub `title:`; the nav layer reads what the stub
+# says, not what the scanner H1-extracted from the source. Bash 3.2 / awk.
+read_stub_title() {
+  _p="$1"
+  [ -f "$_p" ] || return 0
+  awk '
+    BEGIN { state="pre" }
+    NR == 1 && $0 == "---" { state="fm"; next }
+    state == "fm" && $0 == "---" { exit }
+    state == "fm" && $0 ~ /^[[:space:]]*title[[:space:]]*:[[:space:]]*/ {
+      v=$0
+      sub(/^[^:]*:[[:space:]]*/, "", v)
+      sub(/[[:space:]]+$/, "", v)
+      sub(/^["'"'"']/, "", v)
+      sub(/["'"'"']$/, "", v)
+      print v
+      exit
+    }
+  ' "$_p" 2>/dev/null
+}
+
 # emit_leaf <level> <label> <path-under-docs>
 emit_leaf() {
   _lvl="$1"
   _label="$2"
   _path="$3"
+  _q=$(yaml_escape_title "$_label")
+  printf '%s- %s: %s\n' "$(indent "$_lvl")" "$_q" "$_path" >> "$NAV_BODY"
+}
+
+# emit_leaf_prefer_stub_title <level> <label> <path-under-docs>
+#
+# M037/P01/T02 FR-6: variant of emit_leaf that prefers the projected stub's
+# frontmatter `title:` (FR-5 derived from source `version:`) when present.
+# Used by the reference-corpus + knowledge-flat surfaces where slug-soup
+# labels are the readability problem US-2 fixes. Milestone-artifact emitters
+# keep using emit_leaf because their per-shape labels (Plan/Summary/Tasks)
+# are already human-friendly. Falls back to <label> when the stub is
+# missing or has no title.
+emit_leaf_prefer_stub_title() {
+  _lvl="$1"
+  _label="$2"
+  _path="$3"
+  _stub_title=$(read_stub_title "$DOCS/$_path")
+  if [ -n "$_stub_title" ]; then
+    _label="$_stub_title"
+  fi
   _q=$(yaml_escape_title "$_label")
   printf '%s- %s: %s\n' "$(indent "$_lvl")" "$_q" "$_path" >> "$NAV_BODY"
 }
@@ -481,7 +528,9 @@ if [ -s "$TMP_EXTRA_DNS" ]; then
       if [ -n "$XTITLE" ] && [ "$XTITLE" != "$_xbase" ]; then
         _xitemlabel="$XTITLE"
       fi
-      emit_leaf 2 "$_xitemlabel" "$_xpath"
+      # M037/P01/T02 FR-6: prefer stub `title:` (FR-5 projected from
+      # source `version:`) over the scanner H1-derived XTITLE.
+      emit_leaf_prefer_stub_title 2 "$_xitemlabel" "$_xpath"
     done < "$TMP_EX"
     rm -f "$TMP_EX"
   done < "$TMP_EXTRA_DNS_UNIQ"
@@ -508,7 +557,8 @@ if [ "$HAS_KNOWLEDGE_FLAT" -eq 1 ]; then
     if [ -n "$KFTITLE" ] && [ "$KFTITLE" != "$_kfbase" ]; then
       _kflabel="$KFTITLE"
     fi
-    emit_leaf 2 "$_kflabel" "$_kfpath"
+    # M037/P01/T02 FR-6: prefer stub `title:` projected from source `version:`.
+    emit_leaf_prefer_stub_title 2 "$_kflabel" "$_kfpath"
   done < "$TMP_KFL"
   rm -f "$TMP_KFL"
 fi

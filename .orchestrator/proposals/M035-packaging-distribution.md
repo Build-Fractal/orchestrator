@@ -5,6 +5,17 @@
 **Predecessors**: M025 (installer coexistence — settings.json merge helper, manifest, uninstall cascade), M032 (project-asset distribution — `--with-<feature>` flag pattern, `project_assets:` schema), M029 (`orchestrator:where` + headline status — surface for version-drift warning)
 **Source**: 2026-04-28 operator session question — *"What's the best way to ensure this project, dogfooding itself, is using the latest orchestrator code? And how do I make sure I'm using the latest version for my other projects like lakeledger or pbj-central?"* Surfaced a roadmap gap: pre-launch queue (M028→M030→M031→M032→M033→M029) carries no explicit "ship to package managers" milestone. M032 covers asset distribution *within* a consumer project (wiki tooling, mkdocs); it does **not** cover orchestrator-itself distribution to npm / homebrew / curl-pipe-bash. Without M035, "launch" is implicit and underspecified.
 
+## Pre-M035 interim shipped 2026-05-06
+
+**`orchestrator:update` skill landed pre-M035** to address operator velocity for the local-dogfood scenario. Reduces the M035 surface in two ways:
+
+- **Finding D's "first-class command" outcome is now baseline** — the skill exists and is discoverable. M035 P06 evolves it to add `update_source: git|npm|homebrew` dispatch once package-manager publishing ships, rather than authoring the command from scratch.
+- **P01's "documented shell-function recipe" deliverable is obsolete** — operators run `orchestrator:update` (or `bash scripts/lifecycle/run-update.sh`) instead of the `~/.zshrc` function. P01 still owns `--mode=symlink` install + version-drift warning; the recipe-documentation line drops out.
+
+The interim is git-source-only and assumes the source repo lives locally (default `$HOME/Sites/spec-kit-orchestrator`, overridable via `$ORCHESTRATOR_SOURCE_REPO` or `--source-repo` flag). It does NOT do `git pull` on the source — operator controls when source state moves; the skill only re-stages whatever's currently in the source tree. See `commands/update.md` + `scripts/lifecycle/run-update.sh`.
+
+Drives this proposal's remaining scope tighter: M035 is now strictly (P00 baseline) + (P01 symlink mode + drift warning) + (P01.5 namespace rename) + (P02–P05 publishing pipelines) + (P06 multi-source dispatch). The "skill exists" half of P06 is already done; "skill knows how to dispatch by source" is the work.
+
 ## Goal
 
 The launch-readiness milestone. Two layers, sequenced:
@@ -132,22 +143,22 @@ This works pre-M035 but has three problems:
 2. **Per-machine setup** — every machine the operator works on needs the function added.
 3. **No package-manager awareness** — when M035 P02 ships npm, the recipe still does `git pull` instead of `npm update -g @spec-kit/orchestrator`.
 
-**Fix shape (P06 — at-launch)**: `commands/update.md` + `scripts/lifecycle/update.sh` register `orchestrator:update` as a first-class command. Reads `update_source: git|npm|homebrew` config (default `npm` post-launch). Performs source-appropriate update (`npm update -g` / `brew upgrade orchestrator` / `git pull`). Re-runs install (`--force`) to refresh consumer project's runtime stage. Emits an `update_run` JSONL event for M027 cost+quality observability rollups.
+**Fix shape (interim shipped 2026-05-06; refined in P06 — at-launch)**: `commands/update.md` + `scripts/lifecycle/run-update.sh` register `orchestrator:update` as a first-class command. The interim version (git-source-only) wraps `install-claude-code.sh --force` against a locally-resolved source repo (default `$HOME/Sites/spec-kit-orchestrator`, overridable via `$ORCHESTRATOR_SOURCE_REPO` or `--source-repo`). M035 P06 extends the same driver to read `update_source: git|npm|homebrew` config (default `npm` post-launch), dispatch source-appropriate update (`npm update -g` / `brew upgrade orchestrator` / `git pull`), and emit an `update_run` JSONL event for M027 cost+quality observability rollups.
 
-**Impact**: closes the loop. Pre-launch operators document the shell function (P01); at-launch operators run `orchestrator:update`. Same UX shape; different mechanism.
+**Impact**: closes the loop. Pre-launch operators run `orchestrator:update` (git source, local repo); at-launch operators run `orchestrator:update` (npm/homebrew source). Same UX shape; same skill; different source dispatch under the hood. The pre-M035 interim removes the "documented shell-function recipe" deliverable from P01 — operators discover the skill instead of memorizing a `~/.zshrc` snippet.
 
 ## Phase outline (preliminary — refined by `orchestrator:specify`)
 
 | Phase | Goal | Touch list (preliminary) | Pre-launch or at-launch? |
 |---|---|---|---|
 | **P00** (recommended) | Empirical baseline + decisions | Manual publish of beta `@spec-kit/orchestrator` to npm under `@beta` tag; install on a fresh macOS + fresh Linux VM; friction inventory. Decisions: npm scope (`@spec-kit` vs `@orchestrator` vs unscoped), homebrew tap location, curl-pipe-bash domain, GPG signing keys, release-notes generation strategy. | Pre-launch — informs P01–P06 design |
-| **P01** | Dev-install symlink mode + version-drift warning | `--mode=symlink\|copy` flag in `install-claude-code.sh` (and codex/cursor installers). M025 manifest extension to record symlink-vs-copy per entry (so uninstall handles both). `orchestrator:status` version-drift warning reading consumer's `CHANGELOG.md` vs known-orchestrator-repo `CHANGELOG.md`. Documented shell-function recipe in `references/installation.md`. | **Pre-launch** — ships immediately after M029 |
+| **P01** | Dev-install symlink mode + version-drift warning | `--mode=symlink\|copy` flag in `install-claude-code.sh` (and codex/cursor installers). M025 manifest extension to record symlink-vs-copy per entry (so uninstall handles both). `orchestrator:status` version-drift warning reading consumer's `CHANGELOG.md` vs known-orchestrator-repo `CHANGELOG.md`. ~~Documented shell-function recipe in `references/installation.md`~~ — superseded 2026-05-06 by the `orchestrator:update` skill (see top-of-doc interim note). | **Pre-launch** — ships immediately after M029 |
 | **P01.5** | Namespace + project rename (`speckit.orchestrator.*` purge + `spec-kit-orchestrator` → `orchestrator`) | Mechanical sweep across the 15 files carrying `speckit.orchestrator.*` operational references (~71 occurrences) replaced with `orchestrator:<command>` shape; historical/migration documentation (`commands/migrate.md` AD-15, `templates/instruction-schema.md`) reframed as legacy references. Co-shipped with the broader project rename (repo, package.json, `~/Sites/<dir>` path, `.claude/projects/` key) per the dedicated rename plan. Open Question 1 (npm scope) resolved here; P02 inherits the resolved name. | **Pre-launch** — prerequisite to P02 |
 | **P02** | npm publishing pipeline | `package.json` with `@spec-kit/orchestrator` (or chosen scope). Postinstall script wraps existing `install-claude-code.sh`. `bin/orchestrator` entry point delegating to commands. `npm publish` works idempotently. | **At-launch** |
 | **P03** | Homebrew formula + tap | `homebrew-orchestrator` tap repo. Formula authored. `brew install orchestrator` works on macOS + Linuxbrew. Uninstall cascades through M025. | **At-launch** |
 | **P04** | curl-pipe-bash + GH release automation | `install.sh` hosted at GitHub release URL (or `orchestrator.dev` if domain registered by P00). CI workflow: `v*` tag push → `gh release create` + npm tarball upload + homebrew bottle + signed `install.sh` upload. | **At-launch** |
 | **P05** | Install-script integrity | GPG signing in CI. SHA-256 checksums published alongside releases. Rollback semantics: `.previous-version` marker per install; `orchestrator:update --rollback` flag. | **At-launch** |
-| **P06** | `orchestrator:update` first-class command | `commands/update.md` + `scripts/lifecycle/update.sh`. Reads `update_source: git\|npm\|homebrew`. Source-appropriate update + post-update install refresh. Emits `update_run` JSONL event. P01's drift-warning surface upgraded to recommend `orchestrator:update` instead of shell-function recipe. | **At-launch** |
+| **P06** | `orchestrator:update` multi-source dispatch | `commands/update.md` + `scripts/lifecycle/run-update.sh` already exist (shipped pre-M035 2026-05-06; git-source-only). P06 EXTENDS the driver to read `update_source: git\|npm\|homebrew` from `.orchestrator/config.yml`, dispatch source-appropriate update (`git pull` / `npm update -g` / `brew upgrade`), and emit an `update_run` JSONL event for M027 cost+quality observability. P01's drift-warning surface already recommends `orchestrator:update` (no rewrite needed). | **At-launch** |
 
 P00 baseline serves both pre-launch (P01 design) and at-launch (P02–P06 design) phases — same fixture (fresh-machine install) used twice.
 

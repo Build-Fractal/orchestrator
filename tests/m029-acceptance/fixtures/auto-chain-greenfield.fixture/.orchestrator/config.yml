@@ -1,0 +1,14 @@
+schema_version: "1.0"
+type: orchestrator-config
+# SC-10 fixture seed: minimal config so start.sh's invoke_init short-
+# circuits (config.yml present -> "init already complete").
+# auto_proceed: true keeps the AD-3 chain-driver gate from blocking
+# in non-TTY harnesses; --yes from the SC-10 invocation also wins
+# (AD-3 priority 1) but auto_proceed: true is documented as priority 2
+# so the fixture-time fallback is robust.
+auto_proceed: true
+intensity:
+  default: standard
+  auto_detect: false
+dispatch:
+  default_backend: local-agent

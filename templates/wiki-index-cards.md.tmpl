@@ -1,0 +1,52 @@
+<!--
+templates/wiki-index-cards.md.tmpl — M037/P01/T01 FR-1 card-grid template.
+
+Consumed by scripts/wiki/wiki-generate-stubs.sh::render_landing_cards.
+
+DEFAULT_BLURBS section-name -> icon|title|blurb|section-path mapping. Used
+by FR-3 when .orchestrator/config.yml has no `wiki.landing_cards:` block
+(or the list is empty). Section names match top-level nav entries
+enumerated by wiki-generate-nav.sh / parsed from wiki/mkdocs.yml's nav:
+block. The renderer cross-references the present nav top-level names
+against DEFAULT_BLURBS and emits one card per intersection.
+
+Icon syntax is mkdocs-material emoji-shortcode form (hyphens, not slashes).
+Renders as a glyph when pymdownx.emoji is enabled in markdown_extensions;
+renders as literal text otherwise. Operators wanting glyphs add the
+extension to wiki/mkdocs.yml's markdown_extensions: list.
+
+Format: name|icon|title|blurb|section-path (pipe-delimited; no pipes
+inside any value). One record per `# ` line.
+
+# DEFAULT_BLURBS
+# Constitution|fontawesome-solid-scale-balanced|Constitution|Project constitution. Governing principles for every decision.|constitution.md
+# Decisions|fontawesome-solid-list-check|Decisions|Decision log. Architectural choices, rationale, revision history.|decisions.md
+# Glossary|fontawesome-solid-book|Glossary|Project glossary. Terms and one-line definitions.|glossary.md
+# Knowledge|fontawesome-solid-lightbulb|Knowledge|Consolidated narrative. Patterns, decisions, lessons in prose form.|knowledge.md
+# Knowledge Entries|fontawesome-solid-book-bookmark|Knowledge Entries|Granular MEM entries by category — patterns, conventions, lessons.|knowledge/index.md
+# Milestones|fontawesome-solid-flag-checkered|Milestones|Per-milestone phases, tasks, and outcomes.|milestones/index.md
+# Milestone Summary|fontawesome-solid-clipboard-list|Milestone Summary|Cross-milestone rollup. Build summary, extension guide, milestone history.|milestone-summary.md
+# Reference|fontawesome-solid-folder-tree|Reference|Reference corpus. Regulatory docs, training materials, glossaries.|reference/index.md
+# Proposals|fontawesome-solid-pen-to-square|Proposals|Proposal drafts and historical proposals.|proposals/index.md
+# END_DEFAULT_BLURBS
+-->
+
+<!--
+Documentation example of the rendered output (the renderer in
+wiki-generate-stubs.sh emits this shape via printf — no template-engine
+runtime is required). One <li> block per landing-card entry.
+
+<div class="grid cards" markdown>
+
+- :{{icon}}: **{{title}}**
+
+    ---
+
+    {{blurb}}
+
+    [:octicons-arrow-right-24: {{title}}]({{section}})
+
+</div>
+
+The handlebars-style braces above are documentation only.
+-->

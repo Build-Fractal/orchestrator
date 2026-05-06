@@ -22,18 +22,75 @@ This is **not** a public-facing site. External launch lives in M009.
 
 ## How to navigate
 
-Five entry points live in the left navigation:
+<!-- M037-LANDING-CARDS-BEGIN -->
+<div class="grid cards" markdown>
 
-- **Constitution** — the seven governing principles.
-  See [Constitution](constitution.md).
-- **Decisions** — the architectural decisions register (AD-1..AD-19+).
-  See [Decisions](decisions.md).
-- **Knowledge** — consolidated narrative plus 25 granular MEM entries
-  grouped by category. See [Knowledge](knowledge/index.md).
-- **Milestone Summary** — the cross-milestone rollup + extension
-  guide. See [Milestone Summary](milestone-summary.md).
-- **Milestones** — per-milestone plans, phases, tasks, and summaries
-  (M001..current). See [Milestones](milestones/index.md).
+- :fontawesome-solid-scale-balanced: **Constitution**
+
+    ---
+
+    Project constitution. Governing principles for every decision.
+
+    [:octicons-arrow-right-24: Constitution](constitution.md)
+
+- :fontawesome-solid-book: **Glossary**
+
+    ---
+
+    Project glossary. Terms and one-line definitions.
+
+    [:octicons-arrow-right-24: Glossary](glossary.md)
+
+- :fontawesome-solid-list-check: **Decisions**
+
+    ---
+
+    Decision log. Architectural choices, rationale, revision history.
+
+    [:octicons-arrow-right-24: Decisions](decisions.md)
+
+- :fontawesome-solid-lightbulb: **Knowledge**
+
+    ---
+
+    Consolidated narrative. Patterns, decisions, lessons in prose form.
+
+    [:octicons-arrow-right-24: Knowledge](knowledge.md)
+
+- :fontawesome-solid-book-bookmark: **Knowledge Entries**
+
+    ---
+
+    Granular MEM entries by category — patterns, conventions, lessons.
+
+    [:octicons-arrow-right-24: Knowledge Entries](knowledge/index.md)
+
+- :fontawesome-solid-clipboard-list: **Milestone Summary**
+
+    ---
+
+    Cross-milestone rollup. Build summary, extension guide, milestone history.
+
+    [:octicons-arrow-right-24: Milestone Summary](milestone-summary.md)
+
+- :fontawesome-solid-pen-to-square: **Proposals**
+
+    ---
+
+    Proposal drafts and historical proposals.
+
+    [:octicons-arrow-right-24: Proposals](proposals/index.md)
+
+- :fontawesome-solid-flag-checkered: **Milestones**
+
+    ---
+
+    Per-milestone phases, tasks, and outcomes.
+
+    [:octicons-arrow-right-24: Milestones](milestones/index.md)
+
+</div>
+<!-- M037-LANDING-CARDS-END -->
 
 The top-right search box indexes every rendered page.
 

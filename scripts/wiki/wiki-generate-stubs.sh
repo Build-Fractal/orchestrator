@@ -12,16 +12,21 @@
 # Idempotent: safe to re-run. Removes existing auto-generated stubs before
 # writing fresh ones. Never touches wiki/docs/index.md or wiki/docs/README.md.
 #
-# Usage: bash scripts/wiki/wiki-generate-stubs.sh [--dry-run] [--root PROJECT_ROOT]
+# Usage: bash scripts/wiki/wiki-generate-stubs.sh [--dry-run] [--root PROJECT_ROOT] [--cards-only]
 # Exit 0 on success; 1 on scanner failure; 2 on write error.
 # Bash 3.2 compatible — no `declare -A`, no `mapfile`, no `${var^^}`,
 # no process substitution, no `&>`.
+#
+# --cards-only: invoke render_landing_cards (M037/P01/T01 FR-1) and exit.
+# Skips scanner + clean phase + per-record stub emission. Used by the
+# M037 P01 acceptance harness for fast targeted exercising.
 
 set -u
 
 # ---- argument parsing -------------------------------------------------------
 DRY_RUN=0
 ROOT=""
+CARDS_ONLY=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -36,6 +41,10 @@ while [ $# -gt 0 ]; do
         exit 2
       fi
       ROOT="$1"
+      shift
+      ;;
+    --cards-only)
+      CARDS_ONLY=1
       shift
       ;;
     --help|-h)
@@ -68,9 +77,11 @@ if [ ! -d "$DOCS" ]; then
   exit 2
 fi
 
-if [ ! -x "$SCANNER" ] && [ ! -f "$SCANNER" ]; then
-  printf 'ERROR: scanner not found: %s (run T02 first)\n' "$SCANNER" >&2
-  exit 1
+if [ "$CARDS_ONLY" -eq 0 ]; then
+  if [ ! -x "$SCANNER" ] && [ ! -f "$SCANNER" ]; then
+    printf 'ERROR: scanner not found: %s (run T02 first)\n' "$SCANNER" >&2
+    exit 1
+  fi
 fi
 
 # ---- counters ---------------------------------------------------------------
@@ -506,6 +517,260 @@ write_index() {
   INDEXES_WRITTEN=$((INDEXES_WRITTEN + 1))
 }
 
+# ---- M037/P01/T01 FR-1 — render_landing_cards -------------------------------
+# Reads .orchestrator/config.yml's wiki.landing_cards: block. When non-empty,
+# renders one card per record. When empty/absent, falls back to the FR-3 path:
+# parses wiki/mkdocs.yml's nav: block for top-level section names, intersects
+# with the DEFAULT_BLURBS table inside templates/wiki-index-cards.md.tmpl, and
+# emits one card per intersection.
+#
+# Output: a `<div class="grid cards" markdown>...</div>` block bracketed by
+# `<!-- M037-LANDING-CARDS-BEGIN -->` / `<!-- M037-LANDING-CARDS-END -->`
+# sentinels, written into wiki/docs/index.md. Idempotent re-runs:
+#   - sentinels present  -> replace bracketed region only
+#   - sentinels absent + frontmatter present -> insert immediately after fm
+#   - sentinels absent + no frontmatter      -> prepend at top of file
+#   - index.md absent     -> create with frontmatter + H1 + cards block
+#   - zero cards          -> leave index.md unchanged (US-1 edge case)
+#
+# Bash 3.2 + POSIX sh compatible. No associative arrays, no process
+# substitution, no command substitution containing pipes.
+render_landing_cards() {
+  _config="$ROOT/.orchestrator/config.yml"
+  _tmpl="$ROOT/templates/wiki-index-cards.md.tmpl"
+  _mkdocs="$ROOT/wiki/mkdocs.yml"
+  _index="$DOCS/index.md"
+
+  if [ ! -f "$_tmpl" ]; then
+    printf 'WARN: render_landing_cards: template not found: %s\n' "$_tmpl" >&2
+    return 0
+  fi
+
+  _cards_tmp="/tmp/wiki-cards-$$.list"
+  : > "$_cards_tmp"
+
+  # 1. Try operator-configured landing_cards from .orchestrator/config.yml.
+  _has_operator=0
+  if [ -f "$_config" ]; then
+    awk '
+      function emit() {
+        if (idx>0 && (sec != "" || icn != "" || ttl != "" || blb != "")) {
+          printf "%d|%s|%s|%s|%s\n", idx, sec, icn, ttl, blb
+        }
+        sec=""; icn=""; ttl=""; blb=""
+      }
+      function strip(s) {
+        sub(/^[[:space:]]+/, "", s)
+        sub(/[[:space:]]+$/, "", s)
+        sub(/^"/, "", s); sub(/"$/, "", s)
+        sub(/^\047/, "", s); sub(/\047$/, "", s)
+        return s
+      }
+      function set_field(k, v) {
+        if (k=="section") sec=v
+        else if (k=="icon") icn=v
+        else if (k=="title") ttl=v
+        else if (k=="blurb") blb=v
+      }
+      BEGIN { state="pre"; idx=0; sec=""; icn=""; ttl=""; blb="" }
+      /^wiki:[[:space:]]*$/ { state="wiki"; next }
+      state=="wiki" && /^[^[:space:]#]/ { emit(); exit }
+      state=="wiki" && /^  landing_cards:[[:space:]]*\[\][[:space:]]*$/ { exit }
+      state=="wiki" && /^  landing_cards:[[:space:]]*$/ { state="cards"; next }
+      state=="cards" && /^[^[:space:]#]/ { emit(); exit }
+      state=="cards" && /^  [a-zA-Z]/ { emit(); exit }
+      state=="cards" && /^    -[[:space:]]+[a-zA-Z_]+:/ {
+        emit()
+        idx++
+        line=$0
+        sub(/^    -[[:space:]]+/, "", line)
+        if (match(line, /^[a-zA-Z_]+:/)) {
+          k=substr(line, 1, RLENGTH-1)
+          v=substr(line, RLENGTH+1)
+          set_field(k, strip(v))
+        }
+        next
+      }
+      state=="cards" && /^      [a-zA-Z_]+:/ {
+        line=$0
+        sub(/^      /, "", line)
+        if (match(line, /^[a-zA-Z_]+:/)) {
+          k=substr(line, 1, RLENGTH-1)
+          v=substr(line, RLENGTH+1)
+          set_field(k, strip(v))
+        }
+        next
+      }
+      END { emit() }
+    ' "$_config" >> "$_cards_tmp" 2>/dev/null
+    if [ -s "$_cards_tmp" ]; then
+      _has_operator=1
+    fi
+  fi
+
+  # 2. Fallback: enumerate top-level nav from wiki/mkdocs.yml, intersect with
+  # DEFAULT_BLURBS from the template.
+  if [ "$_has_operator" -eq 0 ] && [ -f "$_mkdocs" ]; then
+    _nav_tmp="/tmp/wiki-nav-top-$$.list"
+    awk '
+      BEGIN { in_nav=0 }
+      /^nav:[[:space:]]*$/ { in_nav=1; next }
+      in_nav && /^[^[:space:]#]/ { exit }
+      in_nav && /^  - / {
+        line=$0
+        sub(/^  - /, "", line)
+        if (match(line, /:/)) {
+          name=substr(line, 1, RSTART-1)
+          sub(/^"/, "", name); sub(/"$/, "", name)
+          print name
+        }
+      }
+    ' "$_mkdocs" > "$_nav_tmp" 2>/dev/null
+
+    _blurbs_tmp="/tmp/wiki-blurbs-$$.list"
+    awk '
+      BEGIN { in_block=0 }
+      /^# DEFAULT_BLURBS$/ { in_block=1; next }
+      /^# END_DEFAULT_BLURBS$/ { in_block=0; exit }
+      in_block && /^# [A-Za-z]/ {
+        line=$0
+        sub(/^# /, "", line)
+        print line
+      }
+    ' "$_tmpl" > "$_blurbs_tmp" 2>/dev/null
+
+    _idx=0
+    while IFS= read -r _name; do
+      [ -n "$_name" ] || continue
+      case "$_name" in
+        Home) continue ;;
+      esac
+      _match=$(awk -F'|' -v n="$_name" '$1 == n { print $0; exit }' "$_blurbs_tmp")
+      [ -n "$_match" ] || continue
+      _icon=$(printf '%s\n' "$_match" | awk -F'|' '{print $2}')
+      _title=$(printf '%s\n' "$_match" | awk -F'|' '{print $3}')
+      _blurb=$(printf '%s\n' "$_match" | awk -F'|' '{print $4}')
+      _path=$(printf '%s\n' "$_match" | awk -F'|' '{print $5}')
+      _idx=$((_idx + 1))
+      printf '%d|%s|%s|%s|%s\n' "$_idx" "$_path" "$_icon" "$_title" "$_blurb" >> "$_cards_tmp"
+    done < "$_nav_tmp"
+
+    rm -f "$_nav_tmp" "$_blurbs_tmp"
+  fi
+
+  if [ ! -s "$_cards_tmp" ]; then
+    rm -f "$_cards_tmp"
+    printf 'CARDS: 0 cards rendered (no operator config + no nav intersection); %s unchanged\n' "$_index" >&2
+    return 0
+  fi
+
+  _card_count=$(wc -l < "$_cards_tmp" | tr -d ' ')
+
+  # 3. Render the grid-cards block.
+  _render_tmp="/tmp/wiki-cards-render-$$.md"
+  {
+    printf '<!-- M037-LANDING-CARDS-BEGIN -->\n'
+    printf '<div class="grid cards" markdown>\n\n'
+    while IFS='|' read -r _i _sec _icn _ttl _blb; do
+      [ -n "$_i" ] || continue
+      _href="$_sec"
+      _exists=0
+      if [ -n "$_sec" ]; then
+        _check="$DOCS/$_sec"
+        _check_dir=$(printf '%s' "$_check" | sed 's:/*$::')
+        if [ -f "$_check" ] || [ -f "$_check_dir/index.md" ]; then
+          _exists=1
+        fi
+      fi
+      if [ "$_exists" -eq 0 ]; then
+        printf 'CARDS: orphan section "%s" — emitting placeholder href\n' "$_sec" >&2
+        _slug=$(printf '%s' "$_ttl" | tr '[:upper:] ' '[:lower:]-')
+        _href="#orphan-card-${_slug}"
+      fi
+      if [ -n "$_icn" ]; then
+        printf -- '- :%s: **%s**\n\n' "$_icn" "$_ttl"
+      else
+        printf -- '- **%s**\n\n' "$_ttl"
+      fi
+      printf '    ---\n\n'
+      printf '    %s\n\n' "$_blb"
+      printf '    [:octicons-arrow-right-24: %s](%s)\n\n' "$_ttl" "$_href"
+    done < "$_cards_tmp"
+    printf '</div>\n'
+    printf '<!-- M037-LANDING-CARDS-END -->\n'
+  } > "$_render_tmp"
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    printf 'WOULD-WRITE-CARDS: %s (%d cards)\n' "$_index" "$_card_count" >&2
+    rm -f "$_cards_tmp" "$_render_tmp"
+    return 0
+  fi
+
+  # 4. Write to wiki/docs/index.md.
+  _new_tmp="/tmp/wiki-index-new-$$.md"
+  if [ ! -f "$_index" ]; then
+    {
+      printf -- '---\n'
+      printf 'title: "Home"\n'
+      printf -- '---\n\n'
+      printf '# Home\n\n'
+      cat "$_render_tmp"
+    } > "$_index"
+    printf 'CARDS: created %s with %d-card grid\n' "$_index" "$_card_count" >&2
+  elif grep -q '<!-- M037-LANDING-CARDS-BEGIN -->' "$_index"; then
+    awk -v render="$_render_tmp" '
+      BEGIN {
+        in_block=0
+        replacement=""
+        while ((getline line < render) > 0) replacement = replacement line "\n"
+        close(render)
+      }
+      /<!-- M037-LANDING-CARDS-BEGIN -->/ {
+        printf "%s", replacement
+        in_block=1
+        next
+      }
+      /<!-- M037-LANDING-CARDS-END -->/ {
+        in_block=0
+        next
+      }
+      in_block == 0 { print }
+    ' "$_index" > "$_new_tmp"
+    mv "$_new_tmp" "$_index"
+    printf 'CARDS: replaced bracketed region in %s (%d cards)\n' "$_index" "$_card_count" >&2
+  else
+    _has_fm=0
+    _first=$(head -n 1 "$_index" 2>/dev/null)
+    if [ "$_first" = "---" ]; then
+      _has_fm=1
+    fi
+    if [ "$_has_fm" -eq 1 ]; then
+      awk -v render="$_render_tmp" '
+        BEGIN {
+          state="pre"
+          replacement=""
+          while ((getline line < render) > 0) replacement = replacement line "\n"
+          close(render)
+        }
+        NR==1 && $0 == "---" { state="fm"; print; next }
+        state=="fm" && $0 == "---" { print; print ""; printf "%s\n", replacement; state="post"; next }
+        { print }
+      ' "$_index" > "$_new_tmp"
+    else
+      {
+        cat "$_render_tmp"
+        printf '\n'
+        cat "$_index"
+      } > "$_new_tmp"
+    fi
+    mv "$_new_tmp" "$_index"
+    printf 'CARDS: prepended grid into %s (%d cards)\n' "$_index" "$_card_count" >&2
+  fi
+
+  rm -f "$_cards_tmp" "$_render_tmp"
+  return 0
+}
+
 # ---- clean phase ------------------------------------------------------------
 # Remove every .md under wiki/docs/ except the top-level index.md and README.md.
 
@@ -534,6 +799,14 @@ clean_phase() {
     find "$DOCS" -mindepth 1 -type d -empty -delete 2>/dev/null || true
   fi
 }
+
+# ---- M037/P01/T01 — --cards-only short-circuit ------------------------------
+# All function definitions above are now in scope. When --cards-only is set,
+# render the homepage card grid only and skip scanner / clean / stub-emission.
+if [ "$CARDS_ONLY" -eq 1 ]; then
+  render_landing_cards
+  exit 0
+fi
 
 # ---- collect scanner output -------------------------------------------------
 
@@ -1130,6 +1403,9 @@ write_knowledge_sub_index_from_list "conventions" "$KN_CONVENTIONS_LIST"
 write_knowledge_sub_index_from_list "lessons"     "$KN_LESSONS_LIST"
 
 rm -f "$KN_PATTERNS_LIST" "$KN_CONVENTIONS_LIST" "$KN_LESSONS_LIST"
+
+# ---- M037/P01/T01 — render homepage card grid ------------------------------
+render_landing_cards
 
 # ---- summary ---------------------------------------------------------------
 

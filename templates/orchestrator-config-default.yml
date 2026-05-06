@@ -155,3 +155,21 @@ tier_a_plus_prompt_summary_lines: 8          # AD-20 — number of leading lines
 # closed milestones.
 display_thresholds:
   compression_savings_pct: 5.0
+
+# M037 — Wiki team-feedback-ready (FR-2).
+# The wiki: namespace is orchestrator-managed. Operator-authored values for
+# any keys NOT enumerated in the framework default are preserved by the
+# FR-10 yaml-merge primitive; new orchestrator-managed keys added in
+# future releases will merge under wiki:.
+#
+# landing_cards drives the homepage card grid. Each entry declares
+# section (path to a top-level nav file/dir), icon (mkdocs-material emoji
+# shortcode without leading/trailing colons), title (string), blurb
+# (string). When the list is empty, the stub generator falls back to
+# defaults derived from the top-level nav sections (FR-3) by looking up
+# section names in the DEFAULT_BLURBS table inside
+# templates/wiki-index-cards.md.tmpl. Operators customize this list to
+# point readers at the content they want feedback on.
+wiki:
+  landing_cards: []             # M037 FR-2 — operator-customizable card list.
+

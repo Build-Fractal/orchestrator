@@ -385,8 +385,25 @@ record_knowledge_child() {
 
 # ---- process scanner records ------------------------------------------------
 
+# PBJ-dogfood B4: collect extra-label:<dn>||<label> records into a side-table
+# for section_title_for to consult. Consumed only when the main loop has
+# finished (so we run a separate pre-pass — these records are skipped during
+# the main dispatch).
+EXTRA_LABELS_FILE="/tmp/wiki-stubs-extra-labels-$$.list"
+: > "$EXTRA_LABELS_FILE"
+trap 'rm -f "$SCAN_OUT" "$SECTIONS_FILE" "$KN_PATTERNS_LIST" "$KN_CONVENTIONS_LIST" "$KN_LESSONS_LIST" "$EXTRA_LABELS_FILE"' EXIT INT TERM
+
 while IFS='|' read -r CAT REL TITLE; do
   [ -n "$CAT" ] || continue
+
+  # PBJ-dogfood B4: stash extra-label records, skip dispatch.
+  case "$CAT" in
+    extra-label:*)
+      _xldn=${CAT#extra-label:}
+      printf '%s|%s\n' "$_xldn" "$TITLE" >> "$EXTRA_LABELS_FILE"
+      continue
+      ;;
+  esac
 
   # ---- knowledge:* routing (M012/P02/T02) ----------------------------------
   # knowledge:<sub> records route to wiki/docs/knowledge/<sub>/<MEM>.md. The
@@ -470,6 +487,11 @@ while IFS='|' read -r CAT REL TITLE; do
       CANONICAL=$(build_canonical_repo_rel "$STUB_REL" "$REL")
       CANONICAL_ABS="$ROOT/$REL"
       write_stub "$STUB_ABS" "$CANONICAL" "$TITLE" "$CANONICAL_ABS"
+      # PBJ-dogfood B1 fix: register under the extra-dir section so the
+      # post-loop write_section_index_for emitter writes
+      # wiki/docs/<dn>/index.md. Without this, wiki-generate-nav.sh's
+      # `Overview: <dn>/index.md` leaf 404s and --strict build fails.
+      register_child "${_xdn}" "${_xbase}.md" "$TITLE"
       continue
       ;;
   esac
@@ -639,8 +661,18 @@ section_title_for() {
       fi
       ;;
     *)
-      # Use the last segment as the title; e.g., "milestones/M002/phases/P01" -> "P01".
-      printf '%s' "$(basename "$_rel")"
+      # PBJ-dogfood B4: extra-dir sections (e.g., "knowledge-reference-cms-rule")
+      # consult the wiki.extra_dir_labels override before falling back to the
+      # last-segment default. _rel matches the dirname-record exactly when the
+      # section came from an extra:* record (single-segment), so we look up
+      # directly. For nested/derived sections, the lookup misses harmlessly.
+      _label=$(awk -F'|' -v d="$_rel" '$1 == d { print $2; exit }' "$EXTRA_LABELS_FILE" 2>/dev/null)
+      if [ -n "$_label" ]; then
+        printf '%s' "$_label"
+      else
+        # Use the last segment as the title; e.g., "milestones/M002/phases/P01" -> "P01".
+        printf '%s' "$(basename "$_rel")"
+      fi
       ;;
   esac
 }

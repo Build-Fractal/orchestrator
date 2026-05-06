@@ -298,6 +298,18 @@ HAS_KNOWLEDGE_FLAT=0     # M032/P04/T01 FR-19
 TMP_EXTRA_DNS="/tmp/wiki-nav-extra-dns-$$.list"
 : > "$TMP_EXTRA_DNS"
 
+# PBJ-dogfood B4: side-table mapping <dn>|<label> for declared
+# wiki.extra_dir_labels overrides. Populated from extra-label:<dn>||<label>
+# scanner records. Consulted in the extra-dirs nav section emission below.
+TMP_EXTRA_LABELS="/tmp/wiki-nav-extra-labels-$$.list"
+: > "$TMP_EXTRA_LABELS"
+
+# Helper: print configured label for <dn>, or empty if none declared.
+extra_label_for() {
+  _dn="$1"
+  awk -F'|' -v d="$_dn" '$1 == d { print $2; exit }' "$TMP_EXTRA_LABELS"
+}
+
 # First pass: discover which top-level entries exist, and which milestone/archive
 # IDs appear (in first-seen order — scanner output is lexical). Write the
 # ordered ID lists to TMP_IDS (one per line, prefixed with M: or A:).
@@ -315,6 +327,13 @@ while IFS='|' read -r CAT REL TITLE; do
     extra:*)
       _xdn=$(printf '%s' "$CAT" | sed 's/^extra://')
       printf '%s\n' "$_xdn" >> "$TMP_EXTRA_DNS"
+      ;;
+    extra-label:*)
+      # PBJ-dogfood B4: collect <dn>|<label> into TMP_EXTRA_LABELS for
+      # later lookup. Scanner emits this as `extra-label:<dn>||<label>`,
+      # so REL is empty and TITLE carries the label.
+      _xldn=$(printf '%s' "$CAT" | sed 's/^extra-label://')
+      printf '%s|%s\n' "$_xldn" "$TITLE" >> "$TMP_EXTRA_LABELS"
       ;;
     milestone:*)
       _mid=$(printf '%s' "$CAT" | sed 's/^milestone://')
@@ -440,10 +459,14 @@ if [ -s "$TMP_EXTRA_DNS" ]; then
   awk '!seen[$0]++ { print }' "$TMP_EXTRA_DNS" > "$TMP_EXTRA_DNS_UNIQ"
   while IFS= read -r XDN; do
     [ -n "$XDN" ] || continue
-    # Title-Case the dirname for the nav label.
-    _xfirst=$(printf '%s' "$XDN" | cut -c1 | tr 'a-z' 'A-Z')
-    _xrest=$(printf '%s' "$XDN" | cut -c2-)
-    _xlabel="${_xfirst}${_xrest}"
+    # PBJ-dogfood B4: prefer configured label from wiki.extra_dir_labels,
+    # fall back to the legacy Title-Case projection of the dirname-record.
+    _xlabel=$(extra_label_for "$XDN")
+    if [ -z "$_xlabel" ]; then
+      _xfirst=$(printf '%s' "$XDN" | cut -c1 | tr 'a-z' 'A-Z')
+      _xrest=$(printf '%s' "$XDN" | cut -c2-)
+      _xlabel="${_xfirst}${_xrest}"
+    fi
     emit_group 1 "$_xlabel"
     emit_leaf 2 "Overview" "${XDN}/index.md"
     TMP_EX="/tmp/wiki-nav-extra-$$.list"
@@ -835,6 +858,12 @@ count_between_markers() {
 
 # Helper: extract content between two markers in $CONFIG to a temp file.
 # Strips the markers themselves; preserves all other lines verbatim.
+#
+# PBJ-dogfood B2 fix: also strips a literal top-level `nav:` line so that
+# legacy migration into the custom-nav region cannot leak a duplicate
+# `nav:` YAML key (YAML last-key-wins would silently override the
+# freshly-regenerated auto-nav). The custom-nav region's contract is
+# "list items merged into auto-nav" — it must not redeclare `nav:`.
 extract_between_markers() {
   _ms="$1"
   _me="$2"
@@ -843,7 +872,12 @@ extract_between_markers() {
     BEGIN { state="pre" }
     {
       if (state == "pre") { if ($0 == s) state="in"; next }
-      if (state == "in")  { if ($0 == e) { state="post"; next }; print > out; next }
+      if (state == "in")  {
+        if ($0 == e) { state="post"; next }
+        # Drop a bare top-level `nav:` declaration (PBJ-dogfood B2).
+        if ($0 ~ /^[[:space:]]*nav[[:space:]]*:[[:space:]]*$/) next
+        print > out; next
+      }
     }
   ' "$CONFIG"
   [ -f "$_out" ] || : > "$_out"

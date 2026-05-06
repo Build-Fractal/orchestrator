@@ -77,16 +77,20 @@ rm -f "$OUT_PROP"
 mkdir -p "$FIXTURE/.orchestrator/proposals"
 mkdir -p "$FIXTURE/.orchestrator/knowledge"
 mkdir -p "$FIXTURE/specs"
-mkdir -p "$FIXTURE/decisions"
+mkdir -p "$FIXTURE/domain-decisions"
 
-# .orchestrator/config.yml — block form
+# .orchestrator/config.yml — block form.
+# `domain-decisions/` rather than `decisions/`: PBJ-dogfood B3 sweep added
+# top:/extra: collision detection in wiki-scan-sources.sh that fails-loud
+# on reserved dirname-records (constitution|decisions|knowledge|...).
+# `domain-decisions` is non-colliding and exercises the same FR-18 path.
 cat > "$FIXTURE/.orchestrator/config.yml" <<'EOF'
 schema_version: "1.0"
 type: orchestrator-config
 wiki:
   extra_dirs:
     - specs/
-    - decisions/
+    - domain-decisions/
 EOF
 
 cat > "$FIXTURE/specs/foo.md" <<'EOF'
@@ -95,7 +99,7 @@ cat > "$FIXTURE/specs/foo.md" <<'EOF'
 Body of foo spec.
 EOF
 
-cat > "$FIXTURE/decisions/bar.md" <<'EOF'
+cat > "$FIXTURE/domain-decisions/bar.md" <<'EOF'
 # Bar Decision
 
 Body of bar decision.
@@ -130,10 +134,10 @@ else
   say_fail "FR-18 missing extra:specs|specs/foo.md record"
 fi
 
-if grep -q '^extra:decisions|decisions/bar.md|' "$OUT_FIX"; then
-  say_pass "FR-18 emits extra:decisions|decisions/bar.md record"
+if grep -q '^extra:domain-decisions|domain-decisions/bar.md|' "$OUT_FIX"; then
+  say_pass "FR-18 emits extra:domain-decisions|domain-decisions/bar.md record"
 else
-  say_fail "FR-18 missing extra:decisions|decisions/bar.md record"
+  say_fail "FR-18 missing extra:domain-decisions|domain-decisions/bar.md record"
 fi
 
 # ---- (4) FR-19 against fixture (combined with fixture run above) ----------

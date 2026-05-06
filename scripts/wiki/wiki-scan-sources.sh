@@ -438,6 +438,76 @@ parse_extra_dirs_block() {
   ' "$_cfg"
 }
 
+# PBJ-dogfood B4 — parse wiki.extra_dir_labels block-form map.
+# Reads `wiki:` block, then nested `extra_dir_labels:` block, then collects
+# leading `<dn>: "<label>"` lines until indent decreases or list-shape line
+# appears. Emits `<dn>|<label>` per declared label.
+#
+# Sibling-map shape (chosen over PBJ's `- {path:, label:}` recommendation
+# for bash 3.2 awk parser tractability):
+#   wiki:
+#     extra_dirs:
+#       - knowledge/reference/cms-rule/
+#     extra_dir_labels:
+#       knowledge-reference-cms-rule: "Reference — CMS rules"
+#
+# The dn key is the canonical dirname-record (path with trailing slash
+# stripped, / replaced with -) — matching the form emitted by the
+# scan_extra_dir loop.
+parse_extra_dir_labels() {
+  _cfg="$1"
+  awk '
+    BEGIN { state="pre"; wiki_indent=-1; map_indent=-1 }
+    function indent_of(line) {
+      n=match(line, /[^[:space:]]/)
+      if (n == 0) return -1
+      return n - 1
+    }
+    {
+      ind=indent_of($0)
+      if (ind == -1) next
+      if (state == "pre") {
+        if ($0 ~ /^[[:space:]]*wiki[[:space:]]*:[[:space:]]*$/) {
+          state="wiki"; wiki_indent=ind; next
+        }
+        next
+      }
+      if (state == "wiki") {
+        if (ind <= wiki_indent) {
+          if ($0 ~ /^[[:space:]]*wiki[[:space:]]*:[[:space:]]*$/) {
+            state="wiki"; wiki_indent=ind; next
+          }
+          state="pre"; next
+        }
+        if ($0 ~ /^[[:space:]]*extra_dir_labels[[:space:]]*:[[:space:]]*$/) {
+          state="map"; map_indent=ind; next
+        }
+        next
+      }
+      if (state == "map") {
+        if (ind <= map_indent) {
+          state="wiki"; map_indent=-1
+        } else {
+          # Match `<key>: "<value>"` or `<key>: <value>`.
+          line=$0
+          if (match(line, /^[[:space:]]*[A-Za-z0-9_-]+[[:space:]]*:[[:space:]]*/)) {
+            key=line
+            sub(/^[[:space:]]*/, "", key)
+            sub(/[[:space:]]*:.*$/, "", key)
+            val=line
+            sub(/^[^:]*:[[:space:]]*/, "", val)
+            sub(/[[:space:]]+$/, "", val)
+            sub(/^["'"'"']/, "", val)
+            sub(/["'"'"']$/, "", val)
+            if (key != "" && val != "") print key "|" val
+          }
+          next
+        }
+      }
+    }
+  ' "$_cfg"
+}
+
 # scan_extra_dir <abs-dir> <dirname-record>
 # Emits extra:<dirname>|<rel-from-ROOT>|<title> records.
 scan_extra_dir() {
@@ -470,10 +540,42 @@ if [ -f "$_cfgfile" ]; then
       */) _ed_clean=${_ed_clean%/} ;;
     esac
     _ed_dn=$(printf '%s' "$_ed_clean" | tr '/' '-')
+    # PBJ-dogfood B3: detect URL collision with reserved top-level scanner
+    # records. Both top:<name> (→ wiki/docs/<name>.md) and extra:<dn>
+    # (→ wiki/docs/<dn>/) resolve to the same URL /<name>/ under
+    # use_directory_urls: true. Fail loud rather than letting the consolidated
+    # top-level page become silently unreachable.
+    case "$_ed_dn" in
+      constitution|decisions|knowledge|milestone-summary|glossary|milestones|archive|proposals)
+        printf 'ERROR: wiki.extra_dirs entry %s collides with reserved top-level wiki path /%s/.\n' \
+          "$_edentry" "$_ed_dn" >&2
+        printf 'ERROR: under use_directory_urls: true, both wiki/docs/%s.md (top:%s)\n' \
+          "$_ed_dn" "$_ed_dn" >&2
+        printf 'ERROR: and wiki/docs/%s/index.md (extra:%s) resolve to /%s/.\n' \
+          "$_ed_dn" "$_ed_dn" "$_ed_dn" >&2
+        printf 'ERROR: rename or relocate %s in .orchestrator/config.yml wiki.extra_dirs.\n' \
+          "$_edentry" >&2
+        rm -f "$_edlist"
+        exit 1
+        ;;
+    esac
     _ed_abs="$ROOT/$_ed_clean"
     scan_extra_dir "$_ed_abs" "$_ed_dn"
   done < "$_edlist"
   rm -f "$_edlist"
+
+  # PBJ-dogfood B4 — emit extra-label:<dn>||<label> records for any
+  # declared wiki.extra_dir_labels entries. Downstream nav + stub
+  # generators consult these for nicer section labels than the
+  # default Title-Case projection.
+  _ldlist="/tmp/wiki-scan-extra-labels.$$"
+  parse_extra_dir_labels "$_cfgfile" > "$_ldlist" 2>/dev/null || :
+  while IFS='|' read -r _ld_dn _ld_label; do
+    [ -n "$_ld_dn" ] || continue
+    [ -n "$_ld_label" ] || continue
+    printf 'extra-label:%s||%s\n' "$_ld_dn" "$_ld_label"
+  done < "$_ldlist"
+  rm -f "$_ldlist"
 fi
 
 # ---- FR-19 (M032/P04/T01) — knowledge-flat enumeration ---------------------

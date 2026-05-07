@@ -88,8 +88,25 @@ regression-<YYYY-MM-DD>/
 ## Operator notes
 
 - **Cost.** Each run consumes real LLM tokens through conversus. The
-  tier-2-fidelity preset deliberates with two agents + an arbiter, so
-  expect ~3 model calls per run. Skip if budget-constrained.
+  `tier-2-fidelity` preset runs a 6-phase cooperative deliberation with
+  two agents (extractor-advocate, fidelity-advocate) plus a synthesizer
+  and an arbiter. Expect **~10 model calls** per run, not 3. Phase
+  breakdown from the 2026-05-07 baseline:
+
+  | Phase         | Calls | Wall (cumulative) |
+  |---------------|-------|-------------------|
+  | review        | 2     | ~2 min            |
+  | cross-review  | 2     | ~5 min            |
+  | revision      | 2     | ~7 min            |
+  | disputes      | 2     | ~12 min           |
+  | synthesis     | 1     | ~18 min           |
+  | arbitration   | 1     | ~21 min           |
+  | **Total**     | **10**| **~21 min**       |
+
+  Wall-clock is **~21 min on the `claude-code` provider** (OAuth
+  subscription per project memory). Direct `anthropic` provider is
+  roughly 3-4× faster (~6 min) when configured. Skip if
+  budget-constrained.
 - **Verdict variance.** PASS/BLOCK is non-deterministic. Don't rely
   on a specific verdict in regression — rely on the artifacts being
   well-formed and on the verdict being explainable from the dispute

@@ -253,14 +253,25 @@ if [ ! -f "$cfg_src" ]; then
   exit 1
 fi
 
+# M037 P01 T06 (FR-10/FR-11/CON-3) — config emit via shared yaml-merge primitive.
+# Replaces the pre-T06 "skip if exists / overwrite with --force" logic that
+# clobbered operator customizations. The merge primitive preserves operator-
+# authored top-level keys byte-identical, applies new orchestrator-managed
+# defaults under managed namespaces, and fails closed on malformed YAML.
+YAML_MERGE="$REPO_ROOT/scripts/lib/yaml-merge.sh"
+MANAGED_NAMESPACES="default_tier,verification_commands,context_verbosity,git_isolation,dispatch_budget,duration_budget,budget_enforcement,auto_proceed,autonomy,compression,quick_knowledge_token_budget,entry_routing_confidence_floor,tier_a_plus_prompt_summary_lines,display_thresholds,wiki"
 if [ "$DRY_RUN" = "1" ]; then
+  bash "$YAML_MERGE" merge --target "$cfg_target" --framework-default "$cfg_src" --managed-namespaces "$MANAGED_NAMESPACES" --dry-run >/dev/null
   echo "would_write=$cfg_target"
   config_written=1
-elif [ -e "$cfg_target" ] && [ "$FORCE" = "0" ]; then
-  echo "SKIP: $cfg_target exists (use --force to overwrite)"
 else
   mkdir -p "$state_root"
-  cp "$cfg_src" "$cfg_target"
+  bash "$YAML_MERGE" merge --target "$cfg_target" --framework-default "$cfg_src" --managed-namespaces "$MANAGED_NAMESPACES"
+  merge_rc=$?
+  if [ "$merge_rc" -ne 0 ]; then
+    echo "FAIL: yaml-merge.sh exited $merge_rc against $cfg_target" >&2
+    exit 1
+  fi
   echo "wrote=$cfg_target"
   config_written=1
 fi

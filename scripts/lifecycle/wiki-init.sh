@@ -375,6 +375,38 @@ if [ -f "$MKDOCS_TARGET" ]; then
       echo "wiki-init: substituted site_name=${SITE_NAME} site_url=${SITE_URL} repo_url=${REPO_URL} in $MKDOCS_TARGET (edit_uri skipped — repo_url unset/placeholder)"
     fi
   fi
+
+  # M037 P01 T06 (FR-10/CON-3/MIT-03 P0) — yaml-merge against bundle mkdocs.yml.
+  # After the sed-substitution rewrites the five sed-managed scalars
+  # (site_name/site_description/site_url/repo_url/edit_uri), invoke the shared
+  # yaml-merge primitive to preserve any operator-authored top-level keys
+  # outside the framework's managed list (e.g., custom analytics: blocks),
+  # AND to merge new framework-managed block content into the operator's
+  # mkdocs.yml on subsequent refresh paths (e.g., new T05 polish-bundle
+  # markdown_extensions added since the operator's last init).
+  #
+  # Managed-namespace divergence from T06 plan §149-160: the sed-substituted
+  # scalars (site_name/site_description/site_url/repo_url/edit_uri) are NOT
+  # listed here because those keys are project-derived by sed above; passing
+  # them to yaml-merge would replace the consumer's just-substituted values
+  # with the bundle's stale dogfood values. extra_css IS listed (T04 added the
+  # framework-controlled code-chip CSS declaration; the plan table predated T04
+  # — see T06-SUMMARY.md "extra_css addendum" for the namespace-classification
+  # rationale).
+  BUNDLE_MKDOCS="$REPO_ROOT/wiki/mkdocs.yml"
+  YAML_MERGE="$REPO_ROOT/scripts/lib/yaml-merge.sh"
+  MKDOCS_MANAGED="docs_dir,site_dir,theme,plugins,markdown_extensions,extra_css,nav"
+  if [ -f "$BUNDLE_MKDOCS" ] && [ -f "$YAML_MERGE" ] && [ "$BUNDLE_MKDOCS" != "$MKDOCS_TARGET" ]; then
+    set +e
+    bash "$YAML_MERGE" merge --target "$MKDOCS_TARGET" --framework-default "$BUNDLE_MKDOCS" --managed-namespaces "$MKDOCS_MANAGED"
+    merge_rc=$?
+    set -e
+    if [ "$merge_rc" -ne 0 ]; then
+      echo "FAIL: wiki-init: yaml-merge against $MKDOCS_TARGET exited $merge_rc" >&2
+      exit 6
+    fi
+    echo "wiki-init: yaml-merge applied to $MKDOCS_TARGET (managed=${MKDOCS_MANAGED})"
+  fi
 fi
 
 # FR-15 path-convention stub: author wiki/glossary.md if absent.

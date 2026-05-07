@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# tests/m037-acceptance/run-acceptance-battery.sh — M037 acceptance battery
+# aggregator (SC-12 scaffold, P01 portion).
+#
+# Iterates `tests/m037-acceptance/p01-*.sh`, captures exit codes, and prints a
+# `BATTERY: pass=N skip=M fail=K` summary line at end. Exits 0 only when
+# fail=0. P02 will append a parallel iteration over `p02-*.sh` plus the SC-10
+# strict-build smoke and the SC-11 PBJ-update evidence; OUT OF SCOPE here.
+#
+# Phase artifact contract: this script is >= 20 lines and contains the literal
+# string "BATTERY: pass=" (M037 P01 plan must-have).
+# Bash 3.2 + POSIX sh compatible.
+
+set -u
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+P01_GLOB="$SCRIPT_DIR/p01-*.sh"
+
+pass=0
+skip=0
+fail=0
+
+# shellcheck disable=SC2206  # word-splitting is desired for glob expansion
+P01_TESTS=( $P01_GLOB )
+
+# When the glob fails to expand (no p01-*.sh files), bash leaves the literal
+# pattern in the array. Detect and treat as zero tests.
+if [ "${#P01_TESTS[@]}" -eq 1 ] && [ ! -f "${P01_TESTS[0]}" ]; then
+  printf 'WARN: no p01-*.sh tests found at %s\n' "$P01_GLOB" >&2
+  P01_TESTS=()
+fi
+
+for t in "${P01_TESTS[@]}"; do
+  test_name="$(basename "$t")"
+  printf -- '--- %s ---\n' "$test_name"
+  if [ ! -x "$t" ] && [ ! -r "$t" ]; then
+    printf 'SKIP: %s (not readable)\n' "$test_name"
+    skip=$((skip + 1))
+    continue
+  fi
+  set +e
+  bash "$t"
+  rc=$?
+  set -e
+  if [ "$rc" -eq 0 ]; then
+    printf 'OK: %s (rc=0)\n\n' "$test_name"
+    pass=$((pass + 1))
+  else
+    printf 'FAIL: %s (rc=%d)\n\n' "$test_name" "$rc"
+    fail=$((fail + 1))
+  fi
+done
+
+printf 'BATTERY: pass=%d skip=%d fail=%d\n' "$pass" "$skip" "$fail"
+if [ "$fail" -ne 0 ]; then
+  exit 1
+fi
+exit 0

@@ -1,0 +1,14 @@
+# Framework default fixture for M037 P01 T06 yaml-merge round-trip tests.
+# This is the orchestrator-managed (_orchestrator_managed) framework
+# default — every top-level key here is classified orchestrator-managed
+# per the M037 P01 T06 plan §119-145 cross-reference table.
+#
+# The fixture is intentionally minimal (one scalar, one list, one block-
+# shaped namespace) to exercise the three CON-3 preservation surfaces
+# without dragging the full orchestrator-config-default.yml schema along.
+
+default_tier: standard
+verification_commands: []
+
+wiki:
+  landing_cards: []

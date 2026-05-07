@@ -1,0 +1,29 @@
+# Operator-authored .orchestrator/config.yml fixture (M037 P01 T06).
+# Three CON-3 preservation surfaces are exercised:
+#   1. default_tier overridden to "full" (operator-customized scalar).
+#   2. wiki.landing_cards: populated with three entries (operator-authored
+#      content under a framework-managed namespace).
+#   3. pbj_team_dashboard_url: operator-only top-level key absent from
+#      framework default (round-trip byte-identical preservation).
+
+default_tier: full
+verification_commands:
+  - npm test
+  - npm run lint
+
+wiki:
+  landing_cards:
+    - section: milestones/M032
+      icon: rocket_launch
+      title: M032 Wiki Distribution
+      blurb: Wiki distribution + init integration milestone.
+    - section: milestones/M033
+      icon: explore
+      title: M033 Onboarding
+      blurb: Project onboarding experience milestone.
+    - section: milestones/M037
+      icon: bolt
+      title: M037 Wiki Team-Feedback-Ready
+      blurb: Pre-launch wiki readability + discoverability.
+
+pbj_team_dashboard_url: "https://example.com/pbj-dashboard"

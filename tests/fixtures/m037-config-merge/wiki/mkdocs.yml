@@ -1,0 +1,40 @@
+# Operator-authored wiki/mkdocs.yml fixture (M037 P01 T06).
+# Carries a custom top-level analytics: block (CON-3 preservation surface
+# for the wiki-init.sh template-refresh path; operator-only block, never
+# in framework default).
+
+site_name: "Operator Project Wiki"
+site_description: "Operator-customized site description."
+site_url: "https://example.com/operator-wiki/"
+repo_url: "https://github.com/example-org/operator-repo"
+edit_uri: "edit/main/wiki/docs/"
+docs_dir: "docs"
+site_dir: "site"
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.prune
+    - content.action.edit
+    - content.action.view
+
+plugins:
+  - search
+
+markdown_extensions:
+  - toc:
+      toc_depth: 2
+
+# Operator-only top-level key — must survive yaml-merge byte-identical.
+analytics:
+  provider: matomo
+  site_id: "operator-7"
+  host: "https://stats.example.com"
+
+extra_css:
+  - stylesheets/code-chips.css
+
+nav:
+  - Home: index.md

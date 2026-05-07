@@ -111,6 +111,16 @@ regression-<YYYY-MM-DD>/
   on a specific verdict in regression — rely on the artifacts being
   well-formed and on the verdict being explainable from the dispute
   list in `gate-result.md`.
+- **Model attribution.** The harness emits
+  `model: "conversus-deliberation"` in `unit_close` rather than a
+  specific model id. Conversus does not yet persist per-call model
+  metadata to deliberation transcripts (the `claude_code` provider's
+  default `sonnet` alias is consumed but never serialized). Until that
+  upstream gap is closed, the unit is attributed to the deliberation
+  entity itself rather than to a specific Claude family member.
+  Operators wanting a different literal can override via
+  `SMOKE_MODEL=<id>`. See
+  `.orchestrator/proposals/papercut-m036a-p03-smoke-hardcoded-model.md`.
 - **Smoke does NOT exercise the production live: branch.** That
   branch (`extract_tier_2_dispatch live`) in
   `scripts/knowledge/lib/extract-tier-2-llm.sh` is unimplemented per

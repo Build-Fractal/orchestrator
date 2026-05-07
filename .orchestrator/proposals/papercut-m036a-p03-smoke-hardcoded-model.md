@@ -100,6 +100,50 @@ to confirm no consumers break.
 change, fixes the misattribution today. ~1 hour effort. Land before
 2026-05-15.
 
+## Decision (2026-05-07)
+
+**Adopted: variant of A — "conversus-deliberation" Floor.**
+
+When `parse-model` was prototyped against the 2026-05-07 baseline
+artifacts, the paper-cut's premise turned out to be wrong: conversus
+does **not** record the model per-agent in deliberation transcripts.
+Verified via grep across `regression-2026-05-07/conversus-deliberation/`
+(review.md, cross-reviews/, revision.md, disputes.md, arbiter/resolution.md,
+summary/final.md, conversus.yml — none carry a `model:` field). The
+`claude_code` provider's `DEFAULT_MODEL = "sonnet"` alias
+(`engine/execution/providers/claude_code.py:55`) is consumed by
+`claude -p --model sonnet` but never serialized. `modelUsage` data
+exists on the result envelope (lines 266-274) but is not persisted.
+
+Without on-disk model metadata, A as proposed (parse-model subcommand
+parallel to parse-verdict) would either need to (1) hardcode the
+default alias resolution — same failure class as today, just a
+different misattributed string — or (2) capture conversus stdout
+during the run and grep the model from progress lines (fragile,
+requires a ~21min smoke to verify).
+
+The Floor avoids the false-precision trap: `model: "conversus-deliberation"`
+is structurally accurate at the right granularity (the unit *is* the
+deliberation, not a single model call). When upstream conversus
+surfaces per-call metadata, the harness can pivot to per-call
+attribution and historical records remain interpretable.
+
+**Land shape (~10 min, shipped 2026-05-07):**
+
+- `tests/m036-acceptance/live-llm-smoke/run-smoke.sh:134` — strip the
+  hardcoded `claude-opus-4-7` default. Emit
+  `model: "conversus-deliberation"`. `SMOKE_MODEL=<id>` still wins
+  (operator escape hatch).
+- `tests/fixtures/m036-live-llm-smoke/README.md` — add a Model
+  attribution operator note pointing at this paper-cut.
+
+**Deferred (M036b or upstream conversus):**
+
+- B (two-model unit_close `extraction_model:` + `gate_model:`) — depends
+  on an upstream conversus change emitting per-call model metadata.
+  Without that upstream surface, B can't fill `gate_model:` honestly
+  either. Re-open when conversus ships metadata persistence.
+
 ## Effort estimate
 
 - **A**: ~1 hour (`conversus.sh parse-model` + harness wiring +

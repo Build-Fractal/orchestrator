@@ -131,7 +131,16 @@ SOURCE_BYTES="$(wc -c < "$SOURCE_DOC" | tr -d ' ')"
 EXTRACTED_BYTES="$(wc -c < "$EXTRACTED" | tr -d ' ')"
 TOKENS_IN="$(( SOURCE_BYTES / 4 + 400 ))"   # source + prompt overhead
 TOKENS_OUT="$(( EXTRACTED_BYTES / 4 ))"
-MODEL="${SMOKE_MODEL:-claude-opus-4-7}"     # this session's model by default
+# Model attribution: the bulk of the work in this unit is the conversus
+# fidelity-gate deliberation, not the orchestrating session's extraction
+# step. Conversus does not yet persist a per-call model identifier to
+# disk (engine/execution/providers/claude_code.py uses default alias
+# "sonnet" but never serializes it to deliberation transcripts). Until
+# upstream conversus surfaces model metadata, attribute the unit to the
+# deliberation entity itself rather than to a specific model id.
+# SMOKE_MODEL still wins if explicitly exported (operator escape hatch).
+# See .orchestrator/proposals/papercut-m036a-p03-smoke-hardcoded-model.md.
+MODEL="${SMOKE_MODEL:-conversus-deliberation}"
 COST_USD="${SMOKE_COST_USD:-0.0}"           # bundled with harness session
 case "$verdict" in
   0) QUALITY_SCORE="0.95" ;;

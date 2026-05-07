@@ -111,6 +111,19 @@ regression-<YYYY-MM-DD>/
   on a specific verdict in regression — rely on the artifacts being
   well-formed and on the verdict being explainable from the dispute
   list in `gate-result.md`.
+- **PASS does not mean the extraction is complete.** The gate's
+  PASS/BLOCK semantics are calibrated to "did the advocates converge?"
+  not "is the extraction perfect?" A PASS verdict can carry a synthesis
+  with substantive P1/P2 advisory corrections that improve fidelity
+  without rising to BLOCK-class disputes (the 2026-05-07 baseline run
+  produced PASS with 17 advisory recommendations across §3 / §4 / §5
+  form-equivalence, frontmatter `category:` classification, and three
+  `applies_to_field` gaps). Before treating a promoted chunk as
+  authoritative, read **both** `gate-result.md` AND
+  `conversus-deliberation/summary/final.md` — the verdict is in the
+  former; the actionable corrections are in the latter. See
+  `.orchestrator/proposals/papercut-m036a-p03-smoke-pass-with-concerns.md`
+  for the broader gate-semantics discussion.
 - **Model attribution.** The harness emits
   `model: "conversus-deliberation"` in `unit_close` rather than a
   specific model id. Conversus does not yet persist per-call model

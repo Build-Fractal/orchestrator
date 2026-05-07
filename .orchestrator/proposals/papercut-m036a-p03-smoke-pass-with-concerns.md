@@ -87,7 +87,36 @@ complete; always read `gate-result.md` + `summary/final.md` before
 treating the promoted chunk as authoritative." Cheapest fix; relies on
 operator discipline.
 
-## Recommendation
+## Decision (2026-05-07)
+
+**Adopted: ship both C and B before 2026-05-15 pilot. Defer A to M036b/P09.**
+
+Rationale: C alone relies on operator discipline; pilot ops reading "PASS"
+in gate-result.md will stop there ~80% of the time without a frontmatter
+pointer to surface the advisories. B provides that pointer. Both ship
+together because the README is currently misleading on PASS semantics
+(C is a no-regret hygiene fix) AND the validator-pilot feedback loop
+needs to distinguish "gate caught nothing" from "gate caught it but
+didn't apply the fix" (B is what makes that distinction visible).
+
+**C landed (2026-05-07):** new operator-notes bullet in
+`tests/fixtures/m036-live-llm-smoke/README.md` calling out that PASS
+does not mean the extraction is complete; always read both
+`gate-result.md` AND `conversus-deliberation/summary/final.md` before
+treating the promoted chunk as authoritative.
+
+**B landed (2026-05-07):** see commit. Extends
+`extract_tier_2_promote_or_retain` to copy `summary/final.md` to
+`<log_dir>/<cite_id>.advisories.md` on PASS and write
+`tier_2_advisories: <path>` into chunk frontmatter. Shape verifier
+under `tools/verify/`. Reversible.
+
+**A deferred to M036b/P09:** the `PASS_WITH_CONCERNS` verdict shape
+couples to graph-query work (chunk-frontmatter `tier_2_concerns:` field
+with count, queryable via knowledge-graph projection) that M036b/P09
+already owns.
+
+## Original recommendation
 
 **B for before-pilot, A as M036b post-launch slot, C as the absolute
 floor if B can't make 2026-05-15.**

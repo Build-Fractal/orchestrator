@@ -230,6 +230,7 @@ if [ "$UNINSTALL" = "1" ]; then
         [ -d "$PROJECT_DIR/$d" ] && find "$PROJECT_DIR/$d" -type d -empty -depth -exec rmdir {} \; 2>/dev/null || true
       done
       rm -f "$manifest_file"
+      rm -f "$PROJECT_DIR/.orchestrator/install-meta.txt"
     fi
   elif [ "$DRY_RUN" = "0" ] && [ -d "$PROJECT_DIR/scripts" ]; then
     echo "WARN: manifest $manifest_file missing; refusing to guess removal" >&2
@@ -543,6 +544,19 @@ if [ "$DRY_RUN" = "0" ]; then
     fi
   done < <(bash "$REPO_ROOT/scripts/lifecycle/read-project-assets.sh" "$REPO_ROOT/packaging/bundle/")
   echo "staged=$runtime_staged files manifest=$manifest_file"
+
+  # install-meta.txt sidecar: records the orchestrator source repo path so
+  # staged scripts (e.g. scripts/lifecycle/wiki-init.sh) can resolve
+  # packaging/bundle/manifest.yml when invoked from the consumer project.
+  # Sidecar — not interleaved into installed-files.txt — because the latter
+  # is a flat `<rel>\tmode:<copy|symlink>` list consumed positionally by the
+  # uninstall path (install-claude-code.sh:213-226).
+  meta_file="$PROJECT_DIR/.orchestrator/install-meta.txt"
+  {
+    printf 'source_root=%s\n' "$REPO_ROOT"
+    printf 'runtime=%s\n' "claude-code"
+    printf 'installed_at=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  } > "$meta_file"
 fi
 
 # --- 5. Summary line ---

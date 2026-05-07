@@ -34,6 +34,31 @@
 set -eu
 
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+
+# Staged-invocation fallback: when this copy of wiki-init.sh was staged into
+# a consumer project (manifest.yml absent at REPO_ROOT — packaging/ is
+# source-repo-only per packaging/bundle/manifest.yml's project_assets list),
+# resolve the orchestrator source repo via env override or the
+# install-meta.txt sidecar written by install-{claude-code,codex,cursor}.sh
+# (key: source_root=<abs>). Discovered via the M037 P01 wiki-deploy dogfood:
+# `bash scripts/lifecycle/wiki-init.sh --project-dir .` from a staged-into
+# project hit `FAIL: manifest not found` at line ~173 because REPO_ROOT
+# resolved to PROJECT_DIR. The existing self-application detection (handles
+# REPO_ROOT == PROJECT_DIR for orchestrator dogfooding) sits below the
+# manifest read and never gets reached. Gated on manifest absence so the
+# orchestrator self-application path is untouched.
+if [ ! -f "$REPO_ROOT/packaging/bundle/manifest.yml" ]; then
+  if [ -n "${WIKI_INIT_SOURCE_ROOT:-}" ] && [ -f "$WIKI_INIT_SOURCE_ROOT/packaging/bundle/manifest.yml" ]; then
+    REPO_ROOT="$WIKI_INIT_SOURCE_ROOT"
+  elif [ -f "$REPO_ROOT/.orchestrator/install-meta.txt" ]; then
+    _src=$(awk -F'=' '$1 == "source_root" { sub(/^source_root=/, "", $0); print; exit }' "$REPO_ROOT/.orchestrator/install-meta.txt" 2>/dev/null || true)
+    if [ -n "$_src" ] && [ -f "$_src/packaging/bundle/manifest.yml" ]; then
+      REPO_ROOT="$_src"
+    fi
+    unset _src
+  fi
+fi
+
 PROJECT_DIR=""
 SITE_NAME_OVERRIDE=""
 SITE_DESCRIPTION_OVERRIDE=""

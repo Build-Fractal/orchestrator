@@ -23,6 +23,28 @@
 set -u
 
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+
+# Staged-invocation fallback (same pattern as scripts/lifecycle/wiki-init.sh).
+# When init-project.sh is invoked from a consumer project where it was
+# staged into scripts/lifecycle/, packaging/ is intentionally absent (per
+# packaging/bundle/manifest.yml's project_assets list), so REPO_ROOT
+# resolves to the project, not the orchestrator source. The installer
+# lookup at $REPO_ROOT/packaging/install/install-$RUNTIME.sh would then
+# fail. Resolve via env override or the install-meta.txt sidecar written
+# by the installers. Gated on manifest absence so the orchestrator
+# self-application path is untouched.
+if [ ! -f "$REPO_ROOT/packaging/bundle/manifest.yml" ]; then
+  if [ -n "${ORCHESTRATOR_SOURCE_ROOT:-}" ] && [ -f "$ORCHESTRATOR_SOURCE_ROOT/packaging/bundle/manifest.yml" ]; then
+    REPO_ROOT="$ORCHESTRATOR_SOURCE_ROOT"
+  elif [ -f "$REPO_ROOT/.orchestrator/install-meta.txt" ]; then
+    _src=$(awk -F'=' '$1 == "source_root" { sub(/^source_root=/, "", $0); print; exit }' "$REPO_ROOT/.orchestrator/install-meta.txt" 2>/dev/null || true)
+    if [ -n "$_src" ] && [ -f "$_src/packaging/bundle/manifest.yml" ]; then
+      REPO_ROOT="$_src"
+    fi
+    unset _src
+  fi
+fi
+
 PROJECT_DIR="$PWD"
 RUNTIME="auto"
 RUNTIME_CONFIDENCE=""

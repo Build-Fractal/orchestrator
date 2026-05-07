@@ -534,7 +534,54 @@ if [ "$WITH_GISCUS" = "1" ]; then
     exit 9
   fi
 
-  echo "wiki-init: --with-giscus done — substituted four giscus IDs in $PARTIAL"
+  # Layer 2 of the operator-secrets-and-adaptive-init pre-launch slice
+  # (.orchestrator/proposals/papercut-wiki-deploy-env-loader.md): persist
+  # the four GISCUS_* values to <PROJECT_DIR>/.env under a managed marker
+  # block so wiki-deploy.sh's Layer 1 .env loader can find them on
+  # subsequent invocations. Idempotent — re-runs replace the existing
+  # marker block in place.
+  ENV_FILE="$PROJECT_DIR/.env"
+  ENV_TMP="$(mktemp -t orchestrator-env.XXXXXX)"
+  ENV_MARK_START="# >>> orchestrator-managed: giscus >>>"
+  ENV_MARK_END="# <<< orchestrator-managed: giscus <<<"
+  if [ -f "$ENV_FILE" ]; then
+    awk -v s="$ENV_MARK_START" -v e="$ENV_MARK_END" '
+      BEGIN { skip = 0 }
+      $0 == s { skip = 1; next }
+      $0 == e { skip = 0; next }
+      skip == 0 { print }
+    ' "$ENV_FILE" > "$ENV_TMP"
+  else
+    : > "$ENV_TMP"
+  fi
+  {
+    printf '%s\n' "$ENV_MARK_START"
+    printf 'export GISCUS_REPO="%s"\n' "$GISCUS_REPO_VAL"
+    printf 'export GISCUS_REPO_ID="%s"\n' "$GISCUS_REPO_ID_VAL"
+    printf 'export GISCUS_CATEGORY="%s"\n' "$GISCUS_CATEGORY_VAL"
+    printf 'export GISCUS_CATEGORY_ID="%s"\n' "$GISCUS_CATEGORY_ID_VAL"
+    printf '%s\n' "$ENV_MARK_END"
+  } >> "$ENV_TMP"
+  mv "$ENV_TMP" "$ENV_FILE"
+  chmod 600 "$ENV_FILE" 2>/dev/null || true
+
+  # .gitignore hygiene: warn-don't-block if <PROJECT_DIR>/.gitignore
+  # does not list .env. The orchestrator's own root .gitignore already
+  # ignores .env; consumer projects that don't yet would commit
+  # secrets if not warned. Stay non-blocking — this is paper-cut
+  # scope, not a constitutional gate.
+  GITIGNORE_FILE="$PROJECT_DIR/.gitignore"
+  ENV_GITIGNORED=0
+  if [ -f "$GITIGNORE_FILE" ]; then
+    if grep -qE '^\.env([[:space:]]|$|/|\*)' "$GITIGNORE_FILE"; then
+      ENV_GITIGNORED=1
+    fi
+  fi
+  if [ "$ENV_GITIGNORED" -eq 0 ]; then
+    echo "WARN: wiki-init: $ENV_FILE contains operator secrets but is not gitignored — add '.env' to $GITIGNORE_FILE before committing" >&2
+  fi
+
+  echo "wiki-init: --with-giscus done — substituted four giscus IDs in $PARTIAL; persisted to $ENV_FILE under managed marker block"
 fi
 
 # FR-9 + MIT-007 + MIT-008 --deploy scope: four-step ordered sequence with

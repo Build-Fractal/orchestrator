@@ -288,69 +288,55 @@ deploy wrapper" section below.
 > repos. This is a false-positive for the internal-team case — the
 > underlying giscus GitHub App + client.js work fine on private repos
 > for authenticated team members who have repo read access. Skip
-> giscus.app entirely; install the App directly (step 1) and fetch the
-> four IDs via the helper in step 3.
+> giscus.app entirely; install the App directly (step 1) and let
+> `wiki-init --with-giscus` fetch the four IDs via `gh`.
 
-### 1. Install the giscus GitHub App on the repository
+### 1. Install the giscus GitHub App + enable Discussions
 
-Open <https://github.com/apps/giscus> and click **Install**. On the
-account selector pick the target org. On the repo selector pick
-**Only select repositories** → your repo. Works for both public and
-private repos.
+Operator-UI work, not scriptable:
 
-### 2. Enable GitHub Discussions and create a category
+- Open <https://github.com/apps/giscus> → **Install** → pick the
+  target org → **Only select repositories** → your repo.
+- Settings → General → Features → check **Discussions**, then go to
+  the Discussions tab and create a category named `Wiki Comments`
+  (any name works — just note it for step 2).
 
-Settings → General → Features → check **Discussions**. Then go to the
-Discussions tab and create a category named `Wiki Comments` (or pick
-an existing one — just note the exact name for step 3).
-
-### 3. Fetch the four `GISCUS_*` values
-
-Use the bundled helper. It queries the GitHub GraphQL API via `gh`
-(which works on private repos) and prints paste-ready `export` lines:
+### 2. Run `wiki-init --with-giscus`
 
 ```
-bash scripts/diagnostics/giscus-ids-from-gh.sh \
-  --repo <org>/<repo> --category "Wiki Comments"
+bash scripts/lifecycle/wiki-init.sh \
+  --project-dir <path> \
+  --with-giscus --repo <org>/<repo> --category "Wiki Comments"
 ```
 
-Paste the four lines it prints into the shell that will run the
-deploy wrapper. A missing or empty value trips the pre-build
-config-check gate with a diagnostic line naming the missing var —
-see `scripts/diagnostics/wiki-giscus-config-check.sh`.
+This fetches the four `GISCUS_*` IDs via `gh`, substitutes them into
+`wiki/overrides/partials/comments.html`, and persists them to
+`<path>/.env` under a `# >>> orchestrator-managed: giscus >>>` marker
+block. The marker block is replaced in place on re-run, so it is
+safe to re-invoke when IDs change.
 
-### 4. Enable GitHub Pages with the `gh-pages` branch source
-
-Settings → Pages → Source → **Deploy from a branch** → Branch:
-`gh-pages` → `/ (root)`. On the very first deploy the branch does
-not yet exist; the wrapper creates it.
-
-### 5. Ensure `gh` is on PATH
-
-The deploy wrapper itself does not call `gh` — `mkdocs gh-deploy`
-handles the push — but the Giscus remap flow (`scripts/diagnostics/wiki-giscus-remap.sh`)
-requires `gh` for any future consolidation.
-
-### 6. Run the deploy wrapper
-
-From the repo root:
+### 3. Run the deploy wrapper
 
 ```
 bash scripts/wiki/wiki-deploy.sh
 ```
 
-On success the last two lines read `DEPLOY: pushing to gh-pages`
-and `OK: deployed to https://<org>.github.io/<repo>/`. On any gate
-failure the wrapper aborts before pushing and emits a `FAIL:` line
-naming which gate failed.
+The wrapper sources `<path>/.env` automatically before gate 1, so
+the four `GISCUS_*` values written by step 2 are picked up without
+the operator needing to source the file in their shell. On success
+the last two lines read `DEPLOY: pushing to gh-pages` and `OK:
+deployed to https://<org>.github.io/<repo>/`. On any gate failure
+the wrapper aborts before pushing and emits a `FAIL:` line naming
+which gate failed.
 
-### 7. Record the deploy
+> **Why `.env` is gitignored**: the four `GISCUS_*` values include
+> the repo+category IDs giscus uses to authorize comment posts. The
+> orchestrator's root `.gitignore` already lists `.env`. If your
+> consumer project's `.gitignore` does not yet ignore `.env`, step 2
+> emits a `WARN:` line — add `.env` to your project's `.gitignore`
+> before committing.
 
-Copy the deploy URL and commit SHA into
-`.orchestrator/milestones/M012/phases/P04/DEPLOY-RECORD.md`. That
-file's schema is asserted by `scripts/verify/m012-p04-deploy-record.sh`.
-
-### 8. Smoke-test the deployed URL
+### 4. Smoke-test the deployed URL
 
 Open the deployed URL. Confirm:
 
@@ -361,6 +347,56 @@ Open the deployed URL. Confirm:
   top-level section (Constitution, Decisions, Knowledge, Milestones).
 - Sign in with GitHub, post a test comment on any page, reload the
   page — the comment persists (US2 / SC-5).
+
+### 5. Record the deploy
+
+Copy the deploy URL and commit SHA into
+`.orchestrator/milestones/M012/phases/P04/DEPLOY-RECORD.md`. That
+file's schema is asserted by `scripts/verify/m012-p04-deploy-record.sh`.
+
+<details>
+<summary>Manual recovery (if <code>wiki-init --with-giscus</code> is unavailable)</summary>
+
+Older bundles, sandboxed environments without `gh` auth, or operators
+who want to understand the underlying flow can run the original
+8-step recovery directly:
+
+1. Install the giscus GitHub App and enable Discussions (as in
+   step 1 above).
+2. Fetch the four `GISCUS_*` values directly via the helper:
+
+   ```
+   bash scripts/diagnostics/giscus-ids-from-gh.sh \
+     --repo <org>/<repo> --category "Wiki Comments"
+   ```
+
+3. Paste the four `export` lines it prints into your shell, OR
+   into `<path>/.env` under a marker block:
+
+   ```
+   # >>> orchestrator-managed: giscus >>>
+   export GISCUS_REPO="..."
+   export GISCUS_REPO_ID="..."
+   export GISCUS_CATEGORY="..."
+   export GISCUS_CATEGORY_ID="..."
+   # <<< orchestrator-managed: giscus <<<
+   ```
+
+4. Enable GitHub Pages: Settings → Pages → Source → **Deploy from
+   a branch** → Branch: `gh-pages` → `/ (root)`. On the very first
+   deploy the branch does not yet exist; the wrapper creates it.
+5. Ensure `gh` is on PATH for any future Giscus consolidation
+   (`scripts/diagnostics/wiki-giscus-remap.sh`).
+6. Run `bash scripts/wiki/wiki-deploy.sh`.
+7. Record the deploy URL + SHA into the deploy record (as in step
+   5 above).
+8. Smoke-test the URL (as in step 4 above).
+
+A missing or empty `GISCUS_*` value trips the pre-build config-check
+gate with a diagnostic line naming the missing var — see
+`scripts/diagnostics/wiki-giscus-config-check.sh`.
+
+</details>
 
 ## Running the deploy wrapper
 

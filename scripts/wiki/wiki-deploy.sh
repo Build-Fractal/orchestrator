@@ -136,12 +136,31 @@ if [ "${M032_WIKI_DEPLOY_BYPASS_CWD_GATE:-0}" != "1" ]; then
   printf 'GATE: cwd-vs-repo_url PASS (%s)\n' "$REPO_URL_OWNER"
 fi
 
+# -------- pre-gate: source <root>/.env if present --------
+# Layer 1 of the operator-secrets-and-adaptive-init pre-launch slice
+# (.orchestrator/proposals/papercut-wiki-deploy-env-loader.md). Closes
+# the fetch-vs-deploy persistence gap: wiki-init.sh --with-giscus
+# writes the four GISCUS_* values to <root>/.env under a managed
+# marker block; this loader makes them visible to gate 1 without
+# requiring the operator to source the file in their deploy shell.
+# Operators who already export in shell (or CI environments that
+# inject vars from the runner) are unaffected — this only ADDS
+# values; it does not override anything.
+if [ -f "$ROOT/.env" ]; then
+  set +u
+  # shellcheck disable=SC1091
+  . "$ROOT/.env"
+  set -u
+fi
+
 # -------- gate 1: giscus config-check --------
 if bash scripts/diagnostics/wiki-giscus-config-check.sh --quiet; then
   printf 'GATE: giscus-config PASS\n'
 else
   printf 'GATE: giscus-config FAIL\n'
-  printf 'FAIL: giscus-config — one or more GISCUS_* env vars unset. See wiki/README.md "First-deploy checklist".\n' >&2
+  printf 'FAIL: giscus-config — one or more GISCUS_* env vars unset.\n' >&2
+  printf 'HINT: run `bash scripts/lifecycle/wiki-init.sh --project-dir %s --with-giscus --repo <owner>/<repo> --category "Wiki Comments"` to fetch the four IDs and persist them to %s/.env, then re-run deploy.\n' "$ROOT" "$ROOT" >&2
+  printf 'HINT: or fetch IDs directly via `bash scripts/diagnostics/giscus-ids-from-gh.sh --repo <owner>/<repo> --category "Wiki Comments"` and paste the four export lines into %s/.env (gitignored).\n' "$ROOT" >&2
   exit 1
 fi
 

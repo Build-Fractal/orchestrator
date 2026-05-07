@@ -1071,6 +1071,37 @@ while IFS='|' read -r CAT REL TITLE; do
       ;;
   esac
 
+  # ---- feedback:* routing (M037/P02/T01 FR-18) -----------------------------
+  # feedback:<basename> records route to wiki/docs/feedback/<basename>.md.
+  # The canonical source lives at .orchestrator/feedback/<basename>.md, so we
+  # use build_canonical (which prepends .orchestrator/). REL is "feedback/<file>".
+  # Mirror of the proposals:* shape; differs only in path prefix.
+  #
+  # MIT-01/02 inheritance: operator-edited stubs declaring `auto_generated: false`
+  # in their YAML frontmatter survive re-runs byte-identical. The check delegates
+  # to the P01/T02 existing_stub_is_protected() helper (write_stub also calls
+  # it defensively; this gate ensures register_child still fires for nav while
+  # short-circuiting the re-derivation path).
+  case "$CAT" in
+    feedback:*)
+      _fbase=${CAT#feedback:}
+      STUB_REL="feedback/${_fbase}.md"
+      STUB_ABS="$DOCS/$STUB_REL"
+      CANONICAL=$(build_canonical "$STUB_REL" "$REL")
+      CANONICAL_ABS="$ROOT/.orchestrator/$REL"
+      # MIT-01/02: skip write when operator escape-hatch is set on existing stub.
+      if existing_stub_is_protected "$STUB_ABS"; then
+        register_child "feedback" "${_fbase}.md" "$TITLE"
+        continue
+      fi
+      # B5: feedback files are self-contained SME signoff captures —
+      # fragment-only passthrough (rewrite-relative-urls=false).
+      write_stub "$STUB_ABS" "$CANONICAL" "$TITLE" "$CANONICAL_ABS" "false"
+      register_child "feedback" "${_fbase}.md" "$TITLE"
+      continue
+      ;;
+  esac
+
   # ---- knowledge-flat routing (M032/P04/T01 FR-19) -------------------------
   # knowledge-flat records route to wiki/docs/knowledge/<basename>.md.
   # The canonical source lives at .orchestrator/knowledge/<basename>.md.

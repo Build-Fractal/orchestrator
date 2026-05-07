@@ -337,6 +337,32 @@ if [ "$INCLUDE_PROPOSALS" = "1" ] && [ -d "$ORCH/proposals" ]; then
   rm -f "$_plist"
 fi
 
+# ---- FR-18 (M037/P02/T01) — feedback enumeration --------------------------
+# Emits one record per .orchestrator/feedback/*.md entry. Title field is the
+# H1 of the source file (via extract_title helper); falls back to humanized
+# basename when H1 absent (the existing extract_title helper already does
+# this — basename without extension, lowercased, dashes preserved). Records
+# land at category prefix "feedback:<basename>"; the per-record relative
+# path is "feedback/<basename>.md" (relative to .orchestrator/). Default-on;
+# opt out via INCLUDE_FEEDBACK=0 env override (no CLI flag — feedback is
+# always-in-scope by design unless explicitly suppressed).
+if [ "${INCLUDE_FEEDBACK:-1}" = "1" ] && [ -d "$ORCH/feedback" ]; then
+  _flist="/tmp/wiki-scan-feedback.$$"
+  find "$ORCH/feedback" -maxdepth 1 -type f -name '*.md' 2>/dev/null | LC_ALL=C sort > "$_flist"
+  while IFS= read -r _fpath; do
+    [ -n "$_fpath" ] || continue
+    _frel=${_fpath#"$ROOT/.orchestrator/"}
+    if should_exclude "$_frel"; then
+      continue
+    fi
+    _fbase=$(basename "$_fpath" .md)
+    _ftitle=$(extract_title "$_fpath")
+    printf '%s|%s|%s\n' "feedback:$_fbase" "$_frel" "$_ftitle"
+    COUNT=$((COUNT + 1))
+  done < "$_flist"
+  rm -f "$_flist"
+fi
+
 # ---- FR-18 (M032/P04/T01) — wiki.extra_dirs enumeration --------------------
 # Reads <ROOT>/.orchestrator/config.yml for the wiki.extra_dirs: YAML list.
 # Inline form: `wiki: { extra_dirs: [specs/, decisions/] }` or
@@ -564,7 +590,7 @@ if [ -f "$_cfgfile" ]; then
     # use_directory_urls: true. Fail loud rather than letting the consolidated
     # top-level page become silently unreachable.
     case "$_ed_dn" in
-      constitution|decisions|knowledge|milestone-summary|glossary|milestones|archive|proposals)
+      constitution|decisions|knowledge|milestone-summary|glossary|milestones|archive|proposals|feedback)
         printf 'ERROR: wiki.extra_dirs entry %s collides with reserved top-level wiki path /%s/.\n' \
           "$_edentry" "$_ed_dn" >&2
         printf 'ERROR: under use_directory_urls: true, both wiki/docs/%s.md (top:%s)\n' \

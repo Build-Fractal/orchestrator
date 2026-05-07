@@ -278,13 +278,41 @@ fi
 # values would be byte-identical to what's already on disk.
 MKDOCS_TARGET="$PROJECT_DIR/wiki/mkdocs.yml"
 if [ -f "$MKDOCS_TARGET" ]; then
+  # M037 P01 T05 (FR-9): resolve default branch via CON-4 helper for the
+  # edit_uri: substitution. Helper always exits 0 with a usable name.
+  DEFAULT_BRANCH="$(bash "$REPO_ROOT/scripts/wiki/resolve-default-branch.sh" "$PROJECT_DIR")"
+  EDIT_URI="edit/${DEFAULT_BRANCH}/wiki/docs/"
+
+  # US-4 AS-4 edge case: when repo_url: is unset / placeholder, skip the
+  # edit_uri: injection (no broken affordance) and emit a diagnostic. Detect
+  # by grepping for a `^repo_url:` line whose value is empty, "{{...}}" stub,
+  # or just whitespace.
+  EDIT_URI_SKIP=0
+  repo_url_line="$(grep -E '^repo_url:' "$MKDOCS_TARGET" | head -n 1 || true)"
+  if [ -z "$repo_url_line" ]; then
+    EDIT_URI_SKIP=1
+  else
+    repo_url_value="${repo_url_line#repo_url:}"
+    # Trim leading whitespace + surrounding quotes.
+    repo_url_value="$(printf '%s' "$repo_url_value" | sed -e 's/^[[:space:]]*//' -e 's/^"//' -e 's/"$//')"
+    case "$repo_url_value" in
+      ""|"{{"*"}}") EDIT_URI_SKIP=1 ;;
+    esac
+  fi
+  if [ "$EDIT_URI_SKIP" -eq 1 ]; then
+    echo "wiki-init: repo_url: is unset/placeholder in $MKDOCS_TARGET; skipping edit_uri: injection (set repo_url: to enable the wiki Edit/View action affordances)" >&2
+  fi
+
   # Compute target lines with the to-be-applied values.
   desired_site_name='site_name: "'"$SITE_NAME"'"'
   desired_site_description='site_description: "'"$SITE_DESCRIPTION"'"'
   desired_site_url='site_url: "'"$SITE_URL"'"'
   desired_repo_url='repo_url: "'"$REPO_URL"'"'
+  desired_edit_uri='edit_uri: "'"$EDIT_URI"'"'
 
-  # Detect whether all four lines already match desired values exactly (idempotent no-op).
+  # Detect whether all five lines already match desired values exactly (idempotent no-op).
+  # When EDIT_URI_SKIP=1, the desired_edit_uri is not enforced — the threshold
+  # falls back to 4 to preserve idempotency on operator-unconfigured remotes.
   match_count=0
   if grep -qxF "$desired_site_name" "$MKDOCS_TARGET"; then
     match_count=$((match_count + 1))
@@ -298,8 +326,16 @@ if [ -f "$MKDOCS_TARGET" ]; then
   if grep -qxF "$desired_repo_url" "$MKDOCS_TARGET"; then
     match_count=$((match_count + 1))
   fi
+  if [ "$EDIT_URI_SKIP" -eq 0 ] && grep -qxF "$desired_edit_uri" "$MKDOCS_TARGET"; then
+    match_count=$((match_count + 1))
+  fi
 
-  if [ "$match_count" -eq 4 ] && [ "$FORCE" != "1" ]; then
+  required_matches=5
+  if [ "$EDIT_URI_SKIP" -eq 1 ]; then
+    required_matches=4
+  fi
+
+  if [ "$match_count" -eq "$required_matches" ] && [ "$FORCE" != "1" ]; then
     echo "wiki-init: no changes (mkdocs.yml site-identity values already match)"
   else
     # Field-line rewrite: replace the entire `^<field>: ...` line with the desired
@@ -313,16 +349,31 @@ if [ -f "$MKDOCS_TARGET" ]; then
     s_desc="$(escape_sed "$SITE_DESCRIPTION")"
     s_url="$(escape_sed "$SITE_URL")"
     s_repo="$(escape_sed "$REPO_URL")"
+    s_edit_uri="$(escape_sed "$EDIT_URI")"
 
     tmp="$(mktemp -t wiki-init-mkdocs.XXXXXX)"
-    sed \
-      -e "s|^site_name:.*|site_name: \"${s_name}\"|" \
-      -e "s|^site_description:.*|site_description: \"${s_desc}\"|" \
-      -e "s|^site_url:.*|site_url: \"${s_url}\"|" \
-      -e "s|^repo_url:.*|repo_url: \"${s_repo}\"|" \
-      "$MKDOCS_TARGET" > "$tmp"
+    if [ "$EDIT_URI_SKIP" -eq 0 ]; then
+      sed \
+        -e "s|^site_name:.*|site_name: \"${s_name}\"|" \
+        -e "s|^site_description:.*|site_description: \"${s_desc}\"|" \
+        -e "s|^site_url:.*|site_url: \"${s_url}\"|" \
+        -e "s|^repo_url:.*|repo_url: \"${s_repo}\"|" \
+        -e "s|^edit_uri:.*|edit_uri: \"${s_edit_uri}\"|" \
+        "$MKDOCS_TARGET" > "$tmp"
+    else
+      sed \
+        -e "s|^site_name:.*|site_name: \"${s_name}\"|" \
+        -e "s|^site_description:.*|site_description: \"${s_desc}\"|" \
+        -e "s|^site_url:.*|site_url: \"${s_url}\"|" \
+        -e "s|^repo_url:.*|repo_url: \"${s_repo}\"|" \
+        "$MKDOCS_TARGET" > "$tmp"
+    fi
     mv "$tmp" "$MKDOCS_TARGET"
-    echo "wiki-init: substituted site_name=${SITE_NAME} site_url=${SITE_URL} repo_url=${REPO_URL} in $MKDOCS_TARGET"
+    if [ "$EDIT_URI_SKIP" -eq 0 ]; then
+      echo "wiki-init: substituted site_name=${SITE_NAME} site_url=${SITE_URL} repo_url=${REPO_URL} edit_uri=${EDIT_URI} in $MKDOCS_TARGET"
+    else
+      echo "wiki-init: substituted site_name=${SITE_NAME} site_url=${SITE_URL} repo_url=${REPO_URL} in $MKDOCS_TARGET (edit_uri skipped — repo_url unset/placeholder)"
+    fi
   fi
 fi
 

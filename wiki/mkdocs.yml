@@ -11,6 +11,7 @@ site_name: "spec-kit-orchestrator — dogfood wiki"
 site_description: "Browseable projection of .orchestrator/ artifacts for the dogfood team."
 site_url: "https://build-fractal.github.io/spec-kit-orchestrator/"
 repo_url: "https://github.com/Build-Fractal/spec-kit-orchestrator"
+edit_uri: "edit/main/wiki/docs/"
 docs_dir: "docs"
 site_dir: "site"
 exclude_docs: |
@@ -20,6 +21,11 @@ theme:
   name: material
   custom_dir: overrides          # <-- added in M012/P03/T01 (Giscus partial)
   features:
+    # >>> M037-P01-T05 polish-bundle features (FR-9)
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.prune
+    # <<< M037-P01-T05 polish-bundle features
     - navigation.sections
     - navigation.indexes
     - navigation.top
@@ -28,6 +34,10 @@ theme:
     - search.suggest
     - search.highlight
     - content.code.copy
+    # >>> M037-P01-T05 polish-bundle action affordances (FR-9)
+    - content.action.edit
+    - content.action.view
+    # <<< M037-P01-T05 polish-bundle action affordances
 
 plugins:
   - search
@@ -44,12 +54,18 @@ markdown_extensions:
   - tables
   - toc:
       permalink: true
+      toc_depth: 2
   - pymdownx.highlight
   - pymdownx.inlinehilite
   - pymdownx.superfences
   - pymdownx.snippets
   - pymdownx.tabbed:
       alternate_style: true
+  # >>> M037-P01-T05 polish-bundle markdown extensions (FR-9)
+  - pymdownx.details
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  # <<< M037-P01-T05 polish-bundle markdown extensions
 
 # >>> M037-P01-T04 extra_css (Surface E Option B — code-chip pill styling)
 extra_css:

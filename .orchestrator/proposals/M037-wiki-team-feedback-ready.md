@@ -118,15 +118,11 @@ The smallest set of changes that fixes failures-of-first-impression for a non-au
 
 **Severity**: medium. Bites every project past BG-001-style validation gates — `.orchestrator/feedback/` is the standard location for round-by-round SME signoff captures.
 
-### F9 — `wiki-deploy.sh` Pages-rebuild verification
+### F9 — `wiki-deploy.sh` Pages-rebuild verification — **SUPERSEDED by F12**
 
-**Source**: `.orchestrator/proposals/papercut-sweep-wiki-deploy-2026-05-07.md` finding #2.
+**Status**: SUPERSEDED 2026-05-07 by F12 (workflow-based publishing). F9 was a workaround for the legacy `pages-build-deployment` builder's stuck-queue failure mode — poll `gh api .../pages/builds/latest` after `git push origin gh-pages` for confidence the legacy builder rebuilt. F12 stops using the legacy builder entirely (deploys flow through `actions/deploy-pages` workflow triggered by push to main); there is no longer a gh-pages branch push to verify, and the legacy builder's stuck-queue mode is bypassed entirely. F9's operator-confidence intent transfers to F12: the new `wiki-deploy.sh` print-and-exit replacement surfaces the workflow URL, and operators get full Actions observability.
 
-**Reproducer**: `OK: deployed to gh-pages` is a misleading success signal. The script's contract today is "pushed to gh-pages branch," not "Pages serves the new build." PBJ-central session 2026-05-07: push succeeded but Pages auto-trigger didn't fire — operator confidently shared a URL serving stale content.
-
-**Fix shape**: after `git push origin gh-pages`, capture the push timestamp; poll `gh api repos/{owner}/{repo}/pages/builds/latest` for ~60s waiting for a `created_at` newer than the push timestamp. On success: `OK: deployed to gh-pages and Pages build started at <created_at>`. On timeout: exit non-zero with `WARN: pushed to gh-pages but Pages did not start a build within 60s — try re-running the last pages-build-deployment workflow at <repo>/actions/workflows/pages-build-deployment.yml`. Honor `--skip-pages-verify` for CI; gracefully degrade to `WARN: skipped Pages verification (gh unavailable)` when `gh` is missing, without changing exit code.
-
-**Severity**: medium-high. The deploy script is the operator-facing primitive — its success message must mean what operators think it means. PBJ team is deploying this week, so timing is load-bearing for M037 P01 specifically.
+**Original source**: `.orchestrator/proposals/papercut-sweep-wiki-deploy-2026-05-07.md` finding #2 — kept as historical context. Acceptance criterion derived from F9 in P01 is replaced by F12's workflow-mode acceptance.
 
 ### F10 — `wiki-deploy` OUT-OF-SCOPE output collapse
 
@@ -148,6 +144,37 @@ The smallest set of changes that fixes failures-of-first-impression for a non-au
 
 **Severity**: docs-only. Save the next operator the same dead-end the PBJ-central operator hit on 2026-05-07.
 
+### F12 — Workflow-based Pages publishing scaffold (supersedes F9)
+
+**Source**: `.orchestrator/proposals/papercut-handoff-wiki-publishing-robustness-2026-05-07.md` Gap 1.
+
+**Reproducer**: `scripts/wiki/wiki-deploy.sh` calls `mkdocs gh-deploy --force` against the `gh-pages` branch. GitHub's legacy `pages-build-deployment` builder can wedge into a `queued` state that no documented API will let you cancel, force-cancel, or delete — `gh run cancel`, `gh api -X POST .../force-cancel`, `gh api -X DELETE .../runs/<id>`, `gh api -X DELETE repos/.../pages`, and toggling `build_type` between `legacy`/`workflow`/`legacy` all refuse. New pushes to `gh-pages` deduplicate against the zombie run and never build. PBJ-central dogfood lived through a 7-day stuck deploy (run `25145703975`) before giving up on the legacy builder.
+
+**Severity**: HIGH. Every operator is one stuck-builder away from the same 7-day outage. The deploy primitive must not depend on a builder with no recovery API.
+
+**Fix shape (4 sub-patches that ship together)**:
+
+1. **Scaffold `.github/workflows/pages.yml`** — `wiki-init.sh` emits a workflow file using `actions/configure-pages@v5` + `actions/upload-pages-artifact@v3` + `actions/deploy-pages@v4`, triggered on `push: branches: [main]` + `workflow_dispatch`. Reference impl from dogfood commit `e7a722e` in `pbj-central-mono-repo`. End-to-end timing: ~50s build + ~10s deploy, total ~1 min from push to live. Verbatim YAML preserved in the handoff doc.
+2. **Set `build_type: workflow` during init** — after the workflow is staged, call `gh api -X PUT "repos/$OWNER/$REPO/pages" -f build_type=workflow`. If `gh` is unavailable / unauthenticated, print a clear manual fallback with the same command for the operator.
+3. **Demote `wiki-deploy.sh` live path** — keep gates 1-4 (giscus-config-check + mkdocs build + link-check + giscus-smoke) as local pre-push validation. Drop gate 5 (`mkdocs gh-deploy --force`). Replace with a print of the workflow URL + `git push origin main` instruction. M032 wiki-deploy quickstart docs need updating to match.
+4. **Confirm `wiki/requirements.txt`** — workflow's `pip install -r wiki/requirements.txt` consumes it. If the scaffold doesn't already emit it, add with the same pinned deps the existing tooling uses.
+
+**Acceptance**: fresh-install fixture produces `.github/workflows/pages.yml`; repo's Pages config shows `build_type: workflow`; `scripts/wiki/wiki-deploy.sh` no longer runs `mkdocs gh-deploy` on the live path; pushing to main triggers a `Deploy wiki to Pages` workflow run within ~10s that completes within ~2 min; no `pages-build-deployment` legacy runs are created. Test scaffold `tests/test-wiki-init-workflow-mode.sh` in the handoff doc.
+
+### F13 — Private-repo `site_url` visibility branch
+
+**Source**: `.orchestrator/proposals/papercut-handoff-wiki-publishing-robustness-2026-05-07.md` Gap 2.
+
+**Reproducer**: scaffolded `wiki/mkdocs.yml` writes `site_url: https://<org>.github.io/<repo>/` derived from `repo_url`. mkdocs-material's `404.html` uses **absolute asset paths derived from `site_url`** (regular doc pages use relative paths and work fine). Public repos serve at `<org>.github.io/<repo>/` so the absolute paths resolve. Private repos (Pro/Team/Enterprise plans, including the dogfood project) serve at a randomized `<random>.pages.github.io/` URL **without the `/<repo>/` prefix**. Real pages render styled (relative paths). 404 pages render as a column of giant unstyled SVG icons — no copy, no theme, no layout. Looks like a CSS deployment failure; isn't.
+
+**Severity**: medium-high. Operators hit 404s often, especially during stub-emission gaps (M037 P02 corpus-surface work-in-flight is a current source). The unstyled 404 reads as "deploy is broken" when actually only the asset paths are wrong. Currently visible to PBJ team members on every broken nav click.
+
+**Fix shape**: `scripts/lifecycle/wiki-init.sh` detects repo visibility via `gh api "repos/$OWNER/$REPO" --jq .visibility`. For private: write empty `site_url` (mkdocs-material falls back to relative-only paths in 404.html). For public: write the existing `https://<org>.github.io/<repo>/` shape. Mock-`gh` test fixture at `tests/test-wiki-init-private-site-url.sh` covering both branches; existing public-repo behavior must not regress. Verbatim bash + regression test in the handoff doc.
+
+**Severity rationale for P01**: surfaced from the same dogfood session as F12; same `wiki-init.sh` surface area; bundling avoids two separate ship cycles. Smaller fix than F12 (~10 lines bash vs. workflow scaffold + deploy-flow inversion).
+
+**Alternatives considered (deferred)**: workflow-time `site_url` env-var override (F2-style — more moving parts, good follow-up for per-environment URLs); hand-written `wiki/docs/overrides/404.html` with relative paths (ongoing maintenance burden as upstream 404.html evolves). Smallest scaffold delta + matches existing wiki-init "detect repo state, write conf accordingly" pattern → visibility branch is the choice.
+
 ### P01 acceptance criteria (preview — formalized at `orchestrator:specify` time)
 
 - Card-grid homepage renders on PBJ-central with project-defined cards.
@@ -156,9 +183,14 @@ The smallest set of changes that fixes failures-of-first-impression for a non-au
 - `mkdocs build` clean (no new warnings introduced).
 - PBJ-central re-runs `orchestrator:update` and the `wiki:` config block survives the install refresh.
 - `.orchestrator/feedback/*.md` files project to `wiki/docs/feedback/` stubs without manual scaffolding (F8).
-- `wiki-deploy.sh` exits non-zero when GitHub Pages doesn't start a build within 60s of the push (F9).
+- ~~F9 (Pages-rebuild poll)~~ — superseded by F12 below; no acceptance criterion derived from F9 in P01.
 - 178-page fixture emits one OUT-OF-SCOPE summary line for the giscus target instead of 178 lines (F10); `--verbose` restores per-occurrence emission.
 - `wiki/README.md` first-deploy checklist contains the org-level discussions redirect callout (F11).
+- Fresh-install fixture produces `.github/workflows/pages.yml`; repo Pages config shows `build_type: workflow`; `wiki-deploy.sh` no longer runs `mkdocs gh-deploy` on the live path; push to main triggers a `Deploy wiki to Pages` workflow run that completes within ~2 min; no `pages-build-deployment` legacy runs created (F12).
+- `tests/test-wiki-init-workflow-mode.sh` passes (F12 regression).
+- `wiki-init.sh` writes empty `site_url` for private repos (`gh api repos/X --jq .visibility = private`) and the existing `https://<org>.github.io/<repo>/` shape for public; `mkdocs build` against private fixture produces a `site/404.html` with relative stylesheet hrefs (F13).
+- `tests/test-wiki-init-private-site-url.sh` passes both branches (F13 regression).
+- M032 wiki-deploy quickstart docs reflect the new "git push triggers deploy" flow (F12 documentation update).
 - Acceptance battery `tests/m037-acceptance/` covers the projection paths with synthetic fixtures.
 
 ## P02 — "round 3.5" (after first PBJ feedback signal, ~2–3 days)

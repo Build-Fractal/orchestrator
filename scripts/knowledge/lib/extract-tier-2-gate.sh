@@ -44,10 +44,45 @@ extract_tier_2_invoke_gate() {
   esac
 }
 
+# _t2g_copy_advisories <gate-output-path> <log-dir> <cite_id>
+#   Internal helper. On PASS, parse `conversus_output_dir:` from the
+#   gate-result.md frontmatter and copy <conversus_output_dir>/summary/final.md
+#   to <log-dir>/<cite_id>.advisories.md. Silently no-ops when:
+#     - no conversus_output_dir line (e.g. stub-mode fixtures)
+#     - the directory or final.md does not exist
+#     - the gate-output is missing
+#   This is best-effort discoverability, not load-bearing — failure to
+#   produce an advisories.md never blocks a PASS promotion. Returns 0.
+#
+#   Background: the gate's PASS verdict is calibrated to "did the advocates
+#   converge?" not "is the extraction perfect?" — a PASS can carry P1/P2
+#   advisory corrections in the synthesis that improve fidelity without
+#   rising to BLOCK-class disputes. Copying the synthesis next to the
+#   chunk (and pointing at it from chunk frontmatter) gives operators a
+#   single-indirection surface instead of a three-indirection drill-down
+#   (chunk → gate-result.md → conversus-deliberation/summary/final.md).
+#   See .orchestrator/proposals/papercut-m036a-p03-smoke-pass-with-concerns.md
+_t2g_copy_advisories() {
+  local gate_out="$1"
+  local log_dir="$2"
+  local cite_id="$3"
+  [ -f "$gate_out" ] || return 0
+  local cod
+  cod="$(grep -E '^conversus_output_dir:' "$gate_out" 2>/dev/null \
+    | head -n 1 \
+    | sed -E 's/^conversus_output_dir:[[:space:]]*"?([^"]*)"?.*/\1/')"
+  [ -n "$cod" ] || return 0
+  local synthesis="$cod/summary/final.md"
+  [ -f "$synthesis" ] || return 0
+  cp "$synthesis" "$log_dir/${cite_id}.advisories.md" 2>/dev/null || return 0
+  return 0
+}
+
 # extract_tier_2_promote_or_retain <verdict> <structured-tmp-path> <chunk-dir> <cite_id> <category> <gate-output-path> <log-dir>
 #   verdict: 0 (PASS) | 2 (BLOCK)
 #   PASS: mv <structured-tmp> -> <chunk-dir>/REF-<category>-<cite_id>.structured.md
 #         cp <gate-output-path> -> <log-dir>/<cite_id>.pass.md
+#         cp <cod>/summary/final.md -> <log-dir>/<cite_id>.advisories.md (best-effort; see _t2g_copy_advisories)
 #   BLOCK: cp <gate-output-path> -> <log-dir>/<cite_id>.block.md
 #          rm <structured-tmp>     (do NOT promote)
 #   Returns 0 on success, 1 on error.
@@ -66,6 +101,7 @@ extract_tier_2_promote_or_retain() {
       mkdir -p "$chunk_dir"
       mv "$tmp" "$final"
       cp "$gate_out" "$log_dir/${cite_id}.pass.md"
+      _t2g_copy_advisories "$gate_out" "$log_dir" "$cite_id"
       return 0
       ;;
     2)

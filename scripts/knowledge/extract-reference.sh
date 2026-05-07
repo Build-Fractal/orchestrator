@@ -257,6 +257,18 @@ while [ "$i" -le "$DOC_COUNT" ]; do
     if [ -n "$tier_2_verdict" ]; then
       printf 'tier_2_verdict: "%s"\n' "$tier_2_verdict"
     fi
+    # M036a P03 caveat C1 fix (2026-05-07): when a PASS extraction
+    # carries an advisories.md (the conversus deliberation synthesis
+    # surfaced next to the chunk by extract_tier_2_promote_or_retain),
+    # surface its basename in chunk frontmatter so operators can reach
+    # it via a single indirection instead of a three-step
+    # gate-result → deliberation/summary/final → arbiter drill-down.
+    # Resolution convention: relative to the orchestrator's
+    # _extraction-log/ tree under .orchestrator/knowledge/reference/.
+    # See .orchestrator/proposals/papercut-m036a-p03-smoke-pass-with-concerns.md
+    if [ -n "${log_dir:-}" ] && [ -f "$log_dir/${cite_id}.advisories.md" ]; then
+      printf 'tier_2_advisories: "%s.advisories.md"\n' "$cite_id"
+    fi
     printf -- "---\n\n"
     printf '%s\n' "$summary_text"
   } > "$chunk_file"

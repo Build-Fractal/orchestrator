@@ -262,6 +262,53 @@ The smoke does not surface any RED-class issue (no panic, no empty
 output, no false-PASS or false-BLOCK calibration error, no harness
 abort).
 
+## Pre-pilot follow-ups shipped (2026-05-07)
+
+Operational follow-ups landed against the M036a deferred-validation
+banner per `launch-sequencing-amendment-2026-05-03.md` Q-1 (M036a P03
+live-LLM smoke before 2026-05-08). M036a remains closed; these are
+not phase verdicts.
+
+- **C2** — `tests/fixtures/m036-live-llm-smoke/README.md` Operator
+  notes block now reflects the actual 6-phase / 10-call shape with
+  the per-phase wall-clock table from this baseline. Replaces the
+  prior "two agents + an arbiter, ~3 model calls" framing that
+  under-counted by ~3.3×. See `papercut-m036a-p03-smoke-readme-call-count.md`.
+- **C3 Floor** — `run-smoke.sh:134` strips the hardcoded
+  `claude-opus-4-7` default; `unit_close` now emits
+  `model: "conversus-deliberation"` (the unit IS the deliberation, not
+  a single model call). `SMOKE_MODEL=<id>` remains as the operator
+  escape hatch. Paper-cut Decision section records that the original
+  parse-model proposal premise was wrong (conversus does not persist
+  per-call model metadata to deliberation transcripts; verified via
+  grep across `regression-2026-05-07/conversus-deliberation/`).
+  See `papercut-m036a-p03-smoke-hardcoded-model.md`.
+- **C1 (C+B)** — both shipped. C: README operator-notes bullet
+  warning that PASS does not mean the extraction is complete; always
+  read both `gate-result.md` AND `summary/final.md`. B:
+  `extract_tier_2_promote_or_retain` now copies
+  `<conversus_output_dir>/summary/final.md` to
+  `<log_dir>/<cite_id>.advisories.md` on PASS via the new
+  `_t2g_copy_advisories` helper, and `extract-reference.sh` exposes
+  the file via `tier_2_advisories: "<cite_id>.advisories.md"` in
+  chunk frontmatter. Operators reach the synthesis via single
+  indirection (chunk → advisories.md) instead of three (chunk →
+  gate-result → summary → arbiter). Stub mode silently no-ops
+  (no `conversus_output_dir` in fixture frontmatter). Verifier:
+  `tools/verify/m036-p03-tier-2-pass-advisories-shape.sh` (3 shape
+  checks + 2 behavioral checks; all green; existing P03 phase-suite
+  14/14 still green). The `PASS_WITH_CONCERNS` verdict shape (option
+  A in the paper-cut) is deferred to M036b/P09 alongside the
+  graph-projection work that owns chunk-frontmatter
+  `tier_2_concerns:` queryability. See
+  `papercut-m036a-p03-smoke-pass-with-concerns.md`.
+
+With all three caveats addressed, the smoke verdict moves toward
+GREEN for the 2026-05-15 PBJ pilot. The remaining post-pilot
+follow-up is upstream conversus surfacing per-call model metadata,
+at which point C3 can flip from the literal Floor to per-call
+attribution.
+
 ## Reproducibility
 
 To replay today's smoke from a fresh checkout at git SHA `b772a242`:

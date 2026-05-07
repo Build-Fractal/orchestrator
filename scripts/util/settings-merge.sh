@@ -36,7 +36,7 @@
 #      empty hooks object -> drop hooks key.
 #   4. Write via temp-file-then-rename. Report removed=<N> (outer-wrapper count).
 #
-# Repair algorithm (M028/P02/T04, FR-7):
+# Repair algorithm (M028/P02/T04, FR-7; extended by papercut-pre-M030):
 #   1. Parse target as JSON; exit 4 on parse failure.
 #   2. For each (event, wrapper, leaf):
 #      - If wrapper or any leaf carries _orchestrator_managed:true, KEEP the
@@ -45,17 +45,31 @@
 #          * If (event, matcher, leaf.command) matches a known M025 orphan
 #            tuple AND leaf has no fields outside {type, command}, REMOVE the
 #            leaf (strict-tuple match per Edge Cases CON-4).
+#          * Else if leaf.command starts with `bash <HOME>/.claude/orchestrator-hooks/`
+#            and ends with `.sh` AND leaf has no fields outside {type, command},
+#            REMOVE the leaf (papercut-pre-M030 follow-up: legacy installer
+#            output from the staged-hooks-dir era that pre-dates the
+#            _orchestrator_managed marker. CON-9 reserves that path prefix
+#            for the orchestrator, so a flag-less leaf there is necessarily
+#            stale installer fallout, not user-authored).
 #          * Else KEEP the leaf (user-authored).
 #      - Cascade cleanup: empty wrapper -> drop; empty event array -> drop key;
 #        empty hooks object -> drop hooks key.
-#   3. --dry-run mode: emit `would_remove=<event>:<matcher>:<command>` per
+#   3. After step 2, run a within-managed-scope dedup pass: collapse identical
+#      (event, matcher, command) tuples among _orchestrator_managed:true leaves
+#      to a single occurrence (keep first; drop subsequent). Same cascade
+#      cleanup. Targets pre-existing duplicates that the merge-time dedup
+#      (added in M028/P02/T03) cannot reach because it only checks fragment
+#      vs target, not target against itself.
+#   4. --dry-run mode: emit `would_remove=<event>:<matcher>:<command>` per
 #      removed leaf and `would_preserve=<event>:<matcher>:<command>` per
 #      preserved entry, plus a summary `would_repair=<N> would_preserve=<M>
 #      dry_run=1`. No write.
-#   4. Write mode: temp-file-then-rename; report `repaired=<N> preserved=<M>`.
+#   5. Write mode: temp-file-then-rename; report `repaired=<N> preserved=<M>`.
 #
 # Known M025 orphan tuple table (hard-coded; extend here when new flag-less
-# shapes ship):
+# bare-name shapes ship). For path-prefix legacy leaves see the runtime
+# LEGACY_HOOKS_PREFIX check inside the repair block.
 #   (Stop,       "",     "orchestrator-post-verify")    -- pre-T02 bare-name shape
 #   (PreToolUse, "Bash", "orchestrator-before-commit") -- pre-T02 bare-name shape
 #
@@ -412,6 +426,15 @@ ORPHAN_TUPLES = set([
     ("PreToolUse", "Bash", "orchestrator-before-commit"),
 ])
 
+# Path-prefix legacy match (papercut-pre-M030 follow-up). Unmanaged leaves
+# whose command starts with `bash <HOME>/.claude/orchestrator-hooks/` and ends
+# with `.sh`, with no fields outside ALLOWED_LEAF_KEYS, are flag-less leftovers
+# from the M025/P01/T02-era installer (after staged-hooks-dir landed but
+# before the _orchestrator_managed tag was attached on every append). CON-9
+# reserves that path for the orchestrator, so a minimal leaf pointing into it
+# without the marker is necessarily stale installer fallout, not user-authored.
+LEGACY_HOOKS_PREFIX = "bash " + os.path.expanduser("~/.claude/orchestrator-hooks/")
+
 # Allowed leaf fields for strict-tuple match. A leaf with extra fields is
 # treated as user-authored and preserved (Edge Cases item: false-positive risk).
 ALLOWED_LEAF_KEYS = set(["type", "command"])
@@ -497,6 +520,11 @@ if isinstance(hooks, dict):
                     removed_count += 1
                     removed_lines.append("%s:%s:%s" % (event_name, matcher, cmd))
                     continue
+                if (cmd.startswith(LEGACY_HOOKS_PREFIX) and cmd.endswith(".sh")
+                        and not extra_keys):
+                    removed_count += 1
+                    removed_lines.append("%s:%s:%s" % (event_name, matcher, cmd))
+                    continue
                 new_leaves.append(leaf)
                 preserved_lines.append("%s:%s:%s" % (event_name, matcher, cmd))
             if not new_leaves:
@@ -514,6 +542,64 @@ if isinstance(hooks, dict):
         else:
             empty_event_keys.append(event_name)
     for k in empty_event_keys:
+        del hooks[k]
+    if not hooks:
+        del target["hooks"]
+
+# Within-managed-scope dedup pass (papercut-pre-M030 follow-up). Collapse
+# identical (event, matcher, command) tuples among _orchestrator_managed:true
+# leaves to a single occurrence. Targets pre-existing duplicates that
+# merge-time dedup (M028/P02/T03) cannot reach because it only checks fragment
+# vs target.
+hooks = target.get("hooks")
+if isinstance(hooks, dict):
+    empty_event_keys2 = []
+    for event_name, wrappers in list(hooks.items()):
+        if not isinstance(wrappers, list):
+            continue
+        seen_managed = set()
+        kept_wrappers = []
+        for wrapper in wrappers:
+            if not isinstance(wrapper, dict):
+                kept_wrappers.append(wrapper)
+                continue
+            matcher = wrapper.get("matcher", "")
+            if matcher is None:
+                matcher = ""
+            inner = wrapper.get("hooks", []) or []
+            new_leaves = []
+            for leaf in inner:
+                if not isinstance(leaf, dict):
+                    new_leaves.append(leaf)
+                    continue
+                if leaf_is_managed(leaf):
+                    cmd = leaf.get("command", "")
+                    if not isinstance(cmd, str):
+                        cmd = ""
+                    key = (event_name, matcher, cmd)
+                    if key in seen_managed:
+                        removed_count += 1
+                        removed_lines.append("%s:%s:%s" % (event_name, matcher, cmd))
+                        continue
+                    seen_managed.add(key)
+                    new_leaves.append(leaf)
+                else:
+                    new_leaves.append(leaf)
+            if not new_leaves:
+                # Wrapper became empty after dedup; cascade-drop. Pass 1
+                # already counted this wrapper toward preserved_count; back
+                # that out now that it's being removed.
+                if preserved_count > 0:
+                    preserved_count -= 1
+                continue
+            wrapper_copy = dict(wrapper)
+            wrapper_copy["hooks"] = new_leaves
+            kept_wrappers.append(wrapper_copy)
+        if kept_wrappers:
+            hooks[event_name] = kept_wrappers
+        else:
+            empty_event_keys2.append(event_name)
+    for k in empty_event_keys2:
         del hooks[k]
     if not hooks:
         del target["hooks"]

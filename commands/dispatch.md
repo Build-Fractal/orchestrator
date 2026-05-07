@@ -181,6 +181,24 @@ When running in Claude Code (detected via `CLAUDE_CODE` environment variable by 
 - Mandatory `record-result.sh` usage for execution logging
 - Recommended permission settings via `templates/claude-settings.json`
 
+## Payload Guidance
+
+**Authoring conventions**: dispatched task agents authoring decision-log
+entries (`DR-CODE-NNN`), knowledge entries (`MEM-NNN`), or other code-anchored
+artifacts (`BG-CODE-NNN`, `AN-CODE-NNN`, `Q-NNN`) MUST follow the
+heading-shape and body-chip conventions documented in
+`references/authoring-conventions.md`. The doc also covers already-enabled
+mkdocs-material features (Mermaid via `pymdownx.superfences`, content reuse
+via `pymdownx.snippets`, content tabs, admonitions, and the post-M037/P01/T05
+`pymdownx.details` collapsible admonitions + `pymdownx.tasklist` checkboxes)
+that improve artifact readability without requiring schema changes. The
+contract surface for the heading-shape rule is the framework-owned
+`scripts/verify/decisions-shape-lint.sh` verifier.
+
+Reference `references/authoring-conventions.md` in the dispatch payload
+knowledge-inject for any task whose deliverables include decision /
+knowledge entries, spec / phase-plan prose, or wiki-rendered artifacts.
+
 ## Gotchas
 
 - **Context budget exceeded is a warning unless budget_enforcement is "strict"**: The dispatch continues with an oversized payload by default. Set `budget_enforcement: strict` in orchestrator config to block dispatch when the payload exceeds the configured threshold.

@@ -51,6 +51,11 @@ markdown_extensions:
   - pymdownx.tabbed:
       alternate_style: true
 
+# >>> M037-P01-T04 extra_css (Surface E Option B — code-chip pill styling)
+extra_css:
+  - stylesheets/code-chips.css
+# <<< M037-P01-T04 extra_css end
+
 # >>> M012-P03 extra (Giscus wiring — T01)
 extra:
   giscus:

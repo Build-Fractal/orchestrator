@@ -1,0 +1,35 @@
+/* code-chips.css — minimal styling for DECISIONS-shape body chips.
+ *
+ * Shipped by M037/P01/T04 (Surface E Option B): plugin-free pill styling
+ * for `<span class="md-tag md-tag--decision">DR-CODE-NNN</span>` body chips
+ * used by `.orchestrator/DECISIONS.md` and parallel code-anchored artifacts
+ * (BG/AN/MEM/Q). No mkdocs `tags:` plugin required (CON-1 plugin discipline).
+ *
+ * Reference: references/authoring-conventions.md.
+ */
+
+.code-chip-row {
+  display: block;
+  margin: 0 0 0.6em 0;
+}
+
+.md-tag.md-tag-icon {
+  display: inline-block;
+  padding: 0.15em 0.55em;
+  border-radius: 0.25em;
+  font-size: 0.78em;
+  font-family: var(--md-code-font-family, monospace);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+  background: var(--md-default-fg-color--lightest, #ececec);
+  color: var(--md-default-fg-color, #333);
+  border: 1px solid var(--md-default-fg-color--lighter, #d0d0d0);
+  line-height: 1.4;
+}
+
+.md-tag--decision    { background: rgba( 33, 150, 243, 0.12); border-color: rgba( 33, 150, 243, 0.45); }
+.md-tag--background  { background: rgba(158, 158, 158, 0.18); border-color: rgba(158, 158, 158, 0.50); }
+.md-tag--analysis    { background: rgba(255, 152,   0, 0.14); border-color: rgba(255, 152,   0, 0.45); }
+.md-tag--knowledge   { background: rgba( 76, 175,  80, 0.14); border-color: rgba( 76, 175,  80, 0.45); }
+.md-tag--question    { background: rgba(156,  39, 176, 0.14); border-color: rgba(156,  39, 176, 0.45); }

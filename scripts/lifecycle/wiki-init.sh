@@ -187,6 +187,45 @@ OWNER_LOWER="$(printf '%s' "$OWNER" | tr '[:upper:]' '[:lower:]')"
 SITE_URL="https://${OWNER_LOWER}.github.io/${REPO}/"
 REPO_URL="https://github.com/${OWNER}/${REPO}"
 
+# ---- FR-21 (M037/P02/T03) — repo-visibility branch for site_url: ---------
+# mkdocs-material's 404.html uses absolute asset paths derived from
+# site_url:. Private repos (Pro/Team/Enterprise) serve at randomized
+# <random>.pages.github.io/ subdomains without the /<repo>/ path prefix —
+# absolute paths break, 404.html renders unstyled. Branch SITE_URL on
+# repo visibility:
+#   - private  -> empty site_url (mkdocs-material falls back to relative
+#                paths in 404.html; confirmed mkdocs-material==9.5.49)
+#   - public   -> existing https://<owner>.github.io/<repo>/ shape
+# On gh unavailable / unauthenticated -> fall back to public (default
+# behavior; operator manually flips site_url: "" if they hit the
+# unstyled-404 symptom).
+#
+# Test escape hatch: GH_VISIBILITY_OVERRIDE=private|public bypasses gh
+# for the verbatim test scaffold (tests/test-wiki-init-private-site-url.sh).
+# Documented as test-only; do NOT promote to a CLI flag.
+resolve_site_url_for_visibility() {
+  # Inputs: $OWNER, $REPO, $SITE_URL (currently set to the public shape).
+  # Output: mutates $SITE_URL in caller scope.
+  if [ -n "${GH_VISIBILITY_OVERRIDE:-}" ]; then
+    VISIBILITY="$GH_VISIBILITY_OVERRIDE"
+  elif command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+    VISIBILITY=$(gh api "repos/$OWNER/$REPO" --jq .visibility 2>/dev/null || echo "public")
+    [ -n "$VISIBILITY" ] || VISIBILITY="public"
+  else
+    VISIBILITY="public"
+    echo "wiki-init: gh unavailable / unauthenticated; assuming public visibility for site_url. If the repo is actually private and the 404 page renders unstyled, manually edit wiki/mkdocs.yml to set: site_url: \"\"" >&2
+  fi
+  if [ "$VISIBILITY" = "private" ]; then
+    SITE_URL=""
+    echo "wiki-init: FR-21 private repo detected; site_url set empty so 404.html uses relative asset paths"
+  else
+    echo "wiki-init: FR-21 public repo (or fallback); site_url=$SITE_URL preserved"
+  fi
+}
+
+# FR-21 (M037/P02/T03) — branch SITE_URL on repo visibility
+resolve_site_url_for_visibility
+
 # FR-5 step (a): stage wiki tooling via P01 reader + mode handler.
 # The bundle staging loop reuses the P01 read-project-assets / install-asset-mode helpers.
 # Only the wiki-related project_assets entry is staged here (the four runtime dirs
@@ -433,6 +472,99 @@ if [ -f "$MKDOCS_TARGET" ]; then
     echo "wiki-init: yaml-merge applied to $MKDOCS_TARGET (managed=${MKDOCS_MANAGED})"
   fi
 fi
+
+# ---- FR-19 (M037/P02/T02) — GitHub Pages workflow scaffold ---------------
+# Emit .github/workflows/pages.yml with the verbatim four-component shape
+# from papercut-handoff-wiki-publishing-robustness-2026-05-07.md (PBJ-central
+# commit e7a722e). CON-3: pre-existing operator-authored workflow → diagnostic
+# + no clobber, no per-key merge. Whole-file managed.
+emit_pages_workflow() {
+  PAGES_WF_TARGET="$PROJECT_DIR/.github/workflows/pages.yml"
+  if [ -f "$PAGES_WF_TARGET" ]; then
+    echo "wiki-init: .github/workflows/pages.yml already present at $PAGES_WF_TARGET — preserving operator-authored workflow (CON-3); reference impl in $REPO_ROOT/.orchestrator/proposals/papercut-handoff-wiki-publishing-robustness-2026-05-07.md if reconciliation desired" >&2
+    return 0
+  fi
+  mkdir -p "$(dirname "$PAGES_WF_TARGET")"
+  cat > "$PAGES_WF_TARGET" <<'PAGES_WORKFLOW_EOF'
+name: Deploy wiki to Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: wiki/requirements.txt
+      - run: pip install -r wiki/requirements.txt
+      - run: mkdocs build -f wiki/mkdocs.yml
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: wiki/site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+PAGES_WORKFLOW_EOF
+  echo "wiki-init: emitted $PAGES_WF_TARGET (build_type=workflow scaffold per FR-19)"
+}
+
+# ---- FR-19 (M037/P02/T02) — flip Pages config to build_type=workflow -----
+# After the workflow file is emitted, set the repo's Pages build_type to
+# workflow so the deploy-pages action can publish. Idempotent — flipping
+# an already-workflow repo is a no-op upstream. Manual-fallback diagnostic
+# surfaces the verbatim command on `gh` unavailable / unauthenticated.
+flip_pages_build_type() {
+  [ -n "${OWNER:-}" ] || return 0
+  [ -n "${REPO:-}" ] || return 0
+  if ! command -v gh >/dev/null 2>&1; then
+    echo "wiki-init: gh CLI not on PATH; skipping FR-19 build_type flip. Run manually after install:" >&2
+    echo "    gh api -X PUT \"repos/$OWNER/$REPO/pages\" -f build_type=workflow" >&2
+    return 0
+  fi
+  if ! gh auth status >/dev/null 2>&1; then
+    echo "wiki-init: gh not authenticated; skipping FR-19 build_type flip. Run manually after gh auth login:" >&2
+    echo "    gh api -X PUT \"repos/$OWNER/$REPO/pages\" -f build_type=workflow" >&2
+    return 0
+  fi
+  if gh api -X PUT "repos/$OWNER/$REPO/pages" -f build_type=workflow >/dev/null 2>&1; then
+    echo "wiki-init: FR-19 build_type=workflow set on repos/$OWNER/$REPO/pages"
+  else
+    _flip_rc=$?
+    echo "wiki-init: gh api -X PUT repos/$OWNER/$REPO/pages -f build_type=workflow exited $_flip_rc; run manually if needed" >&2
+  fi
+}
+
+# FR-19 (M037/P02/T02) — workflow-based Pages publishing scaffold.
+# Wired here AFTER mkdocs.yml is finalized and BEFORE the --deploy block.
+# The workflow file emit honors CON-3 (no-clobber on pre-existing path);
+# the build_type flip is gated on gh availability/auth and surfaces a
+# manual-fallback diagnostic on either skip path.
+emit_pages_workflow
+flip_pages_build_type
 
 # FR-15 path-convention stub: author wiki/glossary.md if absent.
 GLOSSARY_TARGET="$PROJECT_DIR/wiki/glossary.md"

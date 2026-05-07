@@ -7,11 +7,13 @@
 #
 # Usage:
 #   bash scripts/diagnostics/wiki-link-check.sh [--site <dir>] [--root <dir>]
-#                                               [--strict] [--help]
+#                                               [--strict] [--verbose] [--help]
 #
 #   --site <dir>  Built site directory. Default: "wiki/site" relative to --root.
 #   --root <dir>  Project root. Default: invocation working directory.
 #   --strict      Treat out-of-scope escape as broken (stricter than default).
+#   --verbose     Disable OUT-OF-SCOPE diagnostic-budget collapse (FR-22a /
+#                 M037/P02/T04). Default: collapse repeats above THRESHOLD=5.
 #   --help        Print this usage block and exit 0.
 #
 # Exit codes:
@@ -37,8 +39,8 @@
 set -u
 
 print_help() {
-  # Render the usage block from this script's own header (lines 2..30).
-  sed -n '2,30p' "$0"
+  # Render the usage block from this script's own header.
+  sed -n '2,32p' "$0"
 }
 
 # ----- Argument parsing --------------------------------------------------------
@@ -46,6 +48,7 @@ print_help() {
 SITE_DIR=""
 ROOT_DIR=""
 STRICT=0
+VERBOSE=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -59,6 +62,9 @@ while [ $# -gt 0 ]; do
       ;;
     --strict)
       STRICT=1
+      ;;
+    --verbose)
+      VERBOSE=1
       ;;
     --help|-h)
       print_help
@@ -102,7 +108,7 @@ LA_FILE="${TMP_PFX}.la"
 ANCHORS_FILE="${TMP_PFX}.anchors"
 LINKS_FILE="${TMP_PFX}.links"
 FINDINGS_FILE="${TMP_PFX}.findings"
-trap 'rm -f "$HTML_LIST" "$FILES_IDX" "$DIRS_IDX" "$LA_FILE" "$ANCHORS_FILE" "$LINKS_FILE" "$FINDINGS_FILE" 2>/dev/null' EXIT INT TERM
+trap 'rm -f "$HTML_LIST" "$FILES_IDX" "$DIRS_IDX" "$LA_FILE" "$ANCHORS_FILE" "$LINKS_FILE" "$FINDINGS_FILE" "${TMP_PFX}.sorted" "${TMP_PFX}.oos" "${TMP_PFX}.non_oos" 2>/dev/null' EXIT INT TERM
 
 find "$SITE_DIR" -type f -name '*.html' 2>/dev/null | LC_ALL=C sort > "$HTML_LIST"
 find "$SITE_DIR" -type f 2>/dev/null > "$FILES_IDX"
@@ -330,8 +336,79 @@ OUT_OF_SCOPE=$(printf '%s' "$SUMMARY_LINE" | awk -F'\t' '{print $4}')
 [ -n "$BROKEN" ] || BROKEN=0
 [ -n "$OUT_OF_SCOPE" ] || OUT_OF_SCOPE=0
 
+# ---- FR-22a (M037/P02/T04) — OUT-OF-SCOPE diagnostic-budget collapse -------
+# Default: collapse repeats above THRESHOLD=5 occurrences per unique target
+# to a single summary line. --verbose disables collapsing for debugging. The
+# zero-OUT-OF-SCOPE case must produce no summary line (silent-on-empty).
+#
+# Implementation: split sorted-unique findings into OUT-OF-SCOPE vs other,
+# emit non-OUT-OF-SCOPE verbatim (sorted-unique), then either emit OOS lines
+# verbatim (--verbose) or post-process via awk to collapse high-fanout repeats
+# above THRESHOLD and bound small-fanout per-occurrence emission to BUDGET=5
+# unique targets. No process substitution per AD-19; matches surrounding
+# temp-file + plain-pipe shape.
 if [ -s "$FINDINGS_FILE" ]; then
-  LC_ALL=C sort -u "$FINDINGS_FILE"
+  OOS_TMP="${TMP_PFX}.oos"
+  NON_OOS_TMP="${TMP_PFX}.non_oos"
+  LC_ALL=C sort -u "$FINDINGS_FILE" > "${TMP_PFX}.sorted"
+  grep '^OUT-OF-SCOPE:' "${TMP_PFX}.sorted" > "$OOS_TMP" 2>/dev/null || true
+  grep -v '^OUT-OF-SCOPE:' "${TMP_PFX}.sorted" > "$NON_OOS_TMP" 2>/dev/null || true
+  if [ -s "$NON_OOS_TMP" ]; then
+    cat "$NON_OOS_TMP"
+  fi
+  if [ -s "$OOS_TMP" ]; then
+    if [ "$VERBOSE" -eq 1 ]; then
+      cat "$OOS_TMP"
+    else
+      awk '
+        BEGIN { THRESHOLD = 5; BUDGET = 5; n_unique = 0 }
+        # Match: OUT-OF-SCOPE: <page> -> <href> [<reason>...]
+        # Extract href (token after "->", stop at "[<reason>") and reason
+        # (everything from the first "[..." token to end-of-line).
+        /^OUT-OF-SCOPE:/ {
+          href = ""
+          reason = ""
+          for (i = 4; i <= NF; i++) {
+            if ($i == "->") continue
+            if (substr($i, 1, 1) == "[") {
+              reason = $i
+              for (j = i + 1; j <= NF; j++) reason = reason " " $j
+              break
+            }
+            href = (href == "") ? $i : href " " $i
+          }
+          if (!(href in count)) {
+            count[href] = 0
+            order[++n_unique] = href
+            reason_for[href] = reason
+            lines[href] = ""
+          }
+          count[href]++
+          lines[href] = lines[href] $0 "\n"
+        }
+        END {
+          budget_used = 0
+          for (k = 1; k <= n_unique; k++) {
+            href = order[k]
+            if (count[href] >= THRESHOLD) {
+              # High-fanout: always collapse
+              printf "OUT-OF-SCOPE: %d pages -> %s %s (collapsed)\n", \
+                count[href], href, reason_for[href]
+            } else if (budget_used < BUDGET) {
+              # Small-fanout within budget: emit per-occurrence verbatim
+              printf "%s", lines[href]
+              budget_used++
+            } else {
+              # Small-fanout beyond budget: collapse with budget marker
+              printf "OUT-OF-SCOPE: %d pages -> %s %s (collapsed, budget)\n", \
+                count[href], href, reason_for[href]
+            }
+          }
+        }
+      ' "$OOS_TMP"
+    fi
+  fi
+  rm -f "${TMP_PFX}.sorted" "$OOS_TMP" "$NON_OOS_TMP" 2>/dev/null || true
 fi
 
 if [ "$BROKEN" -gt 0 ]; then

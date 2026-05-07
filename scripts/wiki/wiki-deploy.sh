@@ -6,22 +6,28 @@
 #   2. mkdocs build -f wiki/mkdocs.yml                   (render to wiki/site/)
 #   3. scripts/diagnostics/wiki-link-check.sh --site     (built-HTML walker)
 #   4. scripts/diagnostics/wiki-giscus-smoke.sh --site   (Giscus presence)
-# Then, on live path: mkdocs gh-deploy --force -f wiki/mkdocs.yml
-# (pushes wiki/site/ to the gh-pages branch).
+# Then prints workflow URL + git-push instruction (M037/P02/T02 FR-20).
+# Live deploy now flows through .github/workflows/pages.yml triggered by
+# `git push origin main`; the legacy `mkdocs gh-deploy --force` live path
+# was demoted because GitHub's pages-build-deployment builder has a known
+# wedged-`queued` failure mode with no documented recovery API.
 #
-# Any non-zero exit from any gate aborts before gh-deploy runs.
+# Any non-zero exit from any gate aborts before the push instruction prints.
 # See wiki/README.md "Running the deploy wrapper" for the full
 # contract + failure-triage table.
 #
 # Flags:
-#   --dry-run       run gates, skip gh-deploy, exit 0 on all PASS
+#   --dry-run       run gates, skip push instruction, exit 0 on all PASS
 #   --help          print usage and exit 0
 #   --root <dir>    override project root (default: invocation cwd)
 #   --skip-smoke    skip gate (4) only (not recommended)
+#   --verbose       pass --verbose to gate-3 wiki-link-check.sh (disables
+#                   FR-22a OUT-OF-SCOPE diagnostic-budget collapse for
+#                   debugging; M037/P02/T04)
 #
 # Exit codes:
-#   0 — all gates PASS and (live path) gh-deploy exit 0
-#   1 — any gate FAIL, build fail, or gh-deploy fail
+#   0 — all gates PASS (push instruction printed on live path)
+#   1 — any gate FAIL or build fail
 #   2 — usage error
 #
 # Bash 3.2 compliant. No declare -A. No process substitution.
@@ -31,7 +37,7 @@ set -u
 # -------- usage / help --------
 usage() {
   cat <<'USAGE'
-Usage: bash scripts/wiki/wiki-deploy.sh [--dry-run] [--help] [--root DIR] [--skip-smoke]
+Usage: bash scripts/wiki/wiki-deploy.sh [--dry-run] [--help] [--root DIR] [--skip-smoke] [--verbose]
 
 Chains the four pre-deploy gates in order:
   1. scripts/diagnostics/wiki-giscus-config-check.sh
@@ -39,13 +45,17 @@ Chains the four pre-deploy gates in order:
   3. scripts/diagnostics/wiki-link-check.sh --site wiki/site
   4. scripts/diagnostics/wiki-giscus-smoke.sh --site wiki/site
 
-Then (live path only): mkdocs gh-deploy --force -f wiki/mkdocs.yml
+Then prints workflow URL + `git push origin main` instruction (M037/P02 FR-20).
+Live deploy flows through .github/workflows/pages.yml on push to main.
 
 Flags:
-  --dry-run      Run gates, skip gh-deploy, exit 0 on all PASS.
+  --dry-run      Run gates, skip push instruction, exit 0 on all PASS.
   --help         Print this usage and exit 0.
   --root DIR     Override project root (default: invocation cwd).
   --skip-smoke   Skip gate (4) only. Not recommended for production.
+  --verbose      Pass --verbose to gate-3 wiki-link-check.sh (disables FR-22a
+                 OUT-OF-SCOPE diagnostic-budget collapse for debugging;
+                 M037/P02/T04).
 
 See wiki/README.md "First-deploy checklist" and "Running the deploy
 wrapper" sections for the full operator contract.
@@ -55,12 +65,14 @@ USAGE
 # -------- flag parsing (Bash 3.2 safe; no while case across shifts > 1) --------
 DRY_RUN=0
 SKIP_SMOKE=0
+VERBOSE=0
 ROOT=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run)     DRY_RUN=1 ;;
     --skip-smoke)  SKIP_SMOKE=1 ;;
+    --verbose)     VERBOSE=1 ;;
     --help|-h)     usage; exit 0 ;;
     --root)
       if [ $# -lt 2 ]; then
@@ -182,13 +194,26 @@ else
 fi
 
 # -------- gate 3: link-check --------
+# M037/P02/T04 FR-22a: forward --verbose to wiki-link-check.sh when set so
+# operators can disable the OUT-OF-SCOPE diagnostic-budget collapse for
+# debugging. Default behavior (collapse on) keeps the diagnostic readable.
 if [ -d wiki/site ]; then
-  if bash scripts/diagnostics/wiki-link-check.sh --site wiki/site; then
-    printf 'GATE: link-check PASS\n'
+  if [ "$VERBOSE" -eq 1 ]; then
+    if bash scripts/diagnostics/wiki-link-check.sh --site wiki/site --verbose; then
+      printf 'GATE: link-check PASS\n'
+    else
+      printf 'GATE: link-check FAIL\n'
+      printf 'FAIL: link-check — see BROKEN: lines above.\n' >&2
+      exit 1
+    fi
   else
-    printf 'GATE: link-check FAIL\n'
-    printf 'FAIL: link-check — see BROKEN: lines above.\n' >&2
-    exit 1
+    if bash scripts/diagnostics/wiki-link-check.sh --site wiki/site; then
+      printf 'GATE: link-check PASS\n'
+    else
+      printf 'GATE: link-check FAIL\n'
+      printf 'FAIL: link-check — see BROKEN: lines above.\n' >&2
+      exit 1
+    fi
   fi
 else
   printf 'GATE: link-check SKIP (no wiki/site/)\n'
@@ -209,17 +234,46 @@ else
   printf 'GATE: giscus-smoke SKIP (no wiki/site/)\n'
 fi
 
-# -------- deploy (live path only) --------
+# -------- post-gate report (M037/P02/T02 FR-20) --------
+# F12 supersedes the legacy mkdocs gh-deploy live path. Pre-push gates 1-4
+# remain as local validation; live deploy now flows through the workflow
+# at .github/workflows/pages.yml triggered by `git push origin main`.
+
+# OWNER/REPO resolution for FR-20 workflow URL print. Mirrors the parser
+# shape in scripts/lifecycle/wiki-init.sh — strip protocol/host prefixes,
+# strip trailing .git, then split on '/'.
+if [ -z "${OWNER:-}" ] || [ -z "${REPO:-}" ]; then
+  _origin_url=$(git config --get remote.origin.url 2>/dev/null || echo "")
+  case "$_origin_url" in
+    git@github.com:*)
+      _owner_repo=${_origin_url#git@github.com:}
+      _owner_repo=${_owner_repo%.git}
+      ;;
+    https://github.com/*)
+      _owner_repo=${_origin_url#https://github.com/}
+      _owner_repo=${_owner_repo%.git}
+      ;;
+    *)
+      _owner_repo=""
+      ;;
+  esac
+  if [ -n "$_owner_repo" ]; then
+    OWNER=${_owner_repo%/*}
+    REPO=${_owner_repo#*/}
+  fi
+fi
+
 if [ "$DRY_RUN" -eq 1 ]; then
-  printf 'DRY-RUN: would deploy\n'
+  printf 'DRY-RUN: gates PASS; would print push instruction\n'
   exit 0
 fi
 
-printf 'DEPLOY: pushing to gh-pages\n'
-if mkdocs gh-deploy --force -f wiki/mkdocs.yml; then
-  printf 'OK: deployed to gh-pages\n'
-  exit 0
+printf 'OK: pre-deploy gates PASS. Push to main to trigger workflow deploy:\n'
+printf '    git push origin main\n'
+printf '\n'
+if [ -n "${OWNER:-}" ] && [ -n "${REPO:-}" ]; then
+  printf 'Workflow run: https://github.com/%s/%s/actions/workflows/pages.yml\n' "$OWNER" "$REPO"
 else
-  printf 'FAIL: mkdocs gh-deploy exited non-zero.\n' >&2
-  exit 1
+  printf 'Workflow run: https://github.com/<owner>/<repo>/actions/workflows/pages.yml (set OWNER/REPO env vars for repo-specific URL)\n'
 fi
+exit 0

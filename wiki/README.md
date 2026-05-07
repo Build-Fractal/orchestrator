@@ -301,6 +301,21 @@ Operator-UI work, not scriptable:
   the Discussions tab and create a category named `Wiki Comments`
   (any name works — just note it for step 2).
 
+> **Org-level redirect quirk**: if your GitHub org has org-level
+> Discussions enabled, `https://github.com/<Org>/<Repo>/discussions`
+> may 302-redirect to the org-level page (`https://github.com/orgs/<Org>/discussions`).
+> The repo's discussions still work via API and giscus, but the
+> "create category" UI lives at the org level until you navigate
+> directly to:
+>
+> ```
+> https://github.com/<Org>/<Repo>/discussions/categories
+> ```
+>
+> Use that URL to manage repo-scoped discussion categories. giscus
+> and the discussions API both still work against the repo; only
+> the web UI redirects.
+
 ### 2. Run `wiki-init --with-giscus`
 
 ```
@@ -315,19 +330,32 @@ This fetches the four `GISCUS_*` IDs via `gh`, substitutes them into
 block. The marker block is replaced in place on re-run, so it is
 safe to re-invoke when IDs change.
 
-### 3. Run the deploy wrapper
+### 3. Run the pre-deploy gates and push to main
 
 ```
 bash scripts/wiki/wiki-deploy.sh
 ```
 
-The wrapper sources `<path>/.env` automatically before gate 1, so
-the four `GISCUS_*` values written by step 2 are picked up without
-the operator needing to source the file in their shell. On success
-the last two lines read `DEPLOY: pushing to gh-pages` and `OK:
-deployed to https://<org>.github.io/<repo>/`. On any gate failure
-the wrapper aborts before pushing and emits a `FAIL:` line naming
-which gate failed.
+The wrapper sources `<path>/.env` automatically before gate 1, runs the
+four pre-deploy gates (giscus-config-check + mkdocs build + link-check
++ giscus-smoke), and on success prints `OK: pre-deploy gates PASS.
+Push to main to trigger workflow deploy:` followed by `git push origin
+main` and the workflow URL. Push the change yourself; the workflow at
+`.github/workflows/pages.yml` builds and deploys via
+`actions/deploy-pages@v4` (typical timing: ~50s build + ~10s deploy,
+total ~1 min from push to live). On any gate failure the wrapper
+aborts before printing the push instruction and emits a `FAIL:` line
+naming which gate failed.
+
+> **Why workflow-based publishing?** F12 (M037/P02) replaces the legacy
+> `mkdocs gh-deploy --force` live path because GitHub's
+> `pages-build-deployment` builder has a known wedged-`queued` failure
+> mode with no documented recovery API (PBJ-central dogfood lost 7
+> days to it before abandoning the legacy builder). Workflow-based
+> deploys are normal Actions runs — fully observable, fully
+> cancellable, fully rerunnable. See
+> `.orchestrator/proposals/papercut-handoff-wiki-publishing-robustness-2026-05-07.md`
+> for the full discovery surface.
 
 > **Why `.env` is gitignored**: the four `GISCUS_*` values include
 > the repo+category IDs giscus uses to authorize comment posts. The
@@ -382,12 +410,13 @@ who want to understand the underlying flow can run the original
    # <<< orchestrator-managed: giscus <<<
    ```
 
-4. Enable GitHub Pages: Settings → Pages → Source → **Deploy from
-   a branch** → Branch: `gh-pages` → `/ (root)`. On the very first
-   deploy the branch does not yet exist; the wrapper creates it.
+4. Enable GitHub Pages with `build_type: workflow`: Settings → Pages
+   → Source → **GitHub Actions**. (`wiki-init --with-giscus` calls
+   `gh api -X PUT repos/.../pages -f build_type=workflow` automatically
+   when `gh` is authenticated.)
 5. Ensure `gh` is on PATH for any future Giscus consolidation
    (`scripts/diagnostics/wiki-giscus-remap.sh`).
-6. Run `bash scripts/wiki/wiki-deploy.sh`.
+6. Run `bash scripts/wiki/wiki-deploy.sh`; on PASS, `git push origin main`.
 7. Record the deploy URL + SHA into the deploy record (as in step
    5 above).
 8. Smoke-test the URL (as in step 4 above).
@@ -401,11 +430,17 @@ gate with a diagnostic line naming the missing var — see
 ## Running the deploy wrapper
 
 `scripts/wiki/wiki-deploy.sh` is the single documented command
-for deploying or redeploying the dogfood wiki. It chains four
-gate-shaped invocations before invoking `mkdocs gh-deploy --force`
-and aborts on the first failure.
+for running the pre-deploy gates before pushing to main. It chains
+the four gate-shaped invocations and, on all PASS, prints the
+workflow URL plus the `git push origin main` instruction. Live
+deploy flows through `.github/workflows/pages.yml` triggered by the
+push (M037/P02 FR-20).
 
 ### Pipeline
+
+Chains the four pre-deploy gates in order. On all PASS, prints
+the workflow URL and `git push origin main` instruction. On any
+FAIL, aborts before printing the push instruction.
 
 1. `scripts/diagnostics/wiki-giscus-config-check.sh` — verifies
    every `GISCUS_*` env var is set.
@@ -415,13 +450,11 @@ and aborts on the first failure.
 4. `scripts/diagnostics/wiki-giscus-smoke.sh --site wiki/site` —
    asserts every page carries the Giscus loader.
 
-Then, on success: `mkdocs gh-deploy --force -f wiki/mkdocs.yml`
-pushes `wiki/site/` to the `gh-pages` branch.
-
 ### Flags
 
-- `--dry-run` — run all four gates, skip the final `mkdocs
-  gh-deploy`, print `DRY-RUN: would deploy` and exit 0.
+- `--dry-run` — run all four gates, skip the push instruction
+  print, print `DRY-RUN: gates PASS; would print push instruction`
+  and exit 0.
 - `--help` — print the usage block naming each gate and each
   supported flag, then exit 0.
 - `--root <dir>` — override the project root (default: invocation
@@ -434,17 +467,17 @@ pushes `wiki/site/` to the `gh-pages` branch.
 
 - `GATE: <name> PASS|FAIL` — one per gate.
 - `BUILD: ok|fail` — `mkdocs build` result.
-- `DEPLOY: pushing to gh-pages` — pre-push announcement on the
-  live path.
-- `DRY-RUN: would deploy` — terminator on `--dry-run` success.
-- `OK: deployed to <url>` — terminator on live-path success.
+- `OK: pre-deploy gates PASS. Push to main to trigger workflow deploy:`
+  — terminator on live-path success, followed by `git push origin
+  main` and the workflow URL.
+- `DRY-RUN: gates PASS; would print push instruction` — terminator
+  on `--dry-run` success.
 - `FAIL: <gate> <diagnostic>` — terminator on any gate failure.
 
 ### Exit codes
 
-- `0` — every gate PASS and (live path) `mkdocs gh-deploy` exit 0.
-- `1` — any gate FAIL, `mkdocs build` fail, or `mkdocs gh-deploy`
-  fail.
+- `0` — every gate PASS (push instruction printed on live path).
+- `1` — any gate FAIL or `mkdocs build` fail.
 - `2` — usage error (unknown flag, missing argument, invalid
   `--root`).
 

@@ -53,6 +53,33 @@ for t in "${P01_TESTS[@]}"; do
   fi
 done
 
+# M037/P02/T05 — explicit invocation of verbatim handoff-doc test scaffolds.
+# These tests live at the test-tree root (not under tests/m037-acceptance/)
+# so they are not picked up by the p01-*.sh glob; invoke explicitly to
+# include in the battery total.
+for explicit_test in \
+  "$PROJECT_ROOT/tests/test-wiki-init-workflow-mode.sh" \
+  "$PROJECT_ROOT/tests/test-wiki-init-private-site-url.sh"; do
+  test_name="$(basename "$explicit_test")"
+  if [ ! -f "$explicit_test" ]; then
+    printf 'SKIP: %s (not present)\n' "$test_name"
+    skip=$((skip + 1))
+    continue
+  fi
+  printf -- '--- %s ---\n' "$test_name"
+  set +e
+  bash "$explicit_test"
+  rc=$?
+  set -e
+  if [ "$rc" -eq 0 ]; then
+    printf 'OK: %s (rc=0)\n\n' "$test_name"
+    pass=$((pass + 1))
+  else
+    printf 'FAIL: %s (rc=%d)\n\n' "$test_name" "$rc"
+    fail=$((fail + 1))
+  fi
+done
+
 printf 'BATTERY: pass=%d skip=%d fail=%d\n' "$pass" "$skip" "$fail"
 if [ "$fail" -ne 0 ]; then
   exit 1

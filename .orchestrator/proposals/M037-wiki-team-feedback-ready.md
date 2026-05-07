@@ -108,6 +108,46 @@ The smallest set of changes that fixes failures-of-first-impression for a non-au
 
 **Fix shape**: per the existing proposal — install template merges operator-authored keys instead of clobbering. Bundled into M037 because we're already touching template territory; not bundled into M035 because M035 doesn't touch `config.yml` template emission and bundling there would expand its surface area.
 
+### F8 — `feedback/` routing arm in `wiki-generate-stubs.sh`
+
+**Source**: `.orchestrator/proposals/papercut-sweep-wiki-deploy-2026-05-07.md` finding #1.
+
+**Reproducer**: `KNOWLEDGE.md` cross-links to `feedback/<file>.md`. The wiki-deploy link-checker (correctly) treats those as in-scope and FAILs because no stubs exist at `wiki/docs/feedback/`. PBJ-central operator hand-scaffolded two stubs to get past gate 2.
+
+**Fix shape**: new routing arm `feedback:<basename>` mirroring `proposals:*` (lines ~1056-1071) — stubs land at `wiki/docs/feedback/<basename>.md`, canonical source at `.orchestrator/feedback/<basename>.md`, fragment-only passthrough (`rewrite-relative-urls=false` per B5 precedent). Title-derivation fallback: feedback files don't carry `version:` the way reference-corpus chunks do — derive title from H1 of the source file; fall back to humanized basename when H1 absent. Section index emission via `register_child` so `wiki-generate-nav.sh` surfaces the bucket without manual `nav:` edits. Bundled into M037 P01 because we're already touching `wiki-generate-stubs.sh` for F1.1 (`version:` → nav title) — same file, same projection-time logic, same kind of fix.
+
+**Severity**: medium. Bites every project past BG-001-style validation gates — `.orchestrator/feedback/` is the standard location for round-by-round SME signoff captures.
+
+### F9 — `wiki-deploy.sh` Pages-rebuild verification
+
+**Source**: `.orchestrator/proposals/papercut-sweep-wiki-deploy-2026-05-07.md` finding #2.
+
+**Reproducer**: `OK: deployed to gh-pages` is a misleading success signal. The script's contract today is "pushed to gh-pages branch," not "Pages serves the new build." PBJ-central session 2026-05-07: push succeeded but Pages auto-trigger didn't fire — operator confidently shared a URL serving stale content.
+
+**Fix shape**: after `git push origin gh-pages`, capture the push timestamp; poll `gh api repos/{owner}/{repo}/pages/builds/latest` for ~60s waiting for a `created_at` newer than the push timestamp. On success: `OK: deployed to gh-pages and Pages build started at <created_at>`. On timeout: exit non-zero with `WARN: pushed to gh-pages but Pages did not start a build within 60s — try re-running the last pages-build-deployment workflow at <repo>/actions/workflows/pages-build-deployment.yml`. Honor `--skip-pages-verify` for CI; gracefully degrade to `WARN: skipped Pages verification (gh unavailable)` when `gh` is missing, without changing exit code.
+
+**Severity**: medium-high. The deploy script is the operator-facing primitive — its success message must mean what operators think it means. PBJ team is deploying this week, so timing is load-bearing for M037 P01 specifically.
+
+### F10 — `wiki-deploy` OUT-OF-SCOPE output collapse
+
+**Source**: `.orchestrator/proposals/papercut-sweep-wiki-deploy-2026-05-07.md` finding #5.
+
+**Reproducer**: PBJ-central deploy emits 178 `OUT-OF-SCOPE: ... -> https://github.com/.../discussions [external]` lines (one per page, all pointing at the same giscus discussions URL). Drowns the actionable signal (in-scope link checks, gate status, projection counts).
+
+**Fix shape**: detect repeated OUT-OF-SCOPE patterns (same target URL across many source pages) and collapse to a single summary line: `OUT-OF-SCOPE: 178 pages -> https://github.com/.../discussions [external giscus]`. Keep first 3-5 unique OUT-OF-SCOPE targets as full lines for diagnostic context; collapse the rest to `(+N more)`. Honor `--verbose` flag to disable collapsing for debugging. Compounds with F9: an operator who can't find the actionable lines is more likely to misread a stale deploy as fresh.
+
+**Severity**: low (output noise) but compounds with F9.
+
+### F11 — `wiki/README.md` org-level discussions redirect callout
+
+**Source**: `.orchestrator/proposals/papercut-sweep-wiki-deploy-2026-05-07.md` finding #7.
+
+**Reproducer**: when the org has org-level Discussions enabled, `https://github.com/<Org>/<Repo>/discussions` 302s to `https://github.com/orgs/<Org>/discussions`. The repo's discussions still work via API and giscus, but the operator UX is confusing — "create category" UI lives at the org level until the operator navigates to the repo discussions categories management URL directly.
+
+**Fix shape**: docs-only callout in `wiki/README.md` § "First-deploy checklist" pointing operators at `https://github.com/<Org>/<Repo>/discussions/categories` for category management when the org-level redirect catches them. Two paragraphs, no code change.
+
+**Severity**: docs-only. Save the next operator the same dead-end the PBJ-central operator hit on 2026-05-07.
+
 ### P01 acceptance criteria (preview — formalized at `orchestrator:specify` time)
 
 - Card-grid homepage renders on PBJ-central with project-defined cards.
@@ -115,6 +155,10 @@ The smallest set of changes that fixes failures-of-first-impression for a non-au
 - DECISIONS.md TOC on this repo reads as human concepts.
 - `mkdocs build` clean (no new warnings introduced).
 - PBJ-central re-runs `orchestrator:update` and the `wiki:` config block survives the install refresh.
+- `.orchestrator/feedback/*.md` files project to `wiki/docs/feedback/` stubs without manual scaffolding (F8).
+- `wiki-deploy.sh` exits non-zero when GitHub Pages doesn't start a build within 60s of the push (F9).
+- 178-page fixture emits one OUT-OF-SCOPE summary line for the giscus target instead of 178 lines (F10); `--verbose` restores per-occurrence emission.
+- `wiki/README.md` first-deploy checklist contains the org-level discussions redirect callout (F11).
 - Acceptance battery `tests/m037-acceptance/` covers the projection paths with synthetic fixtures.
 
 ## P02 — "round 3.5" (after first PBJ feedback signal, ~2–3 days)

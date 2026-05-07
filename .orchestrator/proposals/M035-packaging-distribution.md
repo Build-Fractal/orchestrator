@@ -147,12 +147,50 @@ This works pre-M035 but has three problems:
 
 **Impact**: closes the loop. Pre-launch operators run `orchestrator:update` (git source, local repo); at-launch operators run `orchestrator:update` (npm/homebrew source). Same UX shape; same skill; different source dispatch under the hood. The pre-M035 interim removes the "documented shell-function recipe" deliverable from P01 — operators discover the skill instead of memorizing a `~/.zshrc` snippet.
 
+### Finding F: `install-meta.txt` sidecar leaks absolute homedir paths if accidentally committed
+
+**Source**: `.orchestrator/proposals/papercut-sweep-wiki-deploy-2026-05-07.md` finding #3 (PBJ-central wiki-deploy session).
+
+**Evidence**: `packaging/install/install-claude-code.sh:462-475` writes `$PROJECT_DIR/.orchestrator/install-meta.txt` carrying `source_root=/Users/brettkellgren/...` — an absolute homedir path. The installer creates the file but does not ensure it's gitignored. PBJ-central operator hand-added `.env` to `.gitignore` for the same reason during the giscus paper-cut. Codex/cursor installer parity at `:271-284` / `:280-293` carries the same surface.
+
+**Root cause**: installer creates a file containing operator-specific absolute paths but doesn't manage the `.gitignore` entry that prevents accidental commits. Mirror-image of the `.env` problem the giscus paper-cut closed at the wiki-init layer.
+
+**Fix shape (P01)**: extend all three installer scripts (claude-code, codex, cursor) to append a managed marker block to `<PROJECT_DIR>/.gitignore` after `meta_file` is written:
+
+```
+# >>> orchestrator-managed: gitignore >>>
+.orchestrator/install-meta.txt
+# <<< orchestrator-managed: gitignore <<<
+```
+
+Idempotent — replace marker block contents on re-run rather than appending duplicates. Same managed-block convention as the giscus paper-cut (`papercut-wiki-deploy-env-loader.md` Layer 2). Composes with the symlink-mode work (P01) since both touch installer-internals; bundling here keeps the installer-hygiene surface coherent.
+
+**Impact**: closes a low-severity but real footgun. Operators no longer have to manually gitignore installer-managed sidecars; the convention generalizes if future M035 work adds more sidecars (e.g., `update-meta.txt`, `manifest.txt`).
+
+### Finding G: `set -e` + `while read` exit propagation masks installer collision failures on bash 3.2
+
+**Source**: `.orchestrator/proposals/papercut-sweep-wiki-deploy-2026-05-07.md` finding #4 (PBJ-central wiki-deploy session, root-cause investigation 2026-05-07).
+
+**Evidence**: today's `install-meta.txt` timing fix (commits `f67efb04` + `253eb748`) moved the sidecar write before the per-asset loop, which solves the immediate symptom of the M032 staged-dirs-collision. The underlying issue is unfixed: the installer prints `staged-dirs-collision: ...` to stderr and exits 0 when wiki collides. Confirmed `INSTALLER_EXIT=0` despite the collision-check returning exit 4 and the installer's `if ! ...; then ... exit "$rc"; fi` block being structurally correct.
+
+**Root cause (likely)**: bash 3.2 `set -e` interaction with process substitution + `while read` — exit status from inside the loop doesn't propagate up to the surrounding `if !` block. macOS ships bash 3.2 by default; CI runs bash 4+ where this would behave correctly, so the bug is invisible on the test path but live on every operator machine.
+
+**Why M035 (P00 baseline)**: P00 is the baseline-hardening phase that runs the fresh-machine install audit. The bash 3.2 audit fits there naturally — same fixture (fresh macOS install), same surface (installer scripts), same goal (the install must do what its exit code says it did). Not P01 because P01 ships the symlink-mode + drift-warning surface; bundling root-cause bash 3.2 work would expand P01's scope.
+
+**Fix shape (P00)**:
+- Reproduce the masking on macOS bash 3.2 with a synthetic collision fixture; confirm exit-status propagation is the breakage (rule out competing hypotheses).
+- Replace the `while read` loop with a `for` loop over a temp file (process-substitution-safe pattern), OR explicitly capture the loop's exit status into an outer variable before the `if !` check.
+- Regression test under `tests/installer-acceptance/` forcing a collision and asserting non-zero installer exit — runs on both bash 3.2 (via Docker or macOS CI) and bash 4+.
+- If the bash 3.2 process-substitution + `set -e` interaction is a recurring shape across the installer surface, tag with `AP-???` in `ANTIPATTERNS.md` and audit other `while read` sites under `packaging/install/`.
+
+**Impact**: today the masking is benign (everything M037 needs lands before the loop); tomorrow it'll mask a real install failure and the operator won't know until something breaks downstream. Closing this in P00 makes the installer's exit code trustworthy for every M035 phase that ships after.
+
 ## Phase outline (preliminary — refined by `orchestrator:specify`)
 
 | Phase | Goal | Touch list (preliminary) | Pre-launch or at-launch? |
 |---|---|---|---|
-| **P00** (recommended) | Empirical baseline + decisions | Manual publish of beta `@spec-kit/orchestrator` to npm under `@beta` tag; install on a fresh macOS + fresh Linux VM; friction inventory. Decisions: npm scope (`@spec-kit` vs `@orchestrator` vs unscoped), homebrew tap location, curl-pipe-bash domain, GPG signing keys, release-notes generation strategy. | Pre-launch — informs P01–P06 design |
-| **P01** | Dev-install symlink mode + version-drift warning | `--mode=symlink\|copy` flag in `install-claude-code.sh` (and codex/cursor installers). M025 manifest extension to record symlink-vs-copy per entry (so uninstall handles both). `orchestrator:status` version-drift warning reading consumer's `CHANGELOG.md` vs known-orchestrator-repo `CHANGELOG.md`. ~~Documented shell-function recipe in `references/installation.md`~~ — superseded 2026-05-06 by the `orchestrator:update` skill (see top-of-doc interim note). | **Pre-launch** — ships immediately after M029 |
+| **P00** (recommended) | Empirical baseline + decisions + installer-internals hardening | Manual publish of beta `@spec-kit/orchestrator` to npm under `@beta` tag; install on a fresh macOS + fresh Linux VM; friction inventory. Decisions: npm scope (`@spec-kit` vs `@orchestrator` vs unscoped), homebrew tap location, curl-pipe-bash domain, GPG signing keys, release-notes generation strategy. **Plus Finding G**: bash 3.2 `set -e` + `while read` exit propagation root-cause + fix in installer scripts (collision regression test runs on bash 3.2 and 4+). | Pre-launch — informs P01–P06 design |
+| **P01** | Dev-install symlink mode + version-drift warning + installer-managed `.gitignore` | `--mode=symlink\|copy` flag in `install-claude-code.sh` (and codex/cursor installers). M025 manifest extension to record symlink-vs-copy per entry (so uninstall handles both). `orchestrator:status` version-drift warning reading consumer's `CHANGELOG.md` vs known-orchestrator-repo `CHANGELOG.md`. **Plus Finding F**: installer appends managed marker block to `<PROJECT_DIR>/.gitignore` covering `.orchestrator/install-meta.txt` (and any future installer-managed sidecars). ~~Documented shell-function recipe in `references/installation.md`~~ — superseded 2026-05-06 by the `orchestrator:update` skill (see top-of-doc interim note). | **Pre-launch** — ships immediately after M029 |
 | **P01.5** | Namespace + project rename (`speckit.orchestrator.*` purge + `spec-kit-orchestrator` → `orchestrator`) | Mechanical sweep across the 15 files carrying `speckit.orchestrator.*` operational references (~71 occurrences) replaced with `orchestrator:<command>` shape; historical/migration documentation (`commands/migrate.md` AD-15, `templates/instruction-schema.md`) reframed as legacy references. Co-shipped with the broader project rename (repo, package.json, `~/Sites/<dir>` path, `.claude/projects/` key) per the dedicated rename plan. Open Question 1 (npm scope) resolved here; P02 inherits the resolved name. | **Pre-launch** — prerequisite to P02 |
 | **P02** | npm publishing pipeline | `package.json` with `@spec-kit/orchestrator` (or chosen scope). Postinstall script wraps existing `install-claude-code.sh`. `bin/orchestrator` entry point delegating to commands. `npm publish` works idempotently. | **At-launch** |
 | **P03** | Homebrew formula + tap | `homebrew-orchestrator` tap repo. Formula authored. `brew install orchestrator` works on macOS + Linuxbrew. Uninstall cascades through M025. | **At-launch** |

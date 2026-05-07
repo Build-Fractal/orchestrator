@@ -1,0 +1,57 @@
+mode: cooperative
+target: /private/var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/tmp.cwOiKBlTWN/tmp-extracted.structured.md
+output: /private/var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/tmp.cwOiKBlTWN
+iterations: 1
+agents:
+- name: extractor-advocate
+  prompt: "You argue that the structured-Markdown output preserves every\nheading\
+    \ hierarchy, table structure, figure caption, footnote, and\ncitation marker present\
+    \ in the source document. The source is\nprovided to you as a grounding doc \u2014\
+    \ read it directly and compare.\nYou raise a dispute for any heading that was\
+    \ dropped or merged,\nany table that was flattened to prose, any figure caption\
+    \ removed,\nany citation marker silently dropped, or any block-level\nstructural\
+    \ element substituted with a different one. Your charter\nis structural preservation\
+    \ \u2014 if the source had a section, the\nstructured-Markdown must still have\
+    \ it (verbatim where the\nsource's prose is well-formed, or with the same heading/structure\n\
+    label where the prose was reflowed). Minor reflow that preserves\nstructural intent\
+    \ (e.g., a paragraph break inserted for\nreadability) is NOT a dispute; only dropped,\
+    \ merged, or\nsubstituted structural elements are.\n"
+  docs:
+  - /Users/brettkellgren/Sites/spec-kit-orchestrator/tests/fixtures/m036-live-llm-smoke/policy-data-retention.md
+- name: fidelity-advocate
+  prompt: "You argue that the structured-Markdown output contains no content\nthat\
+    \ was paraphrased in a meaning-changing way, summarised, or\ninvented. The source\
+    \ document is provided to you as a grounding\ndoc \u2014 read it directly and\
+    \ compare every claim in the extraction\nback to the source. You raise a dispute\
+    \ for any sentence whose\nMEANING was changed during reflow, any requirement-shaped\n\
+    statement that was added but does not appear in the source, any\ntechnical term\
+    \ that was substituted with a semantically different\nterm, or any number/date/identifier\
+    \ that was altered. Your\ncharter is content fidelity \u2014 Tier 2 is structural\
+    \ extraction,\nNOT summarisation or paraphrase (Spec NG-5-NEW); you defend that\n\
+    invariant.\n\nCarve-out: minor reflow that preserves meaning (e.g., the source\n\
+    says \"must be retained for 90 days\" and the extraction says\n\"SHALL be retained\
+    \ for at least 90 days\") is NOT a dispute \u2014\nRFC 2119 keyword normalization\
+    \ and minor word order changes that\ndo not alter the semantic claim are acceptable.\
+    \ Raise disputes\nonly when meaning, numbers, identifiers, or scope materially\n\
+    change.\n"
+  docs:
+  - /Users/brettkellgren/Sites/spec-kit-orchestrator/tests/fixtures/m036-live-llm-smoke/policy-data-retention.md
+arbiter:
+  name: arbiter
+  prompt: 'The arbiter reads disputes from both advocates, weighs them against
+
+    the orchestrator constitution (Principle II Evidence Before Claims,
+
+    Principle XV Surgical Precision), and emits PASS or BLOCK. Ties
+
+    resolve in favour of preservation: PASS only when both advocates
+
+    raise no unresolved disputes. Either advocate raising one or more
+
+    unresolved disputes yields BLOCK with the dispute list as rationale.
+
+    '
+  docs:
+  - /Users/brettkellgren/Sites/spec-kit-orchestrator/.orchestrator/memory/constitution.md
+  grounding: /Users/brettkellgren/Sites/spec-kit-orchestrator/.orchestrator/memory/constitution.md
+  trigger: disputes_remain

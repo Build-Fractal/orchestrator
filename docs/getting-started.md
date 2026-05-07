@@ -1,17 +1,24 @@
 # Getting Started
 
-> User guide for installing and using the spec-kit-orchestrator.
-> Follow this guide to run your first orchestrated milestone from scratch.
+> Your first 30 minutes with the orchestrator. By the end, you'll have a project initialized, a feature scoped, and a sense of when to lean on the orchestrator vs when to step around it.
 
-> Audience: users
+## What you're about to do
 
-## Overview
+If your feature fits in a single agent session, the orchestrator detects it (Tier A) and steps aside — you keep using your runtime's native flow with zero overhead. This guide assumes you've got something larger: a feature that's going to span multiple sessions, a project where state needs to survive between conversations, or work where you want autonomous execution you can actually walk away from.
 
-spec-kit-orchestrator is a standalone autonomous orchestrator that adds multi-phase coordination to coding-agent workflows. It decomposes large features into milestones, phases, and tasks, then dispatches each task to a fresh agent context with a purpose-built payload. All state lives on disk -- there is no database, no long-running process, and no in-memory state to lose.
+The shape of the next 30 minutes:
 
-The orchestrator is useful when a feature is too large to build in a single context window. It manages the lifecycle from scope classification through execution, verification, and knowledge consolidation. You write a feature spec; the orchestrator figures out how many phases you need, plans each one, dispatches tasks with just enough context, verifies the results, and records what it learned for future milestones.
+1. **Install** the orchestrator into your runtime (~30 seconds).
+2. **Start** your project. `/orchestrator-start` auto-detects which of four shapes you're in (empty / has-materials / existing-codebase / migrating) and routes you to the right onboarding flow. No 50-question interrogation if you've already got a codebase — it'll do deterministic structural extraction instead.
+3. **Build something small.** `/orchestrator-do "your task"` is the one-shot entry; for larger work, the full evaluate → discuss → roadmap → plan-phase → auto chain takes over.
+4. **Feel the loop.** Mid-execution: `/orchestrator-status` and `/orchestrator-where` are read-only and always safe. After a crash: `/orchestrator-resume` picks up exactly where it left off.
 
-**Who it is for**: developers using Claude Code, Codex CLI, or Cursor who need to build features that span multiple context windows. If your feature fits in one context, the orchestrator classifies it as Tier A and steps aside -- you use your host runtime's native single-context workflow with zero overhead.
+Two things to set expectations on:
+
+- The orchestrator is **opinionated about verification.** Every task and phase runs through a 4-tier ladder before it counts as done. Self-graded "I think that worked" doesn't make it past tier 1.
+- The orchestrator is **honest about when to step aside.** Small features classify as Tier A and you skip the whole orchestration loop — that's a feature, not a limitation.
+
+**Who this is for**: developers using Claude Code (primary), Codex CLI, or Cursor who hit the wall where a single context window stops being enough.
 
 ---
 
@@ -51,13 +58,21 @@ The installer registers `orchestrator:*` skills/commands into the active runtime
 
 ### 2. Initialize your project
 
-In your project directory:
+In your project directory, the recommended entry point is the warm front door:
+
+```
+/orchestrator-start
+```
+
+`start` detects which of four shapes you're in (greenfield-empty, greenfield-with-materials, existing-codebase, or migrating from spec-kit/GSD) and routes you through the right onboarding flow — ideation, materials intake, codebase ingestion, or migration. It calls `/orchestrator-init` under the hood and then chains into the path that fits your project. See [`commands/start.md`](../commands/start.md) for the full branch-detection rules.
+
+If you'd rather skip the onboarding chain and just scaffold the runtime config:
 
 ```
 /orchestrator-init
 ```
 
-`init` probes the project, detects host capabilities, generates `.orchestrator/config.yml` with sensible defaults, and writes a runtime-appropriate instruction file. Completes in ~1 second.
+`init` probes the project, detects host capabilities, generates `.orchestrator/config.yml` with sensible defaults, and writes a runtime-appropriate instruction file. Completes in ~1 second. `start` is recommended for new users; `init` is the lower-level primitive for when you already know exactly what you want.
 
 ### 3. Create project configuration (optional)
 
@@ -86,7 +101,9 @@ See `references/file-formats.md` for the full config schema, or `templates/orche
 
 ### 4. Create your feature spec
 
-Before running the orchestrator commands, you need a feature spec:
+If you ran `/orchestrator-start`, the spec is likely already produced for you — `ideation` (greenfield-empty), `materials-intake` (greenfield-with-materials), or `ingest-codebase` (existing-codebase) each emit specs in the orchestrator's expected shape. Skip ahead to the next section unless you specifically want to hand-author one.
+
+To author a spec by hand:
 
 ```bash
 mkdir -p specs/001-your-feature
@@ -112,6 +129,10 @@ For the full installation reference, see [Installation](../references/installati
 ## Your First Orchestrated Project
 
 The orchestrator commands follow a sequential workflow. Each step produces files on disk that drive the next step. Here is the typical flow from start to finish.
+
+> **Quick path**: if you accepted defaults from `/orchestrator-start`, most of the steps below run automatically when you invoke `/orchestrator-auto`. The breakdown that follows documents each gate individually so you understand what's happening — and so you can take manual control at any point.
+>
+> **One-shot path**: for a single small task, `/orchestrator-do "your task here"` classifies the request and routes to the right depth without making you walk the whole chain.
 
 ### Step 1: Evaluate
 

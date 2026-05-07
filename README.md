@@ -1,80 +1,89 @@
 # spec-kit-orchestrator
 
-A standalone autonomous multi-phase orchestrator for long-horizon software development. Runs on Claude Code at launch; Codex CLI and Cursor are aspirational fast-follows (M009 multi-runtime parity audit ships demand-driven post-launch when non-CC users arrive — M018/P07 already proved zero-LLM-tier compression byte-equality across all three). Originally built as an extension to [spec-kit](https://github.com/github/spec-kit); standalone as of v0.9.0 (M015).
+**A coordination layer for software work that's too big for a single agent session.**
 
-> **Current version**: 0.9.2 — context-compression layer (M018) closed 2026-04-28. 13 commands, 80+ scripts, 24+ templates, 15 reference docs, 6 user guides. Closed milestones: M011–M016, M018, M019 T1+T2/3, M020, M021, M024–M027. See [CHANGELOG.md](./CHANGELOG.md) for the full release history.
+Coding agents are excellent inside one context window. They struggle when work spans many — context degrades, state gets lost between sessions, and yesterday's reasoning has to be re-derived from scratch. spec-kit-orchestrator is the layer underneath that handles the part you don't want to: phase decomposition, fresh-context dispatch, mechanical verification, knowledge that compounds milestone over milestone.
 
-## The Problem
+Runs on Claude Code today. Codex CLI and Cursor adapters exist but are demand-driven — we'll land formal multi-runtime parity (M009) when the first non-Claude-Code user arrives.
 
-Coding agents excel at single-context-window development: specify, clarify, plan, tasks, implement. But projects larger than one context window hit a wall — there's no coordination layer for multi-phase work spanning multiple agent sessions. Context degrades, state is lost between sessions, and knowledge doesn't compound.
+> **v0.9.3** (2026-05-01) — Closed milestones M011–M016, M018–M021, M024–M033, M036a. Live in production against this repo's own development; see [CHANGELOG.md](./CHANGELOG.md) for full history.
 
-## The Solution
+## When you'd reach for this
 
-spec-kit-orchestrator adds a file-based orchestration layer that:
+- The feature is too large for one agent session and you've felt the pain of paste-the-summary-into-the-next-conversation handoffs.
+- You want autonomous execution you can actually walk away from — not a chat loop that needs your attention.
+- You care about verification that doesn't rely on the agent grading its own homework.
+- The project will outlive any single conversation and the knowledge needs to accrete.
 
-1. **Decomposes** large projects into context-window-sized phases
-2. **Dispatches** each phase to a fresh agent session with only the context it needs
-3. **Verifies** results mechanically (no self-assessment)
-4. **Compounds knowledge** — phase N+1 is cheaper than phase N
+## When you wouldn't
+
+- The work fits in one context window. The orchestrator detects this (Tier A) and steps aside automatically — no overhead, no friction. Just keep using your runtime's native flow.
+- You want a chat companion. The orchestrator is a coordination layer, not a conversational partner. It does the boring scaffolding so the conversational parts get more signal.
+
+## How it works
+
+1. **Decompose** large projects into context-window-sized phases with explicit dependencies.
+2. **Dispatch** each phase to a fresh agent session carrying only the context it needs — no scrollback to pollute.
+3. **Verify** results mechanically (4-tier ladder: file checks → command execution → behavioral review → human review). No self-assessment.
+4. **Compound knowledge** — every phase produces structured summaries that make the next phase cheaper.
+
+All state lives on disk under `.orchestrator/`. There is no database, no long-running process, nothing to lose if your machine reboots mid-session.
 
 ## Quick Start
 
 ### 1. Install
 
-From a clone of the orchestrator repo (or a prebuilt skill bundle), run the installer that matches your runtime:
+From a clone of the orchestrator repo (or a prebuilt skill bundle), pick the installer for your runtime:
 
 ```bash
-# Claude Code
-bash packaging/install/install-claude-code.sh
-
-# Codex CLI
-bash packaging/install/install-codex.sh
-
-# Cursor
-bash packaging/install/install-cursor.sh
+bash packaging/install/install-claude-code.sh   # Claude Code (primary)
+bash packaging/install/install-codex.sh         # Codex CLI
+bash packaging/install/install-cursor.sh        # Cursor
 ```
 
-The installer registers the orchestrator skills into the active runtime and drops the script/template/reference tree into place. No files to copy by hand.
+The installer registers the orchestrator skills with your runtime and stages the script tree into your project. Idempotent and safe to re-run.
 
-### 2. Initialize your project
+> Coming in M035 (the launch milestone): `npm`, `brew`, and `curl | bash` install paths.
 
-```
-orchestrator:init
-```
-
-`init` probes the project, detects capabilities, generates a config + a runtime-appropriate instruction file, and registers skills. Completes in ~1 second.
-
-### 3. Evaluate scope
+### 2. Start your project
 
 ```
-orchestrator:evaluate
+/orchestrator-start
 ```
 
-This classifies your project into one of three tiers:
+`start` is the warm front door. It auto-detects which of four shapes you're in and routes you to the right onboarding flow:
 
-| Tier | Scope | What Happens |
-|------|-------|-------------|
-| **A** | Single context window | Routes to the host runtime's native single-context workflow — zero overhead |
-| **B** | One SDD flow, multiple contexts | Adds structured handoff between steps |
-| **C** | Multiple SDD flows | Full orchestration: state machine, autonomous dispatch, crash recovery, knowledge generation |
+| You have… | `start` routes to… | What happens |
+|---|---|---|
+| Empty directory | **Ideation** | A 7-question grilling protocol that captures vision, scope, users, constraints |
+| Materials (briefs, PDFs, decision logs) | **Materials intake** | Reconciles your inputs across 4 SSOT blocks; surfaces drift; asks only to resolve conflicts |
+| An existing codebase | **Codebase ingestion** | Deterministic structural extraction → 5–15 seed knowledge entries. No 50-question interrogation. |
+| spec-kit / GSD state | **Migration** | Lifts your existing artifacts in, then ingests the codebase |
 
-### 4. Plan and execute (Tier C)
+All four paths converge on constitution authoring (3 stack starters: web-saas / cli-tool / library) and a CLAUDE.md custom block.
 
-```
-orchestrator:discuss        # Capture architectural decisions
-orchestrator:roadmap        # Decompose spec into phases
-orchestrator:plan-phase     # Plan one phase with must-haves
-orchestrator:auto           # Run autonomous dispatch — start it and walk away
-```
+### 3. Build something
 
-### 5. Monitor and wrap up
+For most work, `/orchestrator-do "your task here"` is enough — it classifies the request and routes to the right depth automatically. For larger features:
 
 ```
-orchestrator:status         # Check progress anytime (read-only, always safe)
-orchestrator:consolidate    # Compress knowledge at milestone end
+/orchestrator-evaluate       # Classify scope as Tier A, B, or C
+/orchestrator-discuss        # (Tier C) Capture architectural decisions
+/orchestrator-roadmap        # (Tier C) Decompose spec into phases
+/orchestrator-plan-phase     # Plan one phase with must-haves
+/orchestrator-auto           # Run autonomous dispatch — start it and walk away
 ```
 
-That's it. For Tier A/B projects, the orchestrator stays out of the way. For Tier C, it handles the full lifecycle.
+### 4. Check in or recover
+
+```
+/orchestrator-status         # Read-only progress check, always safe
+/orchestrator-where          # Tree view of milestone → phase → task hierarchy
+/orchestrator-resume         # After a crash or pause — picks up exactly where it left off
+/orchestrator-consolidate    # Compress knowledge at milestone end
+```
+
+That's the loop. For Tier A/B projects, the orchestrator stays out of the way. For Tier C, it handles the full lifecycle without you needing to babysit it.
 
 ## Workflow
 
@@ -93,8 +102,10 @@ The state machine advances automatically during `orchestrator:auto`. Use `orches
 
 | Command | When to Use |
 |---------|-------------|
-| `orchestrator:init` | First-run setup — detects project, probes capabilities, registers skills |
-| `orchestrator:evaluate` | Starting a new project — classifies scope as Tier A, B, or C |
+| `orchestrator:start` | Recommended first command — warm front door that auto-detects project shape and routes onboarding |
+| `orchestrator:do` | One-shot tasks — classifies the request and routes to the right depth automatically |
+| `orchestrator:init` | Lower-level scaffold — registers skills and writes config; called by `start` under the hood |
+| `orchestrator:evaluate` | Starting a new project manually — classifies scope as Tier A, B, or C |
 | `orchestrator:discuss` | Before roadmap — captures architectural decisions and constraints |
 | `orchestrator:roadmap` | After discussion — decomposes spec into phases with dependency graph |
 | `orchestrator:plan-phase` | Before execution — plans one phase with task decomposition and must-haves |
@@ -109,16 +120,15 @@ The state machine advances automatically during `orchestrator:auto`. Use `orches
 
 ## Core Capabilities
 
-- **Scope triage** — Classify projects as Tier A/B/C based on complexity, with manual override and tier promotion
-- **Phase decomposition** — Roadmap generation with dependency graphs, boundary maps, and risk-ordered scheduling
-- **State machine** — 10-state lifecycle derived entirely from file presence on disk (never in-memory)
-- **Autonomous dispatch** — Derive state → budget check → stuck detection → context assembly → dispatch → verify → record → advance
-- **Adaptive intensity** — Quick / Standard / Full pipeline scaling auto-calibrated per task and host capability profile
-- **Backend-agnostic dispatch** — Uniform interface with filename-routed adapters (Claude Code / Codex CLI / Cursor)
-- **Mechanical verification** — 4-tier ladder: static checks → command execution → behavioral validation → human review
-- **Crash recovery** — Lock-based detection, recovery briefing from surviving artifacts, graceful pause/resume
-- **Knowledge generation** — Structured summaries, append-only decisions/knowledge registers, scope-filtered context injection
-- **Consolidation** — Artifact compression (87% reduction achieved) and archival at milestone boundaries
+What the orchestrator gives you, in concrete terms:
+
+- **Right-sized work**, automatically. Tier A projects (single context) get out of your way. Tier B/C projects get progressively more scaffolding without you having to choose.
+- **Autonomous execution.** `orchestrator:auto` acquires a session lock and loops through dispatch → verify → record → advance until a milestone completes, a real blocker is hit, or you ask it to pause.
+- **Mechanical verification, not vibes.** Every task and phase passes through a 4-tier ladder: file checks (truths and artifacts), configured commands (your tests, your linters), behavioral review, and optional human gates. Failures stop the loop honestly rather than getting hand-waved.
+- **State that survives anything.** All state derives from files on disk. Crash mid-task and `orchestrator:resume` picks up exactly where it left off — no in-memory state to lose.
+- **Knowledge that accumulates.** Every phase emits structured summaries, every decision goes into an append-only register, and the next phase's context is filtered to just what's relevant. Phase N+1 is genuinely cheaper than phase N.
+- **Adaptive intensity.** Quick / Standard / Full pipelines auto-calibrate per task and host capability — small work doesn't pay big-work overhead.
+- **Runtime-flexible.** Backend-agnostic dispatch with filename-routed adapters; Claude Code is the primary runtime, Codex CLI and Cursor adapters exist for when demand arrives.
 
 ## Architecture
 
@@ -178,7 +188,7 @@ bash packaging/install/install-codex.sh         # Codex CLI
 bash packaging/install/install-cursor.sh        # Cursor
 ```
 
-After install, run `orchestrator:init` once per project. See [`references/installation.md`](references/installation.md) for the full reference, autonomy configuration, and update flow.
+After install, run `/orchestrator-start` from inside your project — that's the recommended entry. It calls `orchestrator:init` for you and routes you through the right onboarding flow. See [`references/installation.md`](references/installation.md) for the full reference, autonomy configuration, and update flow.
 
 ### Requirements
 

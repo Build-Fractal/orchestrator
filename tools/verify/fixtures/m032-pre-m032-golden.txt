@@ -3,7 +3,11 @@
 # source-tree growth from wiki-init command landing, refreshed 2026-05-05
 # post-M032/P04/T01 + T02 to track wiki-decorate-codes.sh + the M033-staged
 # scripts/lifecycle/{grilling-shell,ideation,materials-intake}.sh untracked
-# entries that flow through the installer's project_assets staging).
+# entries that flow through the installer's project_assets staging, refreshed
+# 2026-05-06 post-M029-close + M035-pre-launch-prep to track commands/update.md
+# (28e70c4a, M035 prep) + commands/context.md + commands/where.md (de35c72f,
+# M029/P02 FR-4/FR-5/FR-7/FR-8 surface) and the scripts/templates/references
+# growth those changes pulled in).
 # Source: bash packaging/install/install-claude-code.sh --dry-run
 # Format: <runtime-dir> file_count=<N>
 # Refresh policy: re-capture at HEAD whenever a sibling milestone closes and
@@ -13,13 +17,15 @@
 # wiki-init.sh — per FR-6; M032/P04/T01 added 1 script —
 # wiki-decorate-codes.sh; M033 staged 3 lifecycle scripts —
 # grilling-shell.sh + ideation.sh + materials-intake.sh — that the installer
-# project_assets stage walks).
+# project_assets stage walks; M029/P02 + M035-prep added 3 commands —
+# update.md + context.md + where.md — plus the diagnostics/state scripts and
+# references those surfaces depend on).
 # CON-4 byte-identical invariant means: the project_assets:-driven installer
 # produces the same output as the pre-M032 RUNTIME_DIRS bulk-copy would today,
 # not the same output as a frozen historical snapshot.
-commands/ file_count=34
-scripts/ file_count=1163
-references/ file_count=32
-templates/ file_count=50
+commands/ file_count=37
+scripts/ file_count=1172
+references/ file_count=36
+templates/ file_count=52
 # Total post-refresh RUNTIME_DIRS file count:
-total file_count=1279
+total file_count=1297

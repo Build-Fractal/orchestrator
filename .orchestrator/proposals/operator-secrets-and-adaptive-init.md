@@ -2,6 +2,7 @@
 schema_version: "1.0"
 type: thinking-document
 status: pending
+shipped_layers: [1, 2]
 priority: high (PBJ this week)
 captured_at: "2026-05-06"
 captured_by: "M037/P01-close exploration agent"
@@ -354,6 +355,18 @@ moves to a slash-command-as-skill pattern that runs in-context rather
 than dispatching to a bash driver. Worth tracking but not v1.
 
 ## 5. Pre-launch slice (PBJ this week) vs post-launch
+
+> **SHIPPED 2026-05-06 — Layers 1+2** in commit `75582a09`
+> (`papercut-wiki-deploy-env-loader.md`). `wiki-deploy.sh` now sources
+> `<root>/.env` before gate 1; `wiki-init.sh --with-giscus` writes the
+> four `GISCUS_*` exports to `<project>/.env` under a managed marker
+> block; `wiki/.gitignore` template + first-deploy-checklist collapse
+> rode in the same paper-cut. Layer 3 (generalized secrets-recipe
+> primitive) remains legitimately deferred to post-launch demand-driven,
+> gated by a second consumer arriving with operator-managed secrets.
+> Frontmatter `status: pending` reflects Layer 3 still being open;
+> `shipped_layers: [1, 2]` records what's already done. Design rationale
+> below preserved verbatim for Layer 3 work.
 
 ### What PBJ-central needs THIS week
 

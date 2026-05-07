@@ -26,7 +26,12 @@ theme:
     - navigation.tabs.sticky
     - navigation.prune
     # <<< M037-P01-T05 polish-bundle features
-    - navigation.sections
+    # navigation.sections intentionally omitted (M037 P03 round-5):
+    # the flag forces top-level groups to render as bold flat lists.
+    # Default Material behavior (no sections feature) renders each
+    # group as a collapsible drawer, which matches reader expectations
+    # for sections like `Reference — *` and `Milestones`. Independent
+    # of navigation.indexes (kept).
     - navigation.indexes
     - navigation.top
     - navigation.tracking

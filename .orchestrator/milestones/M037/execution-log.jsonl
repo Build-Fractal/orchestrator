@@ -3,3 +3,4 @@
 {"timestamp":"2026-05-06T23:50:28Z","unitId":"M037/P01/T04","milestone":"M037","phase":"P01","task":"T04","tier":"standard","outcome":"success","dispatch_method":"sequential","attempt":1,"verification_result":"pass","duration_s":180}
 {"timestamp":"2026-05-07T00:21:25Z","unitId":"M037/P01/T05","milestone":"M037","phase":"P01","task":"T05","tier":"standard","outcome":"success","dispatch_method":"subagent","attempt":1,"verification_result":"pass","duration_s":240}
 {"timestamp":"2026-05-07T00:44:23Z","unitId":"M037/P01/T06","milestone":"M037","phase":"P01","task":"T06","tier":"standard","outcome":"success","dispatch_method":"subagent","attempt":1,"verification_result":"pass","duration_s":900}
+{"timestamp":"2026-05-07T00:54:23Z","unitId":"M037/P01/phase-close","milestone":"M037","phase":"P01","task":"phase-close","tier":"standard","outcome":"success","dispatch_method":"sequential","attempt":1,"verification_result":"pass","duration_s":300}

@@ -8,5 +8,5 @@ title: "Glossary"
 {%
   include-markdown "../../wiki/glossary.md"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

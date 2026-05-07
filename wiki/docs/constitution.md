@@ -8,5 +8,5 @@ title: "Speckit-Orchestrator Constitution"
 {%
   include-markdown "../../.orchestrator/memory/constitution.md"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

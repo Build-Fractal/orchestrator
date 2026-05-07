@@ -8,5 +8,5 @@ title: "Orchestrator Knowledge Base"
 {%
   include-markdown "../../.orchestrator/KNOWLEDGE.md"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

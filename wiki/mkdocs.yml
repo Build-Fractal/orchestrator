@@ -133,6 +133,46 @@ nav:
       - "MEM026: M013/P04/T04 hook-config regression": knowledge/lessons/MEM026.md
       - "MEM028: Bash arithmetic silently interprets zero-padded numerics as octal": knowledge/lessons/MEM028.md
   - Milestone Summary: milestone-summary.md
+  - Proposals:
+    - Overview: proposals/index.md
+    - "Proposal: Constitution Amendment — Inclusion Criteria + Governance Log + Distribution Surface [unknown]": proposals/constitution-amendment-inclusion-criteria.md
+    - "Proposal: Delegation Policy — Per-Tool Background-Safety Table [unknown]": proposals/delegation-policy-table.md
+    - "EOS Patterns for the Orchestrator [unknown]": proposals/eos-patterns-for-orchestrator.md
+    - "GSD 2 Adoption Scan — 2026-05-04 [unknown]": proposals/gsd-2-adoption-scan-2026-05-04.md
+    - "Brief — install-template should preserve operator-authored config.yml keys [unknown]": proposals/install-template-preserve-operator-keys.md
+    - "Launch Sequencing Amendment — 2026-05-03 [unknown]": proposals/launch-sequencing-amendment-2026-05-03.md
+    - "Proposal: M028 — Autonomous Hardening v3 [unknown]": proposals/M028-autonomous-hardening-v3.md
+    - "Proposal: M029 — Roadmap Visibility & CLI UX [unknown]": proposals/M029-roadmap-visibility-and-cli-ux.md
+    - "Proposal: M030 — Adaptive Model Selection [unknown]": proposals/M030-adaptive-model-selection.md
+    - "Proposal: M031 — Right-Sized Entry [unknown]": proposals/M031-right-sized-entry.md
+    - "Brief — M032 cross-link rewrite warnings (B5) [unknown]": proposals/m032-cross-link-rewrite-warnings.md
+    - "Proposal: M032 — Wiki Distribution + Init Integration [unknown]": proposals/M032-wiki-distribution-and-init-integration.md
+    - "Proposal: M033 — Project Onboarding Experience [unknown]": proposals/M033-onboarding-experience.md
+    - "Proposal: M034 — Interactive Review Gates [unknown]": proposals/M034-interactive-review-gates.md
+    - "Proposal — Bundle Hygiene: Pre-Publish Filter for project_assets [unknown]": proposals/m035-bundle-hygiene-pre-publish-filter.md
+    - "Proposal: M035 — Packaging & Distribution [unknown]": proposals/M035-packaging-distribution.md
+    - "Proposal: M036 — Reference-Corpus Ingest *(amended 2026-05-01)* [unknown]": proposals/M036-reference-corpus-ingest.md
+    - "Brief — M036 Tier 1 DOCX extraction gap (B6) [unknown]": proposals/m036-tier-1-docx-extraction-gap.md
+    - "Proposal: M037 — Wiki Team-Feedback-Ready (PBJ Round 3) [unknown]": proposals/M037-wiki-team-feedback-ready.md
+    - "Proposal: M038 — Living Documents (framework-owned primitive) [unknown]": proposals/M038-living-documents.md
+    - "Proposal: M039 — Theme-Leveraged Process Primitives (post-launch, demand-driven) [unknown]": proposals/M039-theme-leveraged-process-primitives.md
+    - "Proposal: `orchestrator:exec` — Subprocess-Output Context Discipline (Context Mode equivalent) [unknown]": proposals/orchestrator-exec-primitive.md
+    - "Paper-Cut: `auto-loop.sh --output-file` template substitution is fragile [unknown]": proposals/papercut-auto-loop-output-file-typo.md
+    - "Proposal: Papercut — `check-boundary-map.sh` brace-glob tokenization false positive [unknown]": proposals/papercut-boundary-map-brace-glob-tokenizer.md
+    - "Paper-Cut: `packaging/bundle/config/orchestrator.default.yml` is a hand-authored 12-line stub, not a copy/symlink of `templates/orchestrator-config-default.yml` [unknown]": proposals/papercut-bundle-config-stub-divergence.md
+    - "Paper-cut: User-facing command names use `/orchestrator-X` form, not `orchestrator:X` or `speckit.orchestrator.X` [unknown]": proposals/papercut-command-name-hyphen-form.md
+    - "Paper-Cut Proposal: Project-Shape Classifier in `orchestrator:discuss` [unknown]": proposals/papercut-discuss-project-shape.md
+    - "Paper-Cut Sweep: GSD 2 Adoption — 2026-05-04 [unknown]": proposals/papercut-gsd2-scan-2026-05-04.md
+    - "Paper-cut: M036b deferred state collides with find-active-milestone selection [unknown]": proposals/papercut-m036b-deferred-state-vs-find-active.md
+    - "Paper-Cut: orchestrator commands wrote M030 artifacts to `specs/NNN-slug/` instead of `.orchestrator/milestones/M###/` [unknown]": proposals/papercut-milestone-dir-routing.md
+    - "Paper-Cut: `orchestrator:roadmap` emits no `unit_close` record at all — entire stage is invisible to the execution log [unknown]": proposals/papercut-roadmap-unit-close.md
+    - "Paper-Cut: `orchestrator:specify` emits a Pass-1 `unit_close` only — Pass 2 + Pass 3 never log a follow-up [unknown]": proposals/papercut-specify-pass23-unit-close.md
+    - "Paper-cut Sweep round 2 — M032 wiki tooling, PBJ-central dogfood [unknown]": proposals/papercut-sweep-m032-pbj-dogfood-round2.md
+    - "Paper-cut Sweep — M032 wiki tooling, PBJ-central dogfood [unknown]": proposals/papercut-sweep-m032-pbj-dogfood.md
+    - "Paper-Cut Sweep PR Brief — Pre-M030 [unknown]": proposals/papercut-sweep-pre-M030.md
+    - "Proposal: Post-Launch Arc — Wiki UX Deep + External Tool Adapters [unknown]": proposals/post-launch-wiki-ux-and-adapters.md
+    - "Proposal — Session Knowledge Primer (ambient knowledge-graph injection for ad-hoc Claude sessions) [unknown]": proposals/session-knowledge-primer.md
+    - "Proposal — Shell-to-LLM Bridge for Tier 2 Extraction Live: Branch [unknown]": proposals/shell-to-llm-bridge-extraction.md
   - Milestones:
     - Overview: milestones/index.md
     - M002:
@@ -1838,6 +1878,76 @@ nav:
         - T04 Close-out-sweep-payload: milestones/M028/phases/P05/tasks/T04-close-out-sweep-PAYLOAD.md
         - T04 Close-out-sweep-plan: milestones/M028/phases/P05/tasks/T04-close-out-sweep-PLAN.md
         - T04 Close-out-sweep-summary: milestones/M028/phases/P05/tasks/T04-close-out-sweep-SUMMARY.md
+    - "M029 — Roadmap Visibility & CLI UX":
+      - Overview: milestones/M029/index.md
+      - continue: milestones/M029/continue.md
+      - Context: milestones/M029/M029-CONTEXT.md
+      - Evaluation: milestones/M029/M029-EVALUATION.md
+      - Roadmap: milestones/M029/M029-ROADMAP.md
+      - Summary: milestones/M029/M029-SUMMARY.md
+      - P01:
+        - Overview: milestones/M029/phases/P01/index.md
+        - Plan: milestones/M029/phases/P01/P01-PLAN.md
+        - Summary: milestones/M029/phases/P01/P01-SUMMARY.md
+        - T01 Design-contracts-payload: milestones/M029/phases/P01/tasks/T01-design-contracts-PAYLOAD.md
+        - T01 Design-contracts-plan: milestones/M029/phases/P01/tasks/T01-design-contracts-PLAN.md
+        - T01 Design-contracts-summary: milestones/M029/phases/P01/tasks/T01-design-contracts-SUMMARY.md
+        - T02 Invocation-context-resolver-payload: milestones/M029/phases/P01/tasks/T02-invocation-context-resolver-PAYLOAD.md
+        - T02 Invocation-context-resolver-plan: milestones/M029/phases/P01/tasks/T02-invocation-context-resolver-PLAN.md
+        - T02 Invocation-context-resolver-summary: milestones/M029/phases/P01/tasks/T02-invocation-context-resolver-SUMMARY.md
+        - T03 Status-headline-block-payload: milestones/M029/phases/P01/tasks/T03-status-headline-block-PAYLOAD.md
+        - T03 Status-headline-block-plan: milestones/M029/phases/P01/tasks/T03-status-headline-block-PLAN.md
+        - T03 Status-headline-block-summary: milestones/M029/phases/P01/tasks/T03-status-headline-block-SUMMARY.md
+        - T04 Status-json-format-payload: milestones/M029/phases/P01/tasks/T04-status-json-format-PAYLOAD.md
+        - T04 Status-json-format-plan: milestones/M029/phases/P01/tasks/T04-status-json-format-PLAN.md
+        - T04 Status-json-format-summary: milestones/M029/phases/P01/tasks/T04-status-json-format-SUMMARY.md
+        - T05 Context-skill-payload: milestones/M029/phases/P01/tasks/T05-context-skill-PAYLOAD.md
+        - T05 Context-skill-plan: milestones/M029/phases/P01/tasks/T05-context-skill-PLAN.md
+        - T05 Context-skill-summary: milestones/M029/phases/P01/tasks/T05-context-skill-SUMMARY.md
+        - T06 Acceptance-and-phase-suite-payload: milestones/M029/phases/P01/tasks/T06-acceptance-and-phase-suite-PAYLOAD.md
+        - T06 Acceptance-and-phase-suite-plan: milestones/M029/phases/P01/tasks/T06-acceptance-and-phase-suite-PLAN.md
+        - T06 Acceptance-and-phase-suite-summary: milestones/M029/phases/P01/tasks/T06-acceptance-and-phase-suite-SUMMARY.md
+      - P02:
+        - Overview: milestones/M029/phases/P02/index.md
+        - Plan: milestones/M029/phases/P02/P02-PLAN.md
+        - Summary: milestones/M029/phases/P02/P02-SUMMARY.md
+        - T01 Cross-milestone-data-model-payload: milestones/M029/phases/P02/tasks/T01-cross-milestone-data-model-PAYLOAD.md
+        - T01 Cross-milestone-data-model-plan: milestones/M029/phases/P02/tasks/T01-cross-milestone-data-model-PLAN.md
+        - T01 Cross-milestone-data-model-summary: milestones/M029/phases/P02/tasks/T01-cross-milestone-data-model-SUMMARY.md
+        - T02 Summarize-milestone-payload: milestones/M029/phases/P02/tasks/T02-summarize-milestone-PAYLOAD.md
+        - T02 Summarize-milestone-plan: milestones/M029/phases/P02/tasks/T02-summarize-milestone-PLAN.md
+        - T02 Summarize-milestone-summary: milestones/M029/phases/P02/tasks/T02-summarize-milestone-SUMMARY.md
+        - T03 Render-position-and-where-skill-payload: milestones/M029/phases/P02/tasks/T03-render-position-and-where-skill-PAYLOAD.md
+        - T03 Render-position-and-where-skill-plan: milestones/M029/phases/P02/tasks/T03-render-position-and-where-skill-PLAN.md
+        - T03 Render-position-and-where-skill-summary: milestones/M029/phases/P02/tasks/T03-render-position-and-where-skill-SUMMARY.md
+        - T04 Fixtures-and-sc-acceptance-payload: milestones/M029/phases/P02/tasks/T04-fixtures-and-sc-acceptance-PAYLOAD.md
+        - T04 Fixtures-and-sc-acceptance-plan: milestones/M029/phases/P02/tasks/T04-fixtures-and-sc-acceptance-PLAN.md
+        - T04 Fixtures-and-sc-acceptance-summary: milestones/M029/phases/P02/tasks/T04-fixtures-and-sc-acceptance-SUMMARY.md
+        - T05 Phase-close-gates-payload: milestones/M029/phases/P02/tasks/T05-phase-close-gates-PAYLOAD.md
+        - T05 Phase-close-gates-plan: milestones/M029/phases/P02/tasks/T05-phase-close-gates-PLAN.md
+        - T05 Phase-close-gates-summary: milestones/M029/phases/P02/tasks/T05-phase-close-gates-SUMMARY.md
+      - P03:
+        - Overview: milestones/M029/phases/P03/index.md
+        - Plan: milestones/M029/phases/P03/P03-PLAN.md
+        - Summary: milestones/M029/phases/P03/P03-SUMMARY.md
+        - T01 Render-position-live-and-savings-marker-payload: milestones/M029/phases/P03/tasks/T01-render-position-live-and-savings-marker-PAYLOAD.md
+        - T01 Render-position-live-and-savings-marker-plan: milestones/M029/phases/P03/tasks/T01-render-position-live-and-savings-marker-PLAN.md
+        - T01 Render-position-live-and-savings-marker-summary: milestones/M029/phases/P03/tasks/T01-render-position-live-and-savings-marker-SUMMARY.md
+        - T02 Auto-preflight-summary-payload: milestones/M029/phases/P03/tasks/T02-auto-preflight-summary-PAYLOAD.md
+        - T02 Auto-preflight-summary-plan: milestones/M029/phases/P03/tasks/T02-auto-preflight-summary-PLAN.md
+        - T02 Auto-preflight-summary-summary: milestones/M029/phases/P03/tasks/T02-auto-preflight-summary-SUMMARY.md
+        - T03 Auto-chain-flag-payload: milestones/M029/phases/P03/tasks/T03-auto-chain-flag-PAYLOAD.md
+        - T03 Auto-chain-flag-plan: milestones/M029/phases/P03/tasks/T03-auto-chain-flag-PLAN.md
+        - T03 Auto-chain-flag-summary: milestones/M029/phases/P03/tasks/T03-auto-chain-flag-SUMMARY.md
+        - T04 Fixtures-and-sc-acceptance-payload: milestones/M029/phases/P03/tasks/T04-fixtures-and-sc-acceptance-PAYLOAD.md
+        - T04 Fixtures-and-sc-acceptance-plan: milestones/M029/phases/P03/tasks/T04-fixtures-and-sc-acceptance-PLAN.md
+        - T04 Fixtures-and-sc-acceptance-summary: milestones/M029/phases/P03/tasks/T04-fixtures-and-sc-acceptance-SUMMARY.md
+        - T05 Phase-close-gates-payload: milestones/M029/phases/P03/tasks/T05-phase-close-gates-PAYLOAD.md
+        - T05 Phase-close-gates-plan: milestones/M029/phases/P03/tasks/T05-phase-close-gates-PLAN.md
+        - T05 Phase-close-gates-summary: milestones/M029/phases/P03/tasks/T05-phase-close-gates-SUMMARY.md
+        - T06 Milestone-closure-payload: milestones/M029/phases/P03/tasks/T06-milestone-closure-PAYLOAD.md
+        - T06 Milestone-closure-plan: milestones/M029/phases/P03/tasks/T06-milestone-closure-PLAN.md
+        - T06 Milestone-closure-summary: milestones/M029/phases/P03/tasks/T06-milestone-closure-SUMMARY.md
     - M030 — close → M031 → M032 → M033 → M029 → M035 → launch:
       - Overview: milestones/M030/index.md
       - continue: milestones/M030/continue.md
@@ -2049,10 +2159,11 @@ nav:
         - T05 Evidence-ledger-and-phase-suite-summary: milestones/M031/phases/P04/tasks/T05-evidence-ledger-and-phase-suite-SUMMARY.md
     - M032 — Wiki Distribution + Init Integration:
       - Overview: milestones/M032/index.md
-      - continue: milestones/M032/continue.md
+      - Acceptance-evidence: milestones/M032/M032-ACCEPTANCE-EVIDENCE.md
       - Context: milestones/M032/M032-CONTEXT.md
       - Evaluation: milestones/M032/M032-EVALUATION.md
       - Roadmap: milestones/M032/M032-ROADMAP.md
+      - Summary: milestones/M032/M032-SUMMARY.md
       - P01:
         - Overview: milestones/M032/phases/P01/index.md
         - Plan: milestones/M032/phases/P01/P01-PLAN.md
@@ -2091,6 +2202,7 @@ nav:
       - P03:
         - Overview: milestones/M032/phases/P03/index.md
         - Plan: milestones/M032/phases/P03/P03-PLAN.md
+        - Summary: milestones/M032/phases/P03/P03-SUMMARY.md
         - T01 With-giscus-scope-payload: milestones/M032/phases/P03/tasks/T01-with-giscus-scope-PAYLOAD.md
         - T01 With-giscus-scope-plan: milestones/M032/phases/P03/tasks/T01-with-giscus-scope-PLAN.md
         - T01 With-giscus-scope-summary: milestones/M032/phases/P03/tasks/T01-with-giscus-scope-SUMMARY.md
@@ -2099,11 +2211,34 @@ nav:
         - T02 Deploy-scope-summary: milestones/M032/phases/P03/tasks/T02-deploy-scope-SUMMARY.md
         - T03 Custom-nav-region-payload: milestones/M032/phases/P03/tasks/T03-custom-nav-region-PAYLOAD.md
         - T03 Custom-nav-region-plan: milestones/M032/phases/P03/tasks/T03-custom-nav-region-PLAN.md
+        - T03 Custom-nav-region-summary: milestones/M032/phases/P03/tasks/T03-custom-nav-region-SUMMARY.md
+        - T04 Throwaway-fixture-and-sc5-payload: milestones/M032/phases/P03/tasks/T04-throwaway-fixture-and-sc5-PAYLOAD.md
         - T04 Throwaway-fixture-and-sc5-plan: milestones/M032/phases/P03/tasks/T04-throwaway-fixture-and-sc5-PLAN.md
+        - T04 Throwaway-fixture-and-sc5-summary: milestones/M032/phases/P03/tasks/T04-throwaway-fixture-and-sc5-SUMMARY.md
+        - T05 Phase-suite-and-scope-guard-payload: milestones/M032/phases/P03/tasks/T05-phase-suite-and-scope-guard-PAYLOAD.md
         - T05 Phase-suite-and-scope-guard-plan: milestones/M032/phases/P03/tasks/T05-phase-suite-and-scope-guard-PLAN.md
+        - T05 Phase-suite-and-scope-guard-summary: milestones/M032/phases/P03/tasks/T05-phase-suite-and-scope-guard-SUMMARY.md
+      - P04:
+        - Overview: milestones/M032/phases/P04/index.md
+        - Plan: milestones/M032/phases/P04/P04-PLAN.md
+        - Summary: milestones/M032/phases/P04/P04-SUMMARY.md
+        - T01 Scanner-extensions-payload: milestones/M032/phases/P04/tasks/T01-scanner-extensions-PAYLOAD.md
+        - T01 Scanner-extensions-plan: milestones/M032/phases/P04/tasks/T01-scanner-extensions-PLAN.md
+        - T01 Scanner-extensions-summary: milestones/M032/phases/P04/tasks/T01-scanner-extensions-SUMMARY.md
+        - T02 Decorator-and-with-wiki-noop-payload: milestones/M032/phases/P04/tasks/T02-decorator-and-with-wiki-noop-PAYLOAD.md
+        - T02 Decorator-and-with-wiki-noop-plan: milestones/M032/phases/P04/tasks/T02-decorator-and-with-wiki-noop-PLAN.md
+        - T02 Decorator-and-with-wiki-noop-summary: milestones/M032/phases/P04/tasks/T02-decorator-and-with-wiki-noop-SUMMARY.md
+        - T03 Sc11-doctor-and-self-application-payload: milestones/M032/phases/P04/tasks/T03-sc11-doctor-and-self-application-PAYLOAD.md
+        - T03 Sc11-doctor-and-self-application-plan: milestones/M032/phases/P04/tasks/T03-sc11-doctor-and-self-application-PLAN.md
+        - T03 Summary: milestones/M032/phases/P04/tasks/T03-SUMMARY.md
+        - T04 Acceptance-battery-payload: milestones/M032/phases/P04/tasks/T04-acceptance-battery-PAYLOAD.md
+        - T04 Acceptance-battery-plan: milestones/M032/phases/P04/tasks/T04-acceptance-battery-PLAN.md
+        - T04 Summary: milestones/M032/phases/P04/tasks/T04-SUMMARY.md
+        - T05 Milestone-close-and-phase-suite-payload: milestones/M032/phases/P04/tasks/T05-milestone-close-and-phase-suite-PAYLOAD.md
+        - T05 Milestone-close-and-phase-suite-plan: milestones/M032/phases/P04/tasks/T05-milestone-close-and-phase-suite-PLAN.md
+        - T05 Summary: milestones/M032/phases/P04/tasks/T05-SUMMARY.md
     - M033 — Project Onboarding Experience:
       - Overview: milestones/M033/index.md
-      - continue: milestones/M033/continue.md
       - Context: milestones/M033/M033-CONTEXT.md
       - Evaluation: milestones/M033/M033-EVALUATION.md
       - Roadmap: milestones/M033/M033-ROADMAP.md
@@ -2334,6 +2469,26 @@ nav:
         - T04 Acceptance-harnesses-and-aggregator-payload: milestones/M036/phases/P07/tasks/T04-acceptance-harnesses-and-aggregator-PAYLOAD.md
         - T04 Acceptance-harnesses-and-aggregator-plan: milestones/M036/phases/P07/tasks/T04-acceptance-harnesses-and-aggregator-PLAN.md
         - T04 Acceptance-harnesses-and-aggregator-summary: milestones/M036/phases/P07/tasks/T04-acceptance-harnesses-and-aggregator-SUMMARY.md
+    - M037 — Wiki Team-Feedback-Ready (PBJ Round 3):
+      - Overview: milestones/M037/index.md
+      - Context: milestones/M037/M037-CONTEXT.md
+      - Evaluation: milestones/M037/M037-EVALUATION.md
+      - Roadmap: milestones/M037/M037-ROADMAP.md
+      - P01:
+        - Overview: milestones/M037/phases/P01/index.md
+        - Plan: milestones/M037/phases/P01/P01-PLAN.md
+        - Summary: milestones/M037/phases/P01/P01-SUMMARY.md
+        - T01 Card-grid-surface-plan: milestones/M037/phases/P01/tasks/T01-card-grid-surface-PLAN.md
+        - T02 Version-to-title-projection-plan: milestones/M037/phases/P01/tasks/T02-version-to-title-projection-PLAN.md
+        - T02 Version-to-title-projection-summary: milestones/M037/phases/P01/tasks/T02-version-to-title-projection-SUMMARY.md
+        - T03 Decisions-shape-pivot-plan: milestones/M037/phases/P01/tasks/T03-decisions-shape-pivot-PLAN.md
+        - T03 Decisions-shape-pivot-summary: milestones/M037/phases/P01/tasks/T03-decisions-shape-pivot-SUMMARY.md
+        - T04 Authoring-conventions-doc-plan: milestones/M037/phases/P01/tasks/T04-authoring-conventions-doc-PLAN.md
+        - T04 Authoring-conventions-doc-summary: milestones/M037/phases/P01/tasks/T04-authoring-conventions-doc-SUMMARY.md
+        - T05 Mkdocs-polish-bundle-plan: milestones/M037/phases/P01/tasks/T05-mkdocs-polish-bundle-PLAN.md
+        - T05 Mkdocs-polish-bundle-summary: milestones/M037/phases/P01/tasks/T05-mkdocs-polish-bundle-SUMMARY.md
+        - T06 Yaml-merge-and-install-emission-plan: milestones/M037/phases/P01/tasks/T06-yaml-merge-and-install-emission-PLAN.md
+        - T06 Yaml-merge-and-install-emission-summary: milestones/M037/phases/P01/tasks/T06-yaml-merge-and-install-emission-SUMMARY.md
 # <<< auto-nav end
 # >>> custom-nav
 # <<< custom-nav end

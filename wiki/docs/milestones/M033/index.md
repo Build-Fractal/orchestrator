@@ -15,7 +15,6 @@ title: "M033 — Project Onboarding Experience"
 
 ## Contents
 
-- [M033 Auto-Run — Context Rotation Mid-P05 (after T04 close)](continue.md)
 - [M033-CONTEXT](M033-CONTEXT.md)
 - [M033 Evaluation](M033-EVALUATION.md)
 - [M033-ROADMAP](M033-ROADMAP.md)

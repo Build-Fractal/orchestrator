@@ -73,14 +73,6 @@ This is **not** a public-facing site. External launch lives in M009.
 
     [:octicons-arrow-right-24: Milestone Summary](milestone-summary.md)
 
-- :fontawesome-solid-pen-to-square: **Proposals**
-
-    ---
-
-    Proposal drafts and historical proposals.
-
-    [:octicons-arrow-right-24: Proposals](proposals/index.md)
-
 - :fontawesome-solid-flag-checkered: **Milestones**
 
     ---

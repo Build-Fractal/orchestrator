@@ -8,5 +8,5 @@ title: "M001: spec-kit-orchestrator v0.1.0"
 {%
   include-markdown "../../.orchestrator/milestone-summary.md"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

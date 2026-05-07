@@ -15,7 +15,9 @@ title: "M037 — Wiki Team-Feedback-Ready (PBJ Round 3)"
 
 ## Contents
 
+- [M037 auto-loop pause — P02 closed; P03 gated on PBJ feedback](continue.md)
 - [M037-CONTEXT](M037-CONTEXT.md)
 - [M037 Evaluation](M037-EVALUATION.md)
 - [M037-ROADMAP](M037-ROADMAP.md)
 - [P01](phases/P01/index.md)
+- [P02](phases/P02/index.md)

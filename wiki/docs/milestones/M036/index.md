@@ -16,6 +16,7 @@ title: "M036 — Reference-Corpus Ingest (deferred post-launch, demand-driven)"
 ## Contents
 
 - [M036 Auto Continue — M036a Complete; M036b Deferral Gate](continue.md)
+- [M036 — Acceptance Evidence Ledger](M036-ACCEPTANCE-EVIDENCE.md)
 - [M036 Context Draft](M036-CONTEXT.md)
 - [M036 Evaluation](M036-EVALUATION.md)
 - [M036-ROADMAP](M036-ROADMAP.md)

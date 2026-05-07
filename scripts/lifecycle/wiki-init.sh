@@ -637,6 +637,120 @@ elif [ -f "$GLOSSARY_PROJECT_SRC" ] && glossary_is_empty_stub "$GLOSSARY_TARGET"
   echo "wiki-init: replaced empty glossary stub at $GLOSSARY_TARGET with include-wrapper (source: .orchestrator/knowledge/glossary.md)"
 fi
 
+# M037 P03 round-4 — framework-managed wiki/overrides/ refresh.
+#
+# Round-3.5 introduced wiki/overrides/main.html (P3.1 breadcrumb shim) and
+# updated wiki/overrides/partials/comments.html (P3.2 file-feedback aside +
+# M032 dual-template surface). Neither install path stages wiki/overrides/
+# content into existing projects:
+#   - install-claude-code.sh trips the operator-owned oracle on wiki/ when
+#     a project already has a wiki/ tree.
+#   - wiki-init.sh's PRE_STAGE_NO_OP short-circuits when wiki/mkdocs.yml
+#     exists, skipping the bundle stage.
+# This step mirrors framework-managed *.html files from the bundle into
+# <PROJECT_DIR>/wiki/overrides/ on every wiki-init invocation, with
+# operator-edit-detection: write <f>.bundle.new + WARN rather than clobber
+# when the project file diverges in ways we don't recognize.
+#
+# Special case: wiki/overrides/partials/comments.html. When --with-giscus
+# was previously run, the project copy has the four {{giscus_*}} placeholders
+# substituted with concrete IDs but the dual-template Jinja form intact.
+# Detect that "substituted-managed" shape (no {{giscus_repo}} placeholder AND
+# {{ config.extra.giscus.repo }} present) and re-stage from bundle, then
+# re-substitute against the GISCUS_* values persisted to <PROJECT_DIR>/.env
+# by --with-giscus (papercut-wiki-deploy-env-loader managed marker block).
+# Makes refresh idempotent on substituted-managed projects so dogfood loops
+# pick up new bundle features without a manual --with-giscus rerun.
+BUNDLE_OVERRIDES_DIR="$REPO_ROOT/wiki/overrides"
+PROJECT_OVERRIDES_DIR="$PROJECT_DIR/wiki/overrides"
+if [ -d "$BUNDLE_OVERRIDES_DIR" ] && [ "$REPO_ROOT" != "$PROJECT_DIR" ]; then
+  # Load any persisted GISCUS_* values from <PROJECT_DIR>/.env so we can
+  # re-substitute comments.html transparently when refreshing a project
+  # that previously ran --with-giscus.
+  GISCUS_REPO_ENV=""
+  GISCUS_REPO_ID_ENV=""
+  GISCUS_CATEGORY_ENV=""
+  GISCUS_CATEGORY_ID_ENV=""
+  if [ -f "$PROJECT_DIR/.env" ]; then
+    GISCUS_REPO_ENV=$(awk -F'"' '/^export GISCUS_REPO=/ { print $2; exit }' "$PROJECT_DIR/.env" 2>/dev/null || true)
+    GISCUS_REPO_ID_ENV=$(awk -F'"' '/^export GISCUS_REPO_ID=/ { print $2; exit }' "$PROJECT_DIR/.env" 2>/dev/null || true)
+    GISCUS_CATEGORY_ENV=$(awk -F'"' '/^export GISCUS_CATEGORY=/ { print $2; exit }' "$PROJECT_DIR/.env" 2>/dev/null || true)
+    GISCUS_CATEGORY_ID_ENV=$(awk -F'"' '/^export GISCUS_CATEGORY_ID=/ { print $2; exit }' "$PROJECT_DIR/.env" 2>/dev/null || true)
+  fi
+
+  override_sed_escape() {
+    printf '%s' "$1" | sed -e 's|[\\&|]|\\&|g'
+  }
+
+  apply_giscus_substitution() {
+    # Args: $1=target file. Mutates target in place.
+    [ -n "$GISCUS_REPO_ENV" ] || return 1
+    [ -n "$GISCUS_REPO_ID_ENV" ] || return 1
+    [ -n "$GISCUS_CATEGORY_ENV" ] || return 1
+    [ -n "$GISCUS_CATEGORY_ID_ENV" ] || return 1
+    _gr=$(override_sed_escape "$GISCUS_REPO_ENV")
+    _gri=$(override_sed_escape "$GISCUS_REPO_ID_ENV")
+    _gc=$(override_sed_escape "$GISCUS_CATEGORY_ENV")
+    _gci=$(override_sed_escape "$GISCUS_CATEGORY_ID_ENV")
+    _tmp=$(mktemp -t comments.html.refresh.XXXXXX)
+    sed \
+      -e "s|{{giscus_repo}}|$_gr|g" \
+      -e "s|{{giscus_repo_id}}|$_gri|g" \
+      -e "s|{{giscus_category}}|$_gc|g" \
+      -e "s|{{giscus_category_id}}|$_gci|g" \
+      "$1" > "$_tmp"
+    mv "$_tmp" "$1"
+    return 0
+  }
+
+  # Walk all .html files under bundle wiki/overrides/. The find pipe runs the
+  # while loop in a subshell — that's fine; we only emit diagnostics and write
+  # files, no state needs to escape.
+  find "$BUNDLE_OVERRIDES_DIR" -type f -name '*.html' | while IFS= read -r _bundle_file; do
+    _rel="${_bundle_file#$BUNDLE_OVERRIDES_DIR/}"
+    _proj_file="$PROJECT_OVERRIDES_DIR/$_rel"
+    mkdir -p "$(dirname "$_proj_file")"
+
+    if [ ! -f "$_proj_file" ]; then
+      cp "$_bundle_file" "$_proj_file"
+      echo "wiki-init: staged framework override $_proj_file"
+      continue
+    fi
+
+    if cmp -s "$_bundle_file" "$_proj_file"; then
+      continue
+    fi
+
+    # Files differ. Detect the substituted-managed comments.html shape:
+    # placeholder {{giscus_repo}} absent AND Jinja {{ config.extra.giscus.repo }}
+    # present. That shape can only have been produced by a prior --with-giscus
+    # run; safe to re-stage + re-substitute.
+    _is_subbed_comments=0
+    case "$_rel" in
+      partials/comments.html)
+        if ! grep -q '{{giscus_repo}}' "$_proj_file" 2>/dev/null \
+           && grep -q '{{ config.extra.giscus.repo }}' "$_proj_file" 2>/dev/null; then
+          _is_subbed_comments=1
+        fi
+        ;;
+    esac
+
+    if [ "$_is_subbed_comments" -eq 1 ]; then
+      cp "$_bundle_file" "$_proj_file"
+      if apply_giscus_substitution "$_proj_file"; then
+        echo "wiki-init: refreshed $_proj_file from bundle and re-substituted GISCUS_* from $PROJECT_DIR/.env"
+      else
+        echo "wiki-init: refreshed $_proj_file from bundle (no GISCUS_* in .env to re-substitute; rerun with --with-giscus if needed)"
+      fi
+      continue
+    fi
+
+    # Operator-edited or unrecognized divergence — write .bundle.new + warn.
+    cp "$_bundle_file" "$_proj_file.bundle.new"
+    echo "WARN: wiki-init: $_proj_file diverges from bundle; wrote $_proj_file.bundle.new for review (delete the project file and re-run wiki-init to take the bundle copy)" >&2
+  done
+fi
+
 # FR-12 #Q-2: --auto-pip opt-in runs pip install; default is print-and-exit.
 REQ_FILE="$PROJECT_DIR/wiki/requirements.txt"
 if [ -f "$REQ_FILE" ]; then

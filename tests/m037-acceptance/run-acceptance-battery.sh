@@ -16,23 +16,23 @@ set -u
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-P01_GLOB="$SCRIPT_DIR/p01-*.sh"
+P0X_GLOB="$SCRIPT_DIR/p0[0-9]-*.sh"
 
 pass=0
 skip=0
 fail=0
 
 # shellcheck disable=SC2206  # word-splitting is desired for glob expansion
-P01_TESTS=( $P01_GLOB )
+P0X_TESTS=( $P0X_GLOB )
 
-# When the glob fails to expand (no p01-*.sh files), bash leaves the literal
+# When the glob fails to expand (no p0*-*.sh files), bash leaves the literal
 # pattern in the array. Detect and treat as zero tests.
-if [ "${#P01_TESTS[@]}" -eq 1 ] && [ ! -f "${P01_TESTS[0]}" ]; then
-  printf 'WARN: no p01-*.sh tests found at %s\n' "$P01_GLOB" >&2
-  P01_TESTS=()
+if [ "${#P0X_TESTS[@]}" -eq 1 ] && [ ! -f "${P0X_TESTS[0]}" ]; then
+  printf 'WARN: no p0[0-9]-*.sh tests found at %s\n' "$P0X_GLOB" >&2
+  P0X_TESTS=()
 fi
 
-for t in "${P01_TESTS[@]}"; do
+for t in "${P0X_TESTS[@]}"; do
   test_name="$(basename "$t")"
   printf -- '--- %s ---\n' "$test_name"
   if [ ! -x "$t" ] && [ ! -r "$t" ]; then

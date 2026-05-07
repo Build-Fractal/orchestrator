@@ -7,7 +7,10 @@
 # 2026-05-06 post-M029-close + M035-pre-launch-prep to track commands/update.md
 # (28e70c4a, M035 prep) + commands/context.md + commands/where.md (de35c72f,
 # M029/P02 FR-4/FR-5/FR-7/FR-8 surface) and the scripts/templates/references
-# growth those changes pulled in).
+# growth those changes pulled in, refreshed 2026-05-07 post-M037/P03/round-3.5
+# to track scripts/{lib/yaml-merge.sh, wiki/resolve-default-branch.sh,
+# verify/decisions-shape-lint.sh, verify/m028/p02-repair-legacy-bloat.sh} —
+# net +1 against the prior refresh after intra-window churn).
 # Source: bash packaging/install/install-claude-code.sh --dry-run
 # Format: <runtime-dir> file_count=<N>
 # Refresh policy: re-capture at HEAD whenever a sibling milestone closes and
@@ -24,8 +27,8 @@
 # produces the same output as the pre-M032 RUNTIME_DIRS bulk-copy would today,
 # not the same output as a frozen historical snapshot.
 commands/ file_count=37
-scripts/ file_count=1172
+scripts/ file_count=1173
 references/ file_count=36
 templates/ file_count=52
 # Total post-refresh RUNTIME_DIRS file count:
-total file_count=1297
+total file_count=1298

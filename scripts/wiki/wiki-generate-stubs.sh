@@ -366,6 +366,14 @@ write_stub_extra_with_sibling() {
   _meta_tmp="/tmp/wiki-stubs-meta-$$.tbl"
   : > "$_meta_tmp"
   emit_frontmatter_metadata_table "$_metadata_abs" "$_meta_tmp"
+  # M037 P03 (P2.2): also project external_pointer: on the sibling path so
+  # the "View source on GitHub" affordance appears whenever the pointer is
+  # present, not only when the Tier-1 sibling is absent. Operator quote:
+  # "there should at least be a link to the document in our GitHub repo".
+  _meta_ext=""
+  if [ -n "$_metadata_abs" ] && [ -f "$_metadata_abs" ]; then
+    _meta_ext=$(extract_external_pointer "$_metadata_abs")
+  fi
   {
     printf -- '---\n'
     printf 'title: "%s"\n' "$_title_esc"
@@ -379,6 +387,15 @@ write_stub_extra_with_sibling() {
         printf '    %s\n' "$_row"
       done < "$_meta_tmp"
       printf '\n'
+    fi
+    if [ -n "$_meta_ext" ]; then
+      _projected=$(project_external_pointer "$_meta_ext")
+      case "$_projected" in
+        http://*|https://*)
+          printf '!!! note "Source document"\n\n'
+          printf '    [:octicons-mark-github-16: View source on GitHub](%s)\n\n' "$_projected"
+          ;;
+      esac
     fi
     printf '{%%\n'
     printf '  include-markdown "%s"\n' "$_sibling_canonical"
@@ -444,9 +461,22 @@ write_stub_extra_metadata_only() {
       printf '\n'
     fi
     if [ -n "$_external_pointer" ]; then
+      # M037 P03 (P2.2): project file:///<ROOT>/<rest> to a clickable
+      # GitHub source link when repo_url is configured. Falls back to the
+      # original pointer (rendered as code) when projection fails or the
+      # scheme is not file://.
+      _projected=$(project_external_pointer "$_external_pointer")
       printf '!!! note "Source content"\n\n'
-      printf '    Tier-1 extraction not available on disk. See:\n\n'
-      printf '    `%s`\n' "$_external_pointer"
+      printf '    Tier-1 extraction not available on disk.\n\n'
+      case "$_projected" in
+        http://*|https://*)
+          printf '    [:octicons-mark-github-16: View source on GitHub](%s)\n\n' "$_projected"
+          printf '    Original pointer: `%s`\n' "$_external_pointer"
+          ;;
+        *)
+          printf '    See: `%s`\n' "$_external_pointer"
+          ;;
+      esac
     else
       printf '!!! note "Source content"\n\n'
       printf '    No body content extracted; metadata only.\n'
@@ -459,6 +489,56 @@ write_stub_extra_metadata_only() {
   fi
   printf 'STUB: %s (B7 metadata-only)\n' "$_target" >&2
   STUBS_WRITTEN=$((STUBS_WRITTEN + 1))
+}
+
+# M037 P03 (P2.2) — read_repo_url + project_external_pointer.
+#
+# read_repo_url: parses repo_url: from $ROOT/wiki/mkdocs.yml. Empty stdout
+# when the config or the field is absent. Strips one layer of quotes and
+# trailing /.
+read_repo_url() {
+  _cfg="$ROOT/wiki/mkdocs.yml"
+  [ -f "$_cfg" ] || return 0
+  awk '
+    /^repo_url:[[:space:]]*/ {
+      v=$0
+      sub(/^repo_url:[[:space:]]*/, "", v)
+      sub(/[[:space:]]+$/, "", v)
+      sub(/^"/, "", v); sub(/"$/, "", v)
+      sub(/^\047/, "", v); sub(/\047$/, "", v)
+      sub(/\/$/, "", v)
+      print v
+      exit
+    }
+  ' "$_cfg" 2>/dev/null
+}
+
+# project_external_pointer <pointer-value>
+#
+# PBJ-dogfood M037 P03 (P2.2): file:///<ROOT>/<rest> projects to
+# <repo_url>/blob/main/<rest> (clickable "View source on GitHub" target);
+# non-file:// pointers pass through unchanged so http(s):// callouts and
+# other schemes still render. Empty stdout on empty input. When repo_url:
+# is unavailable the pointer also passes through unchanged so callers can
+# distinguish "projected" (http(s)) from "literal" (file://) without a
+# second hint flag.
+project_external_pointer() {
+  _ptr="$1"
+  [ -n "$_ptr" ] || return 0
+  case "$_ptr" in
+    "file://$ROOT/"*)
+      _rest=${_ptr#"file://$ROOT/"}
+      _ru=$(read_repo_url)
+      if [ -n "$_ru" ]; then
+        printf '%s/blob/main/%s' "$_ru" "$_rest"
+        return 0
+      fi
+      printf '%s' "$_ptr"
+      ;;
+    *)
+      printf '%s' "$_ptr"
+      ;;
+  esac
 }
 
 # extract_external_pointer <abs-path>
@@ -562,7 +642,7 @@ existing_stub_is_protected() {
   return 1
 }
 
-# write_index <target-abs-path> <title> <body-file> [<include-canonical>]
+# write_index <target-abs-path> <title> <body-file> [<include-canonical>] [<preamble>]
 #
 # body-file is a tmp file with pre-formatted bullet lines.
 # include-canonical (optional) is a path of the form
@@ -571,11 +651,16 @@ existing_stub_is_protected() {
 # above the bullet list. Used by milestone/phase indexes so the page leads
 # with a real summary instead of a bare bullet list (item 2 of the
 # wiki-usability pass).
+# preamble (optional, M037 P03 P2.1) — a 1-2 sentence orientation paragraph
+# rendered between the H1 and the bullet list. Used by extra:* category
+# indexes so the page leads with "what is in this category" instead of
+# diving straight into a flat bullet list.
 write_index() {
   _target="$1"
   _title="$2"
   _bodyfile="$3"
   _include_spec="${4:-}"
+  _preamble="${5:-}"
   if [ "$DRY_RUN" -eq 1 ]; then
     printf 'WOULD-WRITE: %s\n' "$_target" >&2
     INDEXES_WRITTEN=$((INDEXES_WRITTEN + 1))
@@ -604,6 +689,9 @@ write_index() {
     printf -- '---\n\n'
     printf '# %s\n\n' "$_title"
     printf '<!-- Auto-generated section index. Regenerated by wiki-generate-stubs.sh. -->\n\n'
+    if [ -n "$_preamble" ]; then
+      printf '%s\n\n' "$_preamble"
+    fi
     if [ -n "$_inc_rel" ] && [ -f "$_inc_abs" ]; then
       printf '{%%\n'
       printf '  include-markdown "%s"\n' "$_inc_rel"
@@ -770,6 +858,35 @@ render_landing_cards() {
     return 0
   fi
 
+  # M037 P03 (P1.2): pre-filter orphans so we neither emit broken
+  # #orphan-card-${slug} anchors nor leave an empty <div class="grid cards">
+  # block when *every* card resolves to an orphan target.
+  _filtered_tmp="/tmp/wiki-cards-filtered-$$.list"
+  : > "$_filtered_tmp"
+  while IFS='|' read -r _i _sec _icn _ttl _blb; do
+    [ -n "$_i" ] || continue
+    _exists=0
+    if [ -n "$_sec" ]; then
+      _check="$DOCS/$_sec"
+      _check_dir=$(printf '%s' "$_check" | sed 's:/*$::')
+      if [ -f "$_check" ] || [ -f "$_check_dir/index.md" ]; then
+        _exists=1
+      fi
+    fi
+    if [ "$_exists" -eq 0 ]; then
+      printf 'CARDS: orphan section "%s" — dropped (no target page)\n' "$_sec" >&2
+      continue
+    fi
+    printf '%s|%s|%s|%s|%s\n' "$_i" "$_sec" "$_icn" "$_ttl" "$_blb" >> "$_filtered_tmp"
+  done < "$_cards_tmp"
+
+  if [ ! -s "$_filtered_tmp" ]; then
+    rm -f "$_cards_tmp" "$_filtered_tmp"
+    printf 'CARDS: 0 cards rendered (all orphan after target-page check); %s unchanged\n' "$_index" >&2
+    return 0
+  fi
+  mv "$_filtered_tmp" "$_cards_tmp"
+
   _card_count=$(wc -l < "$_cards_tmp" | tr -d ' ')
 
   # 3. Render the grid-cards block.
@@ -780,19 +897,6 @@ render_landing_cards() {
     while IFS='|' read -r _i _sec _icn _ttl _blb; do
       [ -n "$_i" ] || continue
       _href="$_sec"
-      _exists=0
-      if [ -n "$_sec" ]; then
-        _check="$DOCS/$_sec"
-        _check_dir=$(printf '%s' "$_check" | sed 's:/*$::')
-        if [ -f "$_check" ] || [ -f "$_check_dir/index.md" ]; then
-          _exists=1
-        fi
-      fi
-      if [ "$_exists" -eq 0 ]; then
-        printf 'CARDS: orphan section "%s" — emitting placeholder href\n' "$_sec" >&2
-        _slug=$(printf '%s' "$_ttl" | tr '[:upper:] ' '[:lower:]-')
-        _href="#orphan-card-${_slug}"
-      fi
       if [ -n "$_icn" ]; then
         printf -- '- :%s: **%s**\n\n' "$_icn" "$_ttl"
       else
@@ -966,7 +1070,41 @@ register_child() {
   _section_rel="$1"   # e.g., "milestones" or "milestones/M002" or "milestones/M002/phases/P01"
   _child_rel="$2"     # stub path relative to section, e.g., "M002/index.md" or "M002-CONTEXT.md" or "P01/index.md"
   _child_title="$3"
-  printf '%s|%s|%s\n' "$_section_rel" "$_child_rel" "$_child_title" >> "$SECTIONS_FILE"
+  # M037 P03 (P2.1) — optional 4th arg: source-of-truth absolute path. When
+  # set, write_section_index_for uses it to read frontmatter `published:`
+  # and sort the section index descendingly. Empty for sections (milestones,
+  # phases, knowledge, proposals, feedback) that retain alphabetical sort.
+  _source_abs="${4:-}"
+  printf '%s|%s|%s|%s\n' "$_section_rel" "$_child_rel" "$_child_title" "$_source_abs" >> "$SECTIONS_FILE"
+}
+
+# M037 P03 (P2.1) — read_published_date <abs>
+# Reads YAML frontmatter `published:` (or `created:` as fallback) and prints
+# YYYY-MM-DD on stdout. Empty stdout when neither is present. Used by
+# write_section_index_for to sort reference-corpus categories newest-first.
+read_published_date() {
+  _p="$1"
+  [ -f "$_p" ] || return 0
+  awk '
+    BEGIN { state="pre"; pub=""; cre="" }
+    NR == 1 && $0 == "---" { state="fm"; next }
+    state == "fm" && $0 == "---" { exit }
+    state == "fm" && $0 ~ /^[[:space:]]*published[[:space:]]*:[[:space:]]*/ {
+      v=$0
+      sub(/^[[:space:]]*published[[:space:]]*:[[:space:]]*/, "", v)
+      sub(/[[:space:]]+$/, "", v); sub(/^"/, "", v); sub(/"$/, "", v)
+      sub(/^\047/, "", v); sub(/\047$/, "", v)
+      pub=v
+    }
+    state == "fm" && $0 ~ /^[[:space:]]*created[[:space:]]*:[[:space:]]*/ {
+      v=$0
+      sub(/^[[:space:]]*created[[:space:]]*:[[:space:]]*/, "", v)
+      sub(/[[:space:]]+$/, "", v); sub(/^"/, "", v); sub(/"$/, "", v)
+      sub(/^\047/, "", v); sub(/\047$/, "", v)
+      cre=v
+    }
+    END { if (pub != "") print pub; else print cre }
+  ' "$_p" 2>/dev/null
 }
 
 # ---- knowledge-entries tracking (M012/P02/T02) -----------------------------
@@ -1164,7 +1302,11 @@ while IFS='|' read -r CAT REL TITLE; do
       # post-loop write_section_index_for emitter writes
       # wiki/docs/<dn>/index.md. Without this, wiki-generate-nav.sh's
       # `Overview: <dn>/index.md` leaf 404s and --strict build fails.
-      register_child "${_xdn}" "${_xbase}.md" "$TITLE"
+      # M037 P03 (P2.1): pass CANONICAL_ABS so the section-index emitter
+      # can read frontmatter `published:` and sort reference-corpus
+      # entries newest-first (matches operator expectation that the
+      # category-index landing page leads with the latest documents).
+      register_child "${_xdn}" "${_xbase}.md" "$TITLE" "$CANONICAL_ABS"
       continue
       ;;
   esac
@@ -1437,10 +1579,53 @@ fi
 write_section_index_for() {
   _section="$1"
   _body_tmp="/tmp/wiki-stubs-body-$$.list"
-  # Extract children of this section, de-dup on child_rel, sort lexically.
-  awk -F'|' -v s="$_section" '
-    $1 == s { print $2 "|" $3 }
-  ' "$SECTIONS_FILE" | sort -u -t'|' -k1,1 > "$_body_tmp"
+
+  # M037 P03 (P2.1): when any child carries a non-empty source_abs (4th
+  # column — set only at the extra:* registration site), sort the section
+  # index descendingly by frontmatter `published:` (falls back to
+  # `created:` then to alphabetical when both absent). For all other
+  # sections (milestones, phases, knowledge, proposals, feedback) the
+  # historical alphabetical sort is preserved.
+  _is_extra_section=0
+  if awk -F'|' -v s="$_section" '
+      $1 == s && $4 != "" { found=1; exit }
+      END { exit (found ? 0 : 1) }
+    ' "$SECTIONS_FILE"; then
+    _is_extra_section=1
+  fi
+
+  if [ "$_is_extra_section" -eq 1 ]; then
+    # Build "<published>|<child_rel>|<child_title>" sort keys. Missing
+    # dates default to "0000-00-00" so reverse-sort puts them last.
+    _key_tmp="/tmp/wiki-stubs-keys-$$.list"
+    : > "$_key_tmp"
+    awk -F'|' -v s="$_section" '
+      $1 == s { print $2 "|" $3 "|" $4 }
+    ' "$SECTIONS_FILE" | sort -u -t'|' -k1,1 > "$_body_tmp"
+    while IFS='|' read -r _cref _ctitle _csrc; do
+      [ -n "$_cref" ] || continue
+      _pub=""
+      if [ -n "$_csrc" ] && [ -f "$_csrc" ]; then
+        _pub=$(read_published_date "$_csrc")
+      fi
+      if [ -z "$_pub" ]; then
+        _pub="0000-00-00"
+      fi
+      printf '%s|%s|%s\n' "$_pub" "$_cref" "$_ctitle" >> "$_key_tmp"
+    done < "$_body_tmp"
+    LC_ALL=C sort -r -t'|' -k1,1 -k2,2 "$_key_tmp" > "${_key_tmp}.sorted"
+    mv "${_key_tmp}.sorted" "$_body_tmp"
+    rm -f "$_key_tmp"
+    # Strip the published key so the bullet builder consumes <child_rel>|<child_title>.
+    awk -F'|' '{ print $2 "|" $3 }' "$_body_tmp" > "${_body_tmp}.stripped"
+    mv "${_body_tmp}.stripped" "$_body_tmp"
+  else
+    # Extract children of this section, de-dup on child_rel, sort lexically.
+    awk -F'|' -v s="$_section" '
+      $1 == s { print $2 "|" $3 }
+    ' "$SECTIONS_FILE" | sort -u -t'|' -k1,1 > "$_body_tmp"
+  fi
+
   # Build body file of bullets.
   _bullets="/tmp/wiki-stubs-bullets-$$.list"
   : > "$_bullets"
@@ -1457,7 +1642,44 @@ write_section_index_for() {
   _title=$(section_title_for "$_section")
   _idx_target="$DOCS/$_section/index.md"
   _inc_spec=$(section_include_for "$_section")
-  write_index "$_idx_target" "$_title" "$_bullets" "$_inc_spec"
+  # M037 P03 (P2.1): emit a 1-sentence preamble for extra:* category
+  # indexes so the page leads with orientation instead of a bare bullet
+  # list. Reads optional `wiki.extra_dir_descriptions:` block from
+  # .orchestrator/config.yml when present; falls back to a generic
+  # "Reference materials in this category, sorted newest-first." line.
+  _preamble=""
+  if [ "$_is_extra_section" -eq 1 ]; then
+    _desc=""
+    _cfgfile="$ROOT/.orchestrator/config.yml"
+    if [ -f "$_cfgfile" ]; then
+      _desc=$(awk -v dn="$_section" '
+        BEGIN { state="pre" }
+        /^wiki:[[:space:]]*$/ { state="wiki"; next }
+        state=="wiki" && /^[^[:space:]#]/ { exit }
+        state=="wiki" && /^  extra_dir_descriptions:[[:space:]]*$/ { state="desc"; next }
+        state=="desc" && /^[^[:space:]#]/ { exit }
+        state=="desc" && /^  [a-zA-Z]/ { exit }
+        state=="desc" && /^    / {
+          line=$0
+          sub(/^    /, "", line)
+          if (match(line, /^[A-Za-z0-9_-]+:[[:space:]]*/)) {
+            k=substr(line, 1, RLENGTH-1)
+            sub(/:[[:space:]]*$/, "", k)
+            v=substr(line, RLENGTH+1)
+            sub(/^"/, "", v); sub(/"$/, "", v)
+            sub(/^\047/, "", v); sub(/\047$/, "", v)
+            sub(/[[:space:]]+$/, "", v)
+            if (k == dn) { print v; exit }
+          }
+        }
+      ' "$_cfgfile" 2>/dev/null)
+    fi
+    if [ -z "$_desc" ]; then
+      _desc="Reference materials in this category, sorted newest-first."
+    fi
+    _preamble="$_desc"
+  fi
+  write_index "$_idx_target" "$_title" "$_bullets" "$_inc_spec" "$_preamble"
   rm -f "$_bullets"
 }
 

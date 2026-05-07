@@ -1,0 +1,38 @@
+{# wiki/overrides/main.html — M037 P03 (P3.1) breadcrumb shim.
+
+   Material's navigation.path feature is Insiders-only and silently
+   ignored in the OSS theme (verified against material 9.5.49: zero
+   references to path.html or md-path). This template extends base.html
+   to render a lightweight breadcrumb trail above page content using
+   the public page.ancestors API.
+
+   The children[0].url fallback handles navigation.indexes sections
+   that themselves have no .url (their first child is the index page).
+   When page.ancestors is empty (top-level pages), the breadcrumb
+   block is suppressed entirely.
+
+   Absorbed verbatim from PBJ Central round-3 dogfood feedback —
+   see .orchestrator/proposals/M037-wiki-team-feedback-ready.md and
+   the M037 P03 PBJ feedback record
+   M037-P03-reference-page-orientation-affordances.md issue 1. #}
+{% extends "base.html" %}
+{% block content %}
+  {% if page and page.ancestors and page.ancestors | length > 0 %}
+    <nav class="md-pbj-breadcrumbs" aria-label="Breadcrumb"
+         style="font-size: 0.75rem; opacity: 0.7; margin: 0 0 0.6rem 0;">
+      <a href="{{ '/' | url }}">Home</a>
+      <span aria-hidden="true"> / </span>
+      {% for ancestor in page.ancestors | reverse %}
+        {%- set ahref = ancestor.url or (ancestor.children and ancestor.children[0].url) -%}
+        {% if ahref %}
+          <a href="{{ ahref | url }}">{{ ancestor.title }}</a>
+        {% else %}
+          <span>{{ ancestor.title }}</span>
+        {% endif %}
+        <span aria-hidden="true"> / </span>
+      {% endfor %}
+      <span>{{ page.title }}</span>
+    </nav>
+  {% endif %}
+  {{ super() }}
+{% endblock %}

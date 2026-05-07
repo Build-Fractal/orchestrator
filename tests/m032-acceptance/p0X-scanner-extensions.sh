@@ -52,12 +52,17 @@ else
   say_fail "FR-17 missing canonical proposals:M032-wiki-distribution-and-init-integration record"
 fi
 
-# Title carries [stage] badge (per FR-17 contract). Without stage frontmatter
-# the badge renders as [unknown].
-if grep -qE '^proposals:[^|]+\|[^|]+\|.* \[(stub|brief|specified|active|closed|unknown)\]$' "$OUT_PROP"; then
-  say_pass "FR-17 proposals records carry [stage] badge in title"
+# M037 P03 (P2.3) — [stage] badge is now opt-in. When `stage:` frontmatter
+# is set, the title carries [<stage>]. When absent, the title carries no
+# bracketed suffix at all (PBJ dogfood: rendering "[unknown]" in nav titles
+# is noise, not signal). The positive-case assertion lives at the fixture
+# block below (proposals:sample with stage=brief surfaces as [brief]).
+# Here we enforce the negative half of the new contract: no record may
+# carry the obsolete [unknown] badge.
+if grep -qE '^proposals:[^|]+\|[^|]+\|.* \[unknown\]$' "$OUT_PROP"; then
+  say_fail "FR-17 proposals records carry obsolete [unknown] badge (M037 P03 P2.3)"
 else
-  say_fail "FR-17 proposals records missing [stage] badge surface"
+  say_pass "FR-17 proposals omit [unknown] badge when stage frontmatter absent"
 fi
 
 # Opt-out flag works.

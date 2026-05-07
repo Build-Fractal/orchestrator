@@ -110,11 +110,34 @@ COUNT=0
 
 # extract_title <absolute-path>
 # Prints the display title on stdout. Never fails.
+#
+# M037 P03 (P2.1): prefer YAML frontmatter `version:` (the same field
+# wiki-generate-stubs.sh's derive_stub_title projects to nav titles)
+# before falling back to H1 then basename. Fixes section-index pages
+# rendering slug-shaped bullets for M036 reference-corpus chunks whose
+# bodies are empty (frontmatter + literal `|` placeholder, real content
+# behind external_pointer:).
 extract_title() {
   _p="$1"
   _t=""
   if [ -f "$_p" ]; then
-    _t=$(grep -m 1 '^# ' "$_p" 2>/dev/null | sed 's/^# //' | head -n 1)
+    _t=$(awk '
+      BEGIN { state="pre" }
+      NR == 1 && $0 == "---" { state="fm"; next }
+      state == "fm" && $0 == "---" { exit }
+      state == "fm" && $0 ~ /^[[:space:]]*version[[:space:]]*:[[:space:]]*/ {
+        v=$0
+        sub(/^[[:space:]]*version[[:space:]]*:[[:space:]]*/, "", v)
+        sub(/[[:space:]]+$/, "", v)
+        sub(/^"/, "", v); sub(/"$/, "", v)
+        sub(/^\047/, "", v); sub(/\047$/, "", v)
+        print v
+        exit
+      }
+    ' "$_p" 2>/dev/null)
+    if [ -z "$_t" ]; then
+      _t=$(grep -m 1 '^# ' "$_p" 2>/dev/null | sed 's/^# //' | head -n 1)
+    fi
   fi
   if [ -z "$_t" ]; then
     _b=$(basename "$_p" .md)
@@ -331,7 +354,14 @@ if [ "$INCLUDE_PROPOSALS" = "1" ] && [ -d "$ORCH/proposals" ]; then
     _pbase=$(basename "$_ppath" .md)
     _ptitle=$(extract_title "$_ppath")
     _pstage=$(extract_proposal_stage "$_ppath")
-    printf '%s|%s|%s [%s]\n' "proposals:$_pbase" "$_prel" "$_ptitle" "$_pstage"
+    # M037 P03 (P2.3): omit the [stage] suffix when stage is "unknown"
+    # (no frontmatter or no stage: field). PBJ dogfood feedback —
+    # rendering literal "[unknown]" in nav titles is noise, not signal.
+    if [ "$_pstage" = "unknown" ]; then
+      printf '%s|%s|%s\n' "proposals:$_pbase" "$_prel" "$_ptitle"
+    else
+      printf '%s|%s|%s [%s]\n' "proposals:$_pbase" "$_prel" "$_ptitle" "$_pstage"
+    fi
     COUNT=$((COUNT + 1))
   done < "$_plist"
   rm -f "$_plist"

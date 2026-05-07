@@ -362,3 +362,94 @@ Today's `regression-2026-05-07/` directory is checked in as the
 canonical PASS-leg baseline. Yesterday's `regression-2026-05-06/` is
 the canonical BLOCK-leg baseline (deliberation transcripts missing —
 see C4).
+
+---
+
+## Addendum 2026-05-07 — Live-Extraction Smoke (extract-side risk retirement)
+
+The smoke runs documented above exercised the **conversus fidelity gate**
+with a real LLM (the deliberation), but the upstream **Tier 2 LLM
+extraction call** (`extract_tier_2_dispatch` `live` mode) was hand-staged
+by the orchestrating session and never actually shelled out to a real
+model invocation. CON-3 closure was preserved end-to-end, but the
+helper's `live` branch had only ever returned a "deferred per CON-3"
+stub error.
+
+This addendum captures the complementary smoke: a real `claude -p`
+invocation through `extract_tier_2_dispatch`, with the conversus gate
+stubbed to PASS. The two smokes together cover the full Tier 2 pipeline
+end-to-end with live LLMs at one end at a time.
+
+### Wiring landed
+
+- `scripts/knowledge/lib/extract-tier-2-llm.sh` — `live` case branch
+  implemented. Shells out to `claude -p --output-format json`, parses
+  via `python3` one-liner (heredoc), enforces a default-closed opt-in
+  flag (`ORCHESTRATOR_TIER2_LIVE=1`) and an operator-set hard cost cap
+  (`ORCHESTRATOR_TIER2_LIVE_COST_CAP_USD`, default `1.0`). Stub paths
+  (`stub:pass` / `stub:block`) are unchanged byte-for-byte; the M036/P03
+  phase suite remains 14/14 green.
+- `tools/m036-p03-live-smoke.sh` — single-leg harness. Stages a
+  workspace under `mktemp -d`, copies `scripts/`, `templates/`, and the
+  conversus stub fixtures, runs `extract-reference.sh` with
+  `EXTRACT_TIER_2_DISPATCH=live ORCHESTRATOR_TIER2_LIVE=1
+  CONVERSUS_STUB=1 CONVERSUS_STUB_VERDICT=PASS` against the synthetic
+  fixture. Persists evidence (extracted chunk, unit_close JSONL line,
+  driver stdout/stderr) under
+  `.orchestrator/milestones/M036/p03-live-smoke-evidence/`.
+- `tests/fixtures/m036-p03-tier-2-live/{sample.md,extract-manifest.yaml}`
+  — synthetic representative-of-PBJ regulatory fixture (4341 bytes,
+  6 top-level sections, definitions + calculations + exclusions +
+  reporting cadence). No real CMS content; numbers and thresholds are
+  illustrative.
+
+### Run record (2026-05-07T23:45:40Z)
+
+| Field | Value |
+|---|---|
+| Cite | `tier2-live-smoke-01` |
+| Model | `claude-opus-4-7` (whatever `claude -p` defaults to — task-type=extraction smart-tier routing is M036b polish) |
+| Tokens in | 5 |
+| Tokens out | 1485 |
+| Cost (real) | **\$0.24069525** |
+| Cost cap | \$1.00 (operator-set) |
+| Gate verdict | PASS (stubbed) |
+| Driver rc | 0 |
+| Verifications | **8/8 PASS** (driver rc, EXTRACTED stdout, verdict=PASS stdout, .structured.md present + non-empty + has headings, unit_close record present + cite_id matches) |
+
+Persisted artifacts under `.orchestrator/milestones/M036/p03-live-smoke-evidence/`:
+
+```
+REF-regulatory-tier2-live-smoke-01.structured.md   (87 lines, full heading structure preserved)
+unit_close.jsonl                                   (1 record, well-formed)
+driver.stdout                                      (full driver run trace)
+driver.stderr
+```
+
+### Risk retired
+
+The Tier 2 LLM-extraction-call wiring is no longer "stub-only" against
+the path of execution. Both halves of the pipeline have now been
+exercised live (gate via the original smoke leg; extraction via this
+addendum). For the 2026-05-15 PBJ pilot, the residual concerns are the
+three operator-facing caveats from the original smoke run (model-attribution
+floor, deliberation-transcript retention, advisory-noise floor) — none
+of which block pilot entry.
+
+### Reproducibility
+
+```bash
+ORCHESTRATOR_TIER2_LIVE=1 bash tools/m036-p03-live-smoke.sh
+```
+
+Optional: cap override.
+
+```bash
+ORCHESTRATOR_TIER2_LIVE=1 ORCHESTRATOR_TIER2_LIVE_COST_CAP_USD=2.0 \
+  bash tools/m036-p03-live-smoke.sh
+```
+
+Workspace is `mktemp -d` and is removed on exit; persistent evidence is
+copied under `.orchestrator/milestones/M036/p03-live-smoke-evidence/`
+before cleanup. Cost will vary slightly run-to-run (5-tier non-determinism
++ different output token counts).

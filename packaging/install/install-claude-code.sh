@@ -459,6 +459,29 @@ else
   config_written=1
 fi
 
+# --- 4.4 install-meta.txt sidecar (early write, robust to staging failure) ---
+# Records the orchestrator source repo path so staged scripts (e.g.
+# scripts/lifecycle/wiki-init.sh) can resolve packaging/bundle/manifest.yml
+# from a consumer project. Sidecar (not interleaved into installed-files.txt)
+# because the latter is a flat `<rel>\tmode:<copy|symlink>` list consumed
+# positionally by the uninstall path.
+#
+# Written BEFORE Stage 4.5 (asset staging) so an FR-22 staged-dirs-collision
+# on a re-install (e.g. wiki/ pre-staged by wiki-init.sh on a prior run)
+# does not lose the metadata. The sidecar reflects the install ATTEMPT, not
+# successful completion of every asset.
+meta_file="$PROJECT_DIR/.orchestrator/install-meta.txt"
+if [ "$DRY_RUN" = "1" ]; then
+  echo "would_write=$meta_file"
+else
+  mkdir -p "$(dirname "$meta_file")"
+  {
+    printf 'source_root=%s\n' "$REPO_ROOT"
+    printf 'runtime=%s\n' "claude-code"
+    printf 'installed_at=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  } > "$meta_file"
+fi
+
 # --- 4.5 Stage runtime payload via project_assets: manifest schema (FR-2 + FR-3 + FR-4 + FR-22) ---
 # The pre-M032 hardcoded loop is fully replaced by the project_assets:
 # schema in packaging/bundle/manifest.yml. Each tuple from
@@ -544,19 +567,6 @@ if [ "$DRY_RUN" = "0" ]; then
     fi
   done < <(bash "$REPO_ROOT/scripts/lifecycle/read-project-assets.sh" "$REPO_ROOT/packaging/bundle/")
   echo "staged=$runtime_staged files manifest=$manifest_file"
-
-  # install-meta.txt sidecar: records the orchestrator source repo path so
-  # staged scripts (e.g. scripts/lifecycle/wiki-init.sh) can resolve
-  # packaging/bundle/manifest.yml when invoked from the consumer project.
-  # Sidecar — not interleaved into installed-files.txt — because the latter
-  # is a flat `<rel>\tmode:<copy|symlink>` list consumed positionally by the
-  # uninstall path (install-claude-code.sh:213-226).
-  meta_file="$PROJECT_DIR/.orchestrator/install-meta.txt"
-  {
-    printf 'source_root=%s\n' "$REPO_ROOT"
-    printf 'runtime=%s\n' "claude-code"
-    printf 'installed_at=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-  } > "$meta_file"
 fi
 
 # --- 5. Summary line ---

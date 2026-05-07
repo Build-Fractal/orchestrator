@@ -140,5 +140,30 @@ else
   sed -n '1,40p' "$WIKI_LOG2" >&2 || true
 fi
 
+# 8. PBJ regression — re-install over a project that already has wiki/
+#    (because wiki-init.sh staged it on a prior run) trips the FR-22
+#    staged-dirs-collision oracle on the wiki entry. install-meta.txt MUST
+#    still get written because it's the recovery handle for the staged
+#    wiki-init.sh fallback. Surfaced via PBJ M037 P01 first-deploy when
+#    the operator re-installed and found install-meta.txt missing.
+rm -f "$META_FILE"
+# wiki/ from step 7 is back on disk now with mkdocs.yml templated against
+# the project's git remote — exactly the state a re-install would hit.
+set +e
+REINSTALL_LOG="$TMP/reinstall.log"
+bash "$INSTALLER" --project-dir "$PROJECT" --force >"$REINSTALL_LOG" 2>&1
+REINSTALL_RC=$?
+set -e
+# install-meta.txt must exist regardless of whether the staging loop
+# completed cleanly. (Whether INSTALLER_EXIT itself is 0 or non-zero on
+# wiki collision is a separate concern not gated by this test.)
+if [ -f "$META_FILE" ] && grep -qF "source_root=$REPO_ROOT" "$META_FILE"; then
+  pass "install-meta.txt survives re-install over project with pre-staged wiki/ (PBJ regression; rc=$REINSTALL_RC)"
+else
+  fail "install-meta.txt missing after re-install (rc=$REINSTALL_RC) — PBJ regression"
+  sed -n '1,40p' "$REINSTALL_LOG" >&2 || true
+  sed -n '1,40p' "$WIKI_LOG2" >&2 || true
+fi
+
 echo "RESULT: $PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ]

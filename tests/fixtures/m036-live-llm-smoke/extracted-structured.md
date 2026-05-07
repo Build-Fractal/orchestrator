@@ -2,7 +2,7 @@
 schema_version: "1.0"
 type: tier-2-structured-extraction
 cite_id: "live-smoke-policy-01"
-category: "regulatory"
+category: "internal-policy"
 source: "synthetic-fixture"
 published: "2026-05-06"
 version: "v1.2-synthetic"
@@ -10,7 +10,7 @@ topic_tags: ["data-retention", "audit", "privacy"]
 applies_to_field: ["operational_records", "audit_records", "personal_data"]
 extracted_by: "claude-opus-4-7"
 extracted_at: "2026-05-06T00:00:00Z"
-derived_from: ["EC-REG-2024-07", "EC-POL-PRIV-002"]
+derived_from: ["EC-REG-2024-07", "EC-POL-PRIV-002", "EC-RUNBOOK-IR-001"]
 ---
 
 # EXAMPLE-CORP Data Retention Policy (Structured)
@@ -48,110 +48,84 @@ EC-POL-FIN-009).
 
 ## 3. Definitions
 
-### Operational Record
+- **Operational Record**: Any structured or semi-structured datum
+  generated as a side effect of normal service operation. Includes
+  request logs, transaction events, and metric samples.
 
-Any structured or semi-structured datum generated as a side effect of
-normal service operation. Includes request logs, transaction events,
-and metric samples.
+  [type: spec/term, applies_to_field: operational_records]
 
-[type: spec/term, applies_to_field: operational_records]
+- **Audit Record**: A timestamped, append-only entry produced by a
+  control surface (auth, access-control, configuration change). Audit
+  Records are a strict subset of Operational Records.
 
-### Audit Record
+  [type: spec/term, applies_to_field: audit_records]
 
-A timestamped, append-only entry produced by a control surface (auth,
-access-control, configuration change). Audit Records are a strict
-subset of Operational Records.
+- **Personal Data**: Data that identifies, or can reasonably be linked
+  to, a living individual. See EC-POL-PRIV-002 §3 for the canonical
+  definition; this policy uses that term in the same sense.
 
-[type: spec/term, applies_to_field: audit_records]
+  [type: spec/term, applies_to_field: personal_data, cites: EC-POL-PRIV-002]
 
-### Personal Data
+- **Retention Floor**: The minimum duration a record must be kept.
 
-Data that identifies, or can reasonably be linked to, a living
-individual. See EC-POL-PRIV-002 §3 for the canonical definition; this
-policy uses that term in the same sense.
+  [type: spec/term]
 
-[type: spec/term, applies_to_field: personal_data, cites: EC-POL-PRIV-002]
+- **Retention Ceiling**: The maximum duration a record may be kept.
 
-### Retention Floor
+  [type: spec/term]
 
-The minimum duration a record must be kept.
+- **Erasure**: The process of rendering a record permanently
+  unrecoverable, including from backups.
 
-[type: spec/term]
-
-### Retention Ceiling
-
-The maximum duration a record may be kept.
-
-[type: spec/term]
-
-### Erasure
-
-The process of rendering a record permanently unrecoverable, including
-from backups.
-
-[type: spec/term]
+  [type: spec/term, applies_to_field: [operational_records, audit_records, personal_data]]
 
 ## 4. Retention Requirements
 
-### R-1: 90-day Operational Record floor
+- **R-1**: Operational Records SHALL be retained for at least 90 days
+  from the date of generation. Rationale: incident-response teams
+  require a 90-day forensic window per EC-RUNBOOK-IR-001.
 
-Operational Records SHALL be retained for at least 90 days from the
-date of generation. Rationale: incident-response teams require a
-90-day forensic window per EC-RUNBOOK-IR-001.
+  [type: spec/requirement, applies_to_field: operational_records, cites: EC-RUNBOOK-IR-001]
 
-[type: spec/requirement, applies_to_field: operational_records, cites: EC-RUNBOOK-IR-001]
+- **R-2**: Audit Records SHALL be retained for at least 7 years.
+  Rationale: regulatory examination cycles run on a 7-year cadence
+  under EC-REG-2024-07 §4.
 
-### R-2: 7-year Audit Record floor
+  [type: spec/requirement, applies_to_field: audit_records, cites: EC-REG-2024-07]
 
-Audit Records SHALL be retained for at least 7 years. Rationale:
-regulatory examination cycles run on a 7-year cadence under
-EC-REG-2024-07 §4.
+- **R-3**: Operational Records containing Personal Data SHALL NOT be
+  retained beyond 365 days unless an explicit legal hold is recorded
+  in the legal-hold register. Rationale: data-minimization requirement
+  in EC-POL-PRIV-002 §5.
 
-[type: spec/requirement, applies_to_field: audit_records, cites: EC-REG-2024-07]
+  [type: spec/requirement, applies_to_field: [operational_records, personal_data], cites: EC-POL-PRIV-002]
 
-### R-3: 365-day Personal Data ceiling
+- **R-4**: Backup snapshots SHALL be subject to the same Retention
+  Ceiling as the underlying records. Erasure procedures MUST account
+  for backup propagation.
 
-Operational Records containing Personal Data SHALL NOT be retained
-beyond 365 days unless an explicit legal hold is recorded in the
-legal-hold register. Rationale: data-minimization requirement in
-EC-POL-PRIV-002 §5.
+  [type: spec/requirement, applies_to_field: [operational_records, audit_records]]
 
-[type: spec/requirement, applies_to_field: personal_data, cites: EC-POL-PRIV-002]
+- **R-5**: Retention metadata (the record describing how long a given
+  artifact was retained and when it was erased) is itself an Audit
+  Record and inherits R-2.
 
-### R-4: Backup propagation parity
-
-Backup snapshots SHALL be subject to the same Retention Ceiling as the
-underlying records. Erasure procedures MUST account for backup
-propagation.
-
-[type: spec/requirement, applies_to_field: operational_records]
-
-### R-5: Retention metadata is itself an Audit Record
-
-Retention metadata (the record describing how long a given artifact
-was retained and when it was erased) is itself an Audit Record and
-inherits R-2.
-
-[type: spec/requirement, applies_to_field: audit_records]
+  [type: spec/requirement, applies_to_field: audit_records]
 
 ## 5. Exceptions
 
-### E-1: Active investigation hold
+- **E-1**: Active incident-response investigations MAY hold records
+  beyond the Retention Ceiling for the duration of the investigation,
+  not exceeding 18 months. The hold MUST be logged in the legal-hold
+  register within 24 hours of being placed.
 
-Active incident-response investigations MAY hold records beyond the
-Retention Ceiling for the duration of the investigation, not exceeding
-18 months. The hold MUST be logged in the legal-hold register within
-24 hours of being placed.
+  [type: spec/constraint, applies_to_field: operational_records]
 
-[type: spec/constraint, applies_to_field: operational_records]
+- **E-2**: Records subject to a regulatory subpoena MUST be retained
+  for the duration of the subpoena, regardless of any otherwise-
+  applicable ceiling. This exception is non-overridable by R-3.
 
-### E-2: Regulatory subpoena hold
-
-Records subject to a regulatory subpoena MUST be retained for the
-duration of the subpoena, regardless of any otherwise-applicable
-ceiling. This exception is non-overridable by R-3.
-
-[type: spec/constraint, applies_to_field: personal_data]
+  [type: spec/constraint, applies_to_field: personal_data]
 
 ## 6. References
 

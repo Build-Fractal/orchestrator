@@ -302,6 +302,39 @@ not phase verdicts.
   graph-projection work that owns chunk-frontmatter
   `tier_2_concerns:` queryability. See
   `papercut-m036a-p03-smoke-pass-with-concerns.md`.
+- **Fixture re-extraction** — gate-recommended P1+P2 corrections from
+  the 2026-05-07 deliberation applied to
+  `tests/fixtures/m036-live-llm-smoke/extracted-structured.md` so the
+  canonical baseline is no longer carrying the 7 known errors flagged
+  in § "Fidelity Assessment" above. P1: `category: "regulatory"` →
+  `"internal-policy"` (FA-2/EA-N1); §3 Definitions, §4 Retention
+  Requirements, §5 Exceptions all reverted from `### Heading` form to
+  bold-bullet-list form matching source (EA-1/EA-2/EA-3); §4
+  extractor-added descriptive subtitles ("90-day Operational Record
+  floor," etc.) dropped. P2: R-3 `applies_to_field` expanded to
+  `[operational_records, personal_data]` (FA-1, co-applied with §4
+  revert per Phase 4 Dispute 2); R-4 `applies_to_field` expanded to
+  `[operational_records, audit_records]` per R-5 inheritance chain
+  (EA-5/FA-N2); Erasure term gains
+  `applies_to_field: [operational_records, audit_records,
+  personal_data]` (EA-4/FA-N1); `derived_from` gains
+  `EC-RUNBOOK-IR-001` as R-1 SHALL rationale authority (FA-3,
+  EA-7-modified). P3 inline `[source:*]` markers (EA-6) deferred per
+  arbiter pending schema authorization. Fidelity invariant preserved:
+  prose is verbatim from the prior extraction; only structural form
+  and annotation values changed. Validation: verifier-only
+  (`tools/verify/m036-p03-tier-2-pass-advisories-shape.sh` 7/7 PASS
+  unchanged — verifier exercises gate-helper shape on synthetic input,
+  is not coupled to fixture content). Optional fresh smoke run not
+  executed; rationale: the diff is mechanical against cited
+  source-line evidence in
+  `regression-2026-05-07/conversus-deliberation/summary/final.md`,
+  every change has a recorded rationale, and burning ~21 min
+  wall-clock + ~10 sonnet calls to confirm the deliberation produces
+  fewer advisories on a corrected baseline is a marginal-information
+  spend not justified pre-pilot. Future smoke runs against this
+  baseline will surface only genuinely new advisories or
+  deliberation non-determinism rather than the 7-issue noise floor.
 
 With all three caveats addressed, the smoke verdict moves toward
 GREEN for the 2026-05-15 PBJ pilot. The remaining post-pilot

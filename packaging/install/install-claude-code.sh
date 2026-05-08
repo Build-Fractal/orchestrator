@@ -18,13 +18,20 @@
 #   --dry-run            no writes; emit `would_write=<path>` lines
 #   --force              overwrite existing hook config and orchestrator config
 #   --verbose            extra debug output on stderr
+#   --mode copy|symlink (also: --mode=copy|symlink)
+#                        User-facing (M035 P01): selects asset-staging mode.
+#                        symlink mode links the runtime tree directly into
+#                        the orchestrator source repo so `git pull` in the
+#                        source repo updates every consumer immediately
+#                        (developer dogfood-velocity contract).
+#                        See references/installation.md
+#                        § Symlink-mode caveats for Unix-only / source-path
+#                        stability / cross-machine fragility constraints.
 #   --asset-mode-override copy|symlink
-#                        TEST-ONLY (M032 P01): overrides per-asset `mode:`
-#                        from packaging/bundle/manifest.yml's project_assets:
-#                        list. Used by P01 acceptance scripts to exercise
-#                        mode: symlink without re-authoring the manifest.
-#                        Will be replaced by manifest-declarable symlink
-#                        mode in P02+.
+#                        TEST-ONLY backward-compat alias for --mode.
+#                        Recognised but undocumented in --help; used by
+#                        M032 P01 acceptance scripts. Routes into the
+#                        same internal ASSET_MODE_OVERRIDE variable.
 #
 # Exit codes:
 #   0 success
@@ -50,9 +57,10 @@ FORCE=0
 VERBOSE=0
 UNINSTALL=0
 REPAIR=0
-# --asset-mode-override (TEST-ONLY, P01 surface; FR-3). Allowed values:
-# `copy` or `symlink`. Empty default means manifest mode (`mode: copy`)
-# wins. Will be replaced by manifest-declarable symlink mode in P02+.
+# Asset-staging mode override (M035 P01 T01). Both --mode (user-facing)
+# and --asset-mode-override (TEST-ONLY backward-compat alias) route here.
+# Allowed values: `copy` or `symlink`. Empty default means manifest mode
+# wins (i.e. `copy` per packaging/bundle/manifest.yml, CON-7).
 ASSET_MODE_OVERRIDE=""
 
 # --- Argument parsing (while-case, bash 3.2 safe) ---
@@ -79,6 +87,27 @@ while [ $# -gt 0 ]; do
       UNINSTALL=1; shift ;;
     --repair)
       REPAIR=1; shift ;;
+    # M035 P01 T01: --mode is the user-facing surface; routes to the same
+    # ASSET_MODE_OVERRIDE variable as the TEST-ONLY --asset-mode-override
+    # alias below (preserved for M032 P01 acceptance-script compatibility).
+    --mode)
+      shift
+      if [ $# -eq 0 ]; then
+        echo "FAIL: --mode requires copy|symlink" >&2
+        exit 1
+      fi
+      case "$1" in
+        copy|symlink) ASSET_MODE_OVERRIDE="$1" ;;
+        *) echo "FAIL: --mode requires copy|symlink" >&2; exit 1 ;;
+      esac
+      shift ;;
+    --mode=*)
+      _mode_val="${1#--mode=}"
+      case "$_mode_val" in
+        copy|symlink) ASSET_MODE_OVERRIDE="$_mode_val" ;;
+        *) echo "FAIL: --mode requires copy|symlink" >&2; exit 1 ;;
+      esac
+      shift ;;
     --asset-mode-override)
       shift
       if [ $# -eq 0 ]; then
@@ -98,7 +127,7 @@ while [ $# -gt 0 ]; do
       esac
       shift ;;
     -h|--help)
-      sed -n '2,35p' "$0"
+      sed -n '2,42p' "$0"
       exit 0 ;;
     *)
       echo "FAIL: unknown argument '$1'" >&2
@@ -471,6 +500,16 @@ fi
 # does not lose the metadata. The sidecar reflects the install ATTEMPT, not
 # successful completion of every asset.
 meta_file="$PROJECT_DIR/.orchestrator/install-meta.txt"
+# M035 P01 T01 (#Q-9): two new fields — `commit_sha=` (empty when .git
+# absent) and `version=` (top-line `## [X.Y.Z]` heading from CHANGELOG.md
+# per CON-4). Both lines are always emitted; empty values are explicit
+# (e.g. `commit_sha=`) so the M035 P01 drift helper can distinguish
+# "field absent (pre-M035 install)" from "field present but empty".
+commit_sha_val=""
+if [ -d "$REPO_ROOT/.git" ]; then
+  commit_sha_val="$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null)"
+fi
+version_val="$(awk '/^## \[/{print; exit}' "$REPO_ROOT/CHANGELOG.md" 2>/dev/null | sed -E 's/^## \[([^]]+)\].*/\1/')"
 if [ "$DRY_RUN" = "1" ]; then
   echo "would_write=$meta_file"
 else
@@ -479,6 +518,8 @@ else
     printf 'source_root=%s\n' "$REPO_ROOT"
     printf 'runtime=%s\n' "claude-code"
     printf 'installed_at=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    printf 'commit_sha=%s\n' "$commit_sha_val"
+    printf 'version=%s\n' "$version_val"
   } > "$meta_file"
 fi
 

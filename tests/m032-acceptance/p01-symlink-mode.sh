@@ -130,8 +130,12 @@ if [ "$rc_win" = "0" ]; then
     exit 1
 fi
 
-if ! grep -q 'POSIX-only in v1' "$TMP_BASE/run-windows.log"; then
-    emit_fail "FR-3:windows-fail-closed-missing-POSIX-only-message"
+# M035 P01 T01 (#Q-G4): advisory wording updated from "POSIX-only in v1"
+# to "symlink mode unsupported on this filesystem -- re-run with --mode=copy".
+# The exit-code contract (rc=3, fail-closed) is unchanged; only the user-
+# facing advisory text changed.
+if ! grep -q 'symlink mode unsupported on this filesystem' "$TMP_BASE/run-windows.log"; then
+    emit_fail "FR-3:windows-fail-closed-missing-advisory-message"
     cat "$TMP_BASE/run-windows.log" >&2
     exit 1
 fi

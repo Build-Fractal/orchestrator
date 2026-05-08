@@ -288,6 +288,22 @@ The installer is idempotent for skill registration; the no-op `cp -R` for runtim
 
 Once M035 P01 ships, `--mode=symlink` will register skills as symlinks pointing at the orchestrator repo, eliminating this re-register-on-edit cycle entirely.
 
+## Symlink-mode caveats
+
+`--mode=symlink` (M035 P01) links the consumer's runtime tree (`scripts/`, `commands/`, `references/`, `templates/`, `wiki/`) directly at the orchestrator source repo path, so a single `git pull` in the source repo updates every consumer immediately. This is the developer dogfood-velocity contract — the recommended mode when you are actively developing the orchestrator across multiple consumer projects on one machine. The defaults remain `--mode=copy` because copy mode is platform-agnostic and survives source-repo motion.
+
+The constraints:
+
+- **Unix-only at v1** (`#Q-8`). Symlink mode requires POSIX `ln -s`. Windows-native filesystems are fail-closed: the installer exits non-zero with `FAIL: symlink mode unsupported on this filesystem -- re-run with --mode=copy` on stderr. Copy mode (the default) is platform-agnostic. Windows symlink support defers to M009 post-launch.
+
+- **Source-path stability**: the symlink target is the absolute orchestrator source repo path captured at install time. Moving or deleting the source repo breaks the consumer install loud — `find <project>/scripts -type l` resolves to a missing path. Recovery is `--uninstall` followed by re-install in copy mode, or restoring the source repo at its original absolute path.
+
+- **Cross-machine fragility** (`#Q-7`): symlinks survive `git pull` in the source repo cleanly on one machine, but break across machines. A repo cloned to a different absolute path on a second machine produces broken symlinks until you re-install. Hardlink mode is intentionally not offered at v1 because hardlinks would silently desynchronize on `git pull` (each pull rewrites the inode rather than updating the existing one).
+
+- **Bundle hygiene**: symlink mode bypasses pre-publish bundle filters. Files visible in a symlink-mode consumer's runtime tree (e.g. dogfood-only fixtures under `scripts/`, in-development experimental templates) may be excluded from copy-mode adopter installs by design. If you publish or share with adopters who consume via the published packages, validate against a fresh `--mode=copy` install rather than a symlink-mode install.
+
+In practice: symlink mode is for the orchestrator-developer's own machine. Adopters should use copy mode (the default).
+
 ## Uninstall
 
 All three installers support `--uninstall`:

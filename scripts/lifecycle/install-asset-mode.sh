@@ -48,39 +48,21 @@ case "$MODE" in
         exit 0
         ;;
     symlink)
-        # Windows fail-closed (NG-9).
+        # Windows fail-closed (NG-9 / M035 P01 #Q-G4 advisory shape).
         if [ "${M032_FORCE_WINDOWS:-0}" = "1" ] || ! command -v ln >/dev/null 2>&1; then
-            echo "FAIL: mode: symlink is POSIX-only in v1 (NG-9)" >&2
+            echo "FAIL: symlink mode unsupported on this filesystem -- re-run with --mode=copy" >&2
             exit 3
         fi
-        # Resolve runtime root: prefer ~/.claude/orchestrator-runtime/<version>/
-        # (highest-versioned subdir if multiple exist), else fall back to
-        # <PROJECT_DIR>/.orchestrator/runtime-cache/ (Assumption A-1).
-        runtime_root="${HOME}/.claude/orchestrator-runtime"
-        resolved_runtime=""
-        if [ -d "$runtime_root" ]; then
-            # Pick highest-versioned subdir via lexicographic sort (v1
-            # constraint: version slugs are sortable strings).
-            picked=""
-            # Enumerate immediate subdirs, sort, pick last.
-            picked="$(
-                find "$runtime_root" -mindepth 1 -maxdepth 1 -type d 2>/dev/null \
-                    | sort \
-                    | tail -n 1
-            )"
-            if [ -n "$picked" ]; then
-                resolved_runtime="$picked"
-            fi
-        fi
-        if [ -z "$resolved_runtime" ]; then
-            # Fallback per Assumption A-1.
-            resolved_runtime="${PROJECT_DIR}/.orchestrator/runtime-cache"
-            mkdir -p "$resolved_runtime"
-        fi
-        # Compute basename of source (strip trailing slash).
-        src_no_slash="${SRC%/}"
-        src_base="${src_no_slash##*/}"
-        link_target="${resolved_runtime}/${src_base}"
+        # M035 P01 T01: link directly at the orchestrator source repo path
+        # ($SRC, an absolute path the installer already supplies via
+        # "$REPO_ROOT/${src_rel%/}"). This replaces the M032/P01-era
+        # managed-runtime-root indirection (~/.claude/orchestrator-runtime/
+        # or <PROJECT_DIR>/.orchestrator/runtime-cache/) per the US-1
+        # dogfood-velocity contract — a single `git pull` in the source
+        # repo updates every consumer immediately. Caveats (Unix-only,
+        # source-path stability, cross-machine fragility) are documented
+        # in references/installation.md § Symlink-mode caveats.
+        link_target="$SRC"
         # Idempotency: second invocation overwrites the symlink.
         mkdir -p "$(dirname "$DST")"
         rm -rf "$DST"

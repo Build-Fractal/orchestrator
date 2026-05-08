@@ -2,6 +2,23 @@
 # and dispatched by the per-runtime installers (install-{claude-code,codex,cursor}.sh).
 # See P01-PLAN.md key-link for the manifest → reader → installer chain.
 schema_version: "1.0"
+# ─── Bundle hygiene contract (M035 P02 T05) ──────────────────────
+# Pre-publish filter rules (build-bundle.sh apply_bundle_hygiene_filter):
+#   1. Pattern exclusion: files matching basename glob
+#      `m[0-9]*-p[0-9]*-*` under any of:
+#        scripts/verify/
+#        tools/verify/
+#        templates/conversus-presets/
+#      are excluded from the staged bundle. This kills the bulk
+#      milestone-internal verifier corpus in one rule.
+#   2. Magic-comment opt-out: any file whose first 10 lines
+#      contain a header line matching:
+#        `^\s*#?\s*bundle:\s*dogfood-only`
+#      is excluded. Self-documenting; tag dogfood-only artifacts
+#      explicitly when authoring.
+# Verified by tools/verify/m035-p02-bundle-hygiene-filter.sh and
+# tools/verify/m035-p02-npm-pack-contents.sh. See proposal at
+# .orchestrator/proposals/m035-bundle-hygiene-pre-publish-filter.md.
 type: bundle-manifest
 name: "orchestrator"
 version: "0.3.0-dev"

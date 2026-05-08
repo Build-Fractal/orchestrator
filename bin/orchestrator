@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# bin/orchestrator -- v1 binary entry point for @build-fractal/orchestrator.
+#
+# v1 surface: --version, --help, no-args banner. No subcommand dispatch.
+# Adopters reach orchestrator commands through registered Claude Code
+# skills (orchestrator:<cmd> prefix per D-RN-3 / dr-code-031), not
+# through this binary. The binary's load-bearing v1 job is to be
+# present on PATH so `which orchestrator` returns 0 and so package-
+# manager smoke tests survive `orchestrator --version`.
+#
+# Bash 3.2 compatible. No declare -A, no jq, no python.
+
+set -u
+
+# Resolve the package.json beside the bin directory.
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PKG_JSON="$SCRIPT_DIR/../package.json"
+
+read_version() {
+  # Bash 3.2 + grep + sed only — no jq dependency.
+  # package.json "version" line shape: "version": "X.Y.Z",
+  if [ ! -f "$PKG_JSON" ]; then
+    echo "FAIL: package.json not found at $PKG_JSON" >&2
+    return 1
+  fi
+  grep -E '^[[:space:]]*"version"[[:space:]]*:' "$PKG_JSON" \
+    | head -1 \
+    | sed -E 's/.*"version"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/'
+}
+
+print_banner() {
+  local v
+  v="$(read_version)" || return 1
+  cat <<EOF
+@build-fractal/orchestrator v${v}
+
+Autonomous multi-phase orchestration skills for Claude Code, Codex,
+and Cursor. Adopter commands ship as registered skills with the
+prefix orchestrator:<cmd> — see installed CLAUDE.md or
+references/installation.md for the command surface.
+
+Quick start:
+  orchestrator --version          # this binary's version
+  /orchestrator-init               # (in Claude Code) bootstrap a project
+  /orchestrator-status             # (in Claude Code) headline status
+
+Documentation: https://github.com/Build-Fractal/orchestrator
+EOF
+}
+
+case "${1:-}" in
+  --version|-v)
+    read_version
+    ;;
+  --help|-h|"")
+    print_banner
+    ;;
+  *)
+    echo "FAIL: unknown invocation '$1'. The orchestrator binary surface is" >&2
+    echo "      --version, --help, or no-args. Adopter commands ship as" >&2
+    echo "      registered skills with the prefix 'orchestrator:<cmd>' —" >&2
+    echo "      run them inside Claude Code via /orchestrator-<cmd>." >&2
+    exit 1
+    ;;
+esac

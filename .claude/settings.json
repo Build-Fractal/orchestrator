@@ -54,7 +54,7 @@
       "WebFetch",
       "NotebookEdit",
       "Skill(speckit.*)",
-      "Skill(speckit.orchestrator.*)",
+      "Skill(orchestrator:*)",
       "Read(//tmp/**)",
       "Read(//private/tmp/**)",
       "Read(//var/folders/**)",

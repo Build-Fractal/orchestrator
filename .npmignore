@@ -1,0 +1,44 @@
+# .npmignore — M035 P02 T05 bundle-hygiene contract.
+#
+# Notes on layered filtering:
+#   - package.json `files:` is the primary whitelist (selects whole
+#     top-level subtrees: bin/, commands/, scripts/, templates/,
+#     references/, packaging/install/, packaging/bundle/,
+#     packaging/npm/, etc.).
+#   - When `files:` is present, the ROOT .npmignore is largely
+#     subordinate to the whitelist for top-level entries — but per-
+#     subdirectory .npmignore files (e.g. scripts/verify/.npmignore,
+#     templates/conversus-presets/.npmignore) DO prune dogfood-only
+#     artifacts from inside whitelisted subtrees. That is where the
+#     M035 P02 T05 bundle-hygiene rule-1 enforcement actually lives.
+#   - This root file is a defense-in-depth backstop and a discoverable
+#     pointer for future maintainers.
+#
+# See .orchestrator/proposals/m035-bundle-hygiene-pre-publish-filter.md
+# and tools/verify/m035-p02-npm-pack-contents.sh for the contract.
+# See packaging/bundle/build-bundle.sh apply_bundle_hygiene_filter for
+# the build-time mirror of the same two rules.
+
+# Defense-in-depth: dirs that should never appear in the tarball.
+.orchestrator/
+specs/
+tests/
+tools/
+docs/
+wiki/
+.github/
+.planning/
+.git/
+node_modules/
+
+# Defense-in-depth: dogfood-only milestone-internal verifiers (real
+# enforcement is per-subdir .npmignore files; this is a backstop).
+scripts/verify/m[0-9]*-p[0-9]*-*
+tools/verify/m[0-9]*-p[0-9]*-*
+templates/conversus-presets/m[0-9]*-p[0-9]*-*
+
+# Editor/scratch debris.
+.DS_Store
+*.swp
+*.tmp
+*~

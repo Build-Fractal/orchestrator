@@ -47,6 +47,89 @@ before-implement
 after-implement
 before-commit"
 
+# M035 P02 T05 — Bundle-hygiene pre-publish filter (#Q-9 absorption).
+# Two rules (per .orchestrator/proposals/m035-bundle-hygiene-pre-
+# publish-filter.md):
+#   1. Pattern exclusion: files matching basename glob
+#      m[0-9]*-p[0-9]*-* under scripts/verify/, tools/verify/, or
+#      templates/conversus-presets/ are excluded from the staged bundle.
+#   2. Magic-comment opt-out: any file whose first 10 lines carry
+#      `# bundle: dogfood-only` (or `bundle: dogfood-only` in YAML/MD
+#      frontmatter) is excluded.
+#
+# Verified by tools/verify/m035-p02-bundle-hygiene-filter.sh and
+# tools/verify/m035-p02-npm-pack-contents.sh.
+should_exclude_from_bundle() {
+    local file="$1"
+    local rel="${file#$REPO_ROOT/}"
+    local base
+    base="$(basename "$file")"
+
+    # Rule 1: pattern exclusion under specific directories.
+    case "$rel" in
+        scripts/verify/m[0-9]*-p[0-9]*-*|\
+        tools/verify/m[0-9]*-p[0-9]*-*|\
+        templates/conversus-presets/m[0-9]*-p[0-9]*-*)
+            return 0
+            ;;
+    esac
+
+    # Fallback: basename match plus parent-dir scope.
+    case "$base" in
+        m[0-9]*-p[0-9]*-*)
+            case "$rel" in
+                scripts/verify/*|tools/verify/*|templates/conversus-presets/*)
+                    return 0
+                    ;;
+            esac
+            ;;
+    esac
+
+    # Rule 2: magic-comment opt-out (header line or YAML frontmatter).
+    if [ -f "$file" ]; then
+        if head -10 "$file" 2>/dev/null \
+             | grep -qE '^[[:space:]]*#?[[:space:]]*bundle:[[:space:]]*dogfood-only' ; then
+            return 0
+        fi
+    fi
+
+    return 1
+}
+
+# Post-copy hygiene pass: prunes dogfood-only artifacts from a staged
+# bundle dir. Invoked at the end of cmd_build for any populated
+# subtrees that may carry milestone-internal verifiers.
+apply_bundle_hygiene_filter() {
+    local stage_dir="$1"
+    [ -d "$stage_dir" ] || return 0
+
+    # Pattern exclusion under three subdirs.
+    local subdir
+    for subdir in scripts/verify tools/verify templates/conversus-presets; do
+        [ -d "$stage_dir/$subdir" ] || continue
+        find "$stage_dir/$subdir" -type f -name 'm[0-9]*-p[0-9]*-*' \
+            -exec rm -f {} +
+    done
+
+    # Magic-comment exclusion: scan bundle-relevant subtrees.
+    local search_dirs=""
+    for subdir in scripts templates references commands; do
+        [ -d "$stage_dir/$subdir" ] && search_dirs="$search_dirs $stage_dir/$subdir"
+    done
+    [ -n "$search_dirs" ] || return 0
+
+    find $search_dirs -type f \
+            \( -name '*.sh' -o -name '*.md' -o -name '*.yml' -o -name '*.yaml' \) \
+            2>/dev/null \
+        | while IFS= read -r f; do
+            if head -10 "$f" 2>/dev/null \
+                 | grep -qE '^[[:space:]]*#?[[:space:]]*bundle:[[:space:]]*dogfood-only'; then
+                rm -f "$f"
+                [ "${VERBOSE:-0}" = "1" ] && echo "excluded=$f" >&2
+            fi
+        done
+}
+
 resolve_version() {
     if [ -f "$REPO_ROOT/VERSION" ]; then
         # Strip whitespace from VERSION file.
@@ -99,6 +182,9 @@ cmd_build() {
     if [ -f "$README" ]; then
         printf 'wrote=%s\n' "$README"
     fi
+
+    # M035 P02 T05 — apply bundle-hygiene pre-publish filter.
+    apply_bundle_hygiene_filter "$BUNDLE_DIR"
 
     printf 'BUILD: version=%s skills=%d hooks=%d\n' "$version" "$EXPECTED_SKILLS" "$EXPECTED_HOOKS"
 }

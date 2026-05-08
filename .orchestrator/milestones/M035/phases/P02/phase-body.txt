@@ -1,0 +1,35 @@
+## What was built
+
+P02 establishes the npm publishing channel for `@build-fractal/orchestrator` end-to-end:
+
+- **T01 — `package.json` + `bin/orchestrator`**: scoped manifest declares `@build-fractal/orchestrator` (D-RN-1), `0.9.2` from `CHANGELOG.md` top-line (CON-4), `engines.node>=14`, `os: [darwin, linux]` (D003 / MIT-9 npm-side Windows fail-closed), and the postinstall pointer. The binary entry point ships a jq-free `--version` reader, a `--help` banner naming the `orchestrator:<cmd>` cohort prefix (D-RN-3), and non-zero exit on unknown invocation — subcommand dispatch is deferred post-launch.
+- **T02 — `packaging/npm/postinstall.sh`**: thin delegate. Windows fail-closed via `uname -s` (belt-and-suspenders behind the package.json `os` field), INIT_CWD-aware project-dir resolution with NPM_PREFIX global-install short-circuit, Claude Code soft-fail (runtime-absent → advisory + exit 0 supports CI-runner use case), DRY_RUN=1 emits `would_invoke=` lines (D002 fixture-strategy contract), and final delegation to `packaging/install/install-claude-code.sh` preserving M025's manifest mechanism (CON-7 reversibility-gate).
+- **T03 — Constitution Principle XVI test (CON-5)**: `tests/m035-acceptance/cross-channel-byte-equivalence.sh` ships with all three channel arms wired but only the npm arm functional; homebrew + curl-pipe-bash arms emit explicit `SKIP: pending P03/P04` lines until the upstream phases extend. The hashing helper produces a deterministic, locale-independent fingerprint (`LC_ALL=C sort` + per-file shasum + outer shasum). The exclusion list (MIT-2) lives canonically in `references/installation.md § Channel-specific metadata files` and is read at runtime via awk extraction — single source of truth by mechanism, not just convention.
+- **T04 — `.github/workflows/release.yml` skeleton**: two-job split with CON-6 defense-in-depth (structural job-condition + runtime negative-assertion step). PR-validate runs all upstream verifiers + the npm-channel byte-equivalence arm without secrets; npm-publish gates on `startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push'` to block fork-PR exfiltration of `secrets.NPM_TOKEN`. Tag-vs-manifest version-gate prevents accidental publish of mismatched versions. SC-14 PR-build job-condition assertion landed both as static-analysis verifier and runtime check.
+- **T05 — Bundle hygiene + phase suite (#Q-9 absorption)**: discovered at execution time that `package.json` `files:` whitelist + a root-only `.npmignore` left 796 dogfood verifiers in the tarball — npm honors the root `.npmignore` only weakly when the whitelist is present. Per-subdir `.npmignore` files (`scripts/verify/.npmignore`, `templates/conversus-presets/.npmignore`) are the load-bearing layer. `npm-pack-contents` verifier runs actual `npm pack` and inspects the tarball: 19 include/exclude assertions, all passing. Phase-suite aggregator chains all eight P02 verifiers in T01→T05 order and emits `BATTERY: pass=8 fail=0`.
+
+## Plan-phase Open Questions resolved
+
+- **#Q-7** → CI runner platform = `ubuntu-latest` (D001).
+- **#Q-10** → test-fixture strategy = `npm pack` to local tarball, `npm install -g` into mktemp prefix; no real-registry calls (D002).
+- **#Q-G9 / MIT-9** → Windows guard = `package.json` `engines`+`os` arrays (primary) + postinstall `uname -s` (secondary) (D003).
+- **#Q-9** → install-meta.txt schema extension absorbed into T05 bundle hygiene; pattern-rule + magic-comment opt-out catches the bulk forward; retroactive dogfood-tagging audit explicitly deferred.
+
+## Verification
+
+- `tools/verify/m035-p02-phase-suite.sh` → `BATTERY: pass=8 fail=0`
+- All eight task-grain verifiers green: `package-json-shape` (7), `bin-entry` (3), `postinstall-shape` (9), `byte-equivalence-skeleton` (10), `installation-doc-exclusion-list` (6), `release-workflow-shape` (10), `bundle-hygiene-filter` (10), `npm-pack-contents` (19).
+- Real-bundle smoke: `npm pack` against the modified bundle produces a clean tarball with zero dogfood verifiers (down from 796 pre-T05).
+
+## Patterns established
+
+- Per-subdir `.npmignore` is the load-bearing dogfood-exclusion layer when `package.json` `files:` whitelist is present
+- Verifier shape: `BATTERY: pass=N fail=N` (and `skip=N` where applicable) for grep-aggregable consolidate-time rollups
+- CON-6 defense-in-depth: structural job-condition + runtime env-var negative-assertion step
+- DRY_RUN=1 as pre-delegate exit point — captures the resolved invocation without side effects, which the byte-equivalence test depends on
+
+## Caveats
+
+- `scripts/util/run-probe.sh` does not export `REPO_ROOT` to child probes; T01, T02, T05 staged probes all hit this and applied a defensive `REPO_ROOT="${REPO_ROOT:-...}"` fallback. Recommended follow-up paper-cut: either export REPO_ROOT in `run-probe.sh` or update its docstring to make the contract explicit.
+- `append-decision.sh` produces 7-column-table rows; the M035 P01.5 D-RN-### decisions used the new `### <Title> { #dr-code-NNN }` heading-shape. Reshape from table-row to heading-shape is a separate paper-cut, not a P02 blocker.
+- T04 release.yml is a *skeleton*: P03 extends with homebrew-bottle, P04 composes the curl-pipe-bash artifact, P05 adds signing + checksums. The npm-publish job is real but untested against GitHub Actions infrastructure until the first PR after merge.

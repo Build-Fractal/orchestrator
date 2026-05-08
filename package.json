@@ -1,0 +1,49 @@
+{
+  "name": "@build-fractal/orchestrator",
+  "version": "0.9.2",
+  "description": "Autonomous multi-phase orchestration skills for Claude Code, Codex, and Cursor",
+  "homepage": "https://github.com/Build-Fractal/orchestrator",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Build-Fractal/orchestrator.git"
+  },
+  "license": "MIT",
+  "author": "Build-Fractal",
+  "bin": {
+    "orchestrator": "bin/orchestrator"
+  },
+  "scripts": {
+    "postinstall": "bash packaging/npm/postinstall.sh"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "os": [
+    "darwin",
+    "linux"
+  ],
+  "files": [
+    "bin/",
+    "commands/",
+    "scripts/",
+    "templates/",
+    "references/",
+    "packaging/install/",
+    "packaging/bundle/",
+    "packaging/npm/",
+    "packaging/SKILL.md",
+    "CHANGELOG.md",
+    "CLAUDE.md",
+    "LICENSE",
+    "README.md"
+  ],
+  "keywords": [
+    "orchestrator",
+    "claude-code",
+    "codex",
+    "cursor",
+    "ai-coding",
+    "autonomous-agents",
+    "spec-driven-development"
+  ]
+}

@@ -320,6 +320,25 @@ orchestrator source repo.
 
 and exit non-zero. This constraint is recorded here so P05 plan-phase has the contract on disk; M035 P01 ships no `--rollback` code (the `#Q-G8` resolution).
 
+## Channel-specific metadata files
+
+The cross-channel byte-equivalence contract (Constitution Principle XVI / FR-14 / SC-10 / SC-12 / CON-5) requires the runtime layout produced by every distribution channel — npm, homebrew, curl-pipe-bash — to be byte-identical at a given release tag. This is verified by hashing the staged runtime tree post-install and comparing across channels.
+
+The hash MUST exclude **per-install metadata files** that are legitimately channel-specific. The canonical exclusion list (M035 P02 T03 / MIT-2 enumeration):
+
+| Path                              | Channel(s) | Why excluded                                                  |
+|-----------------------------------|------------|---------------------------------------------------------------|
+| `.orchestrator/install-meta.txt`  | all        | Operator-specific absolute paths (FR-6).                      |
+| `.orchestrator/.previous-version` | all        | Per-install rollback marker (FR-12).                          |
+| `package.json`                    | npm        | npm-channel manifest; absent in homebrew/curl channels.       |
+| `package-lock.json`               | npm        | npm transitive lock; not authored at release time.            |
+| `node_modules/`                   | npm        | npm-installed dependencies; absent in non-npm channels.       |
+| `.brew/*.bottle.tab`              | homebrew   | Homebrew receipt files (P03 will introduce).                  |
+| `Library/Caches/Homebrew/`        | homebrew   | Homebrew bottle cache (P03).                                  |
+| `.git/`, `.github/`               | all        | Repository metadata; not staged into adopter projects.        |
+
+Plan-phase authors extending this list (P03, P04, future distribution channels) MUST update this section first, then reference it from `tests/m035-acceptance/cross-channel-byte-equivalence.sh`. The test reads the exclusion globs from this document at runtime via grep — no hardcoded list duplication.
+
 ## Uninstall
 
 All three installers support `--uninstall`:

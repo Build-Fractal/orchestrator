@@ -84,7 +84,7 @@ ls -la "$(cd scripts/migrate/.. && pwd)/knowledge/rebuild-index.sh"
 
 …must show the existing `rebuild-index.sh` file. If `_MIGRATE_DIR` is structured differently than expected, adjust the `cd` accordingly.
 
-### Step 3: Smoke run on the spec-kit-orchestrator repo itself
+### Step 3: Smoke run on the orchestrator repo itself
 
 ```
 tmp=$(mktemp -d)

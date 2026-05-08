@@ -137,7 +137,7 @@ A minimal conforming instruction file looks like:
 description: "One-line summary."
 ---
 
-# speckit.orchestrator.<command>
+# orchestrator:<command>
 
 Brief intro.
 
@@ -161,3 +161,9 @@ Brief intro.
 
 <!-- or any Output Format alias -->
 ```
+
+The active heading shape is `# orchestrator:<command>`. Pre-M035 P01.5
+instruction files used the legacy `# speckit.orchestrator.<command>`
+namespaced-alias shape; that form is preserved in historical and
+migration documentation only (see `commands/migrate.md` AD-15) and is
+NOT a live registration surface post-M035 P01.5.

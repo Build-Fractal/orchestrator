@@ -34,7 +34,7 @@ Out of scope:
 
 ### Step 1: Locate the insertion point in `scripts/dispatch/dispatch-interface.sh`
 
-Open `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/dispatch/dispatch-interface.sh` and find the block at lines 45–50 (line numbers approximate; match by content):
+Open `/Users/brettkellgren/Sites/orchestrator/scripts/dispatch/dispatch-interface.sh` and find the block at lines 45–50 (line numbers approximate; match by content):
 
 ```bash
 TASK_PLAN=""
@@ -76,7 +76,7 @@ The block:
 
 ### Step 3: Create `scripts/verify/m020-p02-dispatch-query-wrapper.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p02-dispatch-query-wrapper.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p02-dispatch-query-wrapper.sh`
 
 ```bash
 #!/usr/bin/env bash

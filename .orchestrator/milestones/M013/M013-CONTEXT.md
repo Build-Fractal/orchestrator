@@ -35,7 +35,7 @@ finalized_at: "2026-04-21T16:42:11Z"
 
 **In scope for M013:**
 
-- The dogfood target is **`github.com/Build-Fractal/spec-kit-orchestrator` (this repo's own origin)**. The repo is confirmed clean of hand-maintained Issues, so the FR-14 re-init marker-search path will be verified on empty baselines rather than mixed-origin state.
+- The dogfood target is **`github.com/Build-Fractal/orchestrator` (this repo's own origin)**. The repo is confirmed clean of hand-maintained Issues, so the FR-14 re-init marker-search path will be verified on empty baselines rather than mixed-origin state.
 - **FR-13 conversus UAT PR gate is wired AND dogfooded within M013** (SC-9 is **not** N/A for this cut). The adapter must be exercised end-to-end in at least one test at the UAT PR gate before M013 closes, so that M014's downstream consumption lands on a known-good adapter integration and any sharp edges surface here rather than leaking into M014 scope.
 - **Multi-project readiness**: the sidecar-per-project pattern (FR-6 at `.orchestrator/integrations/github.json`) must work cleanly when a second orchestrator-using project is introduced in the near term. Planning should verify that no helper script hard-codes repo slugs, orchestrator-id namespaces, or label palettes in a way that prevents a second consuming project from running `orchestrator:github init` independently against its own remote.
 
@@ -66,7 +66,7 @@ finalized_at: "2026-04-21T16:42:11Z"
 - **SC-13 operator overhead ceiling** — **recommended target**: combined auth rotation + rate-limit diagnostics + cache reconciliation ≤ **2 hours/quarter/operator** during steady-state use. Exceeding this during M013 dogfooding is signal for M009 launch docs to recommend GitHub App over PAT as the default onboarding path.
 - **Rate-limit preflight threshold** (FR-16): projected GraphQL volume > 50 mutations triggers a `gh api rate_limit` preflight. Keeping the threshold at 50 (the spec default) rather than lowering it — dogfood dataset sizes during M013 are expected to exceed 50 mutations on first-init for realistic milestones, so the preflight will be exercised naturally.
 - **FR-17 observability emission shape**: `conversus_gate_invocation` record ships with the spec's `{gate_id, adapter_version, verdict, llm_calls, elapsed_ms, estimated_cost_usd}` baseline. No additional fields added at this stage — M019 owns schema evolution; M013 is a producer only.
-- **Dogfood-target-specific constraint**: the `Build-Fractal/spec-kit-orchestrator` remote must have Projects v2, Issues, Milestones, and Discussions enabled (Discussions prerequisite inherited from M012). Verify before P02 planning.
+- **Dogfood-target-specific constraint**: the `Build-Fractal/orchestrator` remote must have Projects v2, Issues, Milestones, and Discussions enabled (Discussions prerequisite inherited from M012). Verify before P02 planning.
 
 ## Open Questions
 

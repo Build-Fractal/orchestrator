@@ -32,7 +32,7 @@ The connected-component algorithm is the standard union-find or BFS-from-each-un
 
 ### Step 1: Create `scripts/knowledge/lib/cluster.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/knowledge/lib/cluster.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/knowledge/lib/cluster.sh`
 
 Reference implementation:
 
@@ -323,7 +323,7 @@ Note: this implementation uses an awk pass for final grouping to dodge the subsh
 
 ### Step 2: Create `scripts/verify/m020-p05-cluster-helper-contract.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p05-cluster-helper-contract.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p05-cluster-helper-contract.sh`
 
 Verifier asserts (1) the helper sources cleanly, (2) `cluster_id_for` produces deterministic AD-3-shaped IDs, (3) `cluster_compute` emits the expected schema (TAB-separated `<cluster-id>\t<member-id>` lines).
 
@@ -427,7 +427,7 @@ exit 0
 
 ### Step 3: Create `scripts/verify/m020-p05-cluster-determinism.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p05-cluster-determinism.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p05-cluster-determinism.sh`
 
 ```bash
 #!/usr/bin/env bash
@@ -489,7 +489,7 @@ exit 0
 
 ### Step 4: Create `scripts/verify/m020-p05-cluster-singleton-coverage.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p05-cluster-singleton-coverage.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p05-cluster-singleton-coverage.sh`
 
 Asserts ten-entry fixture (four near-duplicates above threshold by intentionally-overlapping topic+tags+body, plus six distinct entries) emits seven distinct cluster IDs covering all ten members exactly once. Uses an artificially-low threshold (0.1) plus topic-stuffed near-duplicates to make the four-cluster outcome robust.
 

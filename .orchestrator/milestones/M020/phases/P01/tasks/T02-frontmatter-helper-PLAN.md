@@ -42,7 +42,7 @@ append) are the consumers. T02 must NOT itself mutate any
 ### Step 1: Create `scripts/knowledge/lib/frontmatter.sh`
 
 File path:
-`/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/knowledge/lib/frontmatter.sh`
+`/Users/brettkellgren/Sites/orchestrator/scripts/knowledge/lib/frontmatter.sh`
 
 The file MUST expose, at minimum, these function signatures:
 
@@ -179,7 +179,7 @@ the same pattern.
 ### Step 3: Create the contract-test verification script
 
 Create
-`/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p01-frontmatter-helper-contract.sh`:
+`/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p01-frontmatter-helper-contract.sh`:
 
 ```bash
 #!/usr/bin/env bash
@@ -302,7 +302,7 @@ Create `/tmp/m020-p01-t02-smoke.sh`:
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
-ROOT="/Users/brettkellgren/Sites/spec-kit-orchestrator"
+ROOT="/Users/brettkellgren/Sites/orchestrator"
 . "$ROOT/scripts/knowledge/lib/index-utils.sh"
 . "$ROOT/scripts/knowledge/lib/detail-utils.sh"
 . "$ROOT/scripts/knowledge/lib/frontmatter.sh"

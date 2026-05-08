@@ -43,8 +43,8 @@ T04 ships two final P01 verifiers and closes the P01 phase-suite gate.
 
 ## Files Written
 
-- /Users/brettkellgren/Sites/spec-kit-orchestrator/tools/verify/m031-p01-phase-suite.sh (executable, 4065 bytes)
-- /Users/brettkellgren/Sites/spec-kit-orchestrator/tools/verify/m031-p01-scope-guard.sh (executable, 6091 bytes)
+- /Users/brettkellgren/Sites/orchestrator/tools/verify/m031-p01-phase-suite.sh (executable, 4065 bytes)
+- /Users/brettkellgren/Sites/orchestrator/tools/verify/m031-p01-scope-guard.sh (executable, 6091 bytes)
 
 ## Constraints Honored
 

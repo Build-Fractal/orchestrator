@@ -1,11 +1,11 @@
 # Installation Reference
 
-> How to install spec-kit-orchestrator for use in a project.
+> How to install orchestrator for use in a project.
 > Self-contained — follow this document to set up orchestration in any project.
 
 ## Overview
 
-spec-kit-orchestrator is a standalone autonomous orchestrator. It is distributed as a runtime-specific installer that runs from a clone of this repo. The installer does three things:
+orchestrator is a standalone autonomous orchestrator. It is distributed as a runtime-specific installer that runs from a clone of this repo. The installer does three things:
 
 1. Registers the `orchestrator:*` skills/commands into the active runtime (Claude Code / Codex CLI / Cursor).
 2. Wires runtime hooks (Claude Code + Codex CLI only).
@@ -64,7 +64,7 @@ Common settings include verification commands, default tier, context verbosity, 
 ```markdown
 ## Orchestration
 
-This project uses the spec-kit-orchestrator.
+This project uses the orchestrator.
 
 - `orchestrator:evaluate` — classify scope and activate orchestration
 - `orchestrator:discuss` — pre-planning discussion (Tier C required, Tier B optional)
@@ -130,7 +130,7 @@ your-project/
 
 ## Autonomy Configuration
 
-spec-kit-orchestrator's Tier C autonomous mode (`orchestrator:auto`)
+orchestrator's Tier C autonomous mode (`orchestrator:auto`)
 runs unattended — it dispatches tasks, verifies results, and advances
 phase boundaries without developer interaction. For this to work
 reliably, the agent host (Claude Code, Codex CLI, Cursor) must have a
@@ -233,7 +233,7 @@ flags violations so you can fix them before running auto mode.
 There is no version check (yet — M035 P01 adds an `orchestrator:status` drift-warning surface; M035 P06 adds an `orchestrator:update` first-class command at launch). Until then, upgrade manually: pull the latest orchestrator repo and re-run the installer with `--force`:
 
 ```bash
-cd /path/to/spec-kit-orchestrator
+cd /path/to/orchestrator
 git pull
 bash packaging/install/install-claude-code.sh --project-dir /path/to/your-project --force
 ```
@@ -242,15 +242,15 @@ bash packaging/install/install-claude-code.sh --project-dir /path/to/your-projec
 
 **Known limitation (accepted):** if an upstream release removes a file that a previous install wrote, the stale file remains on disk. The new manifest won't list it, so it will not be removed on subsequent `--uninstall`. This is a deliberate trade-off; the alternative (diff manifests and delete) is a fast-follow.
 
-Check `CHANGELOG.md` in the spec-kit-orchestrator repo for breaking changes before upgrading.
+Check `CHANGELOG.md` in the orchestrator repo for breaking changes before upgrading.
 
 ### Staying fresh across multiple consumer projects (recommended workflow)
 
-If you maintain several projects that consume the orchestrator (e.g., dogfooding spec-kit-orchestrator itself plus separate consumer projects like `lakeledger`, `pbj-central`, `bbt-companion`), add this shell function to your `~/.zshrc` or `~/.bashrc`:
+If you maintain several projects that consume the orchestrator (e.g., dogfooding orchestrator itself plus separate consumer projects like `lakeledger`, `pbj-central`, `bbt-companion`), add this shell function to your `~/.zshrc` or `~/.bashrc`:
 
 ```bash
 orchestrator-update() {
-  local repo="${ORCHESTRATOR_REPO:-$HOME/Sites/spec-kit-orchestrator}"
+  local repo="${ORCHESTRATOR_REPO:-$HOME/Sites/orchestrator}"
   ( cd "$repo" && git pull --ff-only ) || return
   bash "$repo/packaging/install/install-claude-code.sh" --force
 }
@@ -266,13 +266,13 @@ cd /path/to/pbj-central
 orchestrator-update
 ```
 
-Override the orchestrator repo path with `ORCHESTRATOR_REPO=/path/to/clone orchestrator-update` if you keep yours somewhere other than `~/Sites/spec-kit-orchestrator`.
+Override the orchestrator repo path with `ORCHESTRATOR_REPO=/path/to/clone orchestrator-update` if you keep yours somewhere other than `~/Sites/orchestrator`.
 
-This is the **bridge workflow until M035 P01 ships** (which will add a `--mode=symlink` install option that makes the per-project re-install unnecessary — a single `git pull` in the orchestrator repo will be enough). At launch, M035 P02–P06 replace this entirely with `npm install -g @spec-kit/orchestrator` (or the homebrew/curl-pipe-bash equivalents).
+This is the **bridge workflow until M035 P01 ships** (which will add a `--mode=symlink` install option that makes the per-project re-install unnecessary — a single `git pull` in the orchestrator repo will be enough). At launch, M035 P02–P06 replace this entirely with `npm install -g @build-fractal/orchestrator` (or the homebrew/curl-pipe-bash equivalents).
 
 ### Dogfooding the orchestrator on itself (self-development)
 
-When you're editing the orchestrator's own commands and scripts (i.e., `PROJECT_DIR == REPO_ROOT == /path/to/spec-kit-orchestrator`), the freshness model is split:
+When you're editing the orchestrator's own commands and scripts (i.e., `PROJECT_DIR == REPO_ROOT == /path/to/orchestrator`), the freshness model is split:
 
 - **Scripts, templates, references** (`scripts/`, `templates/`, `references/`) — **live**. The installer's `cp -R` from self to self is effectively a no-op, and every `commands/*.md` invokes helpers via project-relative paths that resolve to the in-tree files. Edits take effect immediately on next invocation.
 - **Skills** (slash commands like `/orchestrator:auto`) — **stale until re-registered**. Skills are registered into `~/.claude/skills/` (user-global) at install time; a subsequent edit to `commands/auto.md` is invisible to slash-command resolution until you re-run the installer.

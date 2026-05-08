@@ -37,7 +37,7 @@ Three deliverables:
 
 1. **Run the demo path** end-to-end: invoke `bash
    scripts/knowledge/lib/jaccard.sh validate
-   /Users/brettkellgren/Sites/spec-kit-orchestrator/knowledge/` against
+   /Users/brettkellgren/Sites/orchestrator/knowledge/` against
    the live tree and capture pairwise similarities.
 2. **Enrich the report** at
    `.orchestrator/milestones/M020/phases/P01/jaccard-validation-report.md`
@@ -53,8 +53,8 @@ Three deliverables:
 ### Step 1: Run the demo against the live tree
 
 ```bash
-bash /Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/knowledge/lib/jaccard.sh \
-  validate /Users/brettkellgren/Sites/spec-kit-orchestrator/knowledge/
+bash /Users/brettkellgren/Sites/orchestrator/scripts/knowledge/lib/jaccard.sh \
+  validate /Users/brettkellgren/Sites/orchestrator/knowledge/
 ```
 
 Confirm stdout reports `WROTE: .../jaccard-validation-report.md` and the
@@ -64,7 +64,7 @@ above 0.5 listed under "Pairwise Similarities").
 ### Step 2: Enrich the report
 
 Open the report at
-`/Users/brettkellgren/Sites/spec-kit-orchestrator/.orchestrator/milestones/M020/phases/P01/jaccard-validation-report.md`
+`/Users/brettkellgren/Sites/orchestrator/.orchestrator/milestones/M020/phases/P01/jaccard-validation-report.md`
 and append (or replace the placeholder section) with the following analysis
 based on actual observed similarity distribution:
 
@@ -130,7 +130,7 @@ clause in the M020-ROADMAP P01 entry exists exactly for this case.
 ### Step 3: Ship the validation-report verifier
 
 Create
-`/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p01-jaccard-validation-report.sh`:
+`/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p01-jaccard-validation-report.sh`:
 
 ```bash
 #!/usr/bin/env bash
@@ -182,7 +182,7 @@ exit 0
 ### Step 4: Ship the migration-incremental verifier
 
 Create
-`/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p01-migration-incremental.sh`:
+`/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p01-migration-incremental.sh`:
 
 ```bash
 #!/usr/bin/env bash

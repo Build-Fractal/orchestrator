@@ -68,7 +68,7 @@ To start M003 in a new session:
 
 ```bash
 # New session, verify state
-cd /Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator
+cd /Users/brettkellgren/Sites/lakeledger/orchestrator
 bash scripts/state/derive-phase.sh .specify/orchestrator/milestones/M008  # → complete
 
 # Option A: Commit M008 first (recommended)

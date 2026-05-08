@@ -10,7 +10,7 @@ depends_on: []
 
 ## Prerequisites
 
-- `ANTIPATTERNS.md` exists at the repo root (verified: `[ -f /Users/brettkellgren/Sites/spec-kit-orchestrator/ANTIPATTERNS.md ]` returns exit 0; current line count 214).
+- `ANTIPATTERNS.md` exists at the repo root (verified: `[ -f /Users/brettkellgren/Sites/orchestrator/ANTIPATTERNS.md ]` returns exit 0; current line count 214).
 - `.orchestrator/milestones/M028/phases/P01/P01-VERIFICATION.md` exists with the per-screenshot causal trace for SE-02..SE-05 + SE-09 (the five canonical evidence sources for AP-010..AP-014).
 - The M028 spec at `specs/031-autonomous-hardening-v3/spec.md` defines FR-8 through FR-12 (one FR per new AP) and Edge Cases (CON-5 body-descent depth bound for AP-014).
 

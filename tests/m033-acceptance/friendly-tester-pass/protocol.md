@@ -37,7 +37,7 @@ A tester is "eligible" for the M033 friendly-tester pass iff they
 self-attest to ALL THREE of the following on the report's
 `tester_attestations:` block (`not_familiar_with_orchestrator: yes`):
 
-- (a) has not contributed to spec-kit-orchestrator (no commits, no PR
+- (a) has not contributed to orchestrator (no commits, no PR
   reviews, no proposal authorship under `.orchestrator/proposals/`).
 - (b) has not read the M033 spec at `specs/030-project-onboarding-experience/`.
 - (c) has not been briefed on the four init branches

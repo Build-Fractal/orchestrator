@@ -49,7 +49,7 @@ The record file is the structured artifact P04 gates on. Its schema is intention
    ```
 
    After the wrapper exits 0, the deployed URL is
-   `https://<gh-owner>.github.io/spec-kit-orchestrator/` once GitHub
+   `https://<gh-owner>.github.io/orchestrator/` once GitHub
    Pages has finished building the `gh-pages` branch (typically within
    a minute of push). Capture:
 
@@ -68,7 +68,7 @@ The record file is the structured artifact P04 gates on. Its schema is intention
    type: deploy-record
    milestone: "M012"
    phase: "P04"
-   deployed_url: "https://<gh-owner>.github.io/spec-kit-orchestrator/"
+   deployed_url: "https://<gh-owner>.github.io/orchestrator/"
    commit_sha: "<40-char-sha>"
    deployed_at: "2026-04-21T00:00:00Z"
    deployer: "<github-handle>"

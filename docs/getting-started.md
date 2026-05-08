@@ -41,7 +41,7 @@ The orchestrator ships as a runtime-specific installer that runs from a clone of
 
 ### 1. Run the installer
 
-From a clone of the spec-kit-orchestrator repo:
+From a clone of the orchestrator repo:
 
 ```bash
 # Claude Code (primary runtime)

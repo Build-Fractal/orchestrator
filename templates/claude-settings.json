@@ -53,7 +53,7 @@
       "WebFetch",
       "NotebookEdit",
       "Skill(speckit.*)",
-      "Skill(speckit.orchestrator.*)",
+      "Skill(orchestrator:*)",
 
       "Read(//tmp/**)",
       "Read(//private/tmp/**)",
@@ -61,7 +61,7 @@
 
       "Bash(bash scripts/*)",
       "Bash(bash .specify/*)",
-      "Bash(bash spec-kit-orchestrator/scripts/*)",
+      "Bash(bash orchestrator/scripts/*)",
       "Bash(bash ./scripts/*)",
       "Bash(bash ./.specify/*)",
       "Bash(sh scripts/*)",

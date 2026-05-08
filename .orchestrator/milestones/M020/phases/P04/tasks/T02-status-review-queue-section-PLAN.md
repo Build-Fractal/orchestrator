@@ -68,7 +68,7 @@ Out of scope (deferred):
 
 ### Step 1: Edit `scripts/orchestrator/status.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/orchestrator/status.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/orchestrator/status.sh`
 
 The on-main script ends after the milestone-loop (line 99). Append the Review-Queue rendering function and its invocation after the loop. The full diff:
 

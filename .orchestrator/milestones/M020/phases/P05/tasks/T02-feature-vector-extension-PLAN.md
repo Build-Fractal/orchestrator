@@ -41,7 +41,7 @@ After modification, T02 also regenerates the P05 validation report by invoking `
 
 ### Step 1: Modify `scripts/knowledge/lib/jaccard.sh` — extend `_jaccard_extract_tokens`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/knowledge/lib/jaccard.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/knowledge/lib/jaccard.sh`
 
 The current implementation reads `title`, `topic`, `tags`, then derives a first-paragraph body capped at 50 tokens. Replace the `_jaccard_extract_tokens` function body with the extended version below. Leave the file's documentation header untouched aside from updating CON-5 reference comments to read "CON-5 v2 (P05 extension: + relates_to[] + source_unit + body cap 200 full-body tokens)".
 
@@ -217,7 +217,7 @@ The agent uses Edit to make changes (5) — change the H1 and append a final par
 
 ### Step 4: Create `scripts/verify/m020-p05-feature-vector-extension.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p05-feature-vector-extension.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p05-feature-vector-extension.sh`
 
 ```bash
 #!/usr/bin/env bash

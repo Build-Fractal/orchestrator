@@ -42,7 +42,7 @@ to be the demo-sentence consumer (T05 invokes it).
 ### Step 1: Create `scripts/knowledge/graduate.sh`
 
 File path:
-`/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/knowledge/graduate.sh`
+`/Users/brettkellgren/Sites/orchestrator/scripts/knowledge/graduate.sh`
 
 Required behavior:
 
@@ -172,7 +172,7 @@ esac
 ### Step 3: Create the verification script
 
 Create
-`/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p01-graduate-single-entry.sh`:
+`/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p01-graduate-single-entry.sh`:
 
 ```bash
 #!/usr/bin/env bash
@@ -276,7 +276,7 @@ the `Check:` invocation itself stays a single script-file call.
 ### Step 4: Side-effect-scope verification script
 
 Create
-`/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p01-graduate-side-effect-scope.sh`:
+`/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p01-graduate-side-effect-scope.sh`:
 
 ```bash
 #!/usr/bin/env bash

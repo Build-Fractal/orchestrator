@@ -48,7 +48,7 @@ Per Principle VI (State On Disk Is Truth) and FR-10 (multi-agent-host abstractio
 
 ### AD-10: No GSD runtime support beyond the M003 migration tool
 
-The orchestrator supports GSD only through the one-way M003 migration tool (which helps users move **from** GSD **to** spec-kit-orchestrator). The autonomy permission generator does NOT emit `Skill(gsd:*)` allow patterns, does NOT detect `.gsd/` directories as an introspection source, and does NOT include GSD-specific bash patterns. P07's generator output is GSD-free.
+The orchestrator supports GSD only through the one-way M003 migration tool (which helps users move **from** GSD **to** orchestrator). The autonomy permission generator does NOT emit `Skill(gsd:*)` allow patterns, does NOT detect `.gsd/` directories as an introspection source, and does NOT include GSD-specific bash patterns. P07's generator output is GSD-free.
 
 The MVP template at `templates/claude-settings.json`, the orchestrator's own `.claude/settings.json`, and the `commands/auto.md` documentation all previously included a blanket `Skill(gsd:*)` entry; these were cleaned up alongside the finalization of this decision so the repository is consistent with AD-10. The M003 migration tool references (`scripts/migrate/adapters/gsd1.sh`, `gsd2.sh`, `commands/migrate.md`, the `extension.yml` migration command description, and historical `.gsd/` mentions in research/handoff docs) are explicitly out of scope for this cleanup — they describe the one-way migration path, not runtime support.
 
@@ -83,7 +83,7 @@ Consequence: P07 gains a dependency on M004 P04 in addition to M004 P02. P07 sti
 
 ### AD-15: Permission tests use synthetic fixtures with snapshot assertions
 
-Permission generator tests use synthetic minimal project directories under `tests/fixtures/permissions/{nodejs,rust,python,go,polyglot}/` — each fixture contains just enough files to trigger specific introspection sources (e.g., `nodejs/` has a `package.json` with 3 script keys and nothing else). Tests assert against expected-output JSON snapshots in `tests/fixtures/permissions/expected/`. The generator is NOT tested against the spec-kit-orchestrator repo itself (too variable — the repo changes, tests should be stable).
+Permission generator tests use synthetic minimal project directories under `tests/fixtures/permissions/{nodejs,rust,python,go,polyglot}/` — each fixture contains just enough files to trigger specific introspection sources (e.g., `nodejs/` has a `package.json` with 3 script keys and nothing else). Tests assert against expected-output JSON snapshots in `tests/fixtures/permissions/expected/`. The generator is NOT tested against the orchestrator repo itself (too variable — the repo changes, tests should be stable).
 
 ### AD-16: Canonical permissions format v1 is Claude-Code-shaped + metadata
 
@@ -212,6 +212,6 @@ Note: Claude Code's pattern matcher treats the env-assignment prefix as part of 
 - Migrating all existing agent instructions to new schema (progressive, not big-bang)
 - **Full Cursor / Copilot permission writers** — P07 ships the canonical format and the Claude Code writer; other hosts are pluggable stubs, not complete implementations (deferred until a user actually needs them)
 - **A dedicated `speckit.orchestrator.permissions` command** (design question 4 from the feature prompt) — deferred. P07's generator + auto.md pre-flight + doctor drift check cover the main use cases; a standalone command can be added later if demand emerges.
-- **GSD runtime support** — the orchestrator supports GSD only through the existing M003 migration tool (GSD → spec-kit-orchestrator, one-way). P07's generator does not detect GSD, does not emit `Skill(gsd:*)` or GSD-specific bash patterns. The MVP template, `.claude/settings.json`, and `commands/auto.md` have been cleaned up to match this boundary. (Per AD-10.)
+- **GSD runtime support** — the orchestrator supports GSD only through the existing M003 migration tool (GSD → orchestrator, one-way). P07's generator does not detect GSD, does not emit `Skill(gsd:*)` or GSD-specific bash patterns. The MVP template, `.claude/settings.json`, and `commands/auto.md` have been cleaned up to match this boundary. (Per AD-10.)
 - **Richer canonical permissions schema with capability categories** (reads/writes/network/shell) — YAGNI. The canonical format v1 is Claude-Code-shaped + metadata markers. A capability-category abstraction is deferred until a second agent host with genuinely different primitives motivates it. (Per AD-16.)
 - **"Minimal environment" detection mode** — the generator always runs with graceful per-source fallback. There is no separate code path that skips introspection based on environment detection. (Per AD-11.)

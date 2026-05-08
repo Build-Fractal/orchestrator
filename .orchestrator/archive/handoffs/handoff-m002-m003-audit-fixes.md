@@ -2,7 +2,7 @@
 
 **Date**: 2026-04-09
 **Context**: Full audit of M002 (Knowledge Architecture, 7 phases) and M003 (Migration Tool, 6 phases) found issues to fix before deployment.
-**Working directory**: /Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator
+**Working directory**: /Users/brettkellgren/Sites/lakeledger/orchestrator
 
 ## Status
 
@@ -98,7 +98,7 @@ These were flagged as LOW and should be left alone:
 ## Verification After Fixes
 
 ```bash
-cd /Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator
+cd /Users/brettkellgren/Sites/lakeledger/orchestrator
 
 # 1. Confirm no process substitution redirection remains
 ! grep -rn 'done < <(' scripts/ && echo "PASS: No process substitution"

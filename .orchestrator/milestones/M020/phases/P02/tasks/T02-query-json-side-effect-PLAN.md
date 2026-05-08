@@ -34,7 +34,7 @@ Out of scope:
 
 ### Step 1: Replace `query.sh`'s emission tail-block
 
-Open `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/knowledge/query.sh`. Locate the T01 final block:
+Open `/Users/brettkellgren/Sites/orchestrator/scripts/knowledge/query.sh`. Locate the T01 final block:
 
 ```bash
 if [ -z "$sorted" ]; then
@@ -124,7 +124,7 @@ with:
 
 ### Step 3: Create `scripts/verify/m020-p02-query-format-json.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p02-query-format-json.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p02-query-format-json.sh`
 
 ```bash
 #!/usr/bin/env bash
@@ -230,7 +230,7 @@ exit 0
 
 ### Step 4: Create `scripts/verify/m020-p02-query-no-match-empty.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p02-query-no-match-empty.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p02-query-no-match-empty.sh`
 
 ```bash
 #!/usr/bin/env bash
@@ -303,7 +303,7 @@ exit 0
 
 ### Step 5: Create `scripts/verify/m020-p02-query-side-effect-free.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p02-query-side-effect-free.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p02-query-side-effect-free.sh`
 
 ```bash
 #!/usr/bin/env bash

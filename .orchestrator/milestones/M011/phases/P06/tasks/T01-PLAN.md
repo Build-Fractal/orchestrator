@@ -10,7 +10,7 @@ depends_on: []
 
 ## Prerequisites
 
-- P03 is complete: `scripts/knowledge/ingest-spec.sh` exists (see `/Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator/scripts/knowledge/ingest-spec.sh`, 837 lines). It accepts `--spec-path <path>`, `--slug <slug>`, and `--scope-tags <tags>`. It emits `CREATED:`, `SKIPPED:`, `SUPERSEDED:`, `REMOVED:`, and `REVIEW:` prefixed lines to stdout, exits 0 on success / 1 on failure, and is Bash 3.2 compatible. It calls `rebuild-index.sh` once at the end.
+- P03 is complete: `scripts/knowledge/ingest-spec.sh` exists (see `/Users/brettkellgren/Sites/lakeledger/orchestrator/scripts/knowledge/ingest-spec.sh`, 837 lines). It accepts `--spec-path <path>`, `--slug <slug>`, and `--scope-tags <tags>`. It emits `CREATED:`, `SKIPPED:`, `SUPERSEDED:`, `REMOVED:`, and `REVIEW:` prefixed lines to stdout, exits 0 on success / 1 on failure, and is Bash 3.2 compatible. It calls `rebuild-index.sh` once at the end.
 - P05 is complete: `scripts/state/spec-metrics.sh` emits `spec_chunks_present=true|false` and seven other `key=value` lines. `commands/evaluate.md` (199 lines) already has a "Chunks-first path" branch that calls `spec-metrics.sh`, and `commands/roadmap.md` (169 lines) already documents the chunks-first decomposition.
 - The existing command file convention (MEM012) is followed by every file in `commands/`: YAML frontmatter (`description:`), `# speckit.orchestrator.<name>` title, Prerequisites section, one or more workflow sections (numbered steps or named headings), Output section, Idempotency section, Error Handling section, Reference Files section.
 - No `commands/ingest.md` currently exists. `commands/evaluate.md` does not currently reference the ingest command by name.
@@ -38,7 +38,7 @@ No production code changes beyond the two markdown files.
 
 ### Step 1: Create `commands/ingest.md`
 
-Write a new file at `/Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator/commands/ingest.md` with the shape below (min 120 lines). The exact wording may be adjusted, but every pattern the verify scripts check must be present literally (see the Must-Haves + verify-script lists).
+Write a new file at `/Users/brettkellgren/Sites/lakeledger/orchestrator/commands/ingest.md` with the shape below (min 120 lines). The exact wording may be adjusted, but every pattern the verify scripts check must be present literally (see the Must-Haves + verify-script lists).
 
 Required content anchors:
 

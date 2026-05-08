@@ -1,10 +1,10 @@
 # Phase 3 Handoff Prompt — Auto-Loop Driver + Auto.md Rewrite
 
-You are executing Phase 3 of a 5-phase hardening plan for the spec-kit-orchestrator extension (v0.2.0). This is an active implementation task — you should write code, not just plan.
+You are executing Phase 3 of a 5-phase hardening plan for the orchestrator extension (v0.2.0). This is an active implementation task — you should write code, not just plan.
 
 ## Project Context
 
-spec-kit-orchestrator is a spec-kit extension (markdown commands + shell scripts) that provides autonomous multi-phase orchestration. It was field-tested and a post-mortem identified 8 failure categories. We are systematically fixing all of them across 5 phases.
+orchestrator is a spec-kit extension (markdown commands + shell scripts) that provides autonomous multi-phase orchestration. It was field-tested and a post-mortem identified 8 failure categories. We are systematically fixing all of them across 5 phases.
 
 ## What Was Done in Phases 1-2 (COMPLETE — 351 assertions, 0 failures)
 

@@ -10,7 +10,7 @@ depends_on: []
 
 ## Prerequisites
 
-- P01 complete: `wiki/docs/index.md` exists as a 19-line placeholder whose opening frontmatter reads `title: "spec-kit-orchestrator dogfood wiki"` and whose body contains the literal word `placeholder`.
+- P01 complete: `wiki/docs/index.md` exists as a 19-line placeholder whose opening frontmatter reads `title: "orchestrator dogfood wiki"` and whose body contains the literal word `placeholder`.
 - P01 complete: the MkDocs nav emits top-level stubs for Constitution, Decisions, Knowledge (with a `knowledge/` section index from P02), Milestone Summary, and Milestones. Each stub is rendered under `wiki/docs/<slug>.md` or `wiki/docs/<slug>/index.md` — the home page can safely link by slug (e.g., `constitution.md`, `decisions.md`, `knowledge/index.md`, `milestone-summary.md`, `milestones/index.md`).
 - P02 complete: `include-markdown` with `rewrite_relative_urls: true` is active. Relative links on the home page resolve to rendered routes automatically.
 - P03 complete: `wiki/overrides/partials/comments.html` emits a Giscus thread on every page (including this home page once deployed).
@@ -32,10 +32,10 @@ This task does two things:
 
    ```markdown
    ---
-   title: "spec-kit-orchestrator dogfood wiki"
+   title: "orchestrator dogfood wiki"
    ---
 
-   # spec-kit-orchestrator dogfood wiki
+   # orchestrator dogfood wiki
 
    A browseable projection of the orchestrator's `.orchestrator/` state —
    Constitution, Decisions, Knowledge, every milestone's plans and
@@ -131,7 +131,7 @@ This task does two things:
 
 ### From Disk (Pre-existing)
 
-- `wiki/docs/index.md` (P01 output) — 19-line placeholder carrying the `title: "spec-kit-orchestrator dogfood wiki"` frontmatter and the literal word `placeholder` in the body. T01 overwrites this file.
+- `wiki/docs/index.md` (P01 output) — 19-line placeholder carrying the `title: "orchestrator dogfood wiki"` frontmatter and the literal word `placeholder` in the body. T01 overwrites this file.
 - `wiki/mkdocs.yml` (P01 + P02 + P03 output) — the nav block routes `/constitution/`, `/decisions/`, `/knowledge/`, `/milestone-summary/`, `/milestones/` to their respective stubs. The home page's relative links resolve against those routes at build time via MkDocs' default URL scheme.
 - `wiki/overrides/partials/comments.html` (P03 output) — emits the Giscus `<script>` block. Independent of the home page; the home page does not need to reference it explicitly.
 

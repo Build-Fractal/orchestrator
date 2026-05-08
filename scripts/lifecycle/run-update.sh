@@ -9,7 +9,7 @@
 # Source-repo resolution (first match wins):
 #   1. --source-repo PATH      (explicit override)
 #   2. $ORCHESTRATOR_SOURCE_REPO env var
-#   3. $HOME/Sites/spec-kit-orchestrator (default)
+#   3. $HOME/Sites/orchestrator (default)
 #
 # Usage:
 #   bash scripts/lifecycle/run-update.sh
@@ -41,7 +41,7 @@
 
 set -u
 
-SOURCE_REPO="${ORCHESTRATOR_SOURCE_REPO:-$HOME/Sites/spec-kit-orchestrator}"
+SOURCE_REPO="${ORCHESTRATOR_SOURCE_REPO:-$HOME/Sites/orchestrator}"
 PROJECT_DIR="$PWD"
 DRY_RUN=0
 VERBOSE=0
@@ -96,7 +96,7 @@ if [ ! -d "$SOURCE_REPO" ]; then
   echo "FAIL: orchestrator source repo not found: $SOURCE_REPO" >&2
   echo "" >&2
   echo "Resolution: set ORCHESTRATOR_SOURCE_REPO env var, pass --source-repo PATH," >&2
-  echo "or symlink the source at \$HOME/Sites/spec-kit-orchestrator." >&2
+  echo "or symlink the source at \$HOME/Sites/orchestrator." >&2
   echo "" >&2
   echo "Pre-M035 interim: this skill assumes the orchestrator source lives" >&2
   echo "locally. M035 P02-P06 will add npm / homebrew / curl-pipe-bash sources." >&2

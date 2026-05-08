@@ -10,7 +10,7 @@ depends_on: ["T01"]
 
 ## Prerequisites
 
-- `scripts/verify/lib/shape-classifier.sh` exists (verified: `[ -f /Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/lib/shape-classifier.sh ]` returns exit 0; current line count 533).
+- `scripts/verify/lib/shape-classifier.sh` exists (verified: `[ -f /Users/brettkellgren/Sites/orchestrator/scripts/verify/lib/shape-classifier.sh ]` returns exit 0; current line count 533).
 - The existing classifier exports `classify_command(cmd)` returning one of `allow`, `rewrite:<result>`, `reject:<class>` per the contract documented in the file header (lines 1..27).
 - The existing private helpers (`_sc_count_top_level_stages`, `_sc_has_nested_cmd_sub`, `_sc_has_unquoted_heredoc_expansion`, `_sc_has_quoted_brace`, plus the rewrite extractors) are stable and must not change behavior.
 - `bash --version` reports 3.2 or later (constitution principle IX; verified via macOS default shell baseline).

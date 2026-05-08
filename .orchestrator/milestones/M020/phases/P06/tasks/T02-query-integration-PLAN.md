@@ -35,7 +35,7 @@ CON-4 byte-equivalence preservation: the existing P02 test suite (`tests/test-kn
 
 ### Step 1: Edit `scripts/knowledge/query.sh` in place
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/knowledge/query.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/knowledge/query.sh`
 
 Edit 1 — add the source line near the existing source lines (around line 33-35):
 

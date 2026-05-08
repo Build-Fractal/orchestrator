@@ -1,6 +1,6 @@
-# spec-kit-orchestrator bundle
+# orchestrator bundle
 
-This directory is the installable bundle for the spec-kit-orchestrator — a
+This directory is the installable bundle for the orchestrator — a
 self-contained unit that runtime installers stage into Claude Code, Codex,
 and Cursor. The bundle is assembled from source by
 `packaging/bundle/build-bundle.sh` and is tar/zip-safe (no symlinks).

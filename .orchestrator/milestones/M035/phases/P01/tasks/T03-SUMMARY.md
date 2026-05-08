@@ -77,7 +77,7 @@ helper called out in the payload):
 - Same major+minor → patch-level diff (`max(B[3]-A[3], 0)`).
 
 The CHANGELOG awk pattern is `^## \[[0-9]` rather than `^## \[` to
-skip past `## [Unreleased]` (the live spec-kit-orchestrator CHANGELOG
+skip past `## [Unreleased]` (the live orchestrator CHANGELOG
 opens with `## [Unreleased]`); the verifier's fixture upstream still
 matches the pattern because the fixture writes `## [0.9.3]` first.
 

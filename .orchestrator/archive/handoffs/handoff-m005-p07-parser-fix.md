@@ -1,7 +1,7 @@
 # Handoff: M005 P07 planned, `read-roadmap.sh` parser blocks state derivation
 
 **Date**: 2026-04-11
-**Working directory**: `/Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator`
+**Working directory**: `/Users/brettkellgren/Sites/lakeledger/orchestrator`
 **Branch**: `main` (clean before the P07 plan files were added)
 
 ## TL;DR

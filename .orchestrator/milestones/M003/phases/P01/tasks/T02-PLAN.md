@@ -264,7 +264,7 @@ chmod +x scripts/migrate/lib/sqlite-reader.sh
 
 ```bash
 # Test with the lakeledger gsd.db
-cd /path/to/spec-kit-orchestrator
+cd /path/to/orchestrator
 source scripts/migrate/adapter-interface.sh
 source scripts/migrate/lib/sqlite-reader.sh
 

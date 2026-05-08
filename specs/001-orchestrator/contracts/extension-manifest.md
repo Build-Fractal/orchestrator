@@ -18,7 +18,7 @@ extension:
     workflow. Adds milestone/phase/task hierarchy, state machine dispatch, crash
     recovery, and knowledge generation.
   author: clariti-care
-  repository: https://github.com/clariti-care/spec-kit-orchestrator
+  repository: https://github.com/clariti-care/orchestrator
   license: MIT
 
 requires:

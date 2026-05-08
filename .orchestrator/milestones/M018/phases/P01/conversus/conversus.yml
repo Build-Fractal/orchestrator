@@ -1,6 +1,6 @@
 mode: red-blue
-target: /Users/brettkellgren/Sites/spec-kit-orchestrator/references/compression-grammar.md
-output: /Users/brettkellgren/Sites/spec-kit-orchestrator/.orchestrator/milestones/M018/phases/P01/conversus
+target: /Users/brettkellgren/Sites/orchestrator/references/compression-grammar.md
+output: /Users/brettkellgren/Sites/orchestrator/.orchestrator/milestones/M018/phases/P01/conversus
 iterations: 1
 agents:
 - name: blue-advocate
@@ -78,6 +78,6 @@ arbiter:
     \ or SC-9 composition flaw must be\nfixed in the contract document before tier\
     \ code starts.\n"
   docs:
-  - /Users/brettkellgren/Sites/spec-kit-orchestrator/.orchestrator/memory/constitution.md
-  grounding: /Users/brettkellgren/Sites/spec-kit-orchestrator/.orchestrator/memory/constitution.md
+  - /Users/brettkellgren/Sites/orchestrator/.orchestrator/memory/constitution.md
+  grounding: /Users/brettkellgren/Sites/orchestrator/.orchestrator/memory/constitution.md
   trigger: disputes_remain

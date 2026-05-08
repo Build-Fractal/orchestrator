@@ -65,7 +65,7 @@ bash scripts/lifecycle/wiki-init.sh --project-dir "$TMP" >/dev/null 2>&1 || { ec
 grep -q "site_name: \"m032-fresh-project-fixture\"" "$TMP/wiki/mkdocs.yml" || { echo "FAIL: SC-3 site_name not substituted"; exit 1; }
 grep -q "repo_url: \"https://github.com/fixture-owner/m032-fresh-project-fixture\"" "$TMP/wiki/mkdocs.yml" || { echo "FAIL: SC-3 repo_url not substituted"; exit 1; }
 # Negative: no orchestrator-identity values leaked in.
-grep -q 'spec-kit-orchestrator' "$TMP/wiki/mkdocs.yml" && { echo "FAIL: SC-3 orchestrator identity leaked into fixture mkdocs.yml"; exit 1; } || true
+grep -q 'orchestrator' "$TMP/wiki/mkdocs.yml" && { echo "FAIL: SC-3 orchestrator identity leaked into fixture mkdocs.yml"; exit 1; } || true
 # Negative: no remaining placeholders.
 grep -q '{{site_name}}' "$TMP/wiki/mkdocs.yml" && { echo "FAIL: SC-3 placeholder {{site_name}} remained"; exit 1; } || true
 

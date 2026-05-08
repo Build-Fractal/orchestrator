@@ -31,7 +31,7 @@ Verbatim script output followed by a one-line summary. Example configured output
 
 ```
 STATUS: configured
-REPO_SLUG: Build-Fractal/spec-kit-orchestrator
+REPO_SLUG: Build-Fractal/orchestrator
 SYNC_MODE: manual
 SUB_ISSUE_MODE: native
 LAST_SYNC: 2026-04-25T14:22:10Z

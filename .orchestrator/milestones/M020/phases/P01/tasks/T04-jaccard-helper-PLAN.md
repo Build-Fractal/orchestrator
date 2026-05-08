@@ -46,7 +46,7 @@ recommendation analysis and the demo-sentence demonstration.
 ### Step 1: Create `scripts/knowledge/lib/jaccard.sh`
 
 File path:
-`/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/knowledge/lib/jaccard.sh`
+`/Users/brettkellgren/Sites/orchestrator/scripts/knowledge/lib/jaccard.sh`
 
 Required structure:
 
@@ -214,7 +214,7 @@ via the dispatch block at the bottom).
 ### Step 2: Pairwise contract test
 
 Create
-`/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p01-jaccard-pairwise-contract.sh`:
+`/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p01-jaccard-pairwise-contract.sh`:
 
 ```bash
 #!/usr/bin/env bash

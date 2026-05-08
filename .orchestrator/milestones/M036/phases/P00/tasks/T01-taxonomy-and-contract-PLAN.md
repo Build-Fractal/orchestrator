@@ -10,7 +10,7 @@ depends_on: []
 
 ## Prerequisites
 
-- Working tree at `~/Sites/spec-kit-orchestrator/` with `references/` directory present (existing, populated with 21 reference docs).
+- Working tree at `~/Sites/orchestrator/` with `references/` directory present (existing, populated with 21 reference docs).
 - `tools/verify/` directory may exist; create it via `mkdir -p tools/verify` if absent (project-owned verifier home per AD-19 path discipline; framework verifiers live under `scripts/verify/` and ship in the install bundle).
 - `specs/033-reference-corpus-ingest/spec.md` exists and is the binding contract — FR-1 (taxonomy), FR-2 (provenance frontmatter), FR-4 (chunk-output shape additions), FR-17 (tier-policy declaration), and #Q-8 (per-category default tier proposals) are the requirements this task transcribes into SSOT files.
 - T01 is the head of P00; no upstream task dependencies.

@@ -10,7 +10,7 @@ depends_on: []
 
 ## Prerequisites
 
-- Working tree at `~/Sites/spec-kit-orchestrator/` with `specs/034-right-sized-entry/spec.md` present and unchanged from the post-discuss state (status `Draft`, AD-* amendments present in `.orchestrator/milestones/M031/M031-CONTEXT.md` but NOT yet folded into the spec body — the operator-deferred fold per CONTEXT.md "Resolved meta-decisions: Spec amendment timing").
+- Working tree at `~/Sites/orchestrator/` with `specs/034-right-sized-entry/spec.md` present and unchanged from the post-discuss state (status `Draft`, AD-* amendments present in `.orchestrator/milestones/M031/M031-CONTEXT.md` but NOT yet folded into the spec body — the operator-deferred fold per CONTEXT.md "Resolved meta-decisions: Spec amendment timing").
 - `.orchestrator/milestones/M031/M031-CONTEXT.md` present and `status: finalized`. Confirm via `grep -q '^status: finalized' .orchestrator/milestones/M031/M031-CONTEXT.md` returning exit 0.
 - `.orchestrator/milestones/M031/M031-ROADMAP.md` present (P00..P04 phase IDs pinned). Confirm via `[ -f .orchestrator/milestones/M031/M031-ROADMAP.md ]`.
 - `tools/verify/` directory exists (created by earlier orchestrator phases) or will be created via `mkdir -p tools/verify` if absent.

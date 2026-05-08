@@ -1,7 +1,7 @@
 # >>> orchestrator:recent-changes >>>
 - 039-packaging-distribution: M035 packaging and distribution: the launch-readiness milestone. Two layers sequ
 # <<< orchestrator:recent-changes <<<
-# CLAUDE.md — spec-kit-orchestrator
+# CLAUDE.md — orchestrator
 
 ## What This Is
 

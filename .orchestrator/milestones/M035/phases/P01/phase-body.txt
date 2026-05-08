@@ -1,0 +1,95 @@
+P01 closes the M035 pre-launch dev-ergonomics layer for orchestrator-source
+visibility and `--mode=symlink` velocity. With P00's installer hardening as
+foundation, P01 promotes the M032/P01 TEST-ONLY `--asset-mode-override`
+flag to the user-facing `--mode=copy|symlink` surface across all three
+installers, retargets the symlink branch directly at the source repo
+(US-1 dogfood-velocity contract), wires drift detection from
+`install-meta.txt` into `orchestrator:status`, and ships a 7-verifier
+phase-suite that the M035 publishing pipelines (P02–P06) inherit as
+preconditions.
+
+Four tasks landed:
+
+- **T01** (mode flag + symlink-to-source + meta extension). Promoted
+  `--asset-mode-override` to `--mode=copy|symlink` across the three
+  installers; preserved the old flag byte-identically as a TEST-ONLY
+  alias so M032 acceptance scripts keep working. Retargeted
+  `scripts/lifecycle/install-asset-mode.sh`'s symlink branch to set
+  `link_target="$SRC"` directly — replacing the M032-era 11-line
+  runtime-cache resolution block with a one-line assignment that
+  delivers the US-1 contract: `git pull` in `$REPO_ROOT` updates every
+  consumer immediately. Extended `install-meta.txt` with two new
+  always-present fields (`commit_sha=` from `git rev-parse HEAD`,
+  `version=` from `CHANGELOG.md` top-line per #Q-9) so T03's drift
+  helper has the data shape it consumes. Authored
+  `references/installation.md § Symlink-mode caveats` covering #Q-7
+  (cross-machine fragility), #Q-8 (Unix-only at v1), and bundle hygiene.
+  Updated the Windows fail-closed advisory wording per #Q-G4
+  (`"FAIL: symlink mode unsupported on this filesystem -- re-run with
+  --mode=copy"`) and synced the M032 acceptance grep accordingly.
+
+- **T02** (mode-aware uninstall). Branched the manifest-write loop in
+  all three installers on `mode_val` via `case`: symlink mode emits one
+  `<tgt>\tmode:symlink` row per target; copy mode emits per-file rows
+  as today. `--uninstall` short-circuit branches symmetrically on
+  `mode_tok` — symlink-mode tests `[ -L "$f" ]` then `rm -f`, copy-mode
+  tests `[ -f "$f" ]` then `rm -f`, so a copy-mode uninstall never
+  accidentally removes a symlink and vice versa. The CON-1 source-repo
+  invariant is enforced in the verifier via `ls /<dir> | head -n 1`
+  pre/post-uninstall snapshots — cheap, reusable, and catches any
+  future regression that would `rm` through the symlink. Added
+  `### Rollback-and-symlink-mode-interaction` section recording #Q-G8
+  (--rollback unsupported in symlink mode) for P05 plan-phase.
+
+- **T03** (orchestrator-source drift detection). Authored
+  `scripts/state/check-orchestrator-drift.sh` — a read-only helper that
+  reads `.orchestrator/install-meta.txt` + `.orchestrator/config.yml`
+  and emits a four-line `key=value` block (`commits_behind`,
+  `update_source`, `upstream_path`, `versions_behind`) on stdout,
+  exiting 0 always (FR-15 — consumers branch on data, not exit code).
+  SHA-absent fallback per #Q-G5 emits `commits_behind=unknown` plus a
+  one-time stderr advisory. Two task-grain verifiers: SC-3 SHA-bearing
+  path (fixture upstream owns 14 seeded commits past INITIAL_SHA;
+  asserts `commits_behind=14`) and SC-3b pre-M035 fallback path
+  (asserts `commits_behind=unknown` + one stderr advisory).
+  Verifier-owned fixture upstream pattern (mktemp -d + git init +
+  N seeded commits + rewrite consumer commit_sha to INITIAL_SHA) makes
+  the assertion deterministic without depending on the live repo HEAD.
+  CHANGELOG awk pattern restricted to `^## \[[0-9]` to skip past
+  `## [Unreleased]` heading; inline awk semver-delta avoids authoring
+  a separate `lib/semver-delta.sh` per the payload's budget-saving
+  endorsement.
+
+- **T04** (drift line in status). Wired the drift surface into both
+  status render paths: TUI side documented as a render rule in
+  `commands/status.md`; JSON side emits a top-level `drift` object
+  via two new helpers in `scripts/diagnostics/render-status-json.sh`
+  (`_rsj_collect_drift_block` parses the helper's four-line stdout via
+  grep+sed; `_rsj_drift_rendered_line` formats the human line). The
+  drift `_M029_SCHEMA_VERSION` stays at `"1.0"` per AD-7 stability
+  policy — the inline comment in the renderer captures intent — and
+  M029 SC-3 acceptance battery re-runs 26/26 green to confirm. The
+  drift object key set is STABLE across availability states (deviation
+  from the M029 sections-side suppression-by-omission convention,
+  reasoned: downstream consumers need stable shape regardless of
+  helper availability). Authored `tools/verify/m035-p01-drift-line-in-status.sh`
+  (SC-4 primary path), `tools/verify/m035-p01-drift-line-suppressed.sh`
+  (SC-4 three suppression sub-cases), and the AD-19-prefixed P01
+  phase-suite aggregator `tools/verify/m035-p01-phase-suite.sh`.
+
+Verification: phase-suite battery `pass=7 fail=0` on all 7 task-grain
+verifiers. Lock held throughout; no blockers, budget under at 4 tasks /
+~185m duration. The 28 "external modification" warnings reported by
+`phase-transition.sh` are the genuine T01–T04 implementation diffs
+(installer modifications, references doc additions, new verifiers, new
+helpers, T01–T04 SUMMARY.md and PLAN.md files) — not actual external
+edits. Roadmap sync: SYNC:OK.
+
+P02 (M035 launch event — npm + homebrew + curl-pipe-bash publishing
+pipelines) inherits: an installer trio that takes `--mode=copy|symlink`,
+emits 5-line `install-meta.txt` (with `commit_sha=` + `version=`), and
+uninstalls correctly under both modes; a read-only drift helper that
+already does the work the publish-pipeline first-user UX needs; and a
+status-line drift surface that surfaces `Orchestrator drift: N commits /
+M versions behind via <source>` to operators the moment a consumer
+falls behind a published release.

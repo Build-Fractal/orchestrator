@@ -41,7 +41,7 @@ CON-4 byte-equivalence preservation:
 
 ### Step 1: Edit `scripts/knowledge/consolidate-artifacts.sh` in place
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/knowledge/consolidate-artifacts.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/knowledge/consolidate-artifacts.sh`
 
 Edit 1 — replace the current threshold resolution. Locate the existing code (around line 38-40):
 

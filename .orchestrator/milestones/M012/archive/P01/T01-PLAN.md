@@ -10,7 +10,7 @@ depends_on: []
 
 ## Prerequisites
 
-- Repository root is `/Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator` (the orchestrator's own repo; `.orchestrator/` is already populated with real artifacts).
+- Repository root is `/Users/brettkellgren/Sites/lakeledger/orchestrator` (the orchestrator's own repo; `.orchestrator/` is already populated with real artifacts).
 - `.orchestrator/milestones/M012/M012-CONTEXT.md` decisions AD-3 (include-plugin, no copies / no symlinks), AD-6 (phase and task plan inclusion), AD-7 (MkDocs + Material + `mkdocs-include-markdown-plugin` stack) are binding.
 - Python 3.9+ and `pip` are available on the developer's box; no guarantee that they are available in the auto-mode sandbox. Scripts in this task MUST NOT require an `mkdocs` installation to run — `mkdocs` is only needed at preview time via `scripts/wiki/wiki-serve.sh`.
 - No existing `wiki/` directory under the repo root.
@@ -58,7 +58,7 @@ No stubs are generated in this task. No nav is generated in this task. T02–T04
 3. **Write `wiki/mkdocs.yml`** with the minimal base config. Leave `nav:` entirely out — T04 writes it. The include plugin is declared under `plugins:` so T03's stubs can reference it.
 
    ```yaml
-   # wiki/mkdocs.yml — spec-kit-orchestrator dogfood wiki.
+   # wiki/mkdocs.yml — orchestrator dogfood wiki.
    #
    # This config is assembled across M012/P01 in stages:
    #   T01 writes this base (theme + plugins + exclusion markdown_extensions).
@@ -67,10 +67,10 @@ No stubs are generated in this task. No nav is generated in this task. T02–T04
    # Do not edit the nav: block by hand — regenerate via
    # scripts/wiki/wiki-generate-nav.sh.
 
-   site_name: "spec-kit-orchestrator — dogfood wiki"
+   site_name: "orchestrator — dogfood wiki"
    site_description: "Browseable projection of .orchestrator/ artifacts for the dogfood team."
    site_url: "https://example.invalid/"  # placeholder; final URL set in P04.
-   repo_url: "https://github.com/lakeledger/spec-kit-orchestrator"
+   repo_url: "https://github.com/lakeledger/orchestrator"
    docs_dir: "docs"
    site_dir: "site"
 
@@ -113,10 +113,10 @@ No stubs are generated in this task. No nav is generated in this task. T02–T04
 
    ```markdown
    ---
-   title: "spec-kit-orchestrator dogfood wiki"
+   title: "orchestrator dogfood wiki"
    ---
 
-   # spec-kit-orchestrator dogfood wiki
+   # orchestrator dogfood wiki
 
    > **placeholder** — this home page is a P01 scaffold. Final orientation copy
    > ships in M012/P04 (Deploy pipeline, home page, first-deploy validation).
@@ -159,7 +159,7 @@ No stubs are generated in this task. No nav is generated in this task. T02–T04
 6. **Write `wiki/README.md`** — operator notes:
 
    ```markdown
-   # spec-kit-orchestrator wiki (M012)
+   # orchestrator wiki (M012)
 
    Dogfood-only MkDocs site that renders `.orchestrator/` artifacts.
 

@@ -32,7 +32,7 @@ Read T01's classifier audit, attribute every source event to one or more finding
 
    | Trigger | Finding | Notes |
    |---|---|---|
-   | The event occurred under a `$CLAUDE_PROJECT_DIR` that is not the orchestrator repo (path prefix not `spec-kit-orchestrator`) AND the existing classifier verdict is `REJECT` | A | Hook portability — would have rejected if hook had run |
+   | The event occurred under a `$CLAUDE_PROJECT_DIR` that is not the orchestrator repo (path prefix not `orchestrator`) AND the existing classifier verdict is `REJECT` | A | Hook portability — would have rejected if hook had run |
    | The event's existing-classifier verdict is `ALLOW` (or absent) AND the command shape matches one of AP-010 / AP-011 / AP-012 / AP-013 / AP-014 | B (or G if AP-014 specifically) | Classifier shape — under-matched |
    | The event is a Stop-hook `command not found` failure naming `orchestrator-post-verify` or `orchestrator-before-commit` | F | Adapter+installer — bare names not on PATH |
    | The event involves `/bin/rm` and `&&` chained with `ls` for output verification | D | Destructive op — needs `cleanup-stale-results.sh` wrapper |

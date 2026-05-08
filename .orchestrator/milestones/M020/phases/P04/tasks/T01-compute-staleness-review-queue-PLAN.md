@@ -64,7 +64,7 @@ Out of scope (deferred to T02 / T03 / T04):
 
 ### Step 1: Extend `scripts/knowledge/compute-staleness.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/knowledge/compute-staleness.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/knowledge/compute-staleness.sh`
 
 The existing script (143 lines) has a `--archive-below` / `--min-hits` / `--dry-run` argument loop. Add `--review-queue` and `--knowledge-root <path>` flags, and short-circuit the new mode at the top of the script before the legacy index walk.
 

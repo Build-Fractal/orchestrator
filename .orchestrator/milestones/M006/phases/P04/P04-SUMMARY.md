@@ -17,7 +17,7 @@ key_decisions:
 patterns_established:
   - "user audience label, relative cross-links to ../references/, quick-start then deep-dive structure, step-by-step walkthrough with working code examples, lifecycle operations with script references, user guide cross-link validation"
 drill_down_paths:
-  - "/Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator/.specify/orchestrator/milestones/M006//phases/P04/tasks/T01-SUMMARY.md, /Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator/.specify/orchestrator/milestones/M006//phases/P04/tasks/T02-SUMMARY.md, /Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator/.specify/orchestrator/milestones/M006//phases/P04/tasks/T03-SUMMARY.md, /Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator/.specify/orchestrator/milestones/M006//phases/P04/tasks/T04-SUMMARY.md, /Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator/.specify/orchestrator/milestones/M006//phases/P04/tasks/T05-SUMMARY.md"
+  - "/Users/brettkellgren/Sites/lakeledger/orchestrator/.specify/orchestrator/milestones/M006//phases/P04/tasks/T01-SUMMARY.md, /Users/brettkellgren/Sites/lakeledger/orchestrator/.specify/orchestrator/milestones/M006//phases/P04/tasks/T02-SUMMARY.md, /Users/brettkellgren/Sites/lakeledger/orchestrator/.specify/orchestrator/milestones/M006//phases/P04/tasks/T03-SUMMARY.md, /Users/brettkellgren/Sites/lakeledger/orchestrator/.specify/orchestrator/milestones/M006//phases/P04/tasks/T04-SUMMARY.md, /Users/brettkellgren/Sites/lakeledger/orchestrator/.specify/orchestrator/milestones/M006//phases/P04/tasks/T05-SUMMARY.md"
 duration: "732m"
 verification_result: "pass"
 completed_at: "2026-04-14T03:19:36Z"

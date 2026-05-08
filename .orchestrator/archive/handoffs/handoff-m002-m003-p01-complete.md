@@ -1,12 +1,12 @@
 # Handoff: M002 + M003 Phase P01 Complete
 
 **Date**: 2026-04-09
-**Context**: Building two features for spec-kit-orchestrator in parallel using the orchestrator's own workflow (dog-fooding).
-**Working directory**: /Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator (git submodule of lakeledger)
+**Context**: Building two features for orchestrator in parallel using the orchestrator's own workflow (dog-fooding).
+**Working directory**: /Users/brettkellgren/Sites/lakeledger/orchestrator (git submodule of lakeledger)
 
 ## What We're Building
 
-Two features for the spec-kit-orchestrator extension, specified, evaluated, roadmapped, and partially executed:
+Two features for the orchestrator extension, specified, evaluated, roadmapped, and partially executed:
 
 ### M002 — Knowledge Architecture (spec 002)
 **Spec**: `specs/002-knowledge-architecture/spec.md`

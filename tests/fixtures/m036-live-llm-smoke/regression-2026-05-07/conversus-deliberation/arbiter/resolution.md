@@ -4,13 +4,13 @@ I have all the information needed. Here is the arbitration resolution:
 
 ### Process Note
 
-This arbitration was triggered by the `disputes_remain` condition: Phase 5 synthesis identified 2 remaining disputes that could not be resolved by synthesis alone. The deliberation involved 2 agents — extractor-advocate (structural-preservation charter) and fidelity-advocate (content-fidelity charter) — in cooperative mode with subject arbitration. Extractor-advocate declared no remaining disputes in Phase 4; both remaining disputes were raised by fidelity-advocate. The arbiter is the subject system (spec-kit-orchestrator) whose constitution governs all rulings.
+This arbitration was triggered by the `disputes_remain` condition: Phase 5 synthesis identified 2 remaining disputes that could not be resolved by synthesis alone. The deliberation involved 2 agents — extractor-advocate (structural-preservation charter) and fidelity-advocate (content-fidelity charter) — in cooperative mode with subject arbitration. Extractor-advocate declared no remaining disputes in Phase 4; both remaining disputes were raised by fidelity-advocate. The arbiter is the subject system (orchestrator) whose constitution governs all rulings.
 
 ---
 
 ### Decision Framework
 
-Principles from `/Users/brettkellgren/Sites/spec-kit-orchestrator/.orchestrator/memory/constitution.md` that bear on the remaining disputes:
+Principles from `/Users/brettkellgren/Sites/orchestrator/.orchestrator/memory/constitution.md` that bear on the remaining disputes:
 
 - **Principle II (Evidence Before Claims)**: "No task is marked complete without fresh verification evidence... The verification sequence is: run the command → read the output → confirm the result matches expectations → THEN claim completion." A document in which the structural form is corrected but the annotation retains a P1 semantic error cannot provide fresh verification evidence of a complete, correct §4 correction.
 

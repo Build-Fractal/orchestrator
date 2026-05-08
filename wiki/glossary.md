@@ -1,6 +1,6 @@
 # Glossary
 
-Project glossary for spec-kit-orchestrator — alphabetized term entries with
+Project glossary for orchestrator — alphabetized term entries with
 one-line definitions and at most a two-line elaboration. M033's grilling
 protocol writes inline into this file as terms resolve.
 

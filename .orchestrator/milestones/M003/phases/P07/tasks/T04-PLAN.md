@@ -29,7 +29,7 @@ Add three short progressive-disclosure sections to `commands/migrate.md` that su
 
 ### Step 1: Choose insertion point in `commands/migrate.md`
 
-Open `commands/migrate.md`. The conventional spec-kit-orchestrator command file structure (MEM012) is:
+Open `commands/migrate.md`. The conventional orchestrator command file structure (MEM012) is:
 
 ```
 YAML frontmatter

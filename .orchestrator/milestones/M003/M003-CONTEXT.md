@@ -61,7 +61,7 @@ Malformed entries are skipped with warnings in `MIGRATION-REPORT.md`. Raw data p
 
 All scripts in Bash 3.2 (macOS compatible). SQLite reading via `sqlite3` CLI. No `python3` or `jq` hard dependencies. YAML frontmatter written with `printf`/`echo`.
 
-**Rationale**: Aligns with the existing spec-kit-orchestrator technology stack. Bash 3.2 is the macOS default, and `sqlite3` ships with macOS. Avoiding additional dependencies keeps the migration tool portable and consistent with the extension's architecture.
+**Rationale**: Aligns with the existing orchestrator technology stack. Bash 3.2 is the macOS default, and `sqlite3` ships with macOS. Avoiding additional dependencies keeps the migration tool portable and consistent with the extension's architecture.
 
 ### AD-10: Non-Destructive Migration (NFR-201)
 
@@ -117,7 +117,7 @@ Migration itself is a Principle VI operation (State On Disk Is Truth) -- we read
 3. **No jq hard dependency**: JSON parsing must work without `jq`. Use `grep`/`sed`/`awk` for simple JSON extraction, or `sqlite3` JSON functions for database queries. `jq` may be used as optional enhancement if detected.
 4. **No python3 hard dependency**: Everything in shell. No Python scripts for data transformation.
 5. **Performance target**: Migration must complete in <60 seconds for a 43-milestone project with 150 knowledge entries. (NFR-200)
-6. **YAML frontmatter generation**: Use `printf`/`echo` for YAML output. No YAML libraries. Must produce valid YAML that spec-kit-orchestrator's existing scripts can parse.
+6. **YAML frontmatter generation**: Use `printf`/`echo` for YAML output. No YAML libraries. Must produce valid YAML that orchestrator's existing scripts can parse.
 
 ### Compatibility Constraints
 

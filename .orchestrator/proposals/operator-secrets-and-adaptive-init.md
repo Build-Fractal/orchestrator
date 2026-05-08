@@ -90,7 +90,7 @@ Verdict: NOT a problem. Expected dogfood content in this repo's state.
 
 **C. Documentation example URLs (acceptable)**
 
-- `commands/github-status.md:34` → `REPO_SLUG: Build-Fractal/spec-kit-orchestrator`
+- `commands/github-status.md:34` → `REPO_SLUG: Build-Fractal/orchestrator`
 - `references/RENAME-PLAN.md` → multiple `Build-Fractal/...` references
 - `scripts/lifecycle/wiki-init.sh:147-148` → comment showing example
   URL shapes
@@ -130,7 +130,7 @@ covers this whole class.
 
 **One concrete cleanup recommendation if it ever fits a sweep:**
 
-`commands/github-status.md:34` shows `REPO_SLUG: Build-Fractal/spec-kit-orchestrator`
+`commands/github-status.md:34` shows `REPO_SLUG: Build-Fractal/orchestrator`
 in an example output block. Generic-ize to `<owner>/<repo>` so
 consumers who paste a snippet from the docs don't accidentally
 Build-Fractal themselves. Five-minute fix.

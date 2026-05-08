@@ -78,7 +78,7 @@ on first try, then capture feedback in a shape that informs M037 P02
 planning.
 
 Current state of the orchestrator (the source repo at
-/Users/brettkellgren/Sites/spec-kit-orchestrator):
+/Users/brettkellgren/Sites/orchestrator):
 - M037 P01 shipped (homepage card grid + version:→title: nav projection
   + DR-### heading-shape pivot + nav.tabs + toc_depth + edit_uri +
   install-template config.yml clobber fix). PBJ team reads, not operator.

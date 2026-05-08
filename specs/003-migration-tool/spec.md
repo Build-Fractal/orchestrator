@@ -7,7 +7,7 @@
 
 ## Problem Statement
 
-Teams switching to spec-kit-orchestrator from other tools face a cold-start problem:
+Teams switching to orchestrator from other tools face a cold-start problem:
 
 1. **Knowledge loss**: Months of accumulated gotchas, conventions, patterns, and decisions are trapped in incompatible formats. Starting fresh means the first 10+ milestones re-discover knowledge that was already captured.
 2. **History loss**: Milestone summaries, phase outcomes, and verification evidence provide institutional context ("we tried X in M012 and it failed because Y"). Without migration, this context is gone.

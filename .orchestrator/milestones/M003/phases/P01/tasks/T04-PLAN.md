@@ -188,7 +188,7 @@ chmod +x scripts/migrate/adapters/gsd2.sh
 ```bash
 # Source and validate
 bash -c '
-  cd /path/to/spec-kit-orchestrator
+  cd /path/to/orchestrator
   source scripts/migrate/adapter-interface.sh
   source scripts/migrate/adapters/gsd2.sh
   echo "PASS: adapter loaded"
@@ -196,7 +196,7 @@ bash -c '
 
 # Test detection against real GSD2 directory
 bash -c '
-  cd /path/to/spec-kit-orchestrator
+  cd /path/to/orchestrator
   source scripts/migrate/adapter-interface.sh
   source scripts/migrate/adapters/gsd2.sh
   result=$(detect_source "/Users/brettkellgren/Sites/lakeledger/.gsd")
@@ -205,7 +205,7 @@ bash -c '
 
 # Test full extraction pipeline
 bash -c '
-  cd /path/to/spec-kit-orchestrator
+  cd /path/to/orchestrator
   source scripts/migrate/adapter-interface.sh
   source scripts/migrate/adapters/gsd2.sh
   tmpdir=$(mktemp -d)

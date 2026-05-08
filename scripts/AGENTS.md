@@ -1,6 +1,6 @@
 # Contributor Guide
 
-> Progressive disclosure reference for contributing to spec-kit-orchestrator scripts.
+> Progressive disclosure reference for contributing to orchestrator scripts.
 > Self-contained -- read this document to understand coding conventions, testing patterns,
 > and compliance requirements without cross-referencing other docs.
 

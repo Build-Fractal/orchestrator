@@ -12,7 +12,7 @@ depends_on: [T01]
 
 - T01 is complete. All six `scripts/verify/m015-p03-*.sh` verify scripts exist, parse, are executable, and currently FAIL (expected pre-reframe state). The CHANGELOG historical snapshot exists at `scripts/verify/m015-p03-helpers/changelog-historical-snapshot.txt`.
 - P02 is complete. State lives at `.orchestrator/`, constitution lives at `.orchestrator/memory/constitution.md`.
-- Working in repo root: `/Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator`.
+- Working in repo root: `/Users/brettkellgren/Sites/lakeledger/orchestrator`.
 
 ## Description
 
@@ -77,7 +77,7 @@ Replacement narrative: the orchestrator is a standalone tool distributed via `pa
 
 4. **Rewrite `references/architecture.md`** (currently 378 lines). This is a contributor-oriented deep reference.
 
-   - Opening Overview: rewrite the first paragraph to describe the orchestrator as standalone. Replace "spec-kit-orchestrator is a spec-kit extension that adds autonomous multi-phase orchestration to spec-kit's spec-driven development workflow." with a standalone opening. Replace "All state is derived from file presence on disk under `.specify/orchestrator/`." with `.orchestrator/`.
+   - Opening Overview: rewrite the first paragraph to describe the orchestrator as standalone. Replace "orchestrator is a spec-kit extension that adds autonomous multi-phase orchestration to spec-kit's spec-driven development workflow." with a standalone opening. Replace "All state is derived from file presence on disk under `.specify/orchestrator/`." with `.orchestrator/`.
    - Paragraph 2 of Overview: remove "It registers with spec-kit via `extension.yml`, which declares 12 commands, 5 lifecycle hooks, and over 40 helper scripts. The extension requires spec-kit >= 0.1.0". Replace with a standalone description of how the orchestrator plugs into a runtime (Claude Code agent tool / Codex CLI SDK / Cursor) via `packaging/install/install-<runtime>.sh`.
    - Paragraph 3 of Overview: update the `.specify/memory/constitution.md` reference to `.orchestrator/memory/constitution.md`.
    - Engine Pipeline section: sweep the 9 occurrences of `.specify/orchestrator/` to `.orchestrator/`. The structural content (7-stage pipeline, Init/Hook/Build/Compress/Dispatch/Verify/Record) remains unchanged.
@@ -86,7 +86,7 @@ Replacement narrative: the orchestrator is a standalone tool distributed via `pa
 
 5. **Rewrite `references/installation.md`** (currently 258 lines). This is the single source of truth for install steps.
 
-   - Overview: rewrite opening. Replace "spec-kit-orchestrator is an extension that adds multi-phase orchestration to spec-kit's SDD workflow. It is distributed as a set of files that you copy into your project." with "spec-kit-orchestrator is a standalone autonomous orchestrator. It is distributed as a runtime-specific skill bundle installed via `packaging/install/install-<runtime>.sh`."
+   - Overview: rewrite opening. Replace "orchestrator is an extension that adds multi-phase orchestration to spec-kit's SDD workflow. It is distributed as a set of files that you copy into your project." with "orchestrator is a standalone autonomous orchestrator. It is distributed as a runtime-specific skill bundle installed via `packaging/install/install-<runtime>.sh`."
    - What to Copy / What NOT to Copy: the cp-r install is obsolete. Delete the entire "What to Copy" table and "What NOT to Copy" table, and replace with a single "Install" section pointing at the installers:
      - `bash packaging/install/install-claude-code.sh` (Claude Code)
      - `bash packaging/install/install-codex.sh` (Codex CLI)

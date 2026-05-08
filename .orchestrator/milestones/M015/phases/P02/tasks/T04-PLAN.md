@@ -10,7 +10,7 @@ depends_on: [T03]
 
 ## Prerequisites
 
-- Working in repo root: `/Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator`
+- Working in repo root: `/Users/brettkellgren/Sites/lakeledger/orchestrator`
 - T02 is complete: `.orchestrator/` exists with the full state tree.
 - T03 is complete: `.orchestrator/memory/constitution.md` exists, `.specify/memory/` is gone.
 - `scripts/state/resolve-root.sh` contains the five-rule resolver from M008:

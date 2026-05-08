@@ -94,5 +94,5 @@ The extraction demonstrates strong fidelity discipline for body content; the pri
 
 ### Referenced Documentation
 
-- `/Users/brettkellgren/Sites/spec-kit-orchestrator/tests/fixtures/m036-live-llm-smoke/policy-data-retention.md` — sections cited: L1-8 (document header / classification), L9-14 (Purpose / EC-REG-2024-07 authority), L16-26 (Scope / out-of-scope boundaries), R-1 (90-day floor / EC-RUNBOOK-IR-001 rationale), R-2 (7-year floor), R-3 (365-day ceiling compound scope), R-4, R-5, E-1, E-2, L63-70 (References section)
+- `/Users/brettkellgren/Sites/orchestrator/tests/fixtures/m036-live-llm-smoke/policy-data-retention.md` — sections cited: L1-8 (document header / classification), L9-14 (Purpose / EC-REG-2024-07 authority), L16-26 (Scope / out-of-scope boundaries), R-1 (90-day floor / EC-RUNBOOK-IR-001 rationale), R-2 (7-year floor), R-3 (365-day ceiling compound scope), R-4, R-5, E-1, E-2, L63-70 (References section)
 - `/private/var/folders/k4/zsz6pfl936bb8nm6_byfn2d80000gn/T/tmp.cwOiKBlTWN/tmp-extracted.structured.md` — sections cited: L1-14 (YAML frontmatter), L26-33 (Purpose annotation), L44-46 (Scope annotation), L105-143 (R-1 through R-5 with applies_to_field annotations), L157-175 (E-1 through E-2), L177-205 (References with scope annotations)

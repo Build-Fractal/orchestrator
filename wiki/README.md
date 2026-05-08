@@ -1,4 +1,4 @@
-# spec-kit-orchestrator wiki (M012)
+# orchestrator wiki (M012)
 
 Dogfood-only MkDocs site that renders `.orchestrator/` artifacts.
 

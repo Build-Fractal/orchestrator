@@ -80,7 +80,7 @@ Three deliverables wrapped into one task because each is small:
    Operator action items at P01.5:
    - Update CLAUDE.md, README.md, package.json (when authored at P02) to reflect @build-fractal/orchestrator and Build-Fractal/orchestrator forms.
    - Tag v0.9.X-final-spec-kit-name immediately before P01.5 rename commits land (D-RN-7).
-   - Migrate ~/.claude/projects/-Users-brettkellgren-Sites-spec-kit-orchestrator/ → -Sites-orchestrator/ (D-RN-6).
+   - Migrate ~/.claude/projects/-Users-brettkellgren-Sites-orchestrator/ → -Sites-orchestrator/ (D-RN-6).
    ```
 
    If `npm` is unavailable on the executing machine, write the file with the `Outcome:` lines marked `<npm not available; verify before P01.5 with: npm view @build-fractal/orchestrator>` and the `Interpretation:` lines marked `(unverified — assumed AVAILABLE per RENAME-PLAN default; re-run before P01.5 commits)`. The resolution remains `@build-fractal/orchestrator` because the user committed to it at discuss-step regardless of which scope-collision path the registry takes.

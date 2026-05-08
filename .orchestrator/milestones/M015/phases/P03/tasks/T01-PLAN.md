@@ -10,7 +10,7 @@ depends_on: []
 
 ## Prerequisites
 
-- Working in repo root: `/Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator`
+- Working in repo root: `/Users/brettkellgren/Sites/lakeledger/orchestrator`
 - P02 is complete: state lives at `.orchestrator/`, constitution lives at `.orchestrator/memory/constitution.md`, `scripts/state/resolve-root.sh` has no bridge rule, `scripts/verify/m015-p02-no-stale-state-refs.sh` exists and PASSes today with its full `ALLOW_P03_DOCS` list intact.
 - The five primary docs (`README.md`, `CLAUDE.md`, `references/architecture.md`, `references/installation.md`, `docs/getting-started.md`) still contain legacy "spec-kit extension" framing and `/speckit.*`/`.specify/orchestrator/` references — that is the expected pre-reframe state. This task does NOT edit them; T02/T03 do.
 - CHANGELOG.md has no M015 entry yet. Its current top entry is the `[0.8.0] — 2026-04-14` M008 block.

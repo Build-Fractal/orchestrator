@@ -111,7 +111,7 @@ framework-supplied `- stylesheets/code-chips.css` always renders.
 
 PBJ-central's `.orchestrator/config.yml` is **not accessible at executor**
 in this dispatch (the executor only has the orchestrator repo at
-`/Users/brettkellgren/Sites/spec-kit-orchestrator`). Per the T06 plan
+`/Users/brettkellgren/Sites/orchestrator`). Per the T06 plan
 §143-147 fallback ("If PBJ-central is not accessible at dispatch time, the
 executor proceeds with the table above as the authoritative
 classification"), the cross-reference is deferred. The plan's 15-key

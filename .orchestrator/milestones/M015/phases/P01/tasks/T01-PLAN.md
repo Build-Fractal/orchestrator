@@ -10,7 +10,7 @@ depends_on: []
 
 ## Prerequisites
 
-- Working in repo root: `/Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator`
+- Working in repo root: `/Users/brettkellgren/Sites/lakeledger/orchestrator`
 - The repo currently contains `extension.yml`, 9 dogfooded `/speckit.*` slash command files in `.claude/commands/`, 5 helper scripts in `.specify/scripts/bash/`, 9 spec-kit-style command templates in `.specify/templates/commands/`, and 6 root-level spec-kit-style templates (`agent-file-template.md`, `checklist-template.md`, `constitution-template.md`, `plan-template.md`, `spec-template.md`, `tasks-template.md`).
 - Per FR-013 and the cross-cutting "Migration adapter preservation" concern, `scripts/migrate/adapters/speckit.sh`, `scripts/state/detect-speckit.sh`, `scripts/dispatch/adapters/format/speckit.sh`, and `commands/migrate.md` MUST NOT be touched by this task. They detect spec-kit shape as a *migration source*, not as a runtime host.
 

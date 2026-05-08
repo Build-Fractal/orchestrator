@@ -6,7 +6,7 @@ This addendum does not change what M012 ships. It formalizes the routing the M01
 
 ## Base URL
 
-- **Production GitHub Pages**: `https://<github-org>.github.io/<repo>/` (the default for a `gh-deploy`d repo Pages site). For this repo, that resolves to `https://lakeledger.github.io/spec-kit-orchestrator/` once the operator performs the M012 first deploy and flips `wiki/mkdocs.yml`'s placeholder `site_url` (`https://example.invalid/`) to the real value.
+- **Production GitHub Pages**: `https://<github-org>.github.io/<repo>/` (the default for a `gh-deploy`d repo Pages site). For this repo, that resolves to `https://lakeledger.github.io/orchestrator/` once the operator performs the M012 first deploy and flips `wiki/mkdocs.yml`'s placeholder `site_url` (`https://example.invalid/`) to the real value.
 - **Local preview**: `http://127.0.0.1:8000/` (default for `scripts/wiki/wiki-serve.sh` → `mkdocs serve`). Paths below are suffixes of the base URL in both cases.
 
 ## Path routing

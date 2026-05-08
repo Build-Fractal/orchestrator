@@ -10,7 +10,7 @@ depends_on: ["T01", "T02"]
 
 ## Prerequisites
 
-- `scripts/hooks/pre-bash-shape-guard.sh` exists (verified: `[ -f /Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/hooks/pre-bash-shape-guard.sh ]` returns exit 0; current line count 188).
+- `scripts/hooks/pre-bash-shape-guard.sh` exists (verified: `[ -f /Users/brettkellgren/Sites/orchestrator/scripts/hooks/pre-bash-shape-guard.sh ]` returns exit 0; current line count 188).
 - `ANTIPATTERNS.md` carries entries AP-010..AP-014 (T01 deliverable).
 - `scripts/verify/lib/shape-classifier.sh` emits the five new reject classes (T02 deliverable).
 - The hook's `reject_lookup` function exists at lines 25..33 with the four existing case arms (`nested-cmd-sub`, `compound-chain-gt2`, `heredoc-with-expansion`, `quoted-brace`) plus the catch-all default arm.

@@ -58,7 +58,7 @@ Path resolution honors environment-variable overrides for fixture isolation (mat
 
 ### Step 1: Create `scripts/knowledge/lib/preferences.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/knowledge/lib/preferences.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/knowledge/lib/preferences.sh`
 
 Reference implementation:
 

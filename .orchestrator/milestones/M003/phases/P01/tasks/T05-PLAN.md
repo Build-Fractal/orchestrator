@@ -213,7 +213,7 @@ show_usage() {
 Usage: migrate.sh --path <source-path> [options]
 
 Migrate project artifacts from GSD2, GSD v1, or standard spec-kit
-into spec-kit-orchestrator format.
+into orchestrator format.
 
 Required:
   --path <path>          Path to source project directory
@@ -277,7 +277,7 @@ main() {
 
   validate_args
 
-  echo "=== spec-kit-orchestrator migration ==="
+  echo "=== orchestrator migration ==="
   echo ""
 
   # Step 1: Source detection

@@ -24,7 +24,7 @@ depends_on: ["T03"]
 - `scripts/dispatch/dispatch-interface.sh` is amended (T02 + T03 small follow-up Step 2) with shadow-mode hook + `classifier_confidence`/`model_routed`/`model_used`/`partial_flip_active`/`withheld_classes` fields under `M030_SHADOW_MODE=1` AND `CLAUDECODE=1`.
 - `scripts/diagnostics/shadow-compare.sh` exists with 4-verdict output (T03).
 - Five fixture JSONL files at `tests/fixtures/m030-p02/` (T01 + T03).
-- `scripts/util/dual-write-runtime-md.sh` exists (pre-existing; verified during plan-authoring at `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/util/dual-write-runtime-md.sh`).
+- `scripts/util/dual-write-runtime-md.sh` exists (pre-existing; verified during plan-authoring at `/Users/brettkellgren/Sites/orchestrator/scripts/util/dual-write-runtime-md.sh`).
 - `tools/verify/p01-phase-suite.sh` exists as the reference shape for the straight-line aggregator pattern (P01/T04 close).
 
 Plan-time prerequisite-existence verification: every path above is either a T01-T03 deliverable (asserted by their respective close conditions) or a pre-existing repo file (asserted during plan-authoring via direct `ls` inspection). `scripts/util/dual-write-runtime-md.sh` was confirmed present.

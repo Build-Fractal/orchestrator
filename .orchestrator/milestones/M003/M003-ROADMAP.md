@@ -4,7 +4,7 @@ type: roadmap
 milestone: "M003"
 feature_ref: "003-migration-tool"
 feature_spec: "specs/003-migration-tool/spec.md"
-vision: "Enable teams to adopt spec-kit-orchestrator without losing institutional knowledge by migrating project artifacts from GSD2, GSD v1, or standard spec-kit into orchestrator format via a single command."
+vision: "Enable teams to adopt orchestrator without losing institutional knowledge by migrating project artifacts from GSD2, GSD v1, or standard spec-kit into orchestrator format via a single command."
 tier: "C"
 created_at: "2026-04-09T12:00:00Z"
 updated_at: "2026-04-14T00:00:00Z"

@@ -10,7 +10,7 @@ depends_on: [T02]
 
 ## Prerequisites
 
-- Working in repo root: `/Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator`
+- Working in repo root: `/Users/brettkellgren/Sites/lakeledger/orchestrator`
 - T02 is complete: `.orchestrator/` exists with the migrated state tree, `.specify/orchestrator/` is gone.
 - `.specify/memory/constitution.md` still exists and has not been touched.
 - `.orchestrator/memory/` does NOT yet exist.

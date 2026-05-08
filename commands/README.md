@@ -1,6 +1,6 @@
 # commands/
 
-Agent instruction documents for spec-kit orchestrator commands. Each file defines one `orchestrator:*` command (invoked at runtime as `/orchestrator-<name>`).
+Agent instruction documents for orchestrator commands. Each file defines one `orchestrator:*` command (invoked at runtime as `/orchestrator-<name>`).
 
 ## Structure
 Every command file follows: YAML frontmatter → Title → Prerequisites → Core Workflow → Output → Idempotency → Error Handling → Referenced Scripts/Templates.

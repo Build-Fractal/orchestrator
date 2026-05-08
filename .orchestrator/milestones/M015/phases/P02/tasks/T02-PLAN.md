@@ -10,7 +10,7 @@ depends_on: [T01]
 
 ## Prerequisites
 
-- Working in repo root: `/Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator`
+- Working in repo root: `/Users/brettkellgren/Sites/lakeledger/orchestrator`
 - T01 is complete: six `scripts/verify/m015-p02-*.sh` verify scripts exist and are executable.
 - `.specify/orchestrator/` exists with this project's live state: milestones (M001–M015), `KNOWLEDGE.md`, `DECISIONS.md`, `execution-log.jsonl`, `config.yml`, telemetry, locks, etc.
 - `.orchestrator/` does NOT yet exist at the repo root (verified: `test ! -e .orchestrator`).

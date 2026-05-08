@@ -8,7 +8,7 @@ M007 (Graph-Enhanced Knowledge Retrieval) built a SQLite graph backend for the k
 
 ## Project
 
-- **Repo:** `/Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator`
+- **Repo:** `/Users/brettkellgren/Sites/lakeledger/orchestrator`
 - **Architecture:** spec-kit extension, pure Bash 3.2 (no Python, no associative arrays)
 - **Key constraint:** AD-19 — no compound bash in verification Check: commands (use wrapper scripts)
 - **Key constraint:** Atomic file operations via temp-file-then-mv pattern throughout

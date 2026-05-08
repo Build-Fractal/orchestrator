@@ -33,7 +33,7 @@ The test uses tempdir + `PROJECT_ROOT` + `ORCH_ROOT` env overrides (per the P03/
 
 ### Step 1: Create `tests/test-jaccard-clustering.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/tests/test-jaccard-clustering.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/tests/test-jaccard-clustering.sh`
 
 ```bash
 #!/usr/bin/env bash

@@ -10,7 +10,7 @@ depends_on: []
 
 ## Prerequisites
 
-- Working tree at `~/Sites/spec-kit-orchestrator/` with `.orchestrator/milestones/M*/` populated by closed milestones (M001–M027 all have `phases/` or `archive/` subtrees containing `T*-PLAN.md` files — 455 candidates available as of P00 plan time).
+- Working tree at `~/Sites/orchestrator/` with `.orchestrator/milestones/M*/` populated by closed milestones (M001–M027 all have `phases/` or `archive/` subtrees containing `T*-PLAN.md` files — 455 candidates available as of P00 plan time).
 - `scripts/dispatch/classify-task.sh` MUST NOT exist on disk — D-A4 independence-by-construction. Confirm via `ls scripts/dispatch/classify-task.sh` returning exit 1 before starting work; if the file exists, halt and escalate.
 - `tools/verify/` directory may not exist yet; create it via `mkdir -p tools/verify` if absent (this is the project-owned verifier home per AD-19 path discipline).
 - `tests/fixtures/` exists; create `tests/fixtures/m030-classifier-corpus/` via `mkdir -p`.

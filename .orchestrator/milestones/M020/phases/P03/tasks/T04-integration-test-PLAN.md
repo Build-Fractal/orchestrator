@@ -55,7 +55,7 @@ Out of scope:
 
 ### Step 1: Create `tests/test-graduate-workflow.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/tests/test-graduate-workflow.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/tests/test-graduate-workflow.sh`
 
 ```bash
 #!/usr/bin/env bash

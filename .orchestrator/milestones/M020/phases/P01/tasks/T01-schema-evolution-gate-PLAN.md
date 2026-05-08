@@ -44,7 +44,7 @@ frontmatter helper, validation report) lands in T02–T05.
 
 ### Step 1: Append D024 to `.orchestrator/DECISIONS.md`
 
-Open `/Users/brettkellgren/Sites/spec-kit-orchestrator/.orchestrator/DECISIONS.md`
+Open `/Users/brettkellgren/Sites/orchestrator/.orchestrator/DECISIONS.md`
 and append a new D-row at the end of the table. Use the same column shape
 the file already uses (Decision ID | Source | Tags | Decision | Rationale |
 Reversible). Sample row content:
@@ -61,7 +61,7 @@ and (d) the citation of MEM031 as the vocabulary note.
 ### Step 2: Create `knowledge/conventions/MEM031.md`
 
 Write the file at
-`/Users/brettkellgren/Sites/spec-kit-orchestrator/knowledge/conventions/MEM031.md`
+`/Users/brettkellgren/Sites/orchestrator/knowledge/conventions/MEM031.md`
 with the following content (verbatim frontmatter; body may be elaborated for
 clarity but must preserve the load-bearing tokens):
 
@@ -137,7 +137,7 @@ the fields but MUST NOT introduce new fields without a follow-up M020 D-row.
 
 ### Step 3: Register MEM031 in `KNOWLEDGE-INDEX.md`
 
-Open `/Users/brettkellgren/Sites/spec-kit-orchestrator/KNOWLEDGE-INDEX.md`
+Open `/Users/brettkellgren/Sites/orchestrator/KNOWLEDGE-INDEX.md`
 and add a row to the conventions table matching the format of the existing
 MEM030 row. Required field values:
 
@@ -156,7 +156,7 @@ delimited markdown rows, mirror that format.
 ### Step 4: Create the verification scripts for this task
 
 Create
-`/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p01-mem031-vocabulary.sh`:
+`/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p01-mem031-vocabulary.sh`:
 
 ```bash
 #!/usr/bin/env bash
@@ -203,7 +203,7 @@ exit 0
 ```
 
 Create
-`/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p01-d024-row.sh`:
+`/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p01-d024-row.sh`:
 
 ```bash
 #!/usr/bin/env bash
@@ -280,10 +280,10 @@ None.
 
 ### From Disk (Pre-existing)
 
-- `/Users/brettkellgren/Sites/spec-kit-orchestrator/.orchestrator/DECISIONS.md` — existing D-row table; append D024 at the end preserving column shape.
-- `/Users/brettkellgren/Sites/spec-kit-orchestrator/knowledge/conventions/MEM030.md` — reference for frontmatter shape + content style of a recent convention entry; copy frontmatter field set verbatim, change ID + dates + body.
-- `/Users/brettkellgren/Sites/spec-kit-orchestrator/KNOWLEDGE-INDEX.md` — existing conventions table; append a MEM031 row matching the existing format.
-- `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/knowledge/rebuild-index.sh` — existing index rebuilder; run after MEM031 is in place to confirm parseability.
+- `/Users/brettkellgren/Sites/orchestrator/.orchestrator/DECISIONS.md` — existing D-row table; append D024 at the end preserving column shape.
+- `/Users/brettkellgren/Sites/orchestrator/knowledge/conventions/MEM030.md` — reference for frontmatter shape + content style of a recent convention entry; copy frontmatter field set verbatim, change ID + dates + body.
+- `/Users/brettkellgren/Sites/orchestrator/KNOWLEDGE-INDEX.md` — existing conventions table; append a MEM031 row matching the existing format.
+- `/Users/brettkellgren/Sites/orchestrator/scripts/knowledge/rebuild-index.sh` — existing index rebuilder; run after MEM031 is in place to confirm parseability.
 
 ## Constraints
 

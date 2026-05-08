@@ -58,7 +58,7 @@ The new `--cluster` flag, when present, takes a SHORT-CIRCUIT path that does not
 
 ### Step 1: Modify `scripts/knowledge/consolidate-artifacts.sh` — add `--cluster` short-circuit
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/knowledge/consolidate-artifacts.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/knowledge/consolidate-artifacts.sh`
 
 Add the following block IMMEDIATELY after the existing `set -euo pipefail` and `SCRIPT_DIR="..."` resolution near the top of the file (before the existing `usage()` definition and argument validation), so the `--cluster` flag is detected before any legacy-shape validation runs:
 
@@ -210,7 +210,7 @@ The placement is critical: this block must come BEFORE the existing argument-val
 
 ### Step 2: Create `scripts/verify/m020-p05-consolidate-cluster-emit.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p05-consolidate-cluster-emit.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p05-consolidate-cluster-emit.sh`
 
 ```bash
 #!/usr/bin/env bash
@@ -313,7 +313,7 @@ exit 0
 
 ### Step 3: Create `scripts/verify/m020-p05-consolidate-conflict-diagnostic.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p05-consolidate-conflict-diagnostic.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p05-consolidate-conflict-diagnostic.sh`
 
 ```bash
 #!/usr/bin/env bash
@@ -389,7 +389,7 @@ exit 0
 
 ### Step 4: Create `scripts/verify/m020-p05-consolidate-jsonl-emit.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p05-consolidate-jsonl-emit.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p05-consolidate-jsonl-emit.sh`
 
 ```bash
 #!/usr/bin/env bash
@@ -477,7 +477,7 @@ exit 0
 
 ### Step 5: Create `scripts/verify/m020-p05-consolidate-legacy-shape-preserved.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p05-consolidate-legacy-shape-preserved.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p05-consolidate-legacy-shape-preserved.sh`
 
 ```bash
 #!/usr/bin/env bash

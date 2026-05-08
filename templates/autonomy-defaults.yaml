@@ -88,7 +88,7 @@ baseline_allow:
   - "WebFetch"
   - "NotebookEdit"
   - "Skill(speckit.*)"
-  - "Skill(speckit.orchestrator.*)"
+  - "Skill(orchestrator:*)"
   # --- AD-20: system temp directories ---
   - "Read(//tmp/**)"
   - "Read(//private/tmp/**)"

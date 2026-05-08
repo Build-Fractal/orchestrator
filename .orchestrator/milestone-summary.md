@@ -89,7 +89,7 @@ Lakeledger full-scale validation deferred beyond the end-to-end pipeline pass.
 
 ---
 
-# M001: spec-kit-orchestrator v0.1.0
+# M001: orchestrator v0.1.0
 
 Completed: 2026-03-20 | 7 slices, 307 test assertions, zero failures
 

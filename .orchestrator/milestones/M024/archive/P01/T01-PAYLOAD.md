@@ -998,7 +998,7 @@ depends_on: []
 
 ## Prerequisites
 
-None. This is the first task in P01 and depends only on a clean checkout of `spec-kit-orchestrator` at the project root. Working directory is the project root (`/Users/brettkellgren/Sites/spec-kit-orchestrator` or whatever the current checkout is — never hardcode the path).
+None. This is the first task in P01 and depends only on a clean checkout of `orchestrator` at the project root. Working directory is the project root (`/Users/brettkellgren/Sites/orchestrator` or whatever the current checkout is — never hardcode the path).
 
 The project's existing template directory is `templates/`. List it with `ls templates/` to confirm conventions before writing — frontmatter blocks open `---` on line 1, `schema_version: "1.0"` is the canonical first key.
 

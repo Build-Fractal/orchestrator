@@ -45,7 +45,7 @@ and bbt-companion installed before T01's schema extension and lack
 
 For pre-launch (M035 P01) the only supported `update_source` is `git`
 — the helper resolves the configured upstream path from
-`.orchestrator/config.yml` (default `$HOME/Sites/spec-kit-orchestrator`
+`.orchestrator/config.yml` (default `$HOME/Sites/orchestrator`
 per US-2) and runs `git rev-list --count $local_sha..upstream_HEAD`.
 Other source types (`npm`, `homebrew`, `none`) are recognised in the
 emission shape but the upstream-comparison code is a no-op for them
@@ -114,7 +114,7 @@ a follow-up M027-style suppression knob is out of scope for P01.
 
    # --- Defaults ---
    update_source="git"
-   upstream_path="$HOME/Sites/spec-kit-orchestrator"
+   upstream_path="$HOME/Sites/orchestrator"
    commits_behind=0
    versions_behind=0
 

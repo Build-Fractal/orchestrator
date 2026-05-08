@@ -3,7 +3,7 @@ schema_version: "1.0"
 type: deploy-record
 milestone: "M012"
 phase: "P04"
-deployed_url: "https://Build-Fractal.github.io/spec-kit-orchestrator/"
+deployed_url: "https://Build-Fractal.github.io/orchestrator/"
 commit_sha: "84ce4bdc9c398d4108162ab27259e42283bbf5a2"
 deployed_at: "2026-04-23T03:52:07Z"
 deployer: "bkellgren"
@@ -17,10 +17,10 @@ gate_giscus_smoke_result: "pass"
 
 ## Deploy summary
 
-Live deploy completed 2026-04-23 against `Build-Fractal/spec-kit-orchestrator`
+Live deploy completed 2026-04-23 against `Build-Fractal/orchestrator`
 (private repo; Giscus App installed directly). Wrapper ran clean: all four
 gates PASS, `mkdocs gh-deploy --force` created the `gh-pages` branch, and the
-site is live at <https://Build-Fractal.github.io/spec-kit-orchestrator/>.
+site is live at <https://Build-Fractal.github.io/orchestrator/>.
 
 Deploy required a remediation patch first — the M012 auto-mode execution
 used SKIP-as-PASS on mkdocs-dependent gates, so three bugs were caught at
@@ -45,7 +45,7 @@ GATE: giscus-smoke PASS
 DEPLOY: pushing to gh-pages
 INFO    -  Copying '.../wiki/site' to 'gh-pages' branch and pushing to GitHub.
  * [new branch]      gh-pages -> gh-pages
-INFO    -  Your documentation should shortly be available at: https://Build-Fractal.github.io/spec-kit-orchestrator/
+INFO    -  Your documentation should shortly be available at: https://Build-Fractal.github.io/orchestrator/
 OK: deployed to gh-pages
 ```
 

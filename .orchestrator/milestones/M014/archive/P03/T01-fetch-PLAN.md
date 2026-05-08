@@ -141,10 +141,10 @@ The fetcher does NOT classify, queue, or apply — it is a pure cache primer.
 
    - `sample-inbox.jsonl` — 4 fake comments (one per FR-9 class). Used by T02 + downstream tasks; T01 also uses it as the GH_API_STUB target for one of the verifier cases. Format: one JSON object per line with `url`, `body`, `source_surface`, `id`, `created_at` fields. Example seed lines:
      ```
-     {"url":"https://github.com/Build-Fractal/spec-kit-orchestrator/issues/1#issuecomment-1","body":"acceptance criterion 2 fails on macOS 13","source_surface":"github","id":"c1","created_at":"2026-04-24T00:00:00Z"}
-     {"url":"https://github.com/Build-Fractal/spec-kit-orchestrator/issues/2#issuecomment-2","body":"decision: we should pin Bash 3.2 across all scripts","source_surface":"github","id":"c2","created_at":"2026-04-24T00:01:00Z"}
-     {"url":"https://github.com/Build-Fractal/spec-kit-orchestrator/discussions/3#discussioncomment-3","body":"FR-5 should also cover token-density measurement","source_surface":"giscus","id":"c3","created_at":"2026-04-24T00:02:00Z"}
-     {"url":"https://github.com/Build-Fractal/spec-kit-orchestrator/discussions/4#discussioncomment-4","body":"hmm not sure about this approach","source_surface":"giscus","id":"c4","created_at":"2026-04-24T00:03:00Z"}
+     {"url":"https://github.com/Build-Fractal/orchestrator/issues/1#issuecomment-1","body":"acceptance criterion 2 fails on macOS 13","source_surface":"github","id":"c1","created_at":"2026-04-24T00:00:00Z"}
+     {"url":"https://github.com/Build-Fractal/orchestrator/issues/2#issuecomment-2","body":"decision: we should pin Bash 3.2 across all scripts","source_surface":"github","id":"c2","created_at":"2026-04-24T00:01:00Z"}
+     {"url":"https://github.com/Build-Fractal/orchestrator/discussions/3#discussioncomment-3","body":"FR-5 should also cover token-density measurement","source_surface":"giscus","id":"c3","created_at":"2026-04-24T00:02:00Z"}
+     {"url":"https://github.com/Build-Fractal/orchestrator/discussions/4#discussioncomment-4","body":"hmm not sure about this approach","source_surface":"giscus","id":"c4","created_at":"2026-04-24T00:03:00Z"}
      ```
 
 6. **Create `scripts/verify/m014-p03-fetch.sh`** as the T01 verifier (single-script-file shape, Bash 3.2):
@@ -181,7 +181,7 @@ The fetcher does NOT classify, queue, or apply — it is a pure cache primer.
    if grep -q '"event":"unit_close"' "$SCRATCH/.orchestrator/execution-log.jsonl"; then _pass "Case A: unit_close emitted"; else _fail "Case A: unit_close missing"; fi
 
    # Case B: Idempotency — seed actioned.jsonl with one URL, re-fetch, expect skipped=1 fetched=3.
-   echo '{"comment_url":"https://github.com/Build-Fractal/spec-kit-orchestrator/issues/1#issuecomment-1","actioned_at":"2026-04-24T00:00:00Z","class":"uat-bug","applied":true}' > "$SCRATCH/.orchestrator/comments/actioned.jsonl"
+   echo '{"comment_url":"https://github.com/Build-Fractal/orchestrator/issues/1#issuecomment-1","actioned_at":"2026-04-24T00:00:00Z","class":"uat-bug","applied":true}' > "$SCRATCH/.orchestrator/comments/actioned.jsonl"
    rm -rf "$SCRATCH/.orchestrator/comments/inbox"
    ORCHESTRATOR_PROJECT_ROOT="$SCRATCH" \
    GH_API_STUB="$FIXTURE" \

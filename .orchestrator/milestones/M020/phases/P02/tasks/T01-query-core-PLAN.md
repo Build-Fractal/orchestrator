@@ -41,7 +41,7 @@ Out of scope (deferred to T02, T03, T04):
 
 ### Step 1: Create `scripts/knowledge/query.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/knowledge/query.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/knowledge/query.sh`
 
 Reference implementation (verbatim — mandatory shape):
 
@@ -272,7 +272,7 @@ exit 0
 
 ### Step 2: Create `scripts/verify/m020-p02-query-help.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p02-query-help.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p02-query-help.sh`
 
 ```bash
 #!/usr/bin/env bash
@@ -308,7 +308,7 @@ exit 0
 
 ### Step 3: Create `scripts/verify/m020-p02-query-default-state-filter.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p02-query-default-state-filter.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p02-query-default-state-filter.sh`
 
 ```bash
 #!/usr/bin/env bash
@@ -376,7 +376,7 @@ exit 0
 
 ### Step 4: Create `scripts/verify/m020-p02-query-match-rule.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p02-query-match-rule.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p02-query-match-rule.sh`
 
 ```bash
 #!/usr/bin/env bash
@@ -472,7 +472,7 @@ exit 0
 
 ### Step 5: Create `scripts/verify/m020-p02-query-ranking.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p02-query-ranking.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p02-query-ranking.sh`
 
 ```bash
 #!/usr/bin/env bash
@@ -568,7 +568,7 @@ exit 0
 
 ### Step 6: Create `scripts/verify/m020-p02-query-format-ids.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p02-query-format-ids.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p02-query-format-ids.sh`
 
 ```bash
 #!/usr/bin/env bash

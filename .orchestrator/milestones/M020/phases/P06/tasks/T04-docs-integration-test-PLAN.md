@@ -45,7 +45,7 @@ Two deliverables:
 
 ### Step 1: Create `references/preferences.md`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/references/preferences.md`
+Path: `/Users/brettkellgren/Sites/orchestrator/references/preferences.md`
 
 Reference content outline (use the EXACT key list, defaults, and stderr diagnostic shape from T01 — copy verbatim to keep the doc and the helper in sync):
 
@@ -161,7 +161,7 @@ The verifier in Step 3 below asserts the doc names the five keys, the precedence
 
 ### Step 2: Create `tests/test-preferences-resolution.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/tests/test-preferences-resolution.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/tests/test-preferences-resolution.sh`
 
 Three scenarios. Use the MEM002 `pass()`/`fail()` parallel-scalar pattern, tempdir + trap cleanup, and HOME / PROJECT_ROOT / ORCH_ROOT env-override fixture isolation per the P03/P05 conventions (no live filesystem access).
 

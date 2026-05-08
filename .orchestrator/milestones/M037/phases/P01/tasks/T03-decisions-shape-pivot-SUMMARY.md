@@ -61,7 +61,7 @@ $ echo $?
 0
 
 $ bash tests/m037-acceptance/p01-dr-heading-shape.sh
-PASS: decisions-shape-lint /Users/brettkellgren/Sites/spec-kit-orchestrator/.orchestrator/DECISIONS.md (28 entries, all anchors unique)
+PASS: decisions-shape-lint /Users/brettkellgren/Sites/orchestrator/.orchestrator/DECISIONS.md (28 entries, all anchors unique)
 PASS: p01-dr-heading-shape (28 entries, 8 inbound permalinks resolved)
 $ echo $?
 0

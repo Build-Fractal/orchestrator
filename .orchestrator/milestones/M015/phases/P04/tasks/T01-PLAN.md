@@ -10,7 +10,7 @@ depends_on: []
 
 ## Prerequisites
 
-- Working in repo root: /Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator
+- Working in repo root: /Users/brettkellgren/Sites/lakeledger/orchestrator
 - P01 complete: extension host removed (extension.yml, .specify/scripts/bash/, .specify/templates/, .claude/commands/speckit.*.md all absent)
 - P02 complete: state at .orchestrator/, constitution at .orchestrator/memory/constitution.md, resolver has no bridge rule
 - P03 complete: primary docs reframed, CHANGELOG has an M015 entry, docs/migrating-from-speckit.md exists

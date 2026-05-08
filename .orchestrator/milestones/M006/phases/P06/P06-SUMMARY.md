@@ -17,7 +17,7 @@ key_decisions:
 patterns_established:
   - "Keep a Changelog format with milestone/spec references, DOCTOR:DOCS protocol for doc conformance, final sweep as verification gate"
 drill_down_paths:
-  - "/Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator/.specify/orchestrator/milestones/M006//phases/P06/tasks/T01-SUMMARY.md, /Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator/.specify/orchestrator/milestones/M006//phases/P06/tasks/T02-SUMMARY.md, /Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator/.specify/orchestrator/milestones/M006//phases/P06/tasks/T03-SUMMARY.md"
+  - "/Users/brettkellgren/Sites/lakeledger/orchestrator/.specify/orchestrator/milestones/M006//phases/P06/tasks/T01-SUMMARY.md, /Users/brettkellgren/Sites/lakeledger/orchestrator/.specify/orchestrator/milestones/M006//phases/P06/tasks/T02-SUMMARY.md, /Users/brettkellgren/Sites/lakeledger/orchestrator/.specify/orchestrator/milestones/M006//phases/P06/tasks/T03-SUMMARY.md"
 duration: "859m"
 verification_result: "pass"
 completed_at: "2026-04-14T04:05:46Z"

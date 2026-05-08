@@ -6,7 +6,7 @@ confidence: 0.90
 created_at: 2026-04-17
 last_verified: 2026-04-17
 hit_count: 0
-source_unit: "/Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator/specs/016-autonomous-hardening/spec.md#AC-4"
+source_unit: "/Users/brettkellgren/Sites/lakeledger/orchestrator/specs/016-autonomous-hardening/spec.md#AC-4"
 source_type: spec-ingest
 supersedes: ""
 superseded_by: ""

@@ -10,7 +10,7 @@ depends_on: []
 
 ## Prerequisites
 
-- Working in repo root: `/Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator`
+- Working in repo root: `/Users/brettkellgren/Sites/lakeledger/orchestrator`
 - P01 is complete: `extension.yml` is gone, dogfooded `/speckit.*` commands are gone, `.specify/scripts/bash/` and `.specify/templates/` spec-kit-style templates are gone.
 - The repo's live orchestrator state currently lives at `.specify/orchestrator/` (state not yet moved — this task only writes verification scaffolding; T02 performs the actual move).
 - The repo contains `.specify/memory/constitution.md` (not yet moved — T03 handles that).

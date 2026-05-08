@@ -39,7 +39,7 @@ Out of scope:
 
 ### Step 1: Create `tests/test-status-review-queue.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/tests/test-status-review-queue.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/tests/test-status-review-queue.sh`
 
 ```bash
 #!/usr/bin/env bash

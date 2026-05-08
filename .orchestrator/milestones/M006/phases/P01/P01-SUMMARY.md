@@ -17,7 +17,7 @@ key_decisions:
 patterns_established:
   - "progressive disclosure header, audience label, verify-as-you-write, verify-as-you-write confirmed existing routing section had stale data, single-script-file verification shape per AD-19"
 drill_down_paths:
-  - "/Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator/.specify/orchestrator/milestones/M006//phases/P01/tasks/T01-SUMMARY.md, /Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator/.specify/orchestrator/milestones/M006//phases/P01/tasks/T02-SUMMARY.md, /Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator/.specify/orchestrator/milestones/M006//phases/P01/tasks/T03-SUMMARY.md"
+  - "/Users/brettkellgren/Sites/lakeledger/orchestrator/.specify/orchestrator/milestones/M006//phases/P01/tasks/T01-SUMMARY.md, /Users/brettkellgren/Sites/lakeledger/orchestrator/.specify/orchestrator/milestones/M006//phases/P01/tasks/T02-SUMMARY.md, /Users/brettkellgren/Sites/lakeledger/orchestrator/.specify/orchestrator/milestones/M006//phases/P01/tasks/T03-SUMMARY.md"
 duration: "6418m"
 verification_result: "pass"
 completed_at: "2026-04-14T02:01:01Z"

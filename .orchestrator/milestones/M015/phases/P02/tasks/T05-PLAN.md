@@ -10,7 +10,7 @@ depends_on: [T04]
 
 ## Prerequisites
 
-- Working in repo root: `/Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator`
+- Working in repo root: `/Users/brettkellgren/Sites/lakeledger/orchestrator`
 - T02 is complete: `.orchestrator/` populated, `.specify/orchestrator/` absent.
 - T03 is complete: `.orchestrator/memory/constitution.md` present, `.specify/memory/` absent.
 - T04 is complete: `scripts/state/resolve-root.sh` has no bridge rule.

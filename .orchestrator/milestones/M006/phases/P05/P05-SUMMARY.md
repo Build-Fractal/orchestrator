@@ -17,7 +17,7 @@ key_decisions:
 patterns_established:
   - "contributor-focused conventions doc with code examples, principle walkthrough with what/examples/violations/check structure, bidirectional cross-link validation"
 drill_down_paths:
-  - "/Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator/.specify/orchestrator/milestones/M006//phases/P05/tasks/T01-SUMMARY.md, /Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator/.specify/orchestrator/milestones/M006//phases/P05/tasks/T02-SUMMARY.md, /Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator/.specify/orchestrator/milestones/M006//phases/P05/tasks/T03-SUMMARY.md"
+  - "/Users/brettkellgren/Sites/lakeledger/orchestrator/.specify/orchestrator/milestones/M006//phases/P05/tasks/T01-SUMMARY.md, /Users/brettkellgren/Sites/lakeledger/orchestrator/.specify/orchestrator/milestones/M006//phases/P05/tasks/T02-SUMMARY.md, /Users/brettkellgren/Sites/lakeledger/orchestrator/.specify/orchestrator/milestones/M006//phases/P05/tasks/T03-SUMMARY.md"
 duration: "443m"
 verification_result: "pass"
 completed_at: "2026-04-14T03:42:37Z"

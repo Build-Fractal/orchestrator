@@ -91,7 +91,7 @@ The installer **unconditionally bulk-copies 4 directories (1,157 files)** into e
 
 ### Finding B: `mkdocs.yml` is not template-able per-project
 
-**Evidence**: `wiki/mkdocs.yml:9-12` hard-codes `site_name`, `site_description`, `site_url`, and `repo_url` to `Build-Fractal/spec-kit-orchestrator` values. A consumer project copying this file as-is gets the orchestrator repo's branding and a broken Pages URL.
+**Evidence**: `wiki/mkdocs.yml:9-12` hard-codes `site_name`, `site_description`, `site_url`, and `repo_url` to `Build-Fractal/orchestrator` values. A consumer project copying this file as-is gets the orchestrator repo's branding and a broken Pages URL.
 
 **Root cause**: M012's mkdocs.yml was authored for this project. No templating layer exists.
 
@@ -206,7 +206,7 @@ Generator merges the two at output time. ~15 lines of awk in `wiki-generate-nav.
 
 ### Finding J: `mkdocs gh-deploy` uses cwd's git remote — silent cross-project hazard (added 2026-04-29)
 
-**Evidence**: `mkdocs gh-deploy` builds the site, then `git push <cwd's origin> gh-pages --force`. If the operator runs `mkdocs gh-deploy -f /path/to/project-A/wiki/mkdocs.yml` from inside `/path/to/project-B/`, the build reads from project A but the push goes to project B's remote. Today's session lost ~1 minute restoring `Build-Fractal/spec-kit-orchestrator`'s `gh-pages` after PBJ's wiki content force-pushed there. Prior gh-pages SHA was recoverable via reflog; without reflog, would have been a real loss.
+**Evidence**: `mkdocs gh-deploy` builds the site, then `git push <cwd's origin> gh-pages --force`. If the operator runs `mkdocs gh-deploy -f /path/to/project-A/wiki/mkdocs.yml` from inside `/path/to/project-B/`, the build reads from project A but the push goes to project B's remote. Today's session lost ~1 minute restoring `Build-Fractal/orchestrator`'s `gh-pages` after PBJ's wiki content force-pushed there. Prior gh-pages SHA was recoverable via reflog; without reflog, would have been a real loss.
 
 **Root cause**: `-f <config>` was added by mkdocs to support cross-config builds, but `gh-deploy`'s git-remote inference is cwd-bound. Mismatch is invisible until the push line.
 

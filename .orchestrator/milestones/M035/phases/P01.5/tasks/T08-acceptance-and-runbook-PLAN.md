@@ -289,8 +289,7 @@ Two responsibilities:
 - `tools/verify/m035-p015-phase-suite.sh` aggregates all 11 P01.5
   verifiers and emits `BATTERY: pass=11 fail=0`
   - Check: `bash tools/verify/m035-p015-phase-suite.sh`
-- `.orchestrator/milestones/M035/phases/P01.5/operator-runbook.md`
-  exists on disk surfacing D-RN-2 / D-RN-5 / D-RN-6 off-tree steps
+- Operator runbook exists on disk surfacing D-RN-2 / D-RN-5 / D-RN-6 off-tree steps
   - Check: `[ -f .orchestrator/milestones/M035/phases/P01.5/operator-runbook.md ]`
     (folded into the phase-suite per step 5)
 

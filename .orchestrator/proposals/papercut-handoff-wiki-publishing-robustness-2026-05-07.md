@@ -218,7 +218,7 @@ From a clean shell, fresh project install:
 ```bash
 mkdir /tmp/wiki-publish-test && cd /tmp/wiki-publish-test && git init
 git remote add origin git@github.com:Test-Org/test-repo.git
-bash /path/to/spec-kit-orchestrator/packaging/install/install-claude-code.sh \
+bash /path/to/orchestrator/packaging/install/install-claude-code.sh \
   --project-dir . --force
 bash scripts/lifecycle/wiki-init.sh --project-dir . [...giscus flags...]
 ```
@@ -383,7 +383,7 @@ Private repo, fresh install:
 gh repo create Test-Org/test-private-wiki --private
 cd $(mktemp -d) && git init
 git remote add origin git@github.com:Test-Org/test-private-wiki.git
-bash /path/to/spec-kit-orchestrator/packaging/install/install-claude-code.sh \
+bash /path/to/orchestrator/packaging/install/install-claude-code.sh \
   --project-dir . --force
 bash scripts/lifecycle/wiki-init.sh --project-dir . [flags]
 

@@ -3,7 +3,7 @@
 # See P01-PLAN.md key-link for the manifest → reader → installer chain.
 schema_version: "1.0"
 type: bundle-manifest
-name: "spec-kit-orchestrator"
+name: "orchestrator"
 version: "0.3.0-dev"
 description: "Autonomous multi-phase orchestration skills for Claude Code, Codex, and Cursor"
 skill_spec: "packaging/SKILL.md"

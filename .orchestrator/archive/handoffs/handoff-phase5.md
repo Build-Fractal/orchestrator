@@ -1,10 +1,10 @@
 # Phase 5 Handoff Prompt — Final Hardening: Consistency Gaps + Test Coverage
 
-You are executing Phase 5 of a 5-phase hardening plan for the spec-kit-orchestrator extension (v0.2.0). This is the final phase. Read this document fully, then execute it.
+You are executing Phase 5 of a 5-phase hardening plan for the orchestrator extension (v0.2.0). This is the final phase. Read this document fully, then execute it.
 
 ## Project Context
 
-spec-kit-orchestrator is a spec-kit extension (markdown commands + shell scripts) that provides autonomous multi-phase orchestration. It was field-tested and a post-mortem identified 8 failure categories. Phases 1-4 systematically fixed FC2-FC7. Phase 5 addresses the remaining consistency gaps and test coverage holes discovered via a full gap analysis of the codebase after Phases 1-4.
+orchestrator is a spec-kit extension (markdown commands + shell scripts) that provides autonomous multi-phase orchestration. It was field-tested and a post-mortem identified 8 failure categories. Phases 1-4 systematically fixed FC2-FC7. Phase 5 addresses the remaining consistency gaps and test coverage holes discovered via a full gap analysis of the codebase after Phases 1-4.
 
 ## What Was Done in Phases 1-4 (COMPLETE — 366 assertions, 0 failures)
 

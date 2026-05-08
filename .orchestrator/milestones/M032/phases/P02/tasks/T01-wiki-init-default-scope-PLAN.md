@@ -14,7 +14,7 @@ depends_on: []
 - `scripts/lifecycle/read-project-assets.sh` exists, is executable, and emits `source=<src>\ttarget=<tgt>\tmode=<copy|symlink>` tuples on stdout. Verified by `[ -x scripts/lifecycle/read-project-assets.sh ]`. Behavioral contract: the reader emits one tab-separated tuple per `project_assets:` entry, exits 0 on success.
 - `scripts/lifecycle/install-asset-mode.sh` exists, is executable, and dispatches on `mode=copy` and `mode=symlink`. Verified by `[ -x scripts/lifecycle/install-asset-mode.sh ]`. Behavioral contract: takes `<src> <dst> <mode> <project-dir>` args; `mode=copy` runs `cp -R "$src/." "$dst/"`; `mode=symlink` is POSIX-only with `M032_FORCE_WINDOWS=1` fail-closed.
 - `scripts/lifecycle/install-collision-check.sh` exists, is executable, and implements FR-22's three oracle branches. Verified by `[ -x scripts/lifecycle/install-collision-check.sh ]`.
-- `wiki/mkdocs.yml` exists at the orchestrator-repo root with the four hardcoded site-identity values verified at `wiki/mkdocs.yml:10-13` (`site_name: "spec-kit-orchestrator — dogfood wiki"`, `site_description:`, `site_url:`, `repo_url:`). Verified by `grep -q '^site_name:' wiki/mkdocs.yml`.
+- `wiki/mkdocs.yml` exists at the orchestrator-repo root with the four hardcoded site-identity values verified at `wiki/mkdocs.yml:10-13` (`site_name: "orchestrator — dogfood wiki"`, `site_description:`, `site_url:`, `repo_url:`). Verified by `grep -q '^site_name:' wiki/mkdocs.yml`.
 - `wiki/overrides/partials/comments.html` exists with the four `data-repo` / `data-repo-id` / `data-category` / `data-category-id` Giscus attributes. P02/T01 does NOT modify this file; FR-7 templating is P03's deliverable. Verified by `[ -f wiki/overrides/partials/comments.html ]`.
 - `scripts/wiki/wiki-serve.sh` exists and is executable. Used in step 5 to verify the FR-6 self-application loop.
 - `tests/fixtures/m032-fresh-project-fixture/` exists from P01 (`.gitignore`, `.git-init-marker`, `README.md`). The fixture's git remote points at `https://github.com/fixture-owner/m032-fresh-project-fixture.git` per the marker contents.
@@ -172,8 +172,8 @@ fi
 
 # Parse <owner>/<repo> from either https or ssh remote shapes.
 # Examples:
-#   https://github.com/Build-Fractal/spec-kit-orchestrator(.git)
-#   git@github.com:Build-Fractal/spec-kit-orchestrator(.git)
+#   https://github.com/Build-Fractal/orchestrator(.git)
+#   git@github.com:Build-Fractal/orchestrator(.git)
 OWNER_REPO="$(echo "$ORIGIN_URL" | sed -E 's#^https?://github\.com/##; s#^git@github\.com:##; s#\.git$##')"
 OWNER="${OWNER_REPO%%/*}"
 REPO="${OWNER_REPO##*/}"
@@ -270,10 +270,10 @@ exit 0
 3. **Amend `wiki/mkdocs.yml`** by replacing the four hardcoded site-identity values at lines 10-13 with `{{...}}` placeholders. Exact replacements:
 
 ```diff
--site_name: "spec-kit-orchestrator — dogfood wiki"
+-site_name: "orchestrator — dogfood wiki"
 -site_description: "Browseable projection of .orchestrator/ artifacts for the dogfood team."
--site_url: "https://build-fractal.github.io/spec-kit-orchestrator/"
--repo_url: "https://github.com/Build-Fractal/spec-kit-orchestrator"
+-site_url: "https://build-fractal.github.io/orchestrator/"
+-repo_url: "https://github.com/Build-Fractal/orchestrator"
 +site_name: "{{site_name}}"
 +site_description: "{{site_description}}"
 +site_url: "{{site_url}}"
@@ -298,8 +298,8 @@ bash scripts/lifecycle/wiki-init.sh --project-dir .
 
 This invocation:
 - Probes python3/pip3 (orchestrator dev box has them per A-2 implication).
-- Parses the orchestrator's own git remote (`https://github.com/Build-Fractal/spec-kit-orchestrator`) → `OWNER=Build-Fractal`, `REPO=spec-kit-orchestrator`.
-- Synthesizes the four values (`site_name=spec-kit-orchestrator`, `site_url=https://build-fractal.github.io/spec-kit-orchestrator/`, `repo_url=https://github.com/Build-Fractal/spec-kit-orchestrator`, `site_description=`).
+- Parses the orchestrator's own git remote (`https://github.com/Build-Fractal/orchestrator`) → `OWNER=Build-Fractal`, `REPO=orchestrator`.
+- Synthesizes the four values (`site_name=orchestrator`, `site_url=https://build-fractal.github.io/orchestrator/`, `repo_url=https://github.com/Build-Fractal/orchestrator`, `site_description=`).
 - Sed-substitutes the four placeholders in `wiki/mkdocs.yml` (resolving them back to working values).
 - After this step the orchestrator-repo-local `wiki/mkdocs.yml` carries RESOLVED values and `bash scripts/wiki/wiki-serve.sh` continues to function.
 
@@ -332,7 +332,7 @@ echo "PASS: m032-p02-wiki-init-command-shape"
 
    **`m032-p02-wiki-init-default-scope.sh`** — exercises `wiki-init.sh` against the P01 fresh-project fixture: stages a temp copy of the fixture via `mktemp -d` + `cp -R`, initializes a fake git remote pointing at `https://github.com/fixture-owner/m032-fresh-project-fixture.git`, runs `bash scripts/lifecycle/wiki-init.sh --project-dir <tmp>`, asserts `<tmp>/wiki/mkdocs.yml` exists and contains `site_name: m032-fresh-project-fixture` and `repo_url: https://github.com/fixture-owner/m032-fresh-project-fixture` and does NOT contain any `{{site_name}}` placeholder. Also asserts the FR-12 toolchain probe by exporting `PATH=/dev/null` (no python3) and asserting exit code 3 + diagnostic substring.
 
-   **`m032-p02-mkdocs-templating-and-self-application.sh`** — asserts (a) `wiki/mkdocs.yml` after the FR-6 self-application loop in step 5 contains `site_name: "spec-kit-orchestrator` (resolved orchestrator value), (b) does NOT contain literal `{{site_name}}` (placeholder cleared by self-application), (c) the bundle source path (which is the same orchestrator-repo path under `source: wiki/`) is consistent, (d) `bash scripts/wiki/wiki-serve.sh` can start and respond HTTP 200 at `:8000` (use `(wiki-serve.sh & SERVE_PID=$!; sleep 3; curl -fsS http://localhost:8000 -o /dev/null; rc=$?; kill $SERVE_PID; exit $rc)` BUT extracted to a script-file shape per AD-19 — author a tiny helper `tools/verify/lib/m032-p02-wiki-serve-probe.sh` that does the start+probe+kill within a single script body, and have the parent verifier invoke it via `bash tools/verify/lib/m032-p02-wiki-serve-probe.sh`).
+   **`m032-p02-mkdocs-templating-and-self-application.sh`** — asserts (a) `wiki/mkdocs.yml` after the FR-6 self-application loop in step 5 contains `site_name: "orchestrator` (resolved orchestrator value), (b) does NOT contain literal `{{site_name}}` (placeholder cleared by self-application), (c) the bundle source path (which is the same orchestrator-repo path under `source: wiki/`) is consistent, (d) `bash scripts/wiki/wiki-serve.sh` can start and respond HTTP 200 at `:8000` (use `(wiki-serve.sh & SERVE_PID=$!; sleep 3; curl -fsS http://localhost:8000 -o /dev/null; rc=$?; kill $SERVE_PID; exit $rc)` BUT extracted to a script-file shape per AD-19 — author a tiny helper `tools/verify/lib/m032-p02-wiki-serve-probe.sh` that does the start+probe+kill within a single script body, and have the parent verifier invoke it via `bash tools/verify/lib/m032-p02-wiki-serve-probe.sh`).
 
 7. **Run all three verifiers locally** to confirm exit 0 from each.
 

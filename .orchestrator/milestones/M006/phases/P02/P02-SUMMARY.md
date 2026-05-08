@@ -17,7 +17,7 @@ key_decisions:
 patterns_established:
   - "progressive disclosure header, audience label per DC-2, per-event field schema tables with examples, per-kind example RESULT lines, per-lifecycle-point documentation with use-cases, cross-link validation via grep"
 drill_down_paths:
-  - "/Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator/.specify/orchestrator/milestones/M006//phases/P02/tasks/T01-SUMMARY.md, /Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator/.specify/orchestrator/milestones/M006//phases/P02/tasks/T02-SUMMARY.md, /Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator/.specify/orchestrator/milestones/M006//phases/P02/tasks/T03-SUMMARY.md, /Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator/.specify/orchestrator/milestones/M006//phases/P02/tasks/T04-SUMMARY.md, /Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator/.specify/orchestrator/milestones/M006//phases/P02/tasks/T05-SUMMARY.md"
+  - "/Users/brettkellgren/Sites/lakeledger/orchestrator/.specify/orchestrator/milestones/M006//phases/P02/tasks/T01-SUMMARY.md, /Users/brettkellgren/Sites/lakeledger/orchestrator/.specify/orchestrator/milestones/M006//phases/P02/tasks/T02-SUMMARY.md, /Users/brettkellgren/Sites/lakeledger/orchestrator/.specify/orchestrator/milestones/M006//phases/P02/tasks/T03-SUMMARY.md, /Users/brettkellgren/Sites/lakeledger/orchestrator/.specify/orchestrator/milestones/M006//phases/P02/tasks/T04-SUMMARY.md, /Users/brettkellgren/Sites/lakeledger/orchestrator/.specify/orchestrator/milestones/M006//phases/P02/tasks/T05-SUMMARY.md"
 duration: "714m"
 verification_result: "pass"
 completed_at: "2026-04-14T02:35:24Z"

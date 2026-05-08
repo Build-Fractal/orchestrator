@@ -126,9 +126,9 @@ Start with broad discovery — this rename has the widest blast radius of
 the four bugs and grep-hunting eats context fast:
 
 ```bash
-grep -rln "T##-<slug>" /Users/brettkellgren/Sites/spec-kit-orchestrator/skills /Users/brettkellgren/Sites/spec-kit-orchestrator/commands /Users/brettkellgren/Sites/spec-kit-orchestrator/templates /Users/brettkellgren/Sites/spec-kit-orchestrator/scripts /Users/brettkellgren/Sites/spec-kit-orchestrator/references
-grep -rln "T##" /Users/brettkellgren/Sites/spec-kit-orchestrator/skills/orchestrator-plan-phase /Users/brettkellgren/Sites/spec-kit-orchestrator/commands/plan-phase.md
-grep -rln "tasks/T" /Users/brettkellgren/Sites/spec-kit-orchestrator/scripts /Users/brettkellgren/Sites/spec-kit-orchestrator/skills
+grep -rln "T##-<slug>" /Users/brettkellgren/Sites/orchestrator/skills /Users/brettkellgren/Sites/orchestrator/commands /Users/brettkellgren/Sites/orchestrator/templates /Users/brettkellgren/Sites/orchestrator/scripts /Users/brettkellgren/Sites/orchestrator/references
+grep -rln "T##" /Users/brettkellgren/Sites/orchestrator/skills/orchestrator-plan-phase /Users/brettkellgren/Sites/orchestrator/commands/plan-phase.md
+grep -rln "tasks/T" /Users/brettkellgren/Sites/orchestrator/scripts /Users/brettkellgren/Sites/orchestrator/skills
 ```
 
 Likely-affected paths (verify each):

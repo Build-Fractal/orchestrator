@@ -129,7 +129,7 @@ TEST-ONLY alias.
 6. **Author `tests/m035-acceptance/fixtures/install-meta-with-sha.txt`**:
 
    ```
-   source_root=/Users/fixture/Sites/spec-kit-orchestrator
+   source_root=/Users/fixture/Sites/orchestrator
    runtime=claude-code
    installed_at=2026-05-08T12:00:00Z
    commit_sha=0000000000000000000000000000000000000001
@@ -139,7 +139,7 @@ TEST-ONLY alias.
 7. **Author `tests/m035-acceptance/fixtures/install-meta-pre-m035.txt`**:
 
    ```
-   source_root=/Users/fixture/Sites/spec-kit-orchestrator
+   source_root=/Users/fixture/Sites/orchestrator
    runtime=claude-code
    installed_at=2026-04-15T12:00:00Z
    ```

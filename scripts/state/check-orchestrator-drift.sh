@@ -32,7 +32,7 @@ done
 
 # --- Defaults ---
 update_source="git"
-upstream_path="$HOME/Sites/spec-kit-orchestrator"
+upstream_path="$HOME/Sites/orchestrator"
 commits_behind=0
 versions_behind=0
 

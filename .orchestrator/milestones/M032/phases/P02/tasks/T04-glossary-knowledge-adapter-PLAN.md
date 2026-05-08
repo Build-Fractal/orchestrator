@@ -13,7 +13,7 @@ depends_on: ["T03"]
 - T03 has landed `wiki/glossary.md` at the orchestrator-repo root with at least three `### TERM` headings in the US-6 format. Verified by `[ -f wiki/glossary.md ]` and `grep -c '^### ' wiki/glossary.md` returning a value `>= 3`.
 - T03 has landed `scripts/wiki/wiki-scan-sources.sh --include-glossary` flag and `scripts/wiki/wiki-generate-nav.sh` Glossary placement. Verified by `grep -q -- '--include-glossary' scripts/wiki/wiki-scan-sources.sh` and `grep -q 'Glossary' scripts/wiki/wiki-generate-nav.sh`.
 - `scripts/knowledge/` exists as a directory containing the canonical knowledge-graph helpers per the M020 / M032/T03 layer (visible at the orchestrator-repo root). Verified by `[ -d scripts/knowledge ]`.
-- `scripts/knowledge/lookup-mems.sh` does NOT exist on disk at plan-authoring time (verified — see `ls /Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/knowledge/` listing in payload context). T04 creates this file from scratch.
+- `scripts/knowledge/lookup-mems.sh` does NOT exist on disk at plan-authoring time (verified — see `ls /Users/brettkellgren/Sites/orchestrator/scripts/knowledge/` listing in payload context). T04 creates this file from scratch.
 - T04 entry: T03's `wiki/glossary.md` is the input the adapter reads. The adapter's contract is M020-knowledge-record-compatible output on stdout per the `lookup-mems` shape M020 established for the existing `query.sh` / `traverse-graph.sh` adapters in `scripts/knowledge/`.
 
 ## Description

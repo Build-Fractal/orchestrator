@@ -14,7 +14,7 @@
 # selection. Each surviving item becomes a candidate spec edit.
 #
 # Run from repo root:
-#   cd /Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator
+#   cd /Users/brettkellgren/Sites/lakeledger/orchestrator
 #   /conversus run specs/023-github-native-integration/conversus.yml
 
 mode: red-blue

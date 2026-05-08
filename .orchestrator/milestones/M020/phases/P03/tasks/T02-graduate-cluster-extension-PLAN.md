@@ -68,7 +68,7 @@ The schema-authority lint (T03) and integration test (T04) are NOT T02 deliverab
 
 ### Step 1: Replace `scripts/knowledge/graduate.sh` with the extended implementation
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/knowledge/graduate.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/knowledge/graduate.sh`
 
 Reference implementation:
 
@@ -327,7 +327,7 @@ exit 0
 
 ### Step 2: Create `scripts/verify/m020-p03-graduate-cluster-multi-entry.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p03-graduate-cluster-multi-entry.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p03-graduate-cluster-multi-entry.sh`
 
 ```bash
 #!/usr/bin/env bash
@@ -408,7 +408,7 @@ exit 0
 
 ### Step 3: Create `scripts/verify/m020-p03-graduate-cluster-drift-abort.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p03-graduate-cluster-drift-abort.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p03-graduate-cluster-drift-abort.sh`
 
 ```bash
 #!/usr/bin/env bash
@@ -482,7 +482,7 @@ exit 0
 
 ### Step 4: Create `scripts/verify/m020-p03-graduate-reject-path.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p03-graduate-reject-path.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p03-graduate-reject-path.sh`
 
 ```bash
 #!/usr/bin/env bash
@@ -549,7 +549,7 @@ exit 0
 
 ### Step 5: Create `scripts/verify/m020-p03-graduate-jsonl-emit.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p03-graduate-jsonl-emit.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p03-graduate-jsonl-emit.sh`
 
 ```bash
 #!/usr/bin/env bash
@@ -646,7 +646,7 @@ exit 0
 
 ### Step 6: Create `scripts/verify/m020-p03-graduate-p01-shape-preserved.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p03-graduate-p01-shape-preserved.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p03-graduate-p01-shape-preserved.sh`
 
 ```bash
 #!/usr/bin/env bash

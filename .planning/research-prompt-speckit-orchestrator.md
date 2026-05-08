@@ -1,4 +1,4 @@
-# Research Prompt: Spec-Kit Orchestrator Extension
+# Research Prompt: Orchestrator Extension
 
 ## Mission
 

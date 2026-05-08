@@ -17,7 +17,7 @@ agents:
     \ (e.g., a paragraph break inserted for\nreadability) is NOT a dispute; only dropped,\
     \ merged, or\nsubstituted structural elements are.\n"
   docs:
-  - /Users/brettkellgren/Sites/spec-kit-orchestrator/tests/fixtures/m036-live-llm-smoke/policy-data-retention.md
+  - /Users/brettkellgren/Sites/orchestrator/tests/fixtures/m036-live-llm-smoke/policy-data-retention.md
 - name: fidelity-advocate
   prompt: "You argue that the structured-Markdown output contains no content\nthat\
     \ was paraphrased in a meaning-changing way, summarised, or\ninvented. The source\
@@ -35,7 +35,7 @@ agents:
     \ Raise disputes\nonly when meaning, numbers, identifiers, or scope materially\n\
     change.\n"
   docs:
-  - /Users/brettkellgren/Sites/spec-kit-orchestrator/tests/fixtures/m036-live-llm-smoke/policy-data-retention.md
+  - /Users/brettkellgren/Sites/orchestrator/tests/fixtures/m036-live-llm-smoke/policy-data-retention.md
 arbiter:
   name: arbiter
   prompt: 'The arbiter reads disputes from both advocates, weighs them against
@@ -52,6 +52,6 @@ arbiter:
 
     '
   docs:
-  - /Users/brettkellgren/Sites/spec-kit-orchestrator/.orchestrator/memory/constitution.md
-  grounding: /Users/brettkellgren/Sites/spec-kit-orchestrator/.orchestrator/memory/constitution.md
+  - /Users/brettkellgren/Sites/orchestrator/.orchestrator/memory/constitution.md
+  grounding: /Users/brettkellgren/Sites/orchestrator/.orchestrator/memory/constitution.md
   trigger: disputes_remain

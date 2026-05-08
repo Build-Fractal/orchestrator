@@ -1,6 +1,6 @@
 ---
 type: agent-handoff-prompt
-target_repo: "/Users/brettkellgren/Sites/spec-kit-orchestrator"
+target_repo: "/Users/brettkellgren/Sites/orchestrator"
 target_agent: "fresh Claude Code session with no prior context on this work"
 origin: "2026-04-23 spec-025 / M014/P01 dogfood session"
 scope: "continue spec 025 authoring through evaluate + discuss gates"
@@ -14,7 +14,7 @@ referenced files; don't rely on summaries.
 
 ## Where you are
 
-**Repo**: `/Users/brettkellgren/Sites/spec-kit-orchestrator`. Branch: `main`.
+**Repo**: `/Users/brettkellgren/Sites/orchestrator`. Branch: `main`.
 Working tree is dirty with session output that has NOT been committed yet —
 treat those edits as authoritative, not as work-in-progress you might stomp.
 

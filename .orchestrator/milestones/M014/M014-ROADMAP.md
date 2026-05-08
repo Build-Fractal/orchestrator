@@ -59,7 +59,7 @@ updated_at: "2026-04-22T16:30:00Z"
   - Risk: high
   - Depends: P01
   - Preflight (external, operator-gated — see D023):
-    - M012/P04 wiki DEPLOY-RECORD: **RESOLVED 2026-04-23** (all four gates PASS, site live at `https://Build-Fractal.github.io/spec-kit-orchestrator/`).
+    - M012/P04 wiki DEPLOY-RECORD: **RESOLVED 2026-04-23** (all four gates PASS, site live at `https://Build-Fractal.github.io/orchestrator/`).
     - `specs/024-spec-management-extended/planning-inputs/inbox-dogfood.md`: **RELAXED per D023** — original SC-16 ≥1 week organic inbox data target deferred. FR-9 classifier shape pins on best-available signal at plan time (regex/heuristic v1 baseline) with explicit retune commitment after meaningful comment volume accumulates.
   - Phase-entry gate (CONTEXT OQ-4): dispatcher refuses P03 task dispatch on stubbed DEPLOY-RECORD sentinels with a clear error; this gate remains the load-bearing enforcement for the wiki preflight.
   - Boundary Map:

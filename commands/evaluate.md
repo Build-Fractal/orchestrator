@@ -51,7 +51,7 @@ Before invoking any orchestrator scripts, verify that the extension files are av
 test -f scripts/lifecycle/scaffold.sh
 ```
 
-If the exit code is non-zero (file doesn't exist), stop with a clear error: **"spec-kit-orchestrator extension not installed in this project. Copy the extension's commands/, scripts/, templates/, and references/ directories into your project root before running evaluate. See `references/installation.md` for details."**
+If the exit code is non-zero (file doesn't exist), stop with a clear error: **"orchestrator extension not installed in this project. Copy the extension's commands/, scripts/, templates/, and references/ directories into your project root before running evaluate. See `references/installation.md` for details."**
 
 Do NOT attempt to manually create the directory structure that `scaffold.sh` would produce — the scaffold script is the authoritative source for the orchestrator's directory layout.
 

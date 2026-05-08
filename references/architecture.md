@@ -8,7 +8,7 @@
 
 ## Overview
 
-spec-kit-orchestrator is a standalone autonomous multi-phase orchestrator. It decomposes large features into milestones, phases, and tasks, then dispatches each task to a fresh agent context with a purpose-built payload. The orchestrator never holds long-running state in memory — all state is derived from file presence on disk under `.orchestrator/`.
+orchestrator is a standalone autonomous multi-phase orchestrator. It decomposes large features into milestones, phases, and tasks, then dispatches each task to a fresh agent context with a purpose-built payload. The orchestrator never holds long-running state in memory — all state is derived from file presence on disk under `.orchestrator/`.
 
 The system is structured as markdown commands (agent instruction documents in `commands/`), Bash 3.2+ helper scripts (organized by concern in `scripts/`), output templates (`templates/`), and reference documentation (`references/`). It plugs into a host runtime (Claude Code agent tool / Codex CLI SDK / Cursor) via `packaging/install/install-<runtime>.sh`, which registers the orchestrator skills/commands with the active runtime and installs the script, template, and reference tree. The orchestrator uses git for version control and has no runtime dependency on any other workflow tool.
 
@@ -142,7 +142,7 @@ For the complete state transition diagram, tier-conditional behavior, and crash 
 ## File Layout
 
 ```
-spec-kit-orchestrator/
+orchestrator/
 ├── CLAUDE.md                          # Project instructions
 ├── CHANGELOG.md                       # Version history
 ├── packaging/                         # Installable bundle + per-runtime installers

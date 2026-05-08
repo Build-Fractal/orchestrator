@@ -30,7 +30,7 @@ The test follows orchestrator test conventions per MEM002:
 
 ### Step 1: Create `tests/test-knowledge-query.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/tests/test-knowledge-query.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/tests/test-knowledge-query.sh`
 
 ```bash
 #!/usr/bin/env bash

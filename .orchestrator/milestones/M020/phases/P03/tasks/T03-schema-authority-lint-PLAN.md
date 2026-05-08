@@ -65,7 +65,7 @@ Out of scope:
 
 ### Step 1: Create `scripts/verify/knowledge-schema-lint.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/knowledge-schema-lint.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/verify/knowledge-schema-lint.sh`
 
 ```bash
 #!/usr/bin/env bash
@@ -236,7 +236,7 @@ exit 0
 
 ### Step 2: Create `scripts/verify/m020-p03-schema-lint-contract.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p03-schema-lint-contract.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p03-schema-lint-contract.sh`
 
 ```bash
 #!/usr/bin/env bash
@@ -303,7 +303,7 @@ exit 0
 
 ### Step 3: Create `scripts/verify/m020-p03-schema-lint-vocabulary-drift.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p03-schema-lint-vocabulary-drift.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p03-schema-lint-vocabulary-drift.sh`
 
 ```bash
 #!/usr/bin/env bash

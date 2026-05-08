@@ -1,8 +1,8 @@
-# spec-kit-orchestrator
+# orchestrator
 
 **A coordination layer for software work that's too big for a single agent session.**
 
-Coding agents are excellent inside one context window. They struggle when work spans many — context degrades, state gets lost between sessions, and yesterday's reasoning has to be re-derived from scratch. spec-kit-orchestrator is the layer underneath that handles the part you don't want to: phase decomposition, fresh-context dispatch, mechanical verification, knowledge that compounds milestone over milestone.
+Coding agents are excellent inside one context window. They struggle when work spans many — context degrades, state gets lost between sessions, and yesterday's reasoning has to be re-derived from scratch. orchestrator is the layer underneath that handles the part you don't want to: phase decomposition, fresh-context dispatch, mechanical verification, knowledge that compounds milestone over milestone.
 
 Runs on Claude Code today. Codex CLI and Cursor adapters exist but are demand-driven — we'll land formal multi-runtime parity (M009) when the first non-Claude-Code user arrives.
 
@@ -133,7 +133,7 @@ What the orchestrator gives you, in concrete terms:
 ## Architecture
 
 ```
-spec-kit-orchestrator/
+orchestrator/
 │
 ├── packaging/
 │   ├── bundle/              ← installable unit (skill + scripts + templates)

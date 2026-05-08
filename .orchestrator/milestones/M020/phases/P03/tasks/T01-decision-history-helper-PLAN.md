@@ -32,7 +32,7 @@ Out of scope (deferred to T02):
 
 ### Step 1: Create `scripts/knowledge/lib/decision-history.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/knowledge/lib/decision-history.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/knowledge/lib/decision-history.sh`
 
 ```bash
 #!/usr/bin/env bash
@@ -155,7 +155,7 @@ chmod 0644 scripts/knowledge/lib/decision-history.sh
 
 ### Step 2: Create `scripts/verify/m020-p03-decision-history-helper-contract.sh`
 
-Path: `/Users/brettkellgren/Sites/spec-kit-orchestrator/scripts/verify/m020-p03-decision-history-helper-contract.sh`
+Path: `/Users/brettkellgren/Sites/orchestrator/scripts/verify/m020-p03-decision-history-helper-contract.sh`
 
 ```bash
 #!/usr/bin/env bash

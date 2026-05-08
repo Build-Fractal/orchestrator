@@ -17,7 +17,7 @@ key_decisions:
 patterns_established:
   - "stub-to-full transition (P01 stub exit 2 -> P04 full body with distinct exit 3 for runtime gate); CC-only LLM round-trip via dispatch-interface with canned-response hermetic smoke; manifest validation by line-count grep (>=2 and <=4 '  - slug:' entries) + type marker grep; interim-path-with-forward-compat-schema (M024 migration target documented in FR-7 entry body)"
 drill_down_paths:
-  - "/Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator/.orchestrator/milestones/M014/phases/P04/tasks/T05-PAYLOAD.md,/Users/brettkellgren/Sites/lakeledger/spec-kit-orchestrator/.orchestrator/milestones/M014/phases/P04/tasks/T05-PLAN.md"
+  - "/Users/brettkellgren/Sites/lakeledger/orchestrator/.orchestrator/milestones/M014/phases/P04/tasks/T05-PAYLOAD.md,/Users/brettkellgren/Sites/lakeledger/orchestrator/.orchestrator/milestones/M014/phases/P04/tasks/T05-PLAN.md"
 duration: "18m"
 verification_result: "pass"
 completed_at: "2026-04-23T01:01:20Z"

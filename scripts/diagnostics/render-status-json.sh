@@ -410,6 +410,57 @@ _collect_headline_fields() {
     printf 'last_verify_result=%s\n' "$verify"
 }
 
+# --- Drift collection (M035 P01 / FR-4 / SC-4) -----------------------------
+# AD-7 schema-version policy: the addition of the top-level `drift` field is
+# an additive schema change. Per references/status-json-schema.md AD-7
+# stability policy, additive top-level fields do NOT bump
+# `_M029_SCHEMA_VERSION`. The M029 cross-check verifier that asserts
+# schema_version == "1.0" byte-for-byte stays green.
+#
+# The drift datum is sourced from scripts/state/check-orchestrator-drift.sh
+# (M035 P01 T03 helper). The helper exits 0 always (FR-15); consumers branch
+# on the data. When the helper is missing or its stdout is unparseable, the
+# renderer falls back to an `update_source=none`-shaped object so the JSON
+# envelope key set is stable across availability states (FR-16 suppression
+# semantics: `rendered_line` is empty under any suppression branch).
+_rsj_collect_drift_block() {
+    local consumer_root="$1"
+    local helper="$_RSJ_PROJECT_ROOT/scripts/state/check-orchestrator-drift.sh"
+    if [ ! -x "$helper" ] && [ ! -f "$helper" ]; then
+        printf 'commits_behind=0\nupdate_source=none\nupstream_path=\nversions_behind=0\n'
+        return 0
+    fi
+    bash "$helper" --consumer "$consumer_root" 2>/dev/null || true
+}
+
+# _rsj_drift_rendered_line: emit the byte-stable drift line when render
+# conditions are met, empty string otherwise. Mirrors the suppression matrix
+# documented in references/status-headline-shape.md § Drift Line (M035 P01)
+# and in commands/status.md § Headline Block § Drift line.
+_rsj_drift_rendered_line() {
+    local update_source="$1"
+    local commits_behind="$2"
+    local versions_behind="$3"
+    if [ "$update_source" = "none" ]; then
+        printf ''
+        return 0
+    fi
+    # Suppression: both counts are 0 (numeric).
+    if [ "$commits_behind" = "0" ] && [ "$versions_behind" = "0" ]; then
+        printf ''
+        return 0
+    fi
+    # Suppression: empty / missing values (helper unavailable shape).
+    if [ -z "$commits_behind" ] || [ -z "$update_source" ]; then
+        printf ''
+        return 0
+    fi
+    # Otherwise render the byte-stable line. `commits_behind` is either a
+    # numeric integer or the literal token `unknown` (#Q-G5 / SC-3b path).
+    printf 'STALE: orchestrator runtime is %s commits behind upstream — run `orchestrator:update`' \
+        "$commits_behind"
+}
+
 # --- Section collection -----------------------------------------------------
 # _collect_sections emits each section's rendered string to stdout, one
 # section per call. Each section is keyed by a stable lowercase-snake-case
@@ -576,6 +627,29 @@ _emit_json() {
     sec_eff_footer=$(_section_efficiency_footer "$milestone_id" | _ansi_strip)
     sec_next_action=$(_section_next_action | _ansi_strip)
 
+    # Drift block (M035 P01 / FR-4). Additive top-level `drift` field; AD-7
+    # schema-version policy keeps _M029_SCHEMA_VERSION at "1.0". The renderer
+    # roots the helper invocation at the orchestrator root's parent (the
+    # consumer project root) — `_RSJ_ORCH_ROOT` ends in `.orchestrator`, the
+    # helper expects the project root that contains it.
+    local consumer_root="$_RSJ_ORCH_ROOT"
+    case "$consumer_root" in
+        */.orchestrator) consumer_root="${consumer_root%/.orchestrator}" ;;
+        *)               : ;;
+    esac
+    local drift_raw
+    drift_raw=$(_rsj_collect_drift_block "$consumer_root")
+    local drift_commits_behind drift_update_source drift_upstream_path drift_versions_behind
+    drift_commits_behind=$(printf '%s\n' "$drift_raw" | grep -E '^commits_behind=' | head -1 | sed 's/^commits_behind=//')
+    drift_update_source=$(printf '%s\n' "$drift_raw" | grep -E '^update_source=' | head -1 | sed 's/^update_source=//')
+    drift_upstream_path=$(printf '%s\n' "$drift_raw" | grep -E '^upstream_path=' | head -1 | sed 's/^upstream_path=//')
+    drift_versions_behind=$(printf '%s\n' "$drift_raw" | grep -E '^versions_behind=' | head -1 | sed 's/^versions_behind=//')
+    if [ -z "$drift_update_source" ]; then drift_update_source="none"; fi
+    if [ -z "$drift_commits_behind" ]; then drift_commits_behind="0"; fi
+    if [ -z "$drift_versions_behind" ]; then drift_versions_behind="0"; fi
+    local drift_rendered_line
+    drift_rendered_line=$(_rsj_drift_rendered_line "$drift_update_source" "$drift_commits_behind" "$drift_versions_behind")
+
     # Degraded-state probe over execution-log.jsonl.
     local parse_errors
     parse_errors=$(_rsj_jsonl_parse_errors "$mdir/execution-log.jsonl")
@@ -606,6 +680,11 @@ _emit_json() {
             --arg lock_state "$lock_state" \
             --arg last_dispatch_recency "$last_dispatch_recency" \
             --arg last_verify_result "$last_verify_result" \
+            --arg drift_commits_behind "$drift_commits_behind" \
+            --arg drift_update_source "$drift_update_source" \
+            --arg drift_upstream_path "$drift_upstream_path" \
+            --arg drift_versions_behind "$drift_versions_behind" \
+            --arg drift_rendered_line "$drift_rendered_line" \
             --arg progress "$sec_progress" \
             --arg blockers "$sec_blockers" \
             --arg execution_history "$sec_exec_hist" \
@@ -624,6 +703,13 @@ _emit_json() {
                 lock_state: $lock_state,
                 last_dispatch_recency: $last_dispatch_recency,
                 last_verify_result: $last_verify_result,
+                drift: {
+                    commits_behind: $drift_commits_behind,
+                    update_source: $drift_update_source,
+                    upstream_path: $drift_upstream_path,
+                    versions_behind: $drift_versions_behind,
+                    rendered_line: $drift_rendered_line
+                },
                 sections: {
                     progress: $progress,
                     blockers: $blockers,
@@ -644,6 +730,11 @@ _emit_json() {
             --arg lock_state "$lock_state" \
             --arg last_dispatch_recency "$last_dispatch_recency" \
             --arg last_verify_result "$last_verify_result" \
+            --arg drift_commits_behind "$drift_commits_behind" \
+            --arg drift_update_source "$drift_update_source" \
+            --arg drift_upstream_path "$drift_upstream_path" \
+            --arg drift_versions_behind "$drift_versions_behind" \
+            --arg drift_rendered_line "$drift_rendered_line" \
             --arg progress "$sec_progress" \
             --arg blockers "$sec_blockers" \
             --arg execution_history "$sec_exec_hist" \
@@ -660,6 +751,13 @@ _emit_json() {
                 lock_state: $lock_state,
                 last_dispatch_recency: $last_dispatch_recency,
                 last_verify_result: $last_verify_result,
+                drift: {
+                    commits_behind: $drift_commits_behind,
+                    update_source: $drift_update_source,
+                    upstream_path: $drift_upstream_path,
+                    versions_behind: $drift_versions_behind,
+                    rendered_line: $drift_rendered_line
+                },
                 sections: {
                     progress: $progress,
                     blockers: $blockers,

@@ -205,6 +205,87 @@ or other less-common terminal control codes; if such codes appear
 in a section's rendered output, that is a bug in the section
 renderer, not a gap in this primitive.
 
+## drift (M035 P01)
+
+The top-level `drift` field is an ADDITIVE schema-version-1.0
+extension shipped by M035 P01 / T04 (FR-4). Per AD-7 stability
+policy below, additive top-level fields do NOT bump
+`schema_version`; the M029 cross-check verifier that asserts
+`schema_version == "1.0"` byte-for-byte stays green.
+
+The `drift` object is ALWAYS present in the envelope (the key set
+is stable across availability states); suppression is signalled
+via empty `rendered_line` + `update_source: none` shape rather
+than via key omission. This deviates from the `sections`-side
+suppression convention (where suppressed sections are omitted
+entirely) — the deviation is intentional: downstream consumers
+that key on `drift.update_source` need a stable shape regardless
+of helper availability.
+
+### Object Shape
+
+```json
+"drift": {
+  "commits_behind": "<integer-or-string-unknown>",
+  "update_source": "git|npm|homebrew|none",
+  "upstream_path": "<absolute-path-or-empty>",
+  "versions_behind": "<integer>",
+  "rendered_line": "<exact-string-rendered-by-tui-or-empty>"
+}
+```
+
+Per-key types:
+
+- `drift.commits_behind: string` — either a numeric integer
+  encoded as a string (e.g., `"14"`) or the literal token
+  `"unknown"` (#Q-G5 SHA-absent fallback path). Encoded as a
+  JSON string to accommodate both shapes; consumers parse the
+  string and branch on `== "unknown"` or numeric.
+- `drift.update_source: string` — exactly one of `"git"`,
+  `"npm"`, `"homebrew"`, or `"none"`.
+- `drift.upstream_path: string` — absolute filesystem path to
+  the upstream repo (when `update_source=git`) or empty string
+  (`""`).
+- `drift.versions_behind: string` — semver-delta integer encoded
+  as a string (e.g., `"3"`). Always numeric.
+- `drift.rendered_line: string` — exact byte-stable line emitted
+  by the TUI render path:
+  `"STALE: orchestrator runtime is <N> commits behind upstream — run \`orchestrator:update\`"`.
+  Empty string (`""`) under any suppression branch
+  (`update_source=none`, both counts zero, helper unavailable).
+
+### Suppression Matrix
+
+The `rendered_line` is empty under any of:
+
+- `update_source = "none"` (FR-16 suppression honor).
+- `commits_behind = "0"` AND `versions_behind = "0"` (no drift to
+  report).
+- The drift helper (`scripts/state/check-orchestrator-drift.sh`)
+  was missing, exited non-zero, or emitted unparseable stdout.
+
+Under suppression, the other `drift.*` fields fall back to a
+documented default shape:
+
+```json
+"drift": {
+  "commits_behind": "0",
+  "update_source": "none",
+  "upstream_path": "",
+  "versions_behind": "0",
+  "rendered_line": ""
+}
+```
+
+### Source
+
+The data comes from `scripts/state/check-orchestrator-drift.sh`
+(M035 P01 / T03). The helper exits 0 always (FR-15: consumers
+branch on the data, not the exit code) and emits a four-line
+`key=value` stdout block. The renderer parses the four
+fields, computes the byte-stable rendered line, and emits the
+five-key `drift` object.
+
 ## Versioning Policy
 
 Restating AD-7's stability policy:

@@ -157,21 +157,112 @@ deliverable, not a P01 contract concern. P01 ships only the
 headline shape and the JSON schema; suppression matrix changes are
 out of scope.
 
+## Drift Line (M035 P01)
+
+The drift line is an optional FIFTH line that appears after the
+three byte-stable headline lines and the embedded efficiency-footer
+line. It is governed by the `update_source` config value and the
+`commits_behind` / `versions_behind` data emitted by
+`scripts/state/check-orchestrator-drift.sh` (M035 P01 / FR-3).
+
+### Render Conditions
+
+The drift line renders if-and-only-if ALL of:
+
+- `update_source != none` (FR-16 suppression honor).
+- `commits_behind > 0` OR `versions_behind > 0` (or
+  `commits_behind == "unknown"`, the SHA-absent #Q-G5 fallback
+  branch — that path renders with the literal token `unknown`
+  in place of the integer count).
+- The drift helper exited 0 with parseable stdout. When the helper
+  is unavailable, missing, or its stdout cannot be parsed, the
+  renderer suppresses the line silently (degrade gracefully).
+
+### Line Shape
+
+When rendered, the line is byte-stable:
+
+    STALE: orchestrator runtime is <N> commits behind upstream — run `orchestrator:update`
+
+where:
+
+- `<N>` is the integer `commits_behind` value when numeric.
+- `<N>` is the literal token `unknown` when the SHA-absent
+  fallback fired (#Q-G5 / SC-3b path); the user-visible advisory
+  in the helper's stderr has already explained the cause.
+
+The em-dash separator is U+2014 (`—`). The backticks around
+`orchestrator:update` are literal backticks. Renderers MUST NOT
+substitute hyphens for the em-dash.
+
+### JSON-side Field
+
+Under `--format=json`, the drift datum appears as the top-level
+`drift` object:
+
+```json
+"drift": {
+  "commits_behind": "<integer-or-string-unknown>",
+  "update_source": "git|npm|homebrew|none",
+  "upstream_path": "<absolute-path-or-empty>",
+  "versions_behind": "<integer>",
+  "rendered_line": "<exact-string-rendered-by-tui-or-empty>"
+}
+```
+
+The `rendered_line` field is empty when suppression conditions
+fire. The `drift` object itself is ALWAYS present (key set is
+stable across availability states); suppression is signalled via
+empty `rendered_line` and `update_source: none` shape.
+
+### M029 Contract Preservation
+
+The three byte-stable headline lines (`line1`, `line2`, `line3`)
+and their POSIX-extended regexes in § Regex above are UNCHANGED.
+The drift line is additive: existing M029 SC-2 scrapers continue
+to pass byte-for-byte. The M035 SC-4 scraper greps for the
+`^STALE: orchestrator runtime is .*$` pattern below the embedded
+footer line.
+
+### Drift Line Regex
+
+    drift-line: ^STALE: orchestrator runtime is ([0-9]+|unknown) commits behind upstream — run `orchestrator:update`$
+
+### AD-7 Schema-Version Policy
+
+Adding the top-level `drift` field to the JSON envelope is an
+ADDITIVE schema change. Per AD-7 stability policy at
+`references/status-json-schema.md` § Versioning Policy, additive
+top-level fields do NOT bump `_M029_SCHEMA_VERSION`. The M029
+cross-check verifier that asserts `schema_version == "1.0"`
+byte-for-byte stays green.
+
 ## Cross-References
 
 - `references/status-json-schema.md` — companion contract. The five
   headline fields appear as top-level JSON keys in the schema. Drift
   between the two files is a contract violation; gate verifiers
-  cross-check field presence in both directions.
+  cross-check field presence in both directions. The M035 P01
+  `drift` field documented above is an additive top-level object
+  on the JSON side; both files document the field shape.
 - `commands/status.md` — consumer. T03 wires the headline into the
   status command's rendered output; the headline block prepends
-  the existing flat-section markdown body.
+  the existing flat-section markdown body. M035 P01 / T04 appends
+  the drift-line render step between the embedded footer block and
+  the flat-sections-invariant block.
 - `scripts/diagnostics/efficiency-footer.sh` — M027 footer helper
   that the headline embeds verbatim under `efficiency_footer: true`.
+- `scripts/state/check-orchestrator-drift.sh` — M035 P01 / T03
+  read-only drift helper. Both render paths consume its four-line
+  `key=value` stdout block.
 - Spec entries: FR-2 (status headline requirement), SC-2 (acceptance
   criterion that asserts the headline regex), AD-1 (single-resolve
   invocation context discipline that drives the headline rendering
-  path), CON-5 (suppression-matrix inheritance from M027).
+  path), CON-5 (suppression-matrix inheritance from M027). M035
+  spec entries: FR-4 (drift-line render path), SC-4 (acceptance
+  criterion that asserts the drift-line regex + suppression matrix),
+  FR-15 (read-only render-side discipline), FR-16 (drift-line
+  suppression matrix), AD-19 (verifier path discipline).
 
 The contract is consumed by every later P01 task: T03 reads the
 field order, line-packing, and regex; T04 reads the field set as

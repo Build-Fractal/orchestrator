@@ -20,7 +20,25 @@ Report the current progress of a milestone — state, phase/task completion, blo
 >
 > **Embedded footer.** Under `efficiency_footer: true` (M027 default), the headline is followed by the `scripts/diagnostics/efficiency-footer.sh --milestone <active-milestone-id>` line verbatim. Under `efficiency_footer: false` or `--quiet`, the footer line disappears with no other side effect (CON-5 suppression-matrix inheritance from M027). M029 introduces NO new suppression knob — M027's resolution chain (env → local config → project config → defaults) governs the footer line.
 >
-> **Flat sections invariant.** Below the headline + blank line + footer line, the existing flat sections (Progress Overview, Blockers, Execution History, Telemetry Metrics, Efficiency Footer, Next Action) render byte-identical to today's pre-M029 output. The headline is additive; existing scrapers do not break.
+> **Drift line (M035 P01 / FR-4 / SC-4).** After the embedded footer line, invoke `bash scripts/state/check-orchestrator-drift.sh --consumer "$PROJECT_DIR" 2>/dev/null`. Parse the structured stdout:
+>
+>     commits_behind=<value>
+>     update_source=<git|npm|homebrew|none>
+>     upstream_path=<absolute-path-or-empty>
+>     versions_behind=<value>
+>
+> Suppression matrix (FR-4, FR-16):
+> - `update_source=none` → emit nothing.
+> - `commits_behind=0` AND `versions_behind=0` → emit nothing.
+> - drift helper exits non-zero, is missing, or stdout is unparseable → emit nothing (degrade gracefully).
+>
+> Otherwise emit exactly one line, byte-stable:
+>
+>     STALE: orchestrator runtime is N commits behind upstream — run `orchestrator:update`
+>
+> where `N` is the integer `commits_behind` value when numeric, or the literal token `unknown` when the SHA-absent fallback fired (#Q-G5 / SC-3b path; the helper's stderr advisory has already explained the cause). The em-dash separator is U+2014 (`—`); renderers MUST NOT substitute hyphens. Backticks around `orchestrator:update` are literal. The full drift-line contract lives at `references/status-headline-shape.md` § Drift Line (M035 P01).
+>
+> **Flat sections invariant.** Below the headline + blank line + footer line + (optional) drift line, the existing flat sections (Progress Overview, Blockers, Execution History, Telemetry Metrics, Efficiency Footer, Next Action) render byte-identical to today's pre-M029 output. The headline is additive; existing scrapers do not break. The drift line is additive on top of the headline; existing M029 SC-2 scrapers continue to pass byte-for-byte.
 >
 > **Test-only seam.** The `M029_DISABLE_HEADLINE=1` environment variable is a TEST-ONLY hook used by the SC-2 baseline-capture path (`tests/m029-acceptance/p01-sc2-headline.sh`) to capture the pre-M029 flat-section rendering. Production callers MUST NOT set this var; it is not a documented end-user knob.
 
@@ -236,4 +254,5 @@ Status is inherently idempotent — it only reads from disk and computes derived
 - `scripts/state/detect-invocation-context.sh` — AD-1 single-resolve invocation-context resolver (M029/P01)
 - `references/status-headline-shape.md` — FR-2 design contract (M029/P01)
 - `references/status-json-schema.md` — FR-3 design contract (M029/P01; consumed by T04 `--format=json` path)
-- `scripts/diagnostics/render-status-json.sh` — FR-3 JSON renderer (M029/P01; consumed by T04)
+- `scripts/diagnostics/render-status-json.sh` — FR-3 JSON renderer (M029/P01; consumed by T04). Extended in M035/P01/T04 with the additive top-level `drift` field (FR-4 JSON-side surface).
+- `scripts/state/check-orchestrator-drift.sh` — M035/P01/T03 read-only drift helper. Consumed by both the headline drift-line render path (above) and the `render-status-json.sh` `drift` top-level field. Exits 0 always; consumers branch on the data, not the exit code (FR-15).

@@ -6,6 +6,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This pr
 
 ## [Unreleased]
 
+### Fixed (PBJ-2026-05-08 — milestone-title ID-discovery + strip miss `M{numeric}-{suffix}` shape)
+
+- `scripts/wiki/wiki-milestone-titles.sh` ID-collection regex (line 213, the per-subdir loop) now accepts a third alt branch `^M[0-9]+[a-z]*-[A-Za-z0-9-]+$` for `M2a-min` / `M2a-polish` / `M2b-min` / `M2b-polish` shape. The pre-fix two-branch form (`^M[0-9]+[a-z]*$` + `^M-[A-Za-z0-9-]+$`) silently dropped the numeric-with-suffix shape at this discovery step, before `resolve_one()` ever saw the ID. Surfaced 2026-05-08 in the PBJ project after Stage 1 of the V1 reframe replan introduced four `M2a-min`/`M2a-polish`/`M2b-min`/`M2b-polish` peer-milestone subdirs and the wiki nav rendered them with bare IDs.
+- `scripts/wiki/wiki-milestone-titles.sh::strip_title` now tries the longest-shape strip first (`^M[0-9]+[a-z]*-[A-Za-z0-9-]+`) before falling through to plain numeric (`^M[0-9]+[a-z]*`) and dash-prefix (`^M-[A-Za-z0-9-]+`). Without this ordering, `M2a-min — Risk surfacing (V1 narrow ship)` would have its `M2a` prefix stripped first, leaving `-min — Risk surfacing (V1 narrow ship)` as the title — a separate failure mode from the ID-discovery bug. The longest-first ordering is the same conceptual ordering already used in nav-sort and proposal-filename parsing (commit 9570e71e).
+- Verified post-fix on the PBJ tree: M2a-min, M2a-polish, M2b-min, M2b-polish all resolve to their CONTEXT.md H1 titles with the leading MID stripped cleanly.
+
 ### Fixed (PBJ-2026-05-08 — milestone-title regex over-matches hyphenated sub-IDs)
 
 - `scripts/wiki/wiki-milestone-titles.sh` Pattern 1 (`**MID — Title**`) now requires at least one space on each side of the separator. The previous `[[:space:]]*[—-][[:space:]]*` form accepted zero-space matches and caused `\b\b${_mid}\b\b` to consume hyphenated sub-ID cells like `**M2a-min**` / `**M2a-polish**`, parsing the suffix as the milestone title (M2a/M2b section indexes regressed to bare "min" / "polish" on PBJ regen). New form `[[:space:]]+[—-][[:space:]]+` matches the docstring intent (`MID — Title` with whitespace bracketing the dash) without consuming `**M{ID}-{suffix}**` cells. Pattern 2 (bare-bold) and Pattern 3 (H2 form) unaffected.

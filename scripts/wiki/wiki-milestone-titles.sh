@@ -76,16 +76,20 @@ MS_DIR="$ORCH/milestones"
 #
 # PBJ-2026-05-08: ID-shape spec (matches the nav-sort two-bucket invariant
 # established at commit 9570e71e):
-#   * numeric:      ^M[0-9]+[a-z]*   (M001, M2a, M2b, M3, M99a, ...)
-#   * dash-prefix:  ^M-[A-Za-z0-9-]+ (M-Spike-A, M-Foo-Bar, ...)
-# Two-pass strip: try numeric shape first (greedier match for the common case),
-# fall through to dash-prefix.
+#   * numeric:           ^M[0-9]+[a-z]*                    (M001, M2a, M2b, M3, M99a, ...)
+#   * numeric-with-suffix: ^M[0-9]+[a-z]*-[A-Za-z0-9-]+   (M2a-min, M2a-polish, M2b-min, ...)
+#   * dash-prefix:       ^M-[A-Za-z0-9-]+                  (M-Spike-A, M-Foo-Bar, ...)
+# Three-pass strip: try numeric-with-suffix FIRST (longest match wins so
+# `M2a-min — Title` doesn't have `M2a` stripped leaving `-min — Title`),
+# then plain numeric, then dash-prefix.
 strip_title() {
   _t="$1"
   # Drop leading "Proposal: " or "Milestone Summary: ".
   _t=$(printf '%s' "$_t" | sed -E 's/^[[:space:]]*(Proposal:|Milestone Summary:)[[:space:]]*//')
   # Drop leading "MID —" / "MID -" / "MID:" / "MID " (em-dash, hyphen, colon,
-  # or whitespace separator). Numeric shape first, dash-prefix second.
+  # or whitespace separator). Order matters — longest-shape-first so
+  # `M2a-min` isn't reduced to `M2a` with `-min` left as title.
+  _t=$(printf '%s' "$_t" | sed -E 's/^M[0-9]+[a-z]*-[A-Za-z0-9-]+[[:space:]]*[—:-]?[[:space:]]*//')
   _t=$(printf '%s' "$_t" | sed -E 's/^M[0-9]+[a-z]*[[:space:]]*[—:-]?[[:space:]]*//')
   _t=$(printf '%s' "$_t" | sed -E 's/^M-[A-Za-z0-9-]+[[:space:]]*[—:-]?[[:space:]]*//')
   printf '%s' "$_t"
@@ -202,15 +206,23 @@ trap 'rm -f "$_idlist"' EXIT INT TERM
 : > "$_idlist"
 
 # IDs from milestone subdirectories.
-# PBJ-2026-05-08: accept the broader ID shape (numeric M001/M2a/M3 and
-# dash-prefixed M-Spike-A) — matches the nav-sort two-bucket invariant
-# (commit 9570e71e). Pre-fix this loop quietly dropped any non-3-digit
-# subdir, so M2a/M-Spike-A title resolution silently failed.
+# PBJ-2026-05-08: accept the broader ID shape (numeric M001/M2a/M3,
+# numeric-with-suffix M2a-min/M2b-polish, and dash-prefixed M-Spike-A) —
+# matches the nav-sort two-bucket invariant (commit 9570e71e). Pre-fix
+# this loop quietly dropped any non-3-digit subdir, so M2a/M-Spike-A title
+# resolution silently failed.
+# PBJ-2026-05-08 follow-up: third alt branch added for
+# numeric-with-suffix shape (M2a-min, M2a-polish, M2b-min, M2b-polish)
+# introduced by milestone-split reshapes. Without this branch those IDs
+# fell through to the bare-ID nav fallback (silently dropped at this
+# discovery step, before resolve_one ever sees them).
 if [ -d "$MS_DIR" ]; then
   for _d in "$MS_DIR"/M*/; do
     [ -d "$_d" ] || continue
     _b=$(basename "$_d")
-    if [[ "$_b" =~ ^M[0-9]+[a-z]*$ ]] || [[ "$_b" =~ ^M-[A-Za-z0-9-]+$ ]]; then
+    if [[ "$_b" =~ ^M[0-9]+[a-z]*$ ]] \
+       || [[ "$_b" =~ ^M[0-9]+[a-z]*-[A-Za-z0-9-]+$ ]] \
+       || [[ "$_b" =~ ^M-[A-Za-z0-9-]+$ ]]; then
       printf '%s\n' "$_b" >> "$_idlist"
     fi
   done

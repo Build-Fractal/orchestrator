@@ -116,7 +116,7 @@ TMP_POST="/tmp/wiki-nav-post-$$.yml"
 TMP_FINAL="/tmp/wiki-nav-final-$$.yml"
 TMP_IDS="/tmp/wiki-nav-ids-$$.list"
 TMP_PHASE="/tmp/wiki-nav-phase-$$.list"
-trap 'rm -f "$SCAN_OUT" "$NAV_BODY" "$TMP_PRE" "$TMP_POST" "$TMP_FINAL" "$TMP_IDS" "$TMP_PHASE" "/tmp/wiki-nav-titles-$$.tsv" /tmp/wiki-nav-kn-patterns-$$.list /tmp/wiki-nav-kn-conventions-$$.list /tmp/wiki-nav-kn-lessons-$$.list /tmp/wiki-nav-legacy-preserved-$$.yml /tmp/wiki-nav-no-legacy-$$.yml /tmp/wiki-nav-heal-$$.yml /tmp/wiki-nav-extra-dns-$$.list /tmp/wiki-nav-proposals-$$.list /tmp/wiki-nav-flat-$$.list /tmp/wiki-nav-extra-$$.list' EXIT INT TERM
+trap 'rm -f "$SCAN_OUT" "$NAV_BODY" "$TMP_PRE" "$TMP_POST" "$TMP_FINAL" "$TMP_IDS" "$TMP_PHASE" "/tmp/wiki-nav-titles-$$.tsv" /tmp/wiki-nav-kn-patterns-$$.list /tmp/wiki-nav-kn-conventions-$$.list /tmp/wiki-nav-kn-lessons-$$.list /tmp/wiki-nav-legacy-preserved-$$.yml /tmp/wiki-nav-no-legacy-$$.yml /tmp/wiki-nav-heal-$$.yml /tmp/wiki-nav-extra-dns-$$.list /tmp/wiki-nav-proposals-$$.list /tmp/wiki-nav-proposals-$$.raw /tmp/wiki-nav-flat-$$.list /tmp/wiki-nav-flat-$$.raw /tmp/wiki-nav-extra-$$.list /tmp/wiki-nav-extra-$$.raw /tmp/wiki-nav-spec-$$.list /tmp/wiki-nav-spec-$$.raw /tmp/wiki-nav-decisions-extra-$$.list /tmp/wiki-nav-decisions-extra-$$.raw /tmp/wiki-nav-feedback-$$.list /tmp/wiki-nav-feedback-$$.raw' EXIT INT TERM
 
 # ---- helpers ---------------------------------------------------------------
 
@@ -185,6 +185,73 @@ read_stub_title() {
       exit
     }
   ' "$_p" 2>/dev/null
+}
+
+# read_source_nav_order <source-abs-path>
+#
+# PBJ-2026-05-08: reads YAML frontmatter `nav_order:` and prints the integer
+# value on stdout. Empty stdout when the source does not exist or carries no
+# `nav_order:` field (callers default to 9999, sorting after declared items).
+# Mirror of read_stub_title shape, but reads the SOURCE file (not the stub)
+# because the ordering hint is intrinsic to the source, not projected to stubs.
+# Convention: sparse numbering (10, 20, 30, ...) so insertions don't require
+# renumber churn.
+read_source_nav_order() {
+  _p="$1"
+  [ -f "$_p" ] || return 0
+  awk '
+    BEGIN { state="pre" }
+    NR == 1 && $0 == "---" { state="fm"; next }
+    state == "fm" && $0 == "---" { exit }
+    state == "fm" && $0 ~ /^[[:space:]]*nav_order[[:space:]]*:[[:space:]]*/ {
+      v=$0
+      sub(/^[^:]*:[[:space:]]*/, "", v)
+      sub(/[[:space:]]+$/, "", v)
+      sub(/^["'"'"']/, "", v)
+      sub(/["'"'"']$/, "", v)
+      print v
+      exit
+    }
+  ' "$_p" 2>/dev/null
+}
+
+# sort_section_with_nav_order <input-list> <output-list> <source-base-dir>
+#
+# PBJ-2026-05-08: re-sorts a per-section CAT|REL|TITLE list by the source's
+# frontmatter `nav_order:` integer (ascending), with alphabetical fallback
+# within ties. Sources missing the field default to nav_order=9999, sorting
+# after all declared items (backward compat: existing files unchanged → all
+# alphabetical). The <source-base-dir> argument resolves the source file path:
+# `$_src_base/$REL` must be the absolute path to the source-of-truth file
+# (`.orchestrator/` for spec/decisions-extra/proposals/feedback; repo-root
+# for extras). Bash 3.2: leading-zero pad gives stable lexical sort without
+# `sort -n` flags.
+sort_section_with_nav_order() {
+  _in="$1"
+  _out="$2"
+  _src_base="$3"
+  _dec="${_out}.dec"
+  : > "$_dec"
+  while IFS='|' read -r _c _r _t; do
+    [ -n "$_r" ] || continue
+    _src="$_src_base/$_r"
+    _no=$(read_source_nav_order "$_src")
+    case "$_no" in
+      ''|*[!0-9]*) _no=9999 ;;
+    esac
+    _pad=$(printf '%05d' "$_no" 2>/dev/null)
+    [ -n "$_pad" ] || _pad="09999"
+    printf '%s|%s|%s|%s\n' "$_pad" "$_c" "$_r" "$_t" >> "$_dec"
+  done < "$_in"
+  # Default-locale sort matches the previous (pre-2026-05-08) per-section sort
+  # behavior so projects without nav_order: declared see byte-identical nav
+  # output. Digit characters collate identically across locales, so the numeric
+  # prefix still sorts correctly; only the secondary alphabetical tiebreak
+  # within ties uses the locale's collation rules (matching pre-existing
+  # behavior). Tests in tests/test-wiki-nav-order-and-feedback.sh verify both
+  # the numeric primary sort and the no-regression alphabetical fallback.
+  sort "$_dec" | cut -d'|' -f2- > "$_out"
+  rm -f "$_dec"
 }
 
 # emit_leaf <level> <label> <path-under-docs>
@@ -341,6 +408,7 @@ HAS_PROPOSALS=0          # M032/P04/T01 FR-17
 HAS_KNOWLEDGE_FLAT=0     # M032/P04/T01 FR-19
 HAS_SPEC=0               # PBJ-2026-05-07 ask 1
 HAS_DECISIONS_EXTRA=0    # PBJ-2026-05-07 ask 2
+HAS_FEEDBACK=0           # PBJ-2026-05-08 — feedback nav arm (Item E)
 
 # Per-extra-dir presence is tracked via a /tmp accumulator because the dirname
 # slot is dynamic. Each line "extra:<dn>" appears once per distinct dirname.
@@ -375,6 +443,7 @@ while IFS='|' read -r CAT REL TITLE; do
     knowledge-flat)        HAS_KNOWLEDGE_FLAT=1 ;;
     spec:*)                HAS_SPEC=1 ;;
     decisions-extra:*)     HAS_DECISIONS_EXTRA=1 ;;
+    feedback:*)            HAS_FEEDBACK=1 ;;
     extra:*)
       _xdn=$(printf '%s' "$CAT" | sed 's/^extra://')
       printf '%s\n' "$_xdn" >> "$TMP_EXTRA_DNS"
@@ -431,10 +500,15 @@ fi
 if [ "$HAS_SPEC" -eq 1 ]; then
   emit_group 1 "Spec"
   emit_leaf 2 "Overview" "spec/index.md"
+  # PBJ-2026-05-08: sort by source frontmatter `nav_order:` (asc), alphabetical
+  # tiebreak. Files without nav_order: default to 9999 (sort after declared).
+  TMP_SPEC_RAW="/tmp/wiki-nav-spec-$$.raw"
   TMP_SPEC="/tmp/wiki-nav-spec-$$.list"
   awk -F'|' '
     $1 ~ /^spec:/ { print $1 "|" $2 "|" $3 }
-  ' "$SCAN_OUT" | sort > "$TMP_SPEC"
+  ' "$SCAN_OUT" | sort > "$TMP_SPEC_RAW"
+  sort_section_with_nav_order "$TMP_SPEC_RAW" "$TMP_SPEC" "$ROOT/.orchestrator"
+  rm -f "$TMP_SPEC_RAW"
   while IFS='|' read -r SCAT SREL STITLE; do
     [ -n "$SREL" ] || continue
     _sbase=${SCAT#spec:}
@@ -457,10 +531,15 @@ if [ "$HAS_DECISIONS" -eq 1 ]; then
     # there is no decisions/index.md (the parent decisions.md fills that slot).
     emit_group 1 "Decisions"
     emit_leaf 2 "Overview" "decisions.md"
+    # PBJ-2026-05-08: sort by source frontmatter `nav_order:` (asc), alphabetical
+    # tiebreak. Files without nav_order: default to 9999 (sort after declared).
+    TMP_DEX_RAW="/tmp/wiki-nav-decisions-extra-$$.raw"
     TMP_DEX="/tmp/wiki-nav-decisions-extra-$$.list"
     awk -F'|' '
       $1 ~ /^decisions-extra:/ { print $1 "|" $2 "|" $3 }
-    ' "$SCAN_OUT" | sort > "$TMP_DEX"
+    ' "$SCAN_OUT" | sort > "$TMP_DEX_RAW"
+    sort_section_with_nav_order "$TMP_DEX_RAW" "$TMP_DEX" "$ROOT/.orchestrator"
+    rm -f "$TMP_DEX_RAW"
     while IFS='|' read -r DCAT DREL DTITLE; do
       [ -n "$DREL" ] || continue
       _dbase=${DCAT#decisions-extra:}
@@ -549,10 +628,15 @@ fi
 if [ "$HAS_PROPOSALS" -eq 1 ]; then
   emit_group 1 "Proposals"
   emit_leaf 2 "Overview" "proposals/index.md"
+  # PBJ-2026-05-08: sort by source frontmatter `nav_order:` (asc), alphabetical
+  # tiebreak. Files without nav_order: default to 9999 (sort after declared).
+  TMP_PROP_RAW="/tmp/wiki-nav-proposals-$$.raw"
   TMP_PROP="/tmp/wiki-nav-proposals-$$.list"
   awk -F'|' '
     $1 ~ /^proposals:/ { print $1 "|" $2 "|" $3 }
-  ' "$SCAN_OUT" | sort > "$TMP_PROP"
+  ' "$SCAN_OUT" | sort > "$TMP_PROP_RAW"
+  sort_section_with_nav_order "$TMP_PROP_RAW" "$TMP_PROP" "$ROOT/.orchestrator"
+  rm -f "$TMP_PROP_RAW"
   while IFS='|' read -r PCAT PREL PTITLE; do
     [ -n "$PREL" ] || continue
     _pbase=${PCAT#proposals:}
@@ -564,6 +648,42 @@ if [ "$HAS_PROPOSALS" -eq 1 ]; then
     emit_leaf 2 "$_plabel" "$_ppath"
   done < "$TMP_PROP"
   rm -f "$TMP_PROP"
+fi
+
+# ---- Feedback section (PBJ-2026-05-08 — Item E) ----------------------------
+# Mirrors the Proposals section shape. The scanner has emitted feedback:*
+# records since M037/P02/T01 (FR-18); the stub generator routes them to
+# wiki/docs/feedback/<basename>.md and registers a section index. The nav arm
+# was missing — `feedback/` files landed in wiki/docs/ without a corresponding
+# nav entry, surfacing as "not included in nav" mkdocs warnings on every
+# project with a populated .orchestrator/feedback/ tree.
+#
+# Default-on. Projects that want feedback off-nav can opt out via
+# INCLUDE_FEEDBACK=0 in the environment (gates emission at scan time, not
+# render time — no feedback:* records → HAS_FEEDBACK=0 → section suppressed).
+if [ "$HAS_FEEDBACK" -eq 1 ]; then
+  emit_group 1 "Feedback"
+  emit_leaf 2 "Overview" "feedback/index.md"
+  # PBJ-2026-05-08: sort by source frontmatter `nav_order:` (asc), alphabetical
+  # tiebreak. Files without nav_order: default to 9999 (sort after declared).
+  TMP_FB_RAW="/tmp/wiki-nav-feedback-$$.raw"
+  TMP_FB="/tmp/wiki-nav-feedback-$$.list"
+  awk -F'|' '
+    $1 ~ /^feedback:/ { print $1 "|" $2 "|" $3 }
+  ' "$SCAN_OUT" | sort > "$TMP_FB_RAW"
+  sort_section_with_nav_order "$TMP_FB_RAW" "$TMP_FB" "$ROOT/.orchestrator"
+  rm -f "$TMP_FB_RAW"
+  while IFS='|' read -r FCAT FREL FTITLE; do
+    [ -n "$FREL" ] || continue
+    _fbase=${FCAT#feedback:}
+    _fpath="feedback/${_fbase}.md"
+    _flabel="$_fbase"
+    if [ -n "$FTITLE" ] && [ "$FTITLE" != "$_fbase" ]; then
+      _flabel="$FTITLE"
+    fi
+    emit_leaf 2 "$_flabel" "$_fpath"
+  done < "$TMP_FB"
+  rm -f "$TMP_FB"
 fi
 
 # ---- Extra-dirs sections (M032/P04/T01 FR-18) ------------------------------
@@ -587,11 +707,19 @@ if [ -s "$TMP_EXTRA_DNS" ]; then
     fi
     emit_group 1 "$_xlabel"
     emit_leaf 2 "Overview" "${XDN}/index.md"
+    # PBJ-2026-05-08: sort by source frontmatter `nav_order:` (asc), alphabetical
+    # tiebreak. Source paths are repo-rel for extras (vs. .orchestrator-rel for
+    # spec/decisions/proposals/feedback). Decoration includes a synthesized
+    # CAT field so sort_section_with_nav_order's CAT|REL|TITLE input shape
+    # is honored; the helper strips the decoration on output.
+    TMP_EX_RAW="/tmp/wiki-nav-extra-$$.raw"
     TMP_EX="/tmp/wiki-nav-extra-$$.list"
     awk -F'|' -v c="extra:${XDN}" '
-      $1 == c { print $2 "|" $3 }
-    ' "$SCAN_OUT" | sort > "$TMP_EX"
-    while IFS='|' read -r XREL XTITLE; do
+      $1 == c { print $1 "|" $2 "|" $3 }
+    ' "$SCAN_OUT" | sort > "$TMP_EX_RAW"
+    sort_section_with_nav_order "$TMP_EX_RAW" "$TMP_EX" "$ROOT"
+    rm -f "$TMP_EX_RAW"
+    while IFS='|' read -r XCAT XREL XTITLE; do
       [ -n "$XREL" ] || continue
       _xbase=$(basename "$XREL" .md)
       _xpath="${XDN}/${_xbase}.md"
@@ -614,11 +742,17 @@ fi
 # scanner observed at least one knowledge-flat record (suppressed when zero).
 if [ "$HAS_KNOWLEDGE_FLAT" -eq 1 ]; then
   emit_group 1 "Knowledge — Flat"
+  # PBJ-2026-05-08: sort by source frontmatter `nav_order:` (asc), alphabetical
+  # tiebreak. KFREL is .orchestrator-rel ("knowledge/<file>"), so source-base
+  # is $ROOT/.orchestrator. Decoration uses CAT="knowledge-flat" prefix.
+  TMP_KFL_RAW="/tmp/wiki-nav-flat-$$.raw"
   TMP_KFL="/tmp/wiki-nav-flat-$$.list"
   awk -F'|' '
-    $1 == "knowledge-flat" { print $2 "|" $3 }
-  ' "$SCAN_OUT" | sort > "$TMP_KFL"
-  while IFS='|' read -r KFREL KFTITLE; do
+    $1 == "knowledge-flat" { print $1 "|" $2 "|" $3 }
+  ' "$SCAN_OUT" | sort > "$TMP_KFL_RAW"
+  sort_section_with_nav_order "$TMP_KFL_RAW" "$TMP_KFL" "$ROOT/.orchestrator"
+  rm -f "$TMP_KFL_RAW"
+  while IFS='|' read -r KFCAT KFREL KFTITLE; do
     [ -n "$KFREL" ] || continue
     _kfbase=$(basename "$KFREL" .md)
     # KFREL is "knowledge/<file>" relative to .orchestrator/. Stub lives at

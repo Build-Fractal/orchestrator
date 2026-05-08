@@ -294,6 +294,65 @@ Use this pattern when a project has locked future scope (e.g., committed-but-not
 
 ---
 
+## Wiki Nav: Section Ordering Hint (`nav_order:`)
+
+Flat-list nav sections (`spec/`, `decisions/`, `proposals/`, `feedback/`,
+`wiki.extra_dirs:` entries, and flat knowledge files at the root of
+`.orchestrator/knowledge/`) sort alphabetically by filename by default. When
+the desired reading order doesn't match alphabetical order, declare an
+integer `nav_order:` in the source file's YAML frontmatter and the nav
+generator will sort by that integer (ascending) with alphabetical tiebreak
+within ties.
+
+```markdown
+---
+nav_order: 10
+---
+# Product Brief
+
+…
+```
+
+**Sparse numbering convention.** Use `10`, `20`, `30`, … so future inserts
+land between existing entries without renumber churn (`15` slots between
+`10` and `20`).
+
+**Default behavior.** Files without a `nav_order:` field sort with effective
+order `9999` — after every declared item, then alphabetical among themselves.
+This means existing source files without frontmatter changes continue to sort
+exactly as they always have. Adoption is per-file and incremental.
+
+**Where it applies:**
+
+- `.orchestrator/spec/*.md` (Spec section)
+- `.orchestrator/decisions/*.md` (Decisions section, sibling to DECISIONS.md)
+- `.orchestrator/proposals/*.md` (Proposals section)
+- `.orchestrator/feedback/*.md` (Feedback section)
+- `.orchestrator/knowledge/*.md` flat files (Knowledge — Flat section)
+- Each `wiki.extra_dirs:` declared directory
+
+**Where it does NOT apply.** Milestone, archive, knowledge-by-category
+(patterns/conventions/lessons), and milestone-summary sections retain their
+existing structural ordering (lexical M### / phase order, by-publication-date
+for reference-corpus categories where applicable). Those are deliberate IA
+choices, not alphabetical defaults — they would not benefit from per-file
+override.
+
+**Failure mode.** A non-integer `nav_order:` value (e.g., `nav_order: high`,
+`nav_order: "1.5"`) is silently treated as the 9999 default. The frontmatter
+parser strips quotes and validates the result is digits-only. Operators
+authoring the field can verify their intent took effect by regenerating nav
+(`bash scripts/wiki/wiki-generate-nav.sh`) and reading the section.
+
+### Cross-References
+
+- `scripts/wiki/wiki-generate-nav.sh` — `read_source_nav_order` +
+  `sort_section_with_nav_order` helpers; per-section sort calls.
+- `tests/test-wiki-nav-order-and-feedback.sh` — acceptance suite covering
+  declared, undeclared, mixed, and backward-compat cases.
+
+---
+
 ## Cross-References
 
 - `.orchestrator/DECISIONS.md` — every decision-log entry uses the new heading shape.

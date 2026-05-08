@@ -89,9 +89,17 @@ while [ $# -gt 0 ]; do
 done
 
 # ---- resolve PROJECT_ROOT ---------------------------------------------------
+# Canonicalize to absolute. See wiki-generate-stubs.sh for the failure mode
+# this guards against (PBJ-2026-05-08 — `--root .` vs absolute drift).
 if [ -z "$ROOT" ]; then
   SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
   ROOT=$(cd "$SCRIPT_DIR/../.." && pwd)
+else
+  if [ ! -d "$ROOT" ]; then
+    printf 'ERROR: PROJECT_ROOT does not exist: %s\n' "$ROOT" >&2
+    exit 1
+  fi
+  ROOT=$(cd "$ROOT" && pwd)
 fi
 
 if [ ! -d "$ROOT" ]; then

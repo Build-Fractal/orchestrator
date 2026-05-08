@@ -73,6 +73,14 @@ if [ ! -d "$ROOT_DIR" ]; then
   exit 2
 fi
 
+# Canonicalize to absolute. The downstream regenerators bake $ROOT into stub
+# comments and pattern-match against $ROOT in `project_external_pointer`; a
+# relative literal (e.g. `--root .`) produces output that differs from the
+# absolute-path form even when the operator's last regen was drift-free,
+# causing this diagnostic to false-FAIL on `wiki.extra_dirs` content.
+# (PBJ-2026-05-08 — belt-and-suspenders; the regen scripts canonicalize too.)
+ROOT_DIR=$(cd "$ROOT_DIR" && pwd)
+
 DOCS="$ROOT_DIR/wiki/docs"
 MKDOCS="$ROOT_DIR/wiki/mkdocs.yml"
 STUB_GEN="$ROOT_DIR/scripts/wiki/wiki-generate-stubs.sh"

@@ -59,9 +59,22 @@ while [ $# -gt 0 ]; do
 done
 
 # ---- resolve PROJECT_ROOT ---------------------------------------------------
+# Always canonicalize to an absolute path. The flag-less branch already does
+# this via `cd ... && pwd`; the explicit `--root` branch must match, because
+# downstream emitters bake $ROOT into stub comments (`Source metadata: …`)
+# and pattern-match against $ROOT in `project_external_pointer` ("file://$ROOT/"*).
+# A relative literal (e.g. `--root .`) silently produces stubs that differ from
+# the absolute-path form, causing `wiki-stubs-fresh.sh` to false-FAIL on
+# `wiki.extra_dirs` content. (PBJ-2026-05-08)
 if [ -z "$ROOT" ]; then
   SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
   ROOT=$(cd "$SCRIPT_DIR/../.." && pwd)
+else
+  if [ ! -d "$ROOT" ]; then
+    printf 'ERROR: PROJECT_ROOT does not exist: %s\n' "$ROOT" >&2
+    exit 2
+  fi
+  ROOT=$(cd "$ROOT" && pwd)
 fi
 
 if [ ! -d "$ROOT" ]; then

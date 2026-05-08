@@ -331,15 +331,23 @@ while IFS= read -r tuple; do
     exit 1
   fi
 
-  # FR-22 collision check (skips on collision-clean cases).
-  if ! bash "$REPO_ROOT/scripts/lifecycle/install-collision-check.sh" \
-    "$dst_abs" "$PROJECT_DIR" "$(printf '%b' "$project_assets_targets")"; then
-    rc=$?
-    if [ "$rc" = "4" ]; then
+  # FR-22 collision check. PBJ-2026-05-08: operator-owned is soft-skip in the
+  # project_assets loop — wiki/ on a re-install is the canonical case. The
+  # default fail-closed semantic stays intact for direct callers (SC-10).
+  set +e
+  bash "$REPO_ROOT/scripts/lifecycle/install-collision-check.sh" \
+    --on-operator-owned=skip \
+    "$dst_abs" "$PROJECT_DIR" "$(printf '%b' "$project_assets_targets")"
+  rc=$?
+  set -e
+  case "$rc" in
+    0) : ;;
+    5) continue ;;
+    4)
       echo "FAIL: staged-dirs-collision: project_assets entry $src_rel collides with operator-owned $tgt_rel" >&2
-    fi
-    exit "$rc"
-  fi
+      exit "$rc" ;;
+    *) exit "$rc" ;;
+  esac
 
   # FR-3 mode dispatch (copy or symlink).
   if [ "$DRY_RUN" = "1" ]; then

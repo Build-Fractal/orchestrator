@@ -205,6 +205,34 @@ fi
 
 if [ "$DRIFT" -eq 0 ]; then
   printf 'wiki-stubs-fresh: PASS (no drift between .orchestrator/ canonical artifacts and wiki/docs + wiki/mkdocs.yml)\n'
+
+  # ---- Buildability gate (PBJ-2026-05-08 paper-cut) ----
+  # Drift-free is necessary but not sufficient: a stale link in source
+  # markdown (e.g. `](feedback/foo.md)` after feedback/ was removed) leaves
+  # the regen + commit byte-identical yet trips `mkdocs build --strict`.
+  # Chain the strict build so the diagnostic claims both freshness AND
+  # buildability. Skip gracefully when mkdocs is absent or wiki/mkdocs.yml
+  # is missing (no project wiki in scope).
+  if [ -f "$ROOT_DIR/wiki/mkdocs.yml" ] && command -v mkdocs >/dev/null 2>&1; then
+    BUILD_LOG="${TMP_PFX}.build.log"
+    BUILD_SITE="${TMP_PFX}.site"
+    trap 'rm -rf "$DOCS_BEFORE" "$MKDOCS_BEFORE" "${TMP_PFX}.diff" "$BUILD_LOG" "$BUILD_SITE" 2>/dev/null' EXIT INT TERM
+    if ! ( cd "$ROOT_DIR" && mkdocs build -f wiki/mkdocs.yml --strict --site-dir "$BUILD_SITE" ) > "$BUILD_LOG" 2>&1; then
+      printf 'wiki-stubs-fresh: FAIL -- mkdocs build --strict failed despite no stub drift.\n' >&2
+      printf '\n' >&2
+      grep -E '^(ERROR|WARNING)' "$BUILD_LOG" >&2 || tail -20 "$BUILD_LOG" >&2
+      printf '\n' >&2
+      printf 'Hint: a freshness-clean regen does not guarantee the build is clean.\n' >&2
+      printf '      Common cause: dangling `](feedback/...)` or other intra-repo\n' >&2
+      printf '      links in source markdown that no longer resolve. Unlink the\n' >&2
+      printf '      prose or restore the missing target, then re-run.\n' >&2
+      exit 1
+    fi
+    printf 'wiki-stubs-fresh: PASS (mkdocs build --strict OK)\n'
+  else
+    printf 'wiki-stubs-fresh: SKIP build gate (mkdocs not installed or no wiki/mkdocs.yml)\n' >&2
+  fi
+
   exit 0
 fi
 

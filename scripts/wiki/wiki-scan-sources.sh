@@ -108,6 +108,79 @@ fi
 # ---- counters ---------------------------------------------------------------
 COUNT=0
 
+# ---- resolve_include_feedback ----------------------------------------------
+# Env var explicit > .orchestrator/config.yml wiki.include_feedback > default 1.
+# Env wins on any explicit set (including empty) so the existing
+# INCLUDE_FEEDBACK=0 CLI override path stays load-bearing. Without an explicit
+# env, projects pin posture per-project via wiki: include_feedback: false in
+# .orchestrator/config.yml. Default 1 preserves backward compatibility.
+resolve_include_feedback() {
+  if [ -n "${INCLUDE_FEEDBACK+x}" ]; then
+    case "${INCLUDE_FEEDBACK}" in
+      true|TRUE|True|1|yes|on) printf '1'; return 0 ;;
+      false|FALSE|False|0|no|off) printf '0'; return 0 ;;
+      "") printf '1'; return 0 ;;
+      *) printf '1'; return 0 ;;
+    esac
+  fi
+  _cfg="$ORCH/config.yml"
+  if [ -f "$_cfg" ]; then
+    _val=$(awk '
+      BEGIN { state="pre"; wiki_indent=-1 }
+      function indent_of(line) {
+        n=match(line, /[^[:space:]]/)
+        if (n == 0) return -1
+        return n - 1
+      }
+      {
+        # Strip trailing comments before any matching.
+        line=$0
+        if (line ~ /^[[:space:]]*wiki\.include_feedback[[:space:]]*:/) {
+          v=line
+          sub(/^[^:]*:[[:space:]]*/, "", v)
+          sub(/[[:space:]]*#.*$/, "", v)
+          sub(/[[:space:]]+$/, "", v)
+          sub(/^"/, "", v); sub(/"$/, "", v)
+          sub(/^\047/, "", v); sub(/\047$/, "", v)
+          print v
+          exit
+        }
+        ind=indent_of(line)
+        if (ind == -1) next
+        if (state == "pre") {
+          if (line ~ /^[[:space:]]*wiki[[:space:]]*:[[:space:]]*$/) {
+            state="wiki"; wiki_indent=ind; next
+          }
+          next
+        }
+        if (state == "wiki") {
+          if (ind <= wiki_indent) { state="pre"; }
+          else if (line ~ /^[[:space:]]*include_feedback[[:space:]]*:/) {
+            v=line
+            sub(/^[^:]*:[[:space:]]*/, "", v)
+            sub(/[[:space:]]*#.*$/, "", v)
+            sub(/[[:space:]]+$/, "", v)
+            sub(/^"/, "", v); sub(/"$/, "", v)
+            sub(/^\047/, "", v); sub(/\047$/, "", v)
+            print v
+            exit
+          }
+        }
+      }
+    ' "$_cfg" 2>/dev/null)
+    if [ -n "$_val" ]; then
+      case "$_val" in
+        true|TRUE|True|1|yes|on) printf '1'; return 0 ;;
+        false|FALSE|False|0|no|off) printf '0'; return 0 ;;
+        *) printf '1'; return 0 ;;
+      esac
+    fi
+  fi
+  printf '1'
+}
+
+INCLUDE_FEEDBACK_RESOLVED=$(resolve_include_feedback)
+
 # ---- helpers ----------------------------------------------------------------
 
 # extract_title <absolute-path>
@@ -376,9 +449,10 @@ fi
 # this — basename without extension, lowercased, dashes preserved). Records
 # land at category prefix "feedback:<basename>"; the per-record relative
 # path is "feedback/<basename>.md" (relative to .orchestrator/). Default-on;
-# opt out via INCLUDE_FEEDBACK=0 env override (no CLI flag — feedback is
-# always-in-scope by design unless explicitly suppressed).
-if [ "${INCLUDE_FEEDBACK:-1}" = "1" ] && [ -d "$ORCH/feedback" ]; then
+# opt out per-project via wiki: include_feedback: false in config.yml, or
+# per-invocation via INCLUDE_FEEDBACK=0 env override. Resolution precedence
+# is in resolve_include_feedback (env > config > default-1).
+if [ "$INCLUDE_FEEDBACK_RESOLVED" = "1" ] && [ -d "$ORCH/feedback" ]; then
   _flist="/tmp/wiki-scan-feedback.$$"
   find "$ORCH/feedback" -maxdepth 1 -type f -name '*.md' 2>/dev/null | LC_ALL=C sort > "$_flist"
   while IFS= read -r _fpath; do
@@ -737,6 +811,30 @@ if [ -d "$ORCH/knowledge" ]; then
     COUNT=$((COUNT + 1))
   done < "$_kflist"
   rm -f "$_kflist"
+fi
+
+# ---- dangling feedback/ link warning (paper-cut, INCLUDE_FEEDBACK=0) -------
+# When feedback is suppressed AND .orchestrator/ source markdown still
+# contains `](feedback/...)` references, the wiki strict build will fail
+# because the linked targets never get stub-projected. Warn (non-fatal) so
+# the agent regenerating stubs sees the drift before mkdocs --strict trips.
+# PBJ-2026-05-08 paper-cut: prose links to feedback/ in
+# .orchestrator/knowledge.md silently broke pages.yml after INCLUDE_FEEDBACK=0
+# rolled out; wiki-stubs-fresh.sh's PASS verdict didn't probe the build.
+if [ "$INCLUDE_FEEDBACK_RESOLVED" = "0" ]; then
+  _dlist="/tmp/wiki-scan-dangling-feedback.$$"
+  : > "$_dlist"
+  grep -lr --include='*.md' '](feedback/' "$ORCH" 2>/dev/null \
+    | grep -v "^$ORCH/feedback/" >> "$_dlist" 2>/dev/null || :
+  if [ -s "$_dlist" ]; then
+    printf 'WARN: feedback off-nav (wiki.include_feedback=false) but feedback/ links remain in source markdown:\n' >&2
+    while IFS= read -r _df; do
+      [ -n "$_df" ] || continue
+      printf 'WARN:   %s\n' "${_df#$ROOT/}" >&2
+    done < "$_dlist"
+    printf 'WARN: unlink the prose or keep paths as plain text — these will break mkdocs --strict.\n' >&2
+  fi
+  rm -f "$_dlist"
 fi
 
 # ---- trailer ----------------------------------------------------------------

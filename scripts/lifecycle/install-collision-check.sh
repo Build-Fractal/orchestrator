@@ -36,22 +36,64 @@
 #   oracle=bootstrapping  result=framework-installed target=<rel> mit=MIT-006
 #   oracle=clean          result=ok target=<rel>
 #
-# Output (stderr, on collision):
-#   oracle=operator-owned result=collision target=<rel> manifest_entry=<rel>
-#   staged-dirs-collision: project_assets entry <entry> collides with operator-owned <path>
+# Output on operator-owned hit (depends on --on-operator-owned):
+#   fail mode (default, stderr, exit 4):
+#     oracle=operator-owned result=collision target=<rel> manifest_entry=<rel>
+#     staged-dirs-collision: project_assets entry <entry> collides with operator-owned <path>
+#   skip mode (stdout, exit 5):
+#     oracle=operator-owned result=skip-operator-owned target=<rel> manifest_entry=<rel>
+#     staged-dirs-skip: project_assets entry <entry> preserves operator-owned <path>
 #
 # Exit codes:
 #   0 = safe (framework-installed or clean)
 #   2 = invalid input (missing args, project-dir not absolute)
-#   4 = FR-22 collision detected
+#   4 = FR-22 collision detected (operator-owned, fail mode)
+#   5 = operator-owned soft-skip (--on-operator-owned=skip)
 #
 # Usage:
 #   bash scripts/lifecycle/install-collision-check.sh \
+#     [--on-operator-owned=fail|skip] \
 #     <target-abs-path> <project-dir-abs> <project-assets-target-list-newline-sep>
+#
+# --on-operator-owned (PBJ-2026-05-08 paper-cut, follow-on to 253eb748 deferred
+# note): when oracle 3 hits, fail-closed (exit 4) keeps the SC-10 contract;
+# skip mode emits skip-tokens and exits 5 so install-{claude-code,codex,cursor}.sh
+# can preserve operator-owned content (the wiki/ re-install case in
+# particular) and continue staging the next asset.
 #
 # Bash 3.2 compatible (no declare -A per K001 / MEM001).
 
 set -u
+
+ON_OPERATOR_OWNED="fail"
+
+# Consume leading flags up to the first positional. Stop on first non-flag
+# so positional args (notably the third — a newline-separated list) survive
+# byte-identical. Bash 3.2 compatible (no arrays).
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --on-operator-owned=*) ON_OPERATOR_OWNED="${1#--on-operator-owned=}"; shift ;;
+        --on-operator-owned)
+            shift
+            if [ $# -eq 0 ]; then
+                echo "FAIL: --on-operator-owned requires an argument (fail|skip)" >&2
+                exit 2
+            fi
+            ON_OPERATOR_OWNED="$1"; shift ;;
+        --) shift; break ;;
+        --*)
+            echo "FAIL: install-collision-check.sh: unknown flag '$1'" >&2
+            exit 2 ;;
+        *) break ;;
+    esac
+done
+
+case "$ON_OPERATOR_OWNED" in
+    fail|skip) : ;;
+    *)
+        echo "FAIL: --on-operator-owned must be 'fail' or 'skip' (got '$ON_OPERATOR_OWNED')" >&2
+        exit 2 ;;
+esac
 
 if [ "$#" -lt 3 ]; then
     echo "FAIL: install-collision-check.sh requires 3 args: <target-abs> <project-dir-abs> <project-assets-target-list>" >&2
@@ -130,7 +172,15 @@ if [ -e "$ABS_TARGET" ]; then
     fi
     if [ "$git_check_rc" -ne 0 ]; then
         # Path pre-exists, not in tracking file, not gitignored ->
-        # plausibly operator-owned. Fail closed (exit 4).
+        # plausibly operator-owned. Branch on caller's --on-operator-owned
+        # policy: fail-closed (exit 4, default, preserves SC-10 contract)
+        # or soft-skip (exit 5, emit skip-tokens to stdout, caller preserves
+        # the operator-owned target and continues to the next asset).
+        if [ "$ON_OPERATOR_OWNED" = "skip" ]; then
+            printf 'oracle=operator-owned result=skip-operator-owned target=%s manifest_entry=%s\n' "$REL_TARGET" "$REL_TARGET"
+            printf 'staged-dirs-skip: project_assets entry %s preserves operator-owned %s\n' "$REL_TARGET" "$REL_TARGET"
+            exit 5
+        fi
         printf 'oracle=operator-owned result=collision target=%s manifest_entry=%s\n' "$REL_TARGET" "$REL_TARGET" >&2
         printf 'staged-dirs-collision: project_assets entry %s collides with operator-owned %s\n' "$REL_TARGET" "$REL_TARGET" >&2
         exit 4

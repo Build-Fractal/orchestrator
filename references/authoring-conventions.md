@@ -353,6 +353,57 @@ authoring the field can verify their intent took effect by regenerating nav
 
 ---
 
+## Wiki Nav: Feedback Section Posture (`wiki.include_feedback`)
+
+The `Feedback` nav arm (default-on) emits one entry per
+`.orchestrator/feedback/*.md` file. Projects publishing the wiki to a
+non-author audience (PBJ-team-style dogfood) often want feedback off-nav
+so the Feedback section stays an internal artifact rather than reader
+surface area.
+
+**Three-layer precedence** (highest wins):
+
+1. **Env override.** `INCLUDE_FEEDBACK=0` in the invocation environment
+   wins over everything below. This is the existing CLI/CI override
+   path; e.g., a pages.yml job env block.
+2. **Project config.** `wiki.include_feedback: false` in
+   `.orchestrator/config.yml` (block or flow form). Sticky per-project,
+   no per-invocation discipline required.
+3. **Default.** Include (`true` / `1`). Backward-compatible — projects
+   that never declared the key continue to emit Feedback in nav.
+
+```yaml
+# .orchestrator/config.yml
+wiki:
+  include_feedback: false   # off-nav for this project
+```
+
+Or flow form:
+
+```yaml
+wiki.include_feedback: false
+```
+
+Truthy values: `true`, `1`, `yes`, `on`, `True`, `TRUE`, `False`, etc.
+Unknown values (`maybe`, empty) silently fall back to default-include.
+
+**Companion gate.** When feedback is suppressed but
+`.orchestrator/` source markdown still contains `](feedback/...)`
+references, `wiki-scan-sources.sh` emits a non-fatal `WARN:` listing the
+offending files. `mkdocs build --strict` would otherwise abort cryptically
+on the dangling target. Resolution: unlink the prose or keep the path as
+plain text (PBJ-2026-05-08 paper-cut).
+
+### Cross-References
+
+- `scripts/wiki/wiki-scan-sources.sh` — `resolve_include_feedback`
+  helper + dangling-link warning.
+- `scripts/diagnostics/wiki-stubs-fresh.sh` — chains
+  `mkdocs build --strict` after the freshness diff so a freshness-clean
+  regen also claims buildability.
+
+---
+
 ## Cross-References
 
 - `.orchestrator/DECISIONS.md` — every decision-log entry uses the new heading shape.

@@ -1,7 +1,5 @@
 # >>> orchestrator:recent-changes >>>
-- 038-wiki-team-feedback-ready: M037 closed 2026-05-07 — P03 round-5 (`b81b9334`) + PBJ live-dogfood satisfaction signal; FR-12..FR-17 deferred post-launch
-- 033-reference-corpus-ingest: M036a P03 live-LLM extraction smoke retired 2026-05-07 (`c03efcc4`) — extract-side wiring proven against `claude -p`
-- 038-wiki-team-feedback-ready: M037 P03 round-3.5 polish bundle landed 2026-05-07 — 8 fixes from PBJ-central round-3 dogfood
+- 039-packaging-distribution: M035 packaging and distribution: the launch-readiness milestone. Two layers sequ
 # <<< orchestrator:recent-changes <<<
 # CLAUDE.md — spec-kit-orchestrator
 

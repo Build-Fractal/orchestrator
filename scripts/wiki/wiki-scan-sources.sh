@@ -249,6 +249,14 @@ should_exclude() {
     AGENTS.md|README.md)
       return 0
       ;;
+    # PBJ-2026-05-08: continue.md is the orchestrator's resume-after-pause
+    # state file (frontmatter `type: continue-file`). It is a pure runtime
+    # artifact — never SME-facing. Same exclusion class as the d6dcf2d8
+    # feedback nav-arm fix. Frontmatter check below is the durable contract;
+    # this basename arm is the fast-path shortcut.
+    continue.md)
+      return 0
+      ;;
   esac
   # pattern checks — per must-haves, exclude any basename containing
   # PLANNING-PAYLOAD or VERIFICATION (covers P##- and M###- variants).
@@ -280,6 +288,42 @@ should_exclude() {
   return 1
 }
 
+# is_runtime_artifact <absolute-path>
+# Returns 0 (yes, runtime artifact — exclude from wiki) when the file's YAML
+# frontmatter declares a `type:` value the orchestrator owns at runtime and
+# should never project into SME-facing surfaces. Returns 1 otherwise.
+#
+# PBJ-2026-05-08: durable backstop to the basename-based exclusion in
+# should_exclude. Catches future runtime artifacts of the same shape that
+# don't share the `continue.md` basename. Same exclusion class as d6dcf2d8
+# (feedback nav-arm) — the orchestrator owns its own runtime, the wiki does
+# not project it. Reads only the leading frontmatter block (cheap; bounded
+# by `---` delimiter).
+is_runtime_artifact() {
+  _p="$1"
+  [ -f "$_p" ] || return 1
+  _ty=$(awk '
+    BEGIN { state="pre" }
+    NR == 1 && $0 == "---" { state="fm"; next }
+    state == "fm" && $0 == "---" { exit }
+    state == "fm" && $0 ~ /^[[:space:]]*type[[:space:]]*:[[:space:]]*/ {
+      v=$0
+      sub(/^[[:space:]]*type[[:space:]]*:[[:space:]]*/, "", v)
+      sub(/[[:space:]]+$/, "", v); sub(/[[:space:]]*#.*$/, "", v)
+      sub(/^"/, "", v); sub(/"$/, "", v)
+      sub(/^\047/, "", v); sub(/\047$/, "", v)
+      print v
+      exit
+    }
+  ' "$_p" 2>/dev/null)
+  case "$_ty" in
+    continue-file)
+      return 0
+      ;;
+  esac
+  return 1
+}
+
 # scan_tree <absolute-dir> <category-prefix-mode>
 # category-prefix-mode: "milestone" or "archive"
 # Emits milestone:M### or archive:M### records for all in-scope .md files.
@@ -301,6 +345,13 @@ scan_tree() {
       [ -n "$_abs" ] || continue
       _rel=${_abs#"$ROOT/.orchestrator/"}
       if should_exclude "$_rel"; then
+        continue
+      fi
+      # PBJ-2026-05-08: durable runtime-artifact exclusion. Catches
+      # `type: continue-file` (and future runtime types) regardless of
+      # basename — the frontmatter-declared type is the orchestrator's
+      # contract for "this is mine, not for SMEs."
+      if is_runtime_artifact "$_abs"; then
         continue
       fi
       emit_record "$_cat" "$_rel" "$_abs"

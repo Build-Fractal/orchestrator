@@ -70,13 +70,24 @@ MS_DIR="$ORCH/milestones"
 #   "Milestone Summary: M018 — Context Compression Layer" -> "Context Compression Layer"
 #   "Proposal: M028 — Autonomous Hardening v3"           -> "Autonomous Hardening v3"
 #   "M025 — GitHub installer coexistence remediation"    -> "GitHub installer coexistence remediation"
+#   "M2a — Risk surfacing (validation + risk/fix UX)"    -> "Risk surfacing (validation + risk/fix UX)"
+#   "M-Spike-A: Automation reconciliation"               -> "Automation reconciliation"
 #   "M026 Evaluation"                                    -> "Evaluation"   (poor signal but better than M026)
+#
+# PBJ-2026-05-08: ID-shape spec (matches the nav-sort two-bucket invariant
+# established at commit 9570e71e):
+#   * numeric:      ^M[0-9]+[a-z]*   (M001, M2a, M2b, M3, M99a, ...)
+#   * dash-prefix:  ^M-[A-Za-z0-9-]+ (M-Spike-A, M-Foo-Bar, ...)
+# Two-pass strip: try numeric shape first (greedier match for the common case),
+# fall through to dash-prefix.
 strip_title() {
   _t="$1"
   # Drop leading "Proposal: " or "Milestone Summary: ".
   _t=$(printf '%s' "$_t" | sed -E 's/^[[:space:]]*(Proposal:|Milestone Summary:)[[:space:]]*//')
-  # Drop leading "M### —" / "M### -" / "M### " (em-dash, hyphen, or whitespace).
-  _t=$(printf '%s' "$_t" | sed -E 's/^M[0-9]{3}[[:space:]]*[—-]?[[:space:]]*//')
+  # Drop leading "MID —" / "MID -" / "MID:" / "MID " (em-dash, hyphen, colon,
+  # or whitespace separator). Numeric shape first, dash-prefix second.
+  _t=$(printf '%s' "$_t" | sed -E 's/^M[0-9]+[a-z]*[[:space:]]*[—:-]?[[:space:]]*//')
+  _t=$(printf '%s' "$_t" | sed -E 's/^M-[A-Za-z0-9-]+[[:space:]]*[—:-]?[[:space:]]*//')
   printf '%s' "$_t"
 }
 
@@ -185,32 +196,50 @@ _idlist="/tmp/wiki-milestone-titles-ids-$$.list"
 trap 'rm -f "$_idlist"' EXIT INT TERM
 : > "$_idlist"
 
-# IDs from milestone subdirectories
+# IDs from milestone subdirectories.
+# PBJ-2026-05-08: accept the broader ID shape (numeric M001/M2a/M3 and
+# dash-prefixed M-Spike-A) — matches the nav-sort two-bucket invariant
+# (commit 9570e71e). Pre-fix this loop quietly dropped any non-3-digit
+# subdir, so M2a/M-Spike-A title resolution silently failed.
 if [ -d "$MS_DIR" ]; then
   for _d in "$MS_DIR"/M*/; do
     [ -d "$_d" ] || continue
     _b=$(basename "$_d")
-    case "$_b" in
-      M[0-9][0-9][0-9]) printf '%s\n' "$_b" >> "$_idlist" ;;
-    esac
+    if [[ "$_b" =~ ^M[0-9]+[a-z]*$ ]] || [[ "$_b" =~ ^M-[A-Za-z0-9-]+$ ]]; then
+      printf '%s\n' "$_b" >> "$_idlist"
+    fi
   done
 fi
 
-# IDs from proposal filenames
+# IDs from proposal filenames. Convention: <MID>-<descriptor>.md where the
+# descriptor begins with a lowercase letter (so the MID/descriptor boundary
+# is unambiguous for both numeric and dash-prefixed MIDs).
+#   M001-foo.md       -> MID = M001
+#   M2a-bar.md        -> MID = M2a
+#   M-Spike-A-baz.md  -> MID = M-Spike-A   (-[A-Z] segments belong to MID;
+#                                           a -[a-z] boundary marks descriptor)
 if [ -d "$PROP_DIR" ]; then
   for _f in "$PROP_DIR"/M*-*.md; do
     [ -f "$_f" ] || continue
     _b=$(basename "$_f")
-    case "$_b" in
-      M[0-9][0-9][0-9]-*) printf '%s\n' "${_b%%-*}" >> "$_idlist" ;;
-    esac
+    _mid=""
+    if [[ "$_b" =~ ^(M[0-9]+[a-z]*)- ]]; then
+      _mid="${BASH_REMATCH[1]}"
+    elif [[ "$_b" =~ ^(M(-[A-Z][A-Za-z0-9]*)+)-[a-z] ]]; then
+      _mid="${BASH_REMATCH[1]}"
+    fi
+    [ -n "$_mid" ] && printf '%s\n' "$_mid" >> "$_idlist"
   done
 fi
 
-# IDs from milestone-summary.md `**MXXX` markers (covers IDs that have neither
+# IDs from milestone-summary.md `**MID` markers (covers IDs that have neither
 # a milestone subdir nor a proposal file but are referenced in the rollup).
+# Same broadened shape as above. The right-side bound is implicit — the
+# bracket char class refuses non-ID characters (space, `*`, `—`), so each
+# match terminates at the natural MID boundary.
 if [ -f "$SUM" ]; then
-  grep -oE '\*\*M[0-9]{3}' "$SUM" 2>/dev/null | sed 's/^\*\*//' >> "$_idlist"
+  grep -oE '\*\*M([0-9]+[a-z]*|-[A-Za-z0-9-]+)' "$SUM" 2>/dev/null \
+    | sed 's/^\*\*//' >> "$_idlist"
 fi
 
 # Dedup + sort

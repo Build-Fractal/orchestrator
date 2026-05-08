@@ -295,27 +295,45 @@ emit_group() {
 }
 
 # milestone_artifact_label <basename>
-# Strip the M###- prefix and title-case the rest. Examples:
-#   M011-CONTEXT.md     -> "Context"
-#   M011-EVALUATION.md  -> "Evaluation"
-#   M011-ROADMAP.md     -> "Roadmap"
-#   M011-SUMMARY.md     -> "Summary"
+# Strip the MID- prefix and title-case the rest. Examples:
+#   M011-CONTEXT.md          -> "Context"
+#   M011-EVALUATION.md       -> "Evaluation"
+#   M011-ROADMAP.md          -> "Roadmap"
+#   M011-SUMMARY.md          -> "Summary"
+#   M2a-CONTEXT.md           -> "Context"            (PBJ-2026-05-08)
+#   M-Spike-A-CONTEXT.md     -> "Context"            (PBJ-2026-05-08)
 # Fallback (no prefix match): use the basename minus .md.
+#
+# PBJ-2026-05-08: pre-fix the case glob accepted only M###-* (3-digit numeric),
+# so children of M2a/M-Spike-A milestones rendered as the bare basename
+# ("M2a-CONTEXT") instead of "Context". Same ID-shape spec as the nav-sort
+# two-bucket invariant (commit 9570e71e). Implemented with bash regex (`=~`)
+# because case globs cannot express the dash-prefix shape without ambiguity
+# under `*`-matches-`/` semantics.
 milestone_artifact_label() {
   _b="$1"
   _core=$(printf '%s' "$_b" | sed 's/\.md$//')
-  case "$_core" in
-    M[0-9][0-9][0-9]-*)
-      _rest=$(printf '%s' "$_core" | sed 's/^M[0-9][0-9][0-9]-//')
-      # Title case: first letter upper, rest lower.
-      _first=$(printf '%s' "$_rest" | cut -c1 | tr 'a-z' 'A-Z')
-      _tail=$(printf '%s' "$_rest" | cut -c2- | tr 'A-Z' 'a-z')
-      printf '%s%s' "$_first" "$_tail"
-      ;;
-    *)
-      printf '%s' "$_core"
-      ;;
-  esac
+  _mid=""
+  _rest=""
+  if [[ "$_core" =~ ^(M[0-9]+[a-z]*)-(.+)$ ]]; then
+    _mid="${BASH_REMATCH[1]}"
+    _rest="${BASH_REMATCH[2]}"
+  elif [[ "$_core" =~ ^(M(-[A-Z][A-Za-z0-9]*)+)-([A-Z][A-Za-z0-9]*)$ ]]; then
+    # Dash-prefixed MID (M-Spike-A) followed by a single UPPERCASE-led
+    # artifact token (CONTEXT, SUMMARY, EVALUATION, ROADMAP, PLAN). The
+    # artifact convention is dash-free: greedy captures the MID by repeatedly
+    # matching `-[A-Z][A-Za-z0-9]*`, then the trailing token (no internal
+    # dashes) is the artifact name.
+    _mid="${BASH_REMATCH[1]}"
+    _rest="${BASH_REMATCH[3]}"
+  fi
+  if [ -n "$_rest" ]; then
+    _first=$(printf '%s' "$_rest" | cut -c1 | tr 'a-z' 'A-Z')
+    _tail=$(printf '%s' "$_rest" | cut -c2- | tr 'A-Z' 'a-z')
+    printf '%s%s' "$_first" "$_tail"
+  else
+    printf '%s' "$_core"
+  fi
 }
 
 # phase_artifact_label <basename>

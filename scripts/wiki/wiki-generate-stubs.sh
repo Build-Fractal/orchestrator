@@ -1482,14 +1482,18 @@ ARCHIVE_SEEN="/tmp/wiki-stubs-archive-$$.list"
 : > "$ARCHIVE_SEEN" 2>/dev/null || true
 
 # From SECTIONS_FILE, extract distinct top-level milestone ids.
+# PBJ-2026-05-08: accept the broader ID shape — numeric (M001/M2a/M3) and
+# dash-prefixed (M-Spike-A) — matching the nav-sort two-bucket invariant
+# (commit 9570e71e). Pre-fix the awk regex matched only `M[0-9]+`, silently
+# dropping any non-digits-only milestone from the milestones index.
 if [ -f "$SECTIONS_FILE" ]; then
   awk -F'|' '
-    $1 ~ /^milestones\/M[0-9]+$/ { print $1 }
-    $1 ~ /^milestones\/M[0-9]+\// { n=split($1, a, "/"); print a[1] "/" a[2] }
+    $1 ~ /^milestones\/(M[0-9]+[a-z]*|M-[A-Za-z0-9-]+)$/ { print $1 }
+    $1 ~ /^milestones\/(M[0-9]+[a-z]*|M-[A-Za-z0-9-]+)\// { n=split($1, a, "/"); print a[1] "/" a[2] }
   ' "$SECTIONS_FILE" | sort -u > "$MILESTONES_SEEN"
   awk -F'|' '
-    $1 ~ /^archive\/M[0-9]+$/ { print $1 }
-    $1 ~ /^archive\/M[0-9]+\// { n=split($1, a, "/"); print a[1] "/" a[2] }
+    $1 ~ /^archive\/(M[0-9]+[a-z]*|M-[A-Za-z0-9-]+)$/ { print $1 }
+    $1 ~ /^archive\/(M[0-9]+[a-z]*|M-[A-Za-z0-9-]+)\// { n=split($1, a, "/"); print a[1] "/" a[2] }
   ' "$SECTIONS_FILE" | sort -u > "$ARCHIVE_SEEN"
 fi
 
@@ -1547,33 +1551,39 @@ rm -f "$MILESTONES_SEEN" "$ARCHIVE_SEEN"
 
 section_title_for() {
   _rel="$1"
-  case "$_rel" in
-    milestones) printf 'Milestones' ;;
-    archive)    printf 'Archive' ;;
-    milestones/M[0-9][0-9][0-9]|archive/M[0-9][0-9][0-9])
-      _mid=$(basename "$_rel")
-      _t=$(awk -F'\t' -v m="$_mid" '$1 == m { print $2; exit }' "$TITLES_FILE" 2>/dev/null)
-      if [ -n "$_t" ]; then
-        printf '%s — %s' "$_mid" "$_t"
-      else
-        printf '%s' "$_mid"
-      fi
-      ;;
-    *)
-      # PBJ-dogfood B4: extra-dir sections (e.g., "knowledge-reference-cms-rule")
-      # consult the wiki.extra_dir_labels override before falling back to the
-      # last-segment default. _rel matches the dirname-record exactly when the
-      # section came from an extra:* record (single-segment), so we look up
-      # directly. For nested/derived sections, the lookup misses harmlessly.
-      _label=$(awk -F'|' -v d="$_rel" '$1 == d { print $2; exit }' "$EXTRA_LABELS_FILE" 2>/dev/null)
-      if [ -n "$_label" ]; then
-        printf '%s' "$_label"
-      else
-        # Use the last segment as the title; e.g., "milestones/M002/phases/P01" -> "P01".
-        printf '%s' "$(basename "$_rel")"
-      fi
-      ;;
-  esac
+  if [ "$_rel" = "milestones" ]; then
+    printf 'Milestones'
+    return 0
+  fi
+  if [ "$_rel" = "archive" ]; then
+    printf 'Archive'
+    return 0
+  fi
+  # PBJ-2026-05-08: match milestone/archive root section paths against the
+  # broader ID shape (numeric M001/M2a/M3 + dash-prefixed M-Spike-A) — same
+  # spec used by the nav-sort two-bucket invariant (commit 9570e71e).
+  if [[ "$_rel" =~ ^(milestones|archive)/(M[0-9]+[a-z]*|M-[A-Za-z0-9-]+)$ ]]; then
+    _mid=$(basename "$_rel")
+    _t=$(awk -F'\t' -v m="$_mid" '$1 == m { print $2; exit }' "$TITLES_FILE" 2>/dev/null)
+    if [ -n "$_t" ]; then
+      printf '%s — %s' "$_mid" "$_t"
+    else
+      printf '%s' "$_mid"
+    fi
+    return 0
+  fi
+  # PBJ-dogfood B4: extra-dir sections (e.g., "knowledge-reference-cms-rule")
+  # consult the wiki.extra_dir_labels override before falling back to the
+  # last-segment default. _rel matches the dirname-record exactly when the
+  # section came from an extra:* record (single-segment), so we look up
+  # directly. For nested/derived sections, the lookup misses harmlessly.
+  _label=$(awk -F'|' -v d="$_rel" '$1 == d { print $2; exit }' "$EXTRA_LABELS_FILE" 2>/dev/null)
+  if [ -n "$_label" ]; then
+    printf '%s' "$_label"
+  else
+    # Use the last segment as the title; e.g., "milestones/M002/phases/P01" -> "P01".
+    printf '%s' "$(basename "$_rel")"
+  fi
 }
 
 # section_include_for <section-rel>
@@ -1596,57 +1606,62 @@ section_include_for() {
     _prefix="${_prefix}../"
     _i=$((_i + 1))
   done
-  case "$_rel" in
-    milestones)
-      # PBJ-2026-05-07 forward-roadmap consolidation: when both
-      # .orchestrator/milestone-summary.md and at least one milestone:* record
-      # exist, fold milestone-summary.md into the Milestones section index.
-      # Mirrors the milestones/M### include precedent. CONSOLIDATION_ACTIVE is
-      # computed at top-level after the scanner runs and false-y when only one
-      # of the two inputs is present (preserves pre-consolidation behavior).
-      if [ "${CONSOLIDATION_ACTIVE:-0}" -eq 1 ]; then
-        _abs="$ROOT/.orchestrator/milestone-summary.md"
-        if [ -f "$_abs" ]; then
-          printf '%s.orchestrator/milestone-summary.md|%s' "$_prefix" "$_abs"
-          return 0
-        fi
+  if [ "$_rel" = "milestones" ]; then
+    # PBJ-2026-05-07 forward-roadmap consolidation: when both
+    # .orchestrator/milestone-summary.md and at least one milestone:* record
+    # exist, fold milestone-summary.md into the Milestones section index.
+    # Mirrors the milestones/M### include precedent. CONSOLIDATION_ACTIVE is
+    # computed at top-level after the scanner runs and false-y when only one
+    # of the two inputs is present (preserves pre-consolidation behavior).
+    if [ "${CONSOLIDATION_ACTIVE:-0}" -eq 1 ]; then
+      _abs="$ROOT/.orchestrator/milestone-summary.md"
+      if [ -f "$_abs" ]; then
+        printf '%s.orchestrator/milestone-summary.md|%s' "$_prefix" "$_abs"
+        return 0
       fi
-      ;;
-    milestones/M[0-9][0-9][0-9])
-      _mid=$(basename "$_rel")
-      for _kind in SUMMARY CONTEXT EVALUATION ROADMAP; do
-        _abs="$ROOT/.orchestrator/milestones/${_mid}/${_mid}-${_kind}.md"
-        if [ -f "$_abs" ]; then
-          printf '%s.orchestrator/milestones/%s/%s-%s.md|%s' \
-            "$_prefix" "$_mid" "$_mid" "$_kind" "$_abs"
-          return 0
-        fi
-      done
-      ;;
-    milestones/M[0-9][0-9][0-9]/phases/P[0-9][0-9])
-      _mid=$(printf '%s' "$_rel" | awk -F/ '{print $2}')
-      _pid=$(printf '%s' "$_rel" | awk -F/ '{print $4}')
-      for _kind in SUMMARY PLAN; do
-        _abs="$ROOT/.orchestrator/milestones/${_mid}/phases/${_pid}/${_pid}-${_kind}.md"
-        if [ -f "$_abs" ]; then
-          printf '%s.orchestrator/milestones/%s/phases/%s/%s-%s.md|%s' \
-            "$_prefix" "$_mid" "$_pid" "$_pid" "$_kind" "$_abs"
-          return 0
-        fi
-      done
-      ;;
-    archive/M[0-9][0-9][0-9])
-      _mid=$(basename "$_rel")
-      for _kind in SUMMARY CONTEXT EVALUATION ROADMAP; do
-        _abs="$ROOT/.orchestrator/archive/${_mid}/${_mid}-${_kind}.md"
-        if [ -f "$_abs" ]; then
-          printf '%s.orchestrator/archive/%s/%s-%s.md|%s' \
-            "$_prefix" "$_mid" "$_mid" "$_kind" "$_abs"
-          return 0
-        fi
-      done
-      ;;
-  esac
+    fi
+    return 1
+  fi
+  # PBJ-2026-05-08: broader ID shape (numeric M001/M2a + dash-prefix M-Spike-A)
+  # for milestone-root and archive-root sections. Same spec as the nav-sort
+  # two-bucket invariant (commit 9570e71e).
+  if [[ "$_rel" =~ ^milestones/(M[0-9]+[a-z]*|M-[A-Za-z0-9-]+)$ ]]; then
+    _mid=$(basename "$_rel")
+    for _kind in SUMMARY CONTEXT EVALUATION ROADMAP; do
+      _abs="$ROOT/.orchestrator/milestones/${_mid}/${_mid}-${_kind}.md"
+      if [ -f "$_abs" ]; then
+        printf '%s.orchestrator/milestones/%s/%s-%s.md|%s' \
+          "$_prefix" "$_mid" "$_mid" "$_kind" "$_abs"
+        return 0
+      fi
+    done
+    return 1
+  fi
+  if [[ "$_rel" =~ ^milestones/(M[0-9]+[a-z]*|M-[A-Za-z0-9-]+)/phases/P[0-9]+$ ]]; then
+    _mid=$(printf '%s' "$_rel" | awk -F/ '{print $2}')
+    _pid=$(printf '%s' "$_rel" | awk -F/ '{print $4}')
+    for _kind in SUMMARY PLAN; do
+      _abs="$ROOT/.orchestrator/milestones/${_mid}/phases/${_pid}/${_pid}-${_kind}.md"
+      if [ -f "$_abs" ]; then
+        printf '%s.orchestrator/milestones/%s/phases/%s/%s-%s.md|%s' \
+          "$_prefix" "$_mid" "$_pid" "$_pid" "$_kind" "$_abs"
+        return 0
+      fi
+    done
+    return 1
+  fi
+  if [[ "$_rel" =~ ^archive/(M[0-9]+[a-z]*|M-[A-Za-z0-9-]+)$ ]]; then
+    _mid=$(basename "$_rel")
+    for _kind in SUMMARY CONTEXT EVALUATION ROADMAP; do
+      _abs="$ROOT/.orchestrator/archive/${_mid}/${_mid}-${_kind}.md"
+      if [ -f "$_abs" ]; then
+        printf '%s.orchestrator/archive/%s/%s-%s.md|%s' \
+          "$_prefix" "$_mid" "$_mid" "$_kind" "$_abs"
+        return 0
+      fi
+    done
+    return 1
+  fi
   return 1
 }
 

@@ -65,14 +65,6 @@ This is **not** a public-facing site. External launch lives in M009.
 
     [:octicons-arrow-right-24: Knowledge Entries](knowledge/index.md)
 
-- :fontawesome-solid-clipboard-list: **Milestone Summary**
-
-    ---
-
-    Cross-milestone rollup. Build summary, extension guide, milestone history.
-
-    [:octicons-arrow-right-24: Milestone Summary](milestone-summary.md)
-
 - :fontawesome-solid-pen-to-square: **Proposals**
 
     ---

@@ -142,7 +142,6 @@ nav:
       - "MEM025: Verification Script Grep Patterns": knowledge/lessons/MEM025.md
       - "MEM026: M013/P04/T04 hook-config regression": knowledge/lessons/MEM026.md
       - "MEM028: Bash arithmetic silently interprets zero-padded numerics as octal": knowledge/lessons/MEM028.md
-  - Milestone Summary: milestone-summary.md
   - Proposals:
     - Overview: proposals/index.md
     - "Proposal: Constitution Amendment — Inclusion Criteria + Governance Log + Distribution Surface": proposals/constitution-amendment-inclusion-criteria.md
@@ -164,6 +163,7 @@ nav:
     - "Proposal: M035 — Packaging & Distribution": proposals/M035-packaging-distribution.md
     - "Proposal: M036 — Reference-Corpus Ingest *(amended 2026-05-01)*": proposals/M036-reference-corpus-ingest.md
     - Brief — M036 Tier 1 DOCX extraction gap (B6): proposals/m036-tier-1-docx-extraction-gap.md
+    - M037 FR-12..FR-17 — Deferred to Post-Launch: proposals/M037-fr-12-17-deferred-scope.md
     - "Proposal: M037 — Wiki Team-Feedback-Ready (PBJ Round 3)": proposals/M037-wiki-team-feedback-ready.md
     - "Proposal: M038 — Living Documents (framework-owned primitive)": proposals/M038-living-documents.md
     - "Proposal: M039 — Theme-Leveraged Process Primitives (post-launch, demand-driven)": proposals/M039-theme-leveraged-process-primitives.md
@@ -188,6 +188,7 @@ nav:
     - Paper-Cut Sweep PR Brief — Pre-M030: proposals/papercut-sweep-pre-M030.md
     - Paper-Cut Sweep — wiki-deploy session (2026-05-07, PBJ-central round 3): proposals/papercut-sweep-wiki-deploy-2026-05-07.md
     - "Paper-Cut: `wiki-deploy.sh` and `wiki-init.sh --with-giscus` are not": proposals/papercut-wiki-deploy-env-loader.md
+    - "Paper-Cut: wiki-stub freshness gap allows mkdocs silent failure when planner renames a task plan": proposals/papercut-wiki-stub-drift.md
     - PBJ Round-3 Wiki Deploy + Feedback Protocol: proposals/pbj-round-3-deploy-and-feedback-protocol.md
     - "Proposal: Post-Launch Arc — Wiki UX Deep + External Tool Adapters": proposals/post-launch-wiki-ux-and-adapters.md
     - Proposal — Session Knowledge Primer (ambient knowledge-graph injection for ad-hoc Claude sessions): proposals/session-knowledge-primer.md
@@ -2357,6 +2358,18 @@ nav:
         - T05 Milestone-close-payload: milestones/M033/phases/P05/tasks/T05-milestone-close-PAYLOAD.md
         - T05 Milestone-close-plan: milestones/M033/phases/P05/tasks/T05-milestone-close-PLAN.md
         - T05 Milestone-close-summary: milestones/M033/phases/P05/tasks/T05-milestone-close-SUMMARY.md
+    - "M035 — Packaging & Distribution":
+      - Overview: milestones/M035/index.md
+      - Context: milestones/M035/M035-CONTEXT.md
+      - Evaluation: milestones/M035/M035-EVALUATION.md
+      - Roadmap: milestones/M035/M035-ROADMAP.md
+      - P00:
+        - Overview: milestones/M035/phases/P00/index.md
+        - Plan: milestones/M035/phases/P00/P00-PLAN.md
+        - T01 Bash32-installer-exit-status-plan: milestones/M035/phases/P00/tasks/T01-bash32-installer-exit-status-PLAN.md
+        - T02 Managed-gitignore-block-plan: milestones/M035/phases/P00/tasks/T02-managed-gitignore-block-PLAN.md
+        - T03 Wiki-stubs-fresh-diagnostic-and-gate-plan: milestones/M035/phases/P00/tasks/T03-wiki-stubs-fresh-diagnostic-and-gate-PLAN.md
+        - T04 M032-wiki-deploy-stage-and-npm-evidence-plan: milestones/M035/phases/P00/tasks/T04-m032-wiki-deploy-stage-and-npm-evidence-PLAN.md
     - M036 — Reference-Corpus Ingest (deferred post-launch, demand-driven):
       - Overview: milestones/M036/index.md
       - continue: milestones/M036/continue.md
@@ -2489,12 +2502,15 @@ nav:
         - T04 Acceptance-harnesses-and-aggregator-payload: milestones/M036/phases/P07/tasks/T04-acceptance-harnesses-and-aggregator-PAYLOAD.md
         - T04 Acceptance-harnesses-and-aggregator-plan: milestones/M036/phases/P07/tasks/T04-acceptance-harnesses-and-aggregator-PLAN.md
         - T04 Acceptance-harnesses-and-aggregator-summary: milestones/M036/phases/P07/tasks/T04-acceptance-harnesses-and-aggregator-SUMMARY.md
-    - M037 — Wiki Team-Feedback-Ready (PBJ Round 3):
+      - p03-live-smoke-evidence / REF-regulatory-tier2-live-smoke-01.structured: milestones/M036/p03-live-smoke-evidence/REF-regulatory-tier2-live-smoke-01.structured.md
+    - M037 — FR-12..FR-17 — Deferred to Post-Launch:
       - Overview: milestones/M037/index.md
       - continue: milestones/M037/continue.md
+      - Acceptance-evidence: milestones/M037/M037-ACCEPTANCE-EVIDENCE.md
       - Context: milestones/M037/M037-CONTEXT.md
       - Evaluation: milestones/M037/M037-EVALUATION.md
       - Roadmap: milestones/M037/M037-ROADMAP.md
+      - Summary: milestones/M037/M037-SUMMARY.md
       - P01:
         - Overview: milestones/M037/phases/P01/index.md
         - Plan: milestones/M037/phases/P01/P01-PLAN.md
@@ -2529,6 +2545,10 @@ nav:
         - T05 Discussions-callout-and-phase-suite-payload: milestones/M037/phases/P02/tasks/T05-discussions-callout-and-phase-suite-PAYLOAD.md
         - T05 Discussions-callout-and-phase-suite-plan: milestones/M037/phases/P02/tasks/T05-discussions-callout-and-phase-suite-PLAN.md
         - T05 Discussions-callout-and-phase-suite-summary: milestones/M037/phases/P02/tasks/T05-discussions-callout-and-phase-suite-SUMMARY.md
+      - P03:
+        - Overview: milestones/M037/phases/P03/index.md
+        - Plan: milestones/M037/phases/P03/P03-PLAN.md
+        - Summary: milestones/M037/phases/P03/P03-SUMMARY.md
 # <<< auto-nav end
 # >>> custom-nav
 # <<< custom-nav end

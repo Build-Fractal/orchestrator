@@ -403,6 +403,17 @@ done < "$SCAN_OUT"
 sort -u "$TMP_IDS" > "${TMP_IDS}.sorted"
 mv "${TMP_IDS}.sorted" "$TMP_IDS"
 
+# Pre-compute HAS_ANY_MILESTONE / HAS_ANY_ARCHIVE here (re-set below at the
+# Milestones-group emission site as well). Needed up-front for the
+# PBJ-2026-05-07 forward-roadmap consolidation gate at the "Milestone Summary"
+# top-level leaf — the leaf must be suppressed when at least one milestone:*
+# record was observed (the milestone-summary content is now folded into
+# wiki/docs/milestones/index.md by wiki-generate-stubs.sh::section_include_for).
+HAS_ANY_MILESTONE=0
+HAS_ANY_ARCHIVE=0
+grep -q '^M:' "$TMP_IDS" && HAS_ANY_MILESTONE=1
+grep -q '^A:' "$TMP_IDS" && HAS_ANY_ARCHIVE=1
+
 # Emit top-level leaves.
 if [ "$HAS_CONSTITUTION" -eq 1 ]; then
   emit_leaf 1 "Constitution" "constitution.md"
@@ -519,7 +530,14 @@ if [ "$HAS_ANY_KNOWLEDGE" -eq 1 ]; then
   done
 fi
 
-if [ "$HAS_MILSUM" -eq 1 ]; then
+# PBJ-2026-05-07 forward-roadmap consolidation: when both
+# .orchestrator/milestone-summary.md AND at least one milestone:* record exist,
+# fold the forward roadmap into the Milestones section's index page (handled
+# in wiki-generate-stubs.sh::section_include_for). Suppress the redundant
+# top-level "Milestone Summary" leaf so the nav stops competing with itself.
+# Greenfield projects with only milestone-summary.md (no milestones tree yet)
+# preserve the current top-level leaf so the file remains nav-reachable.
+if [ "$HAS_MILSUM" -eq 1 ] && [ "$HAS_ANY_MILESTONE" -eq 0 ]; then
   emit_leaf 1 "Milestone Summary" "milestone-summary.md"
 fi
 
@@ -618,12 +636,9 @@ fi
 
 # ---- Milestones group ------------------------------------------------------
 # Determine whether any milestone IDs exist. If yes, emit the group with
-# Overview + per-milestone subgroups.
-
-HAS_ANY_MILESTONE=0
-HAS_ANY_ARCHIVE=0
-grep -q '^M:' "$TMP_IDS" && HAS_ANY_MILESTONE=1
-grep -q '^A:' "$TMP_IDS" && HAS_ANY_ARCHIVE=1
+# Overview + per-milestone subgroups. HAS_ANY_MILESTONE / HAS_ANY_ARCHIVE
+# already pre-computed above the top-level-leaf section so the
+# forward-roadmap consolidation gate (PBJ-2026-05-07) had access to them.
 
 if [ "$HAS_ANY_MILESTONE" -eq 1 ]; then
   emit_group 1 "Milestones"

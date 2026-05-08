@@ -28,3 +28,4 @@ title: "M036 — Reference-Corpus Ingest (deferred post-launch, demand-driven)"
 - [P05](phases/P05/index.md)
 - [P06](phases/P06/index.md)
 - [P07](phases/P07/index.md)
+- [Synthetic Long-Term-Care Staffing Calculation Rule](REF-regulatory-tier2-live-smoke-01.structured.md)

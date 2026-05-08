@@ -6,6 +6,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This pr
 
 ## [Unreleased]
 
+### Changed (PBJ-2026-05-07 — wiki forward-roadmap consolidation)
+
+- Wiki nav consolidates `.orchestrator/milestone-summary.md` (forward roadmap) into `wiki/docs/milestones/index.md` when both the file AND at least one milestone:* record exist. The redundant top-level **Milestone Summary** nav leaf is suppressed; its content now leads the **Milestones** section index page. Greenfield projects with only `milestone-summary.md` (no `milestones/` tree yet) keep the existing top-level leaf so the file stays nav-reachable. Projects with only the `milestones/` tree (no forward roadmap) see no behavior change. Operators wanting the old two-section shape can delete `.orchestrator/milestone-summary.md` and rely on per-milestone `M###-CONTEXT.md` / `M###-ROADMAP.md` for forward planning, but the consolidation is the IA-correct default.
+- Scope-only milestone convention is now operator-supported: a `.orchestrator/milestones/M###/M###-CONTEXT.md` file with no `M###-ROADMAP.md` and no `phases/` subdirectory renders in the wiki nav as a leaf node under **Milestones**. The state machine handles this safely without code changes — `derive-phase.sh` returns `state=planning`, and `find-active-milestone.sh` filters by `tier=="C"` (sourced from `M###-EVALUATION.md` or `M###-ROADMAP.md`, both absent for scope-only) so the auto loop correctly skips the milestone. Use this when a project locks scope for future milestones (e.g., committed-but-not-yet-decomposed work) and wants those scopes visible to SMEs reviewing the wiki without entering the auto-execution pipeline.
+
 ### Changed (M031 — right-sized entry)
 
 - Compound behavioral change: `auto_proceed` config default flips from `false` to `true`, AND Quick-profile dispatches now inject knowledge + compression unconditionally (the pre-M031 `commands/dispatch.md:21` skip branch is gone). Operators upgrading from pre-M031 see both changes simultaneously on first post-M031 dispatch.

@@ -268,6 +268,32 @@ handles the rest.
 
 ---
 
+## Wiki Nav: Forward-Roadmap Consolidation
+
+The wiki tooling consolidates the forward roadmap (`.orchestrator/milestone-summary.md`) and the per-milestone phase tree (`.orchestrator/milestones/`) into a single nav section called **Milestones** when both inputs exist. This keeps SMEs from landing cold on two side-by-side sections that compete for attention (one named "Milestone Summary", one named "Milestones") with no way to tell which is which without clicking. The forward-roadmap content fills the **Milestones** section index page; per-milestone phase detail nests below.
+
+The rule is automatic and based on what the scanner observed:
+
+- **Both inputs present** (`milestone-summary.md` + ≥1 `milestone:M###` directory) → consolidation triggers. The top-level **Milestone Summary** nav leaf is suppressed, `wiki/docs/milestone-summary.md` is not emitted as a stub, and `wiki/docs/milestones/index.md` leads with an `include-markdown` of the forward roadmap before the per-milestone bullet list.
+- **Forward roadmap only** (`milestone-summary.md` alone) → the top-level **Milestone Summary** leaf stays. Greenfield projects with a roadmap but no started milestones keep the file nav-reachable.
+- **Phase tree only** (no `milestone-summary.md`) → no change. The **Milestones** section index renders as a bullet list of M### children, as it always has.
+
+There is no opt-out config knob — the consolidation IS the IA-correct shape. Operators who don't want the forward roadmap visible at all can omit `.orchestrator/milestone-summary.md` and rely on per-milestone CONTEXT/ROADMAP files for forward planning.
+
+### Scope-only milestones
+
+The orchestrator supports declaring a milestone's scope before phase decomposition exists. Create `.orchestrator/milestones/M###/M###-CONTEXT.md` with the locked scope, no `M###-ROADMAP.md`, no `phases/` subdirectory. The scanner picks the directory up via the standard `milestone:M###` walker; the wiki nav renders M### as a leaf node under **Milestones** (no expansion arrow, no Overview-plus-children group — just a single CONTEXT page). This matches the IA users expect when scrolling a roadmap section: scoped-but-not-yet-decomposed milestones appear as flat entries, in-progress milestones expand into phases.
+
+State-machine consumers handle scope-only milestones safely without any schema change:
+
+- `scripts/state/derive-phase.sh` returns `state=planning` because no `M###-ROADMAP.md` exists.
+- `scripts/state/find-active-milestone.sh` filters by `tier=="C"`, sourced from `M###-EVALUATION.md` or `M###-ROADMAP.md`. Both are absent for scope-only milestones, so the tier resolves to `none` and the milestone is correctly skipped by the auto loop.
+- `orchestrator:auto` cannot accidentally pick up a scope-only milestone for execution. To start work on M###, run `orchestrator:specify` (or write `M###-EVALUATION.md` directly) — that produces the tier signal that flips the milestone into the auto-eligible pool.
+
+Use this pattern when a project has locked future scope (e.g., committed-but-not-yet-decomposed work captured in a Decision Register or Background note) and wants those scopes visible to SMEs reviewing the wiki without entering the auto-execution pipeline.
+
+---
+
 ## Cross-References
 
 - `.orchestrator/DECISIONS.md` — every decision-log entry uses the new heading shape.
@@ -276,3 +302,5 @@ handles the rest.
 - `wiki/docs/stylesheets/code-chips.css` — pill styling for body chips.
 - `scripts/verify/decisions-shape-lint.sh` — framework-owned shape-lint contract surface.
 - `tools/verify/m037-p01-decisions-shape.sh` — phase-suite wrapper.
+- `scripts/wiki/wiki-generate-stubs.sh` — `section_include_for "milestones"` + `CONSOLIDATION_ACTIVE` predicate.
+- `scripts/wiki/wiki-generate-nav.sh` — top-level **Milestone Summary** leaf gate.

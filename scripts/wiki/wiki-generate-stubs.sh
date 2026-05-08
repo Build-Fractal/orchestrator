@@ -1039,6 +1039,25 @@ if ! bash "$SCANNER" --root "$ROOT" > "$SCAN_OUT" 2>/dev/null; then
   exit 1
 fi
 
+# PBJ-2026-05-07 forward-roadmap consolidation predicate.
+# Active when the project ships BOTH the forward roadmap
+# (.orchestrator/milestone-summary.md → top:milestone-summary scanner record)
+# AND at least one milestone:* record. Under that condition:
+#   1. section_include_for "milestones" folds milestone-summary.md into
+#      wiki/docs/milestones/index.md.
+#   2. The top-level `milestone-summary.md` stub is suppressed (the content
+#      is now reachable via the Milestones section index — keeping the
+#      separate stub would orphan under mkdocs --strict).
+#   3. wiki-generate-nav.sh suppresses the top-level "Milestone Summary"
+#      leaf using the same predicate (computed there from the same scanner
+#      output).
+# Projects with only one of the two inputs see zero behavior change.
+CONSOLIDATION_ACTIVE=0
+if grep -q '^top:milestone-summary|' "$SCAN_OUT" && grep -q '^milestone:' "$SCAN_OUT"; then
+  CONSOLIDATION_ACTIVE=1
+fi
+export CONSOLIDATION_ACTIVE
+
 # Build M### -> Title lookup once. Consumed by section_title_for() so milestone
 # index pages render "M028 — Autonomous Hardening v3" headings instead of bare
 # M###. Failure to load is non-fatal; section_title_for falls back to MID.
@@ -1358,6 +1377,15 @@ while IFS='|' read -r CAT REL TITLE; do
       ;;
   esac
 
+  # PBJ-2026-05-07 forward-roadmap consolidation: under CONSOLIDATION_ACTIVE,
+  # skip emitting the top-level milestone-summary.md stub — the canonical
+  # content is now folded into wiki/docs/milestones/index.md by
+  # section_include_for "milestones". Keeping the stub would orphan its URL
+  # under mkdocs --strict (no nav leaf points at it).
+  if [ "$CAT" = "top:milestone-summary" ] && [ "$CONSOLIDATION_ACTIVE" -eq 1 ]; then
+    continue
+  fi
+
   STUB_REL=$(map_record_to_stub_rel "$CAT" "$REL")
   STUB_ABS="$DOCS/$STUB_REL"
   CANONICAL=$(build_canonical "$STUB_REL" "$REL")
@@ -1569,6 +1597,21 @@ section_include_for() {
     _i=$((_i + 1))
   done
   case "$_rel" in
+    milestones)
+      # PBJ-2026-05-07 forward-roadmap consolidation: when both
+      # .orchestrator/milestone-summary.md and at least one milestone:* record
+      # exist, fold milestone-summary.md into the Milestones section index.
+      # Mirrors the milestones/M### include precedent. CONSOLIDATION_ACTIVE is
+      # computed at top-level after the scanner runs and false-y when only one
+      # of the two inputs is present (preserves pre-consolidation behavior).
+      if [ "${CONSOLIDATION_ACTIVE:-0}" -eq 1 ]; then
+        _abs="$ROOT/.orchestrator/milestone-summary.md"
+        if [ -f "$_abs" ]; then
+          printf '%s.orchestrator/milestone-summary.md|%s' "$_prefix" "$_abs"
+          return 0
+        fi
+      fi
+      ;;
     milestones/M[0-9][0-9][0-9])
       _mid=$(basename "$_rel")
       for _kind in SUMMARY CONTEXT EVALUATION ROADMAP; do

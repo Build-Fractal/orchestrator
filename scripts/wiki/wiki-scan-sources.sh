@@ -6,9 +6,11 @@
 #
 # Category enum:
 #   top:constitution
-#   top:decisions
+#   top:decisions          (single .orchestrator/DECISIONS.md)
 #   top:knowledge
 #   top:milestone-summary
+#   spec:<basename>        (.orchestrator/spec/*.md)
+#   decisions-extra:<base> (.orchestrator/decisions/*.md siblings)
 #   milestone:M###
 #   archive:M###
 #
@@ -391,6 +393,69 @@ if [ "${INCLUDE_FEEDBACK:-1}" = "1" ] && [ -d "$ORCH/feedback" ]; then
     COUNT=$((COUNT + 1))
   done < "$_flist"
   rm -f "$_flist"
+fi
+
+# ---- PBJ-2026-05-07 — top-level spec/ enumeration --------------------------
+# Emits one record per .orchestrator/spec/*.md entry. Source-of-truth spec
+# documents (product brief, MVP plan, decision register, coverage audit)
+# distinct from accreting knowledge graph entries. Records land at
+# `spec:<basename>`; per-record relative path is `spec/<basename>.md`
+# (relative to .orchestrator/). Mirrors the proposals:* / feedback:*
+# emit shape. Default-on; opt out via INCLUDE_SPEC=0 env override.
+# Convention-only: walks .orchestrator/spec/ at repo-relative .orchestrator/spec/.
+# Projects with legacy locations (initial-spec-documents/) can use the
+# existing wiki.extra_dirs: + wiki.extra_dir_labels: mechanism instead.
+if [ "${INCLUDE_SPEC:-1}" = "1" ] && [ -d "$ORCH/spec" ]; then
+  _splist="/tmp/wiki-scan-spec.$$"
+  find "$ORCH/spec" -maxdepth 1 -type f -name '*.md' 2>/dev/null | LC_ALL=C sort > "$_splist"
+  while IFS= read -r _sppath; do
+    [ -n "$_sppath" ] || continue
+    _sprel=${_sppath#"$ROOT/.orchestrator/"}
+    if should_exclude "$_sprel"; then
+      continue
+    fi
+    _spbase=$(basename "$_sppath" .md)
+    _sptitle=$(extract_title "$_sppath")
+    printf '%s|%s|%s\n' "spec:$_spbase" "$_sprel" "$_sptitle"
+    COUNT=$((COUNT + 1))
+  done < "$_splist"
+  rm -f "$_splist"
+fi
+
+# ---- PBJ-2026-05-07 — multi-file decisions tree ----------------------------
+# Existing single-file emission for .orchestrator/DECISIONS.md (top:decisions)
+# is unchanged; this extends the decisions surface to also walk
+# .orchestrator/decisions/*.md when present. Records land at
+# `decisions-extra:<basename>`; per-record relative path is
+# `decisions/<basename>.md` (relative to .orchestrator/). The downstream
+# nav generator detects these records and flips the Decisions section from
+# a leaf (DECISIONS.md only) to a group (DECISIONS.md as Overview + subdir
+# files as children). No URL collision under use_directory_urls:true:
+# `decisions.md` -> /decisions/, `decisions/<file>.md` -> /decisions/<file>/.
+if [ "${INCLUDE_DECISIONS_EXTRA:-1}" = "1" ] && [ -d "$ORCH/decisions" ]; then
+  _delist="/tmp/wiki-scan-decisions-extra.$$"
+  find "$ORCH/decisions" -maxdepth 1 -type f -name '*.md' 2>/dev/null | LC_ALL=C sort > "$_delist"
+  while IFS= read -r _depath; do
+    [ -n "$_depath" ] || continue
+    _derel=${_depath#"$ROOT/.orchestrator/"}
+    if should_exclude "$_derel"; then
+      continue
+    fi
+    _debase=$(basename "$_depath" .md)
+    # Collision guard: a `decisions/index.md` entry would resolve to /decisions/
+    # under use_directory_urls:true -- same URL as wiki/docs/decisions.md
+    # (from top:decisions / DECISIONS.md). Fail loud.
+    if [ "$_debase" = "index" ] || [ "$_debase" = "INDEX" ]; then
+      printf 'ERROR: %s/%s.md collides with .orchestrator/DECISIONS.md under use_directory_urls.\n' \
+        ".orchestrator/decisions" "$_debase" >&2
+      printf 'ERROR: rename or move the file (any other basename works).\n' >&2
+      exit 1
+    fi
+    _detitle=$(extract_title "$_depath")
+    printf '%s|%s|%s\n' "decisions-extra:$_debase" "$_derel" "$_detitle"
+    COUNT=$((COUNT + 1))
+  done < "$_delist"
+  rm -f "$_delist"
 fi
 
 # ---- FR-18 (M032/P04/T01) — wiki.extra_dirs enumeration --------------------

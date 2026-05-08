@@ -1191,6 +1191,53 @@ while IFS='|' read -r CAT REL TITLE; do
       ;;
   esac
 
+  # ---- spec:* routing (PBJ-2026-05-07 ask 1) -------------------------------
+  # spec:<basename> records route to wiki/docs/spec/<basename>.md. Canonical
+  # source lives at .orchestrator/spec/<basename>.md. REL is "spec/<file>".
+  # Mirror of proposals:* shape. register_child fires so the section index
+  # at wiki/docs/spec/index.md gets auto-emitted listing all spec docs.
+  case "$CAT" in
+    spec:*)
+      _spbase=${CAT#spec:}
+      STUB_REL="spec/${_spbase}.md"
+      STUB_ABS="$DOCS/$STUB_REL"
+      CANONICAL=$(build_canonical "$STUB_REL" "$REL")
+      CANONICAL_ABS="$ROOT/.orchestrator/$REL"
+      if existing_stub_is_protected "$STUB_ABS"; then
+        register_child "spec" "${_spbase}.md" "$TITLE"
+        continue
+      fi
+      # Spec docs are self-contained source-of-truth files — fragment-only
+      # passthrough (rewrite-relative-urls=false), matching proposals/feedback.
+      write_stub "$STUB_ABS" "$CANONICAL" "$TITLE" "$CANONICAL_ABS" "false"
+      register_child "spec" "${_spbase}.md" "$TITLE"
+      continue
+      ;;
+  esac
+
+  # ---- decisions-extra:* routing (PBJ-2026-05-07 ask 2) --------------------
+  # decisions-extra:<basename> records route to wiki/docs/decisions/<basename>.md.
+  # Canonical source lives at .orchestrator/decisions/<basename>.md. The
+  # existing top:decisions arm continues to emit wiki/docs/decisions.md
+  # (the DECISIONS.md include) at the section root URL /decisions/. The
+  # subdir files live at /decisions/<basename>/. NOT registering a section
+  # index for "decisions" -- the parent decisions.md already serves /decisions/.
+  case "$CAT" in
+    decisions-extra:*)
+      _debase=${CAT#decisions-extra:}
+      STUB_REL="decisions/${_debase}.md"
+      STUB_ABS="$DOCS/$STUB_REL"
+      CANONICAL=$(build_canonical "$STUB_REL" "$REL")
+      CANONICAL_ABS="$ROOT/.orchestrator/$REL"
+      if existing_stub_is_protected "$STUB_ABS"; then
+        continue
+      fi
+      # Decision detail files are self-contained — fragment-only passthrough.
+      write_stub "$STUB_ABS" "$CANONICAL" "$TITLE" "$CANONICAL_ABS" "false"
+      continue
+      ;;
+  esac
+
   # ---- proposals:* routing (M032/P04/T01 FR-17) ----------------------------
   # proposals:<basename> records route to wiki/docs/proposals/<basename>.md.
   # The canonical source lives at .orchestrator/proposals/<basename>.md, so we

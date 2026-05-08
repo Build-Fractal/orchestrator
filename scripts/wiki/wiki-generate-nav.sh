@@ -339,6 +339,8 @@ HAS_KNOWLEDGE=0
 HAS_MILSUM=0
 HAS_PROPOSALS=0          # M032/P04/T01 FR-17
 HAS_KNOWLEDGE_FLAT=0     # M032/P04/T01 FR-19
+HAS_SPEC=0               # PBJ-2026-05-07 ask 1
+HAS_DECISIONS_EXTRA=0    # PBJ-2026-05-07 ask 2
 
 # Per-extra-dir presence is tracked via a /tmp accumulator because the dirname
 # slot is dynamic. Each line "extra:<dn>" appears once per distinct dirname.
@@ -371,6 +373,8 @@ while IFS='|' read -r CAT REL TITLE; do
     top:milestone-summary) HAS_MILSUM=1 ;;
     proposals:*)           HAS_PROPOSALS=1 ;;
     knowledge-flat)        HAS_KNOWLEDGE_FLAT=1 ;;
+    spec:*)                HAS_SPEC=1 ;;
+    decisions-extra:*)     HAS_DECISIONS_EXTRA=1 ;;
     extra:*)
       _xdn=$(printf '%s' "$CAT" | sed 's/^extra://')
       printf '%s\n' "$_xdn" >> "$TMP_EXTRA_DNS"
@@ -409,8 +413,57 @@ fi
 if [ "$HAS_GLOSSARY" -eq 1 ]; then
   emit_leaf 1 "Glossary" "glossary.md"
 fi
+# PBJ-2026-05-07 ask 1: Spec section, slotted between Glossary and Decisions
+# per the requested ordering. Index page (spec/index.md) is auto-rendered by
+# the stub generator from register_child("spec", ...) calls. Entries sort by
+# spec:<basename> ascending (matching proposals:* shape).
+if [ "$HAS_SPEC" -eq 1 ]; then
+  emit_group 1 "Spec"
+  emit_leaf 2 "Overview" "spec/index.md"
+  TMP_SPEC="/tmp/wiki-nav-spec-$$.list"
+  awk -F'|' '
+    $1 ~ /^spec:/ { print $1 "|" $2 "|" $3 }
+  ' "$SCAN_OUT" | sort > "$TMP_SPEC"
+  while IFS='|' read -r SCAT SREL STITLE; do
+    [ -n "$SREL" ] || continue
+    _sbase=${SCAT#spec:}
+    _spath="spec/${_sbase}.md"
+    _slabel="$_sbase"
+    if [ -n "$STITLE" ] && [ "$STITLE" != "$_sbase" ]; then
+      _slabel="$STITLE"
+    fi
+    emit_leaf_prefer_stub_title 2 "$_slabel" "$_spath"
+  done < "$TMP_SPEC"
+  rm -f "$TMP_SPEC"
+fi
+
 if [ "$HAS_DECISIONS" -eq 1 ]; then
-  emit_leaf 1 "Decisions" "decisions.md"
+  if [ "$HAS_DECISIONS_EXTRA" -eq 1 ]; then
+    # PBJ-2026-05-07 ask 2: when subdir files are present, emit Decisions as a
+    # group with the canonical DECISIONS.md as Overview and each subdir file as
+    # a child. URL routing: decisions.md -> /decisions/, decisions/<f>.md ->
+    # /decisions/<f>/. No collision under use_directory_urls:true because
+    # there is no decisions/index.md (the parent decisions.md fills that slot).
+    emit_group 1 "Decisions"
+    emit_leaf 2 "Overview" "decisions.md"
+    TMP_DEX="/tmp/wiki-nav-decisions-extra-$$.list"
+    awk -F'|' '
+      $1 ~ /^decisions-extra:/ { print $1 "|" $2 "|" $3 }
+    ' "$SCAN_OUT" | sort > "$TMP_DEX"
+    while IFS='|' read -r DCAT DREL DTITLE; do
+      [ -n "$DREL" ] || continue
+      _dbase=${DCAT#decisions-extra:}
+      _dpath="decisions/${_dbase}.md"
+      _dlabel="$_dbase"
+      if [ -n "$DTITLE" ] && [ "$DTITLE" != "$_dbase" ]; then
+        _dlabel="$DTITLE"
+      fi
+      emit_leaf_prefer_stub_title 2 "$_dlabel" "$_dpath"
+    done < "$TMP_DEX"
+    rm -f "$TMP_DEX"
+  else
+    emit_leaf 1 "Decisions" "decisions.md"
+  fi
 fi
 if [ "$HAS_KNOWLEDGE" -eq 1 ]; then
   emit_leaf 1 "Knowledge" "knowledge.md"

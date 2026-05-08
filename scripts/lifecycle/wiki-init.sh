@@ -513,6 +513,13 @@ jobs:
           cache: pip
           cache-dependency-path: wiki/requirements.txt
       - run: pip install -r wiki/requirements.txt
+      - name: Check wiki stubs are fresh (no drift vs .orchestrator/)
+        run: |
+          if [ -x scripts/diagnostics/wiki-stubs-fresh.sh ]; then
+            bash scripts/diagnostics/wiki-stubs-fresh.sh
+          else
+            echo "wiki-stubs-fresh: scripts/diagnostics/wiki-stubs-fresh.sh not present -- skipping (older orchestrator runtime)"
+          fi
       - run: mkdocs build -f wiki/mkdocs.yml
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

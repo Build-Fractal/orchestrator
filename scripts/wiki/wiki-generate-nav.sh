@@ -466,11 +466,25 @@ while IFS='|' read -r CAT REL TITLE; do
   esac
 done < "$SCAN_OUT"
 
-# Unique-sort the IDs so each milestone/archive group appears once; sort keeps
-# M-prefix first, then A-prefix (lexical sort), and lexical order within each
-# kind matches scanner order. This preserves determinism.
-sort -u "$TMP_IDS" > "${TMP_IDS}.sorted"
+# Two-bucket sort within each kind (M-prefix then A-prefix preserved as outer
+# key so M-group still leads A-group). Bucket 0: milestone IDs whose first
+# character after `M` is a digit (M001, M2a, M999-foo) — sorted by version
+# compare so M9 < M10 < M100 and M001 < M2a. Bucket 1: everything else
+# (e.g. M-Spike-A) — sorted lex. Bucket 0 always precedes bucket 1.
+#
+# Why two buckets: a single `sort -u` puts `M-Spike-A` ahead of `M001`
+# because `-` (0x2D) is below `0` (0x30) in lex order, which inverts
+# priority signaling in the rendered nav (PBJ-2026-05-08).
+sort -u "$TMP_IDS" > "${TMP_IDS}.uniq"
+awk -F: '
+  $2 ~ /^M[0-9]/ { print $1 ":0:" $2; next }
+                 { print $1 ":1:" $2 }
+' "${TMP_IDS}.uniq" \
+  | LC_ALL=C sort -t: -k1,1 -k2,2n -k3,3V \
+  | awk -F: '{ print $1 ":" $3 }' \
+  > "${TMP_IDS}.sorted"
 mv "${TMP_IDS}.sorted" "$TMP_IDS"
+rm -f "${TMP_IDS}.uniq"
 
 # Pre-compute HAS_ANY_MILESTONE / HAS_ANY_ARCHIVE here (re-set below at the
 # Milestones-group emission site as well). Needed up-front for the
@@ -778,7 +792,8 @@ if [ "$HAS_ANY_MILESTONE" -eq 1 ]; then
   emit_group 1 "Milestones"
   emit_leaf 2 "Overview" "milestones/index.md"
 
-  # For each milestone ID (sorted lexically by the earlier sort -u):
+  # For each milestone ID (sorted by the two-bucket rule above: numeric
+  # M[0-9]…  first by version compare, non-numeric IDs after, lex):
   grep '^M:' "$TMP_IDS" | sed 's/^M://' | while IFS= read -r MID; do
     [ -n "$MID" ] || continue
     emit_group 2 "$(milestone_label "$MID")"

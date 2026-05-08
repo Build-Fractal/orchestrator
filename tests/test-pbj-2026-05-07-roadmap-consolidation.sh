@@ -43,7 +43,8 @@ FIXTURE_BOTH="/tmp/pbj-2026-05-07-both-$$"
 FIXTURE_SUM="/tmp/pbj-2026-05-07-sum-$$"
 FIXTURE_TREE="/tmp/pbj-2026-05-07-tree-$$"
 FIXTURE_SCOPED="/tmp/pbj-2026-05-07-scoped-$$"
-trap 'rm -rf "$FIXTURE_BOTH" "$FIXTURE_SUM" "$FIXTURE_TREE" "$FIXTURE_SCOPED"' EXIT INT TERM
+FIXTURE_SORT="/tmp/pbj-2026-05-08-sort-$$"
+trap 'rm -rf "$FIXTURE_BOTH" "$FIXTURE_SUM" "$FIXTURE_TREE" "$FIXTURE_SCOPED" "$FIXTURE_SORT"' EXIT INT TERM
 
 STUBS="$PROJECT_ROOT/scripts/wiki/wiki-generate-stubs.sh"
 NAV="$PROJECT_ROOT/scripts/wiki/wiki-generate-nav.sh"
@@ -282,6 +283,62 @@ if bash "$FIND_ACTIVE" "$FIXTURE_SCOPED/.orchestrator" --milestone M002 >/dev/nu
   say_fail "scenario 4: find-active-milestone.sh accepted scope-only M002 (auto loop would pick it up)"
 else
   say_pass "scenario 4: find-active-milestone.sh rejects scope-only M002 (correctly auto-skipped)"
+fi
+
+# ---- (5) Mixed numeric + dash-prefixed milestone IDs sort numeric-first ----
+#
+# PBJ-2026-05-08: when a project introduces a non-numeric milestone ID (e.g.
+# `M-Spike-A` for a parallel low-priority track), the lexical sort in
+# wiki-generate-nav.sh used to put it ahead of `M001` because `-` (0x2D)
+# precedes `0` (0x30). Two-bucket fix: numeric-prefixed IDs (^M[0-9]) sort
+# first by version-compare; non-numeric IDs sort lex after.
+
+scaffold_fixture "$FIXTURE_SORT"
+write_milestone_tree "$FIXTURE_SORT" "M001"
+write_milestone_tree "$FIXTURE_SORT" "M002"
+write_scope_only_milestone "$FIXTURE_SORT" "M-Spike-A"
+write_scope_only_milestone "$FIXTURE_SORT" "M-Spike-B"
+
+bash "$STUBS" --root "$FIXTURE_SORT" >/dev/null 2>&1 || {
+  say_fail "scenario 5: stubs generator returned non-zero"
+}
+bash "$NAV" --root "$FIXTURE_SORT" >/dev/null 2>&1 || {
+  say_fail "scenario 5: nav generator returned non-zero"
+}
+
+# Extract the leaf order under the Milestones group from the rendered nav.
+# Each milestone surfaces a line like `      - M001 — title: milestones/M001/...`
+# (or just the ID for scope-only milestones). The first id-token after each
+# `      - ` under the Milestones group is what we want to compare.
+ORDER=$(awk '
+  /^  - Milestones:/ { in_ms = 1; next }
+  in_ms && /^  - [A-Z]/ { exit }                                # next top-level group
+  in_ms && /^    - / {
+    sub(/^    - "?/, "")
+    sub(/[":].*$/, "")
+    sub(/ —.*$/, "")
+    sub(/[ \t]+$/, "")
+    if ($0 != "") print $0
+  }
+' "$FIXTURE_SORT/wiki/mkdocs.yml" | tr '\n' ' ' | sed 's/ *$//')
+
+EXPECTED="Overview M001 M002 M-Spike-A M-Spike-B"
+if [ "$ORDER" = "$EXPECTED" ]; then
+  say_pass "scenario 5: numeric IDs sort ahead of dash-prefixed IDs in nav"
+else
+  say_fail "scenario 5: nav order mismatch — got [$ORDER], expected [$EXPECTED]"
+fi
+
+# Also assert a bucket-B-with-one-entry case doesn't break the awk pipeline:
+# scenario 4 (M001 numeric + M002 numeric scope-only) covers numeric-only;
+# scenario 5 above covers mixed; this assertion confirms a single non-numeric
+# entry alone still renders. (Reuses FIXTURE_SORT — re-running on a subset
+# would require a sixth fixture; instead we just assert M-Spike-A's nav leaf
+# was actually emitted, not just that ordering is correct.)
+if grep -qE 'milestones/M-Spike-A/M-Spike-A-CONTEXT\.md$' "$FIXTURE_SORT/wiki/mkdocs.yml"; then
+  say_pass "scenario 5: dash-prefixed M-Spike-A renders as nav leaf"
+else
+  say_fail "scenario 5: dash-prefixed M-Spike-A missing from nav (pipeline broken on non-numeric ID)"
 fi
 
 # ---- summary ---------------------------------------------------------------

@@ -6,6 +6,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This pr
 
 ## [Unreleased]
 
+### Fixed (PBJ-2026-05-08 — milestone-title regex over-matches hyphenated sub-IDs)
+
+- `scripts/wiki/wiki-milestone-titles.sh` Pattern 1 (`**MID — Title**`) now requires at least one space on each side of the separator. The previous `[[:space:]]*[—-][[:space:]]*` form accepted zero-space matches and caused `\b\b${_mid}\b\b` to consume hyphenated sub-ID cells like `**M2a-min**` / `**M2a-polish**`, parsing the suffix as the milestone title (M2a/M2b section indexes regressed to bare "min" / "polish" on PBJ regen). New form `[[:space:]]+[—-][[:space:]]+` matches the docstring intent (`MID — Title` with whitespace bracketing the dash) without consuming `**M{ID}-{suffix}**` cells. Pattern 2 (bare-bold) and Pattern 3 (H2 form) unaffected.
+
 ### Added (PBJ-2026-05-08 — Spikes registry scaffold + constitution title version-tracking)
 
 - Wiki tooling now ships a **Spikes registry** scaffold. When a project carries

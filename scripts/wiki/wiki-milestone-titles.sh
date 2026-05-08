@@ -101,9 +101,14 @@ title_from_summary() {
   _mid="$1"
   [ -f "$SUM" ] || return 1
   # Pattern 1: `**MID — Title**`
-  _line=$(grep -m 1 -E "\*\*${_mid}[[:space:]]*[—-][[:space:]]*[^*]+\*\*" "$SUM" 2>/dev/null)
+  # PBJ-2026-05-08: require ≥1 space on each side of the separator to keep
+  # the regex from consuming `**M{ID}-{suffix}**` cells (e.g., `**M2a-min**`,
+  # `**M2a-polish**`) where the hyphen is part of a sub-ID rather than a
+  # title separator. The docstring intent is `MID — Title` (or `MID - Title`)
+  # with whitespace bracketing the dash, never `MID-suffix` glued.
+  _line=$(grep -m 1 -E "\*\*${_mid}[[:space:]]+[—-][[:space:]]+[^*]+\*\*" "$SUM" 2>/dev/null)
   if [ -n "$_line" ]; then
-    printf '%s' "$_line" | sed -E "s/.*\*\*${_mid}[[:space:]]*[—-][[:space:]]*([^*]+)\*\*.*/\1/" \
+    printf '%s' "$_line" | sed -E "s/.*\*\*${_mid}[[:space:]]+[—-][[:space:]]+([^*]+)\*\*.*/\1/" \
       | sed -E 's/[[:space:]]+$//'
     return 0
   fi

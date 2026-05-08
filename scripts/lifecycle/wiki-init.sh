@@ -481,7 +481,7 @@ fi
 emit_pages_workflow() {
   PAGES_WF_TARGET="$PROJECT_DIR/.github/workflows/pages.yml"
   if [ -f "$PAGES_WF_TARGET" ]; then
-    echo "wiki-init: .github/workflows/pages.yml already present at $PAGES_WF_TARGET — preserving operator-authored workflow (CON-3); reference impl in $REPO_ROOT/.orchestrator/proposals/papercut-handoff-wiki-publishing-robustness-2026-05-07.md if reconciliation desired" >&2
+    echo "wiki-init: .github/workflows/pages.yml already present at $PAGES_WF_TARGET — preserving operator-authored workflow (CON-3); reference impl in $REPO_ROOT/.orchestrator/proposals/papercut-handoff-wiki-publishing-robustness-2026-05-07.md if reconciliation desired. Consider adding 'bash scripts/diagnostics/wiki-stubs-fresh.sh --root .' as a pre-build step (see papercut-wiki-stub-drift.md Layer 1)" >&2
     return 0
   fi
   mkdir -p "$(dirname "$PAGES_WF_TARGET")"
@@ -1001,6 +1001,21 @@ if [ "$WITH_DEPLOY" = "1" ]; then
     audit_failure "discussions_enable" "$step1_rc"
     echo "FAIL: wiki-init: --deploy step 1: gh api PATCH /repos/$OWNER/$REPO has_discussions=true exited $step1_rc" >&2
     exit 10
+  fi
+
+  # M035/P00/T04 — closes M032 SC-5 fixture-completeness gap.
+  # If $PROJECT_DIR is missing scripts/wiki/wiki-deploy.sh, stage it from
+  # $REPO_ROOT (M032 SC-5 deferred-validation fallback). Existing-file
+  # behaviour unchanged: copy only when target is absent.
+  if [ ! -f "$PROJECT_DIR/scripts/wiki/wiki-deploy.sh" ]; then
+    if [ -f "$REPO_ROOT/scripts/wiki/wiki-deploy.sh" ]; then
+      mkdir -p "$PROJECT_DIR/scripts/wiki"
+      cp "$REPO_ROOT/scripts/wiki/wiki-deploy.sh" "$PROJECT_DIR/scripts/wiki/wiki-deploy.sh"
+      echo "wiki-init: staged \$PROJECT_DIR/scripts/wiki/wiki-deploy.sh from \$REPO_ROOT (M032 SC-5 deferred-validation fallback)" >&2
+    else
+      echo "FAIL: wiki-init: --deploy step 2 cannot stage wiki-deploy.sh — neither \$PROJECT_DIR/scripts/wiki/wiki-deploy.sh nor \$REPO_ROOT/scripts/wiki/wiki-deploy.sh exist" >&2
+      exit 11
+    fi
   fi
 
   # Step 2: invoke wiki-deploy.sh (it runs the FR-10 cwd-gate + the four

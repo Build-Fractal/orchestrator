@@ -109,7 +109,6 @@ title: "M024 — Universal Intake & Routing"
 - [Dispatch Context -- T04 (Phase P07, Milestone M024)](archive/P07/T04-PAYLOAD.md)
 - [tests/test-design-gate-degradation.sh](archive/P07/T04-PLAN.md)
 - [T04-SUMMARY](archive/P07/T04-SUMMARY.md)
-- [continue](continue.md)
 - [M024-CONTEXT](M024-CONTEXT.md)
 - [M024 Evaluation](M024-EVALUATION.md)
 - [M024-ROADMAP](M024-ROADMAP.md)

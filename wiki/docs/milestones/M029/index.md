@@ -15,7 +15,6 @@ title: "M029 — Roadmap Visibility & CLI UX"
 
 ## Contents
 
-- [M029 Continue File — Proactive Context Rotation](continue.md)
 - [M029-CONTEXT](M029-CONTEXT.md)
 - [M029 Evaluation](M029-EVALUATION.md)
 - [M029-ROADMAP](M029-ROADMAP.md)

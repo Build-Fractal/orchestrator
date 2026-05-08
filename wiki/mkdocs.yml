@@ -1213,7 +1213,6 @@ nav:
         - evidence / zero-prompts-attestation: milestones/M016/phases/P04/evidence/zero-prompts-attestation.md
     - M018 — Context Compression Layer:
       - Overview: milestones/M018/index.md
-      - continue: milestones/M018/continue.md
       - Context: milestones/M018/M018-CONTEXT.md
       - Evaluation: milestones/M018/M018-EVALUATION.md
       - Roadmap: milestones/M018/M018-ROADMAP.md
@@ -1376,7 +1375,6 @@ nav:
         - T06 Summary: milestones/M019/phases/P01/tasks/T06-SUMMARY.md
     - M020 — Knowledge Layer Maturation:
       - Overview: milestones/M020/index.md
-      - continue: milestones/M020/continue.md
       - Context: milestones/M020/M020-CONTEXT.md
       - Evaluation: milestones/M020/M020-EVALUATION.md
       - Roadmap: milestones/M020/M020-ROADMAP.md
@@ -1542,7 +1540,6 @@ nav:
         - T05 Summary: milestones/M021/phases/P04/tasks/T05-SUMMARY.md
     - "M024 — Universal Intake & Routing":
       - Overview: milestones/M024/index.md
-      - continue: milestones/M024/continue.md
       - Context: milestones/M024/M024-CONTEXT.md
       - Evaluation: milestones/M024/M024-EVALUATION.md
       - Roadmap: milestones/M024/M024-ROADMAP.md
@@ -1806,7 +1803,6 @@ nav:
       - archive / P03 / T04-verifier-suite-SUMMARY: milestones/M027/archive/P03/T04-verifier-suite-SUMMARY.md
     - M028 — Autonomous Hardening v3:
       - Overview: milestones/M028/index.md
-      - continue: milestones/M028/continue.md
       - Context: milestones/M028/M028-CONTEXT.md
       - Evaluation: milestones/M028/M028-EVALUATION.md
       - Roadmap: milestones/M028/M028-ROADMAP.md
@@ -1900,7 +1896,6 @@ nav:
         - T04 Close-out-sweep-summary: milestones/M028/phases/P05/tasks/T04-close-out-sweep-SUMMARY.md
     - "M029 — Roadmap Visibility & CLI UX":
       - Overview: milestones/M029/index.md
-      - continue: milestones/M029/continue.md
       - Context: milestones/M029/M029-CONTEXT.md
       - Evaluation: milestones/M029/M029-EVALUATION.md
       - Roadmap: milestones/M029/M029-ROADMAP.md
@@ -1970,7 +1965,6 @@ nav:
         - T06 Milestone-closure-summary: milestones/M029/phases/P03/tasks/T06-milestone-closure-SUMMARY.md
     - M030 — close → M031 → M032 → M033 → M029 → M035 → launch:
       - Overview: milestones/M030/index.md
-      - continue: milestones/M030/continue.md
       - Acceptance-evidence: milestones/M030/M030-ACCEPTANCE-EVIDENCE.md
       - Context: milestones/M030/M030-CONTEXT.md
       - Evaluation: milestones/M030/M030-EVALUATION.md
@@ -2366,13 +2360,20 @@ nav:
       - P00:
         - Overview: milestones/M035/phases/P00/index.md
         - Plan: milestones/M035/phases/P00/P00-PLAN.md
+        - T01 Bash32-installer-exit-status-payload: milestones/M035/phases/P00/tasks/T01-bash32-installer-exit-status-PAYLOAD.md
         - T01 Bash32-installer-exit-status-plan: milestones/M035/phases/P00/tasks/T01-bash32-installer-exit-status-PLAN.md
+        - T01 Summary: milestones/M035/phases/P00/tasks/T01-SUMMARY.md
+        - T02 Managed-gitignore-block-payload: milestones/M035/phases/P00/tasks/T02-managed-gitignore-block-PAYLOAD.md
         - T02 Managed-gitignore-block-plan: milestones/M035/phases/P00/tasks/T02-managed-gitignore-block-PLAN.md
+        - T02 Summary: milestones/M035/phases/P00/tasks/T02-SUMMARY.md
+        - T03 Summary: milestones/M035/phases/P00/tasks/T03-SUMMARY.md
+        - T03 Wiki-stubs-fresh-diagnostic-and-gate-payload: milestones/M035/phases/P00/tasks/T03-wiki-stubs-fresh-diagnostic-and-gate-PAYLOAD.md
         - T03 Wiki-stubs-fresh-diagnostic-and-gate-plan: milestones/M035/phases/P00/tasks/T03-wiki-stubs-fresh-diagnostic-and-gate-PLAN.md
+        - T04 M032-wiki-deploy-stage-and-npm-evidence-payload: milestones/M035/phases/P00/tasks/T04-m032-wiki-deploy-stage-and-npm-evidence-PAYLOAD.md
         - T04 M032-wiki-deploy-stage-and-npm-evidence-plan: milestones/M035/phases/P00/tasks/T04-m032-wiki-deploy-stage-and-npm-evidence-PLAN.md
+        - T04 Summary: milestones/M035/phases/P00/tasks/T04-SUMMARY.md
     - M036 — Reference-Corpus Ingest (deferred post-launch, demand-driven):
       - Overview: milestones/M036/index.md
-      - continue: milestones/M036/continue.md
       - Acceptance-evidence: milestones/M036/M036-ACCEPTANCE-EVIDENCE.md
       - Context: milestones/M036/M036-CONTEXT.md
       - Evaluation: milestones/M036/M036-EVALUATION.md
@@ -2505,7 +2506,6 @@ nav:
       - p03-live-smoke-evidence / REF-regulatory-tier2-live-smoke-01.structured: milestones/M036/p03-live-smoke-evidence/REF-regulatory-tier2-live-smoke-01.structured.md
     - M037 — FR-12..FR-17 — Deferred to Post-Launch:
       - Overview: milestones/M037/index.md
-      - continue: milestones/M037/continue.md
       - Acceptance-evidence: milestones/M037/M037-ACCEPTANCE-EVIDENCE.md
       - Context: milestones/M037/M037-CONTEXT.md
       - Evaluation: milestones/M037/M037-EVALUATION.md

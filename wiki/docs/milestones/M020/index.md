@@ -15,7 +15,6 @@ title: "M020 — Knowledge Layer Maturation"
 
 ## Contents
 
-- [M020 Continue File — Context Rotation After P03](continue.md)
 - [M020-CONTEXT](M020-CONTEXT.md)
 - [M020 Evaluation](M020-EVALUATION.md)
 - [M020-ROADMAP](M020-ROADMAP.md)

@@ -1,173 +1,208 @@
 #!/usr/bin/env bash
-# scripts/diagnostics/wiki-stubs-fresh.sh -- staleness gate for wiki stubs.
+# scripts/diagnostics/wiki-stubs-fresh.sh -- M035/P00/T03 staleness gate.
 #
-# Regenerates wiki stubs + mkdocs.yml against the current .orchestrator/
-# canonical artifacts and reports whether the committed outputs are stale.
-# Intended primary use: pages.yml pre-build gate. Without this gate, an
-# orchestrator:plan-phase re-plan that renames a canonical artifact (e.g.
-# T03-foo-PLAN.md -> T03-bar-PLAN.md) silently breaks `mkdocs build` with a
-# cryptic include-markdown error and the GitHub Pages deploy never runs.
+# Layer 1 of the wiki-stub-drift paper-cut (see
+# .orchestrator/proposals/papercut-wiki-stub-drift.md). Compares committed
+# wiki state under <root>/wiki/ against a freshly-regenerated copy emitted by
+# scripts/wiki/wiki-generate-stubs.sh + scripts/wiki/wiki-generate-nav.sh,
+# without mutating the committed tree.
 #
-# Failure mode after this gate: actionable "STALE: <files>" message naming
-# exactly which committed outputs need refresh + the verbatim regen command.
+# Without this gate, an orchestrator:plan-phase re-plan that renames a
+# canonical artifact (e.g. T03-foo-PLAN.md -> T03-bar-PLAN.md) silently
+# breaks `mkdocs build` with a cryptic include-markdown error and the
+# GitHub Pages deploy never runs. This diagnostic catches the drift loudly
+# *before* mkdocs runs.
 #
 # Usage:
-#   bash scripts/diagnostics/wiki-stubs-fresh.sh [--root <dir>] [--restore]
-#                                                [--help]
+#   bash scripts/diagnostics/wiki-stubs-fresh.sh [--root <project-dir>]
 #
-#   --root <dir>  Project root. Default: invocation working directory.
-#   --restore     After diff, restore wiki/docs + wiki/mkdocs.yml to their
-#                 pre-run state. Side-effect-free invocation; useful for
-#                 local checks where the operator does not want the regen
-#                 mutations to leak into their working tree. Default: no
-#                 restore (CI-friendly; operator can `git checkout` to revert).
-#   --help        Print this usage block and exit 0.
+# Default root: $PWD.
 #
-# Exit codes:
-#   0  -- no drift; wiki stubs + mkdocs.yml match the canonical .orchestrator/.
-#   1  -- drift detected; STALE: lines enumerate which outputs need refresh.
-#   2  -- usage error or regenerator failure.
+# Exit codes (contract -- downstream callers branch on these):
+#   0  fresh (or no wiki present -- informational skip)
+#   1  environment failure (generators missing, can't write tmp, regen fails)
+#   2  drift detected
 #
-# Bash 3.2 compatible. Single-script-file shape.
+# Bash 3.2 compatible -- no `<(...)`, no `mapfile`, no `${var^^}`,
+# no `&>`, no compound chains > 2. AP-009 shape-guard friendly.
 
 set -u
 
 print_help() {
-  sed -n '2,32p' "$0"
+  sed -n '2,28p' "$0"
 }
 
-# ----- Argument parsing --------------------------------------------------------
+# ----- Argument parsing ------------------------------------------------------
 
-ROOT_DIR=""
-RESTORE=0
+ROOT=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --root)
       shift
-      ROOT_DIR="${1:-}"
-      ;;
-    --restore)
-      RESTORE=1
+      if [ $# -eq 0 ]; then
+        printf 'FAIL: --root requires a path argument\n' >&2
+        exit 1
+      fi
+      ROOT="$1"
+      shift
       ;;
     --help|-h)
       print_help
       exit 0
       ;;
     *)
-      printf 'ERROR: unknown flag: %s\n' "$1" >&2
-      exit 2
+      printf 'FAIL: unknown argument: %s\n' "$1" >&2
+      exit 1
       ;;
   esac
-  if [ $# -gt 0 ]; then
-    shift
-  fi
 done
 
-if [ -z "$ROOT_DIR" ]; then
-  ROOT_DIR="$(pwd)"
+if [ -z "$ROOT" ]; then
+  ROOT="$PWD"
 fi
 
-if [ ! -d "$ROOT_DIR" ]; then
-  printf 'ERROR: --root not a directory: %s\n' "$ROOT_DIR" >&2
-  exit 2
+if [ ! -d "$ROOT" ]; then
+  printf 'FAIL: --root does not exist: %s\n' "$ROOT" >&2
+  exit 1
 fi
 
-# Canonicalize to absolute. The downstream regenerators bake $ROOT into stub
-# comments and pattern-match against $ROOT in `project_external_pointer`; a
-# relative literal (e.g. `--root .`) produces output that differs from the
-# absolute-path form even when the operator's last regen was drift-free,
-# causing this diagnostic to false-FAIL on `wiki.extra_dirs` content.
-# (PBJ-2026-05-08 — belt-and-suspenders; the regen scripts canonicalize too.)
-ROOT_DIR=$(cd "$ROOT_DIR" && pwd)
+ROOT=$(cd "$ROOT" && pwd)
 
-DOCS="$ROOT_DIR/wiki/docs"
-MKDOCS="$ROOT_DIR/wiki/mkdocs.yml"
-STUB_GEN="$ROOT_DIR/scripts/wiki/wiki-generate-stubs.sh"
-NAV_GEN="$ROOT_DIR/scripts/wiki/wiki-generate-nav.sh"
-
-if [ ! -d "$DOCS" ]; then
-  printf 'wiki-stubs-fresh: wiki/docs not found at %s -- nothing to check (exit 0)\n' "$DOCS"
+# ----- Absent-wiki short-circuit --------------------------------------------
+# Not every consumer project ships a wiki. Treat absence as a soft pass so
+# the diagnostic can be invoked unconditionally from CI workflows.
+if [ ! -d "$ROOT/wiki/docs" ] || [ ! -f "$ROOT/wiki/mkdocs.yml" ]; then
+  printf 'INFO: no wiki present, skipping freshness check (root=%s)\n' "$ROOT"
   exit 0
 fi
 
+# ----- Environment preflight ------------------------------------------------
+STUB_GEN="$ROOT/scripts/wiki/wiki-generate-stubs.sh"
+NAV_GEN="$ROOT/scripts/wiki/wiki-generate-nav.sh"
+
 if [ ! -f "$STUB_GEN" ]; then
-  printf 'ERROR: stub generator not found at %s\n' "$STUB_GEN" >&2
-  exit 2
+  printf 'FAIL: wiki-generate-stubs.sh not found at %s\n' "$STUB_GEN" >&2
+  exit 1
 fi
-
 if [ ! -f "$NAV_GEN" ]; then
-  printf 'ERROR: nav generator not found at %s\n' "$NAV_GEN" >&2
-  exit 2
+  printf 'FAIL: wiki-generate-nav.sh not found at %s\n' "$NAV_GEN" >&2
+  exit 1
+fi
+if ! command -v diff >/dev/null 2>&1; then
+  printf 'FAIL: diff(1) not on PATH\n' >&2
+  exit 1
 fi
 
-# ----- Snapshot current state -------------------------------------------------
-# Always snapshot, even when --restore is unset; a future failure path may
-# need to surface the prior state for debugging, and the cost is one cp -R
-# of a small directory (<1MB on typical projects).
+# ----- Stage tmp tree --------------------------------------------------------
+# The stub generator writes into <root>/wiki/docs (rooted at the resolved
+# absolute --root path). To compare without mutating the live tree, stage
+# the source-of-truth directories the generators read from (.orchestrator/,
+# scripts/, wiki/) into a tmp dir and run the generators with --root <tmp>.
+# The generators emit fresh state into <tmp>/wiki/, which we diff against
+# <root>/wiki/.
+TMP_PARENT=$(mktemp -d 2>/dev/null)
+if [ -z "$TMP_PARENT" ] || [ ! -d "$TMP_PARENT" ]; then
+  printf 'FAIL: mktemp -d failed\n' >&2
+  exit 1
+fi
+TMP_ROOT="$TMP_PARENT/proj"
+mkdir -p "$TMP_ROOT" 2>/dev/null
+GEN_LOG="$TMP_PARENT/genlog"
+DOCS_DIFF="$TMP_PARENT/docsdiff"
+NAV_DIFF="$TMP_PARENT/navdiff"
+trap 'rm -rf "$TMP_PARENT" 2>/dev/null' EXIT INT TERM
 
-TMP_PFX="/tmp/wiki-stubs-fresh.$$"
-DOCS_BEFORE="${TMP_PFX}.docs.before"
-MKDOCS_BEFORE="${TMP_PFX}.mkdocs.before.yml"
-trap 'rm -rf "$DOCS_BEFORE" "$MKDOCS_BEFORE" "${TMP_PFX}.diff" 2>/dev/null' EXIT INT TERM
+# Stage the directories the generators + scanner consume + the wiki/ tree
+# they overwrite. Source-of-truth dirs (read by wiki-scan-sources.sh):
+#   .orchestrator/   -- specs, plans, knowledge graph, proposals, decisions
+#   knowledge/       -- top-level MEM* knowledge entries (M012/P02/T01)
+#   scripts/         -- generators + scanner themselves
+#   templates/       -- index-cards templates consumed by stub gen
+#   wiki/            -- comparison baseline + regen target
+# Use cp -R for bash 3.2 portability.
+for _dir in ".orchestrator" "knowledge" "scripts" "templates" "wiki"; do
+  if [ -d "$ROOT/$_dir" ]; then
+    if ! cp -R "$ROOT/$_dir" "$TMP_ROOT/$_dir" 2>/dev/null; then
+      printf 'FAIL: could not stage %s into %s\n' "$_dir" "$TMP_ROOT" >&2
+      exit 1
+    fi
+  fi
+done
 
-cp -R "$DOCS" "$DOCS_BEFORE" 2>/dev/null || {
-  printf 'ERROR: failed to snapshot %s\n' "$DOCS" >&2
-  exit 2
-}
+# Stage common repo-root sibling files best-effort. The scanners may read
+# CHANGELOG.md / README.md / constitution.md when present.
+for _f in "CHANGELOG.md" "README.md" "constitution.md"; do
+  if [ -f "$ROOT/$_f" ]; then
+    cp "$ROOT/$_f" "$TMP_ROOT/$_f" 2>/dev/null || true
+  fi
+done
 
-if [ -f "$MKDOCS" ]; then
-  cp "$MKDOCS" "$MKDOCS_BEFORE" 2>/dev/null || {
-    printf 'ERROR: failed to snapshot %s\n' "$MKDOCS" >&2
-    exit 2
-  }
+# ----- Regenerate fresh stubs + nav into tmp -------------------------------
+if ! bash "$STUB_GEN" --root "$TMP_ROOT" >"$GEN_LOG" 2>&1; then
+  printf 'FAIL: wiki-generate-stubs.sh exited non-zero against tmp tree\n' >&2
+  printf '%s\n' '----- generator output -----' >&2
+  cat "$GEN_LOG" >&2
+  exit 1
 fi
 
-# ----- Regenerate -------------------------------------------------------------
-# Run both generators silently. Failure of either is a hard error -- the
-# operator must fix the upstream regen before staleness can be assessed.
-
-REGEN_LOG="${TMP_PFX}.regen.log"
-if ! bash "$STUB_GEN" --root "$ROOT_DIR" >"$REGEN_LOG" 2>&1; then
-  printf 'ERROR: wiki-generate-stubs.sh failed:\n' >&2
-  cat "$REGEN_LOG" >&2
-  rm -f "$REGEN_LOG"
-  exit 2
+if ! bash "$NAV_GEN" --root "$TMP_ROOT" >"$GEN_LOG" 2>&1; then
+  printf 'FAIL: wiki-generate-nav.sh exited non-zero against tmp tree\n' >&2
+  printf '%s\n' '----- generator output -----' >&2
+  cat "$GEN_LOG" >&2
+  exit 1
 fi
-if ! bash "$NAV_GEN" --root "$ROOT_DIR" >"$REGEN_LOG" 2>&1; then
-  printf 'ERROR: wiki-generate-nav.sh failed:\n' >&2
-  cat "$REGEN_LOG" >&2
-  rm -f "$REGEN_LOG"
-  exit 2
-fi
-rm -f "$REGEN_LOG"
 
-# ----- Diff -------------------------------------------------------------------
-
+# ----- Diff committed vs freshly regenerated -------------------------------
+# Two diffs:
+#   (a) wiki/docs/ tree (recursive) -- every auto-generated stub must match.
+#   (b) wiki/mkdocs.yml -- the auto-nav region is regenerated; the rest is
+#       hand-authored and untouched by the generator. A whole-file diff
+#       PASSes when state is fresh because the generators preserve the
+#       hand-authored prefix verbatim (see wiki-generate-nav.sh region split
+#       at MARKER_AUTO_START / MARKER_AUTO_END).
 DRIFT=0
-STALE_LIST="${TMP_PFX}.stale"
-: > "$STALE_LIST"
+DOCS_DRIFT=0
+NAV_DRIFT=0
 
-# wiki/docs/: enumerate all files where regen produced different content
-# (or where files were added/removed). diff -rq prints one line per
-# differing file in the form:
-#   Files <a> and <b> differ
-#   Only in <dir>: <basename>
-# We map both forms to a relative path for the STALE: enumeration.
-diff -rq "$DOCS_BEFORE" "$DOCS" 2>/dev/null > "${TMP_PFX}.diff" || true
-if [ -s "${TMP_PFX}.diff" ]; then
+if ! diff -ruN "$ROOT/wiki/docs" "$TMP_ROOT/wiki/docs" >"$DOCS_DIFF" 2>&1; then
   DRIFT=1
-  awk -v before="$DOCS_BEFORE" -v after="$DOCS" '
+  DOCS_DRIFT=1
+fi
+if ! diff -uN "$ROOT/wiki/mkdocs.yml" "$TMP_ROOT/wiki/mkdocs.yml" >"$NAV_DIFF" 2>&1; then
+  DRIFT=1
+  NAV_DRIFT=1
+fi
+
+# ----- Count stubs (informational) -----------------------------------------
+STUB_COUNT=$(find "$ROOT/wiki/docs" -type f -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
+
+if [ "$DRIFT" -eq 0 ]; then
+  printf 'PASS: wiki-stubs-fresh (no drift; %s stubs + nav verified against committed state)\n' "$STUB_COUNT"
+  exit 0
+fi
+
+# ----- Drift path -----------------------------------------------------------
+printf 'DRIFT: wiki-stubs-fresh detected divergence between committed wiki/ and freshly-regenerated output\n' >&2
+printf '\n' >&2
+
+# Enumerate drifted files in wiki/docs/ as STALE: <relpath> lines so the
+# operator sees the path-set rather than diff bytes. Use diff -rq for the
+# enumeration (separate from the unified -u diff used for human inspection).
+if [ "$DOCS_DRIFT" -eq 1 ]; then
+  STALE_LIST="${TMP_ROOT}.stale"
+  : > "$STALE_LIST"
+  diff -rq "$ROOT/wiki/docs" "$TMP_ROOT/wiki/docs" 2>/dev/null > "${STALE_LIST}.raw" || true
+  # Map "Files <a> and <b> differ" + "Only in <dir>: <basename>" to a single
+  # path per line, anchored to the committed (root) tree where possible.
+  awk -v root_docs="$ROOT/wiki/docs" -v tmp_docs="$TMP_ROOT/wiki/docs" '
     /^Files / {
-      # "Files <a> and <b> differ" -- emit the AFTER path (committed copy)
-      # so the operator sees the path that needs the regen content.
+      # token 4 is the AFTER path; emit it raw.
       n = split($0, parts, " ")
-      # token 4 is the AFTER path (Files <a> and <b> differ)
       print parts[4]
       next
     }
     /^Only in / {
-      # "Only in <dir>: <basename>" -- emit <dir>/<basename>.
       sub(/^Only in /, "", $0)
       colon = index($0, ": ")
       if (colon > 0) {
@@ -176,88 +211,36 @@ if [ -s "${TMP_PFX}.diff" ]; then
         print d "/" b
       }
     }
-  ' "${TMP_PFX}.diff" >> "$STALE_LIST"
-fi
-rm -f "${TMP_PFX}.diff"
+  ' "${STALE_LIST}.raw" > "$STALE_LIST"
+  rm -f "${STALE_LIST}.raw"
 
-# wiki/mkdocs.yml
-if [ -f "$MKDOCS_BEFORE" ] && [ -f "$MKDOCS" ]; then
-  if ! diff -q "$MKDOCS_BEFORE" "$MKDOCS" >/dev/null 2>&1; then
-    DRIFT=1
-    printf '%s\n' "$MKDOCS" >> "$STALE_LIST"
+  printf '%s\n' '----- wiki/docs/ drift (committed -> fresh) -----' >&2
+  if [ -s "$STALE_LIST" ]; then
+    LC_ALL=C sort -u "$STALE_LIST" | while IFS= read -r _stale; do
+      if [ -n "$_stale" ]; then
+        printf 'STALE: %s\n' "$_stale" >&2
+      fi
+    done
+    printf '\n' >&2
   fi
-elif [ -f "$MKDOCS" ] && [ ! -f "$MKDOCS_BEFORE" ]; then
-  DRIFT=1
-  printf '%s (newly generated)\n' "$MKDOCS" >> "$STALE_LIST"
-fi
-
-# ----- Restore (optional) -----------------------------------------------------
-
-if [ "$RESTORE" -eq 1 ]; then
-  rm -rf "$DOCS"
-  cp -R "$DOCS_BEFORE" "$DOCS" 2>/dev/null || {
-    printf 'ERROR: failed to restore %s from snapshot %s; manual recovery required\n' \
-      "$DOCS" "$DOCS_BEFORE" >&2
-    exit 2
-  }
-  if [ -f "$MKDOCS_BEFORE" ]; then
-    cp "$MKDOCS_BEFORE" "$MKDOCS" 2>/dev/null || {
-      printf 'ERROR: failed to restore %s from snapshot %s; manual recovery required\n' \
-        "$MKDOCS" "$MKDOCS_BEFORE" >&2
-      exit 2
-    }
+  # Also surface the unified diff (capped at 200 lines for CI readability).
+  head -n 200 "$DOCS_DIFF" >&2
+  _docs_lines=$(wc -l < "$DOCS_DIFF" | tr -d ' ')
+  if [ "$_docs_lines" -gt 200 ]; then
+    printf '... (%s more diff lines truncated)\n' "$_docs_lines" >&2
   fi
-fi
-
-# ----- Report -----------------------------------------------------------------
-
-if [ "$DRIFT" -eq 0 ]; then
-  printf 'wiki-stubs-fresh: PASS (no drift between .orchestrator/ canonical artifacts and wiki/docs + wiki/mkdocs.yml)\n'
-
-  # ---- Buildability gate (PBJ-2026-05-08 paper-cut) ----
-  # Drift-free is necessary but not sufficient: a stale link in source
-  # markdown (e.g. `](feedback/foo.md)` after feedback/ was removed) leaves
-  # the regen + commit byte-identical yet trips `mkdocs build --strict`.
-  # Chain the strict build so the diagnostic claims both freshness AND
-  # buildability. Skip gracefully when mkdocs is absent or wiki/mkdocs.yml
-  # is missing (no project wiki in scope).
-  if [ -f "$ROOT_DIR/wiki/mkdocs.yml" ] && command -v mkdocs >/dev/null 2>&1; then
-    BUILD_LOG="${TMP_PFX}.build.log"
-    BUILD_SITE="${TMP_PFX}.site"
-    trap 'rm -rf "$DOCS_BEFORE" "$MKDOCS_BEFORE" "${TMP_PFX}.diff" "$BUILD_LOG" "$BUILD_SITE" 2>/dev/null' EXIT INT TERM
-    if ! ( cd "$ROOT_DIR" && mkdocs build -f wiki/mkdocs.yml --strict --site-dir "$BUILD_SITE" ) > "$BUILD_LOG" 2>&1; then
-      printf 'wiki-stubs-fresh: FAIL -- mkdocs build --strict failed despite no stub drift.\n' >&2
-      printf '\n' >&2
-      grep -E '^(ERROR|WARNING)' "$BUILD_LOG" >&2 || tail -20 "$BUILD_LOG" >&2
-      printf '\n' >&2
-      printf 'Hint: a freshness-clean regen does not guarantee the build is clean.\n' >&2
-      printf '      Common cause: dangling `](feedback/...)` or other intra-repo\n' >&2
-      printf '      links in source markdown that no longer resolve. Unlink the\n' >&2
-      printf '      prose or restore the missing target, then re-run.\n' >&2
-      exit 1
-    fi
-    printf 'wiki-stubs-fresh: PASS (mkdocs build --strict OK)\n'
-  else
-    printf 'wiki-stubs-fresh: SKIP build gate (mkdocs not installed or no wiki/mkdocs.yml)\n' >&2
-  fi
-
-  exit 0
-fi
-
-printf 'wiki-stubs-fresh: FAIL -- wiki stubs are stale relative to .orchestrator/ canonical artifacts\n' >&2
-printf '\n' >&2
-LC_ALL=C sort -u "$STALE_LIST" | while IFS= read -r _stale; do
-  [ -n "$_stale" ] || continue
-  printf 'STALE: %s\n' "$_stale" >&2
-done
-printf '\n' >&2
-printf 'Fix: run the regenerators and commit the updated outputs:\n' >&2
-printf '  bash scripts/wiki/wiki-generate-stubs.sh\n' >&2
-printf '  bash scripts/wiki/wiki-generate-nav.sh\n' >&2
-if [ "$RESTORE" -eq 1 ]; then
   printf '\n' >&2
-  printf 'Note: --restore was specified; wiki/docs + wiki/mkdocs.yml have been\n' >&2
-  printf '      restored to their pre-run state. The regen output above describes\n' >&2
-  printf '      what the regen WOULD HAVE produced.\n' >&2
 fi
-exit 1
+
+if [ "$NAV_DRIFT" -eq 1 ]; then
+  printf '%s\n' '----- wiki/mkdocs.yml drift (committed -> fresh) -----' >&2
+  printf 'STALE: %s\n' "$ROOT/wiki/mkdocs.yml" >&2
+  cat "$NAV_DIFF" >&2
+  printf '\n' >&2
+fi
+
+printf 'To regen, run from %s:\n' "$ROOT" >&2
+printf '    bash scripts/wiki/wiki-generate-stubs.sh && bash scripts/wiki/wiki-generate-nav.sh && git add wiki/\n' >&2
+printf 'Then commit the regen and re-run this diagnostic.\n' >&2
+
+exit 2

@@ -1,0 +1,29 @@
+D-RN-1 npm-name collision-check evidence
+Captured at: 2026-05-08T11:17:40Z
+Captured by: M035 P00 T04
+Captured from: orchestrator repo at 4aa5fdd4d2e618253e38d7d3c9edd37f87913d4d
+
+Command 1: npm view @build-fractal/orchestrator
+Outcome:
+  npm error code E404
+  npm error 404 Not Found - GET https://registry.npmjs.org/@build-fractal%2forchestrator - Not found
+  npm error 404
+Interpretation: AVAILABLE (404 means no published package; scope @build-fractal can be claimed at publish time)
+
+Command 2: npm view orchestrator
+Outcome:
+  orchestrator@0.3.8 | MIT | deps: 3 | versions: 18
+  A module for sequencing and executing tasks and dependencies in maximum concurrency
+Interpretation: TAKEN (existing published package; unscoped is not an option)
+
+Resolution: D-RN-1 = @build-fractal/orchestrator (RENAME-PLAN.md default fallback when unscoped is taken; user-confirmed at discuss-step 2026-05-07).
+
+Downstream binding:
+- D-RN-2 GitHub repo basename: Build-Fractal/orchestrator (RENAME-PLAN match-npm-scope rule).
+- D-RN-4 Homebrew tap: build-fractal/orchestrator (RENAME-PLAN single-formula tap default).
+- C7 npm scope token resolution: @build-fractal/orchestrator (lands in P02 plan-phase package.json authoring).
+
+Operator action items at P01.5:
+- Update CLAUDE.md, README.md, package.json (when authored at P02) to reflect @build-fractal/orchestrator and Build-Fractal/orchestrator forms.
+- Tag v0.9.X-final-spec-kit-name immediately before P01.5 rename commits land (D-RN-7).
+- Migrate ~/.claude/projects/-Users-brettkellgren-Sites-spec-kit-orchestrator/ -> -Sites-orchestrator/ (D-RN-6).

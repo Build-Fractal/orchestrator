@@ -15,7 +15,6 @@ title: "M028 — Autonomous Hardening v3"
 
 ## Contents
 
-- [M028 — Validation Pass; Mark-Complete Gate Pending](continue.md)
 - [M028-CONTEXT](M028-CONTEXT.md)
 - [M028 Evaluation](M028-EVALUATION.md)
 - [M028-ROADMAP](M028-ROADMAP.md)

@@ -15,7 +15,6 @@ title: "M018 — Context Compression Layer"
 
 ## Contents
 
-- [1. Commit M018 phase work (split per-phase to match recent history) ...](continue.md)
 - [M018-CONTEXT](M018-CONTEXT.md)
 - [M018 Evaluation](M018-EVALUATION.md)
 - [M018-ROADMAP](M018-ROADMAP.md)

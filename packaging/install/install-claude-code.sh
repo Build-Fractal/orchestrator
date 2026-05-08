@@ -482,6 +482,24 @@ else
   } > "$meta_file"
 fi
 
+# --- 4.4.5 Managed .gitignore block (M035 P00 T02, FR-6 / SC-6) ---
+# Append/replace the orchestrator-managed marker block in
+# <PROJECT_DIR>/.gitignore covering installer-owned sidecars (currently only
+# .orchestrator/install-meta.txt). Idempotent: re-runs leave exactly one
+# block. Skipped on --uninstall and --repair (those paths short-circuit
+# before this stage). Helper is identical across all three installers.
+if [ "$DRY_RUN" = "1" ]; then
+  bash "$REPO_ROOT/scripts/lifecycle/emit-managed-gitignore.sh" --project-dir "$PROJECT_DIR" --dry-run
+  _emit_rc=$?
+else
+  bash "$REPO_ROOT/scripts/lifecycle/emit-managed-gitignore.sh" --project-dir "$PROJECT_DIR"
+  _emit_rc=$?
+fi
+if [ "$_emit_rc" -ne 0 ]; then
+  echo "FAIL: emit-managed-gitignore.sh exited $_emit_rc" >&2
+  exit "$_emit_rc"
+fi
+
 # --- 4.5 Stage runtime payload via project_assets: manifest schema (FR-2 + FR-3 + FR-4 + FR-22) ---
 # The pre-M032 hardcoded loop is fully replaced by the project_assets:
 # schema in packaging/bundle/manifest.yml. Each tuple from
@@ -498,12 +516,36 @@ project_assets_targets=""
 
 # First pass: collect the project-assets target list (needed by collision check
 # for the bootstrapping oracle's "in the project_assets target list" check).
+#
+# M035 P00 T01: bash-3.2 exit-status capture. Process-substitution-fed
+# `while read` loops (`done < <(bash ...)`) silently mask the producer's
+# non-zero exit on macOS bash 3.2, so a malformed manifest or a missing
+# producer is invisible to the installer. We write the producer's stdout to
+# a temp file, capture rc explicitly, then iterate the temp file.
+_collect_tmp="$(mktemp -t orch-install-collect.XXXXXX)"
+bash "$REPO_ROOT/scripts/lifecycle/read-project-assets.sh" "$REPO_ROOT/packaging/bundle/" > "$_collect_tmp"
+_producer_rc=$?
+if [ "$_producer_rc" -ne 0 ]; then
+  rm -f "$_collect_tmp"
+  echo "FAIL: read-project-assets.sh exited $_producer_rc (collect pass)" >&2
+  exit 1
+fi
 while IFS= read -r tuple; do
   tgt=$(printf '%s\n' "$tuple" | awk -F'\t' '{for(i=1;i<=NF;i++){if($i ~ /^target=/){sub(/^target=/, "", $i); print $i}}}')
   project_assets_targets="${project_assets_targets}${tgt}\n"
-done < <(bash "$REPO_ROOT/scripts/lifecycle/read-project-assets.sh" "$REPO_ROOT/packaging/bundle/")
+done < "$_collect_tmp"
+rm -f "$_collect_tmp"
 
 # Second pass: dispatch each tuple through collision check + mode handler.
+_dispatch_tmp="$(mktemp -t orch-install-dispatch.XXXXXX)"
+bash "$REPO_ROOT/scripts/lifecycle/read-project-assets.sh" "$REPO_ROOT/packaging/bundle/" > "$_dispatch_tmp"
+_producer_rc=$?
+if [ "$_producer_rc" -ne 0 ]; then
+  rm -f "$_dispatch_tmp"
+  echo "FAIL: read-project-assets.sh exited $_producer_rc (dispatch pass)" >&2
+  exit 1
+fi
+_inner_rc=0
 while IFS= read -r tuple; do
   src_rel=$(printf '%s\n' "$tuple" | awk -F'\t' '{for(i=1;i<=NF;i++){if($i ~ /^source=/){sub(/^source=/, "", $i); print $i}}}')
   tgt_rel=$(printf '%s\n' "$tuple" | awk -F'\t' '{for(i=1;i<=NF;i++){if($i ~ /^target=/){sub(/^target=/, "", $i); print $i}}}')
@@ -550,21 +592,37 @@ while IFS= read -r tuple; do
     bash "$REPO_ROOT/scripts/lifecycle/install-asset-mode.sh" \
       "$src_abs" "$dst_abs" "$mode_val" "$PROJECT_DIR"
     handler_rc=$?
+    _inner_step_rc=$handler_rc
     if [ "$handler_rc" -ne 0 ]; then
       # FR-3 fail-closed propagation (e.g. M032_FORCE_WINDOWS=1, exit 3
       # for POSIX-only-in-v1; exit 2 for invalid mode).
       echo "FAIL: install-asset-mode.sh exited $handler_rc for $src_rel ($mode_val)" >&2
+      rm -f "$_dispatch_tmp"
       exit "$handler_rc"
     fi
     cnt=$(find "$src_abs" -type f | wc -l | tr -d ' ')
     runtime_staged=$((runtime_staged + cnt))
   fi
-done < <(bash "$REPO_ROOT/scripts/lifecycle/read-project-assets.sh" "$REPO_ROOT/packaging/bundle/")
+  if [ "${_inner_step_rc:-0}" -ne 0 ]; then _inner_rc=$_inner_step_rc; fi
+done < "$_dispatch_tmp"
+rm -f "$_dispatch_tmp"
+if [ "$_inner_rc" -ne 0 ]; then
+  echo "FAIL: dispatch pass had inner failure rc=$_inner_rc" >&2
+  exit "$_inner_rc"
+fi
 
 # FR-4: write installed-files.txt with per-asset mode: field.
 if [ "$DRY_RUN" = "0" ]; then
   mkdir -p "$(dirname "$manifest_file")"
   : > "$manifest_file"
+  _manifest_tmp="$(mktemp -t orch-install-manifest.XXXXXX)"
+  bash "$REPO_ROOT/scripts/lifecycle/read-project-assets.sh" "$REPO_ROOT/packaging/bundle/" > "$_manifest_tmp"
+  _producer_rc=$?
+  if [ "$_producer_rc" -ne 0 ]; then
+    rm -f "$_manifest_tmp"
+    echo "FAIL: read-project-assets.sh exited $_producer_rc (manifest pass)" >&2
+    exit 1
+  fi
   while IFS= read -r tuple; do
     tgt_rel=$(printf '%s\n' "$tuple" | awk -F'\t' '{for(i=1;i<=NF;i++){if($i ~ /^target=/){sub(/^target=/, "", $i); print $i}}}')
     mode_val=$(printf '%s\n' "$tuple" | awk -F'\t' '{for(i=1;i<=NF;i++){if($i ~ /^mode=/){sub(/^mode=/, "", $i); print $i}}}')
@@ -573,7 +631,8 @@ if [ "$DRY_RUN" = "0" ]; then
       ( cd "$PROJECT_DIR" && find "${tgt_rel%/}" -type f ) | \
         awk -v m="$mode_val" '{printf "%s\tmode:%s\n", $0, m}' >> "$manifest_file"
     fi
-  done < <(bash "$REPO_ROOT/scripts/lifecycle/read-project-assets.sh" "$REPO_ROOT/packaging/bundle/")
+  done < "$_manifest_tmp"
+  rm -f "$_manifest_tmp"
   echo "staged=$runtime_staged files manifest=$manifest_file"
 fi
 

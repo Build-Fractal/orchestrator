@@ -15,7 +15,6 @@ title: "M037 — FR-12..FR-17 — Deferred to Post-Launch"
 
 ## Contents
 
-- [M037 — Closed](continue.md)
 - [M037 — Acceptance Evidence Ledger](M037-ACCEPTANCE-EVIDENCE.md)
 - [M037-CONTEXT](M037-CONTEXT.md)
 - [M037 Evaluation](M037-EVALUATION.md)

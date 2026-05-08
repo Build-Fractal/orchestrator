@@ -15,7 +15,6 @@ title: "M030 — close → M031 → M032 → M033 → M029 → M035 → launch"
 
 ## Contents
 
-- [Continue: M030 — context rotation between P05 and P06](continue.md)
 - [M030 Acceptance Evidence](M030-ACCEPTANCE-EVIDENCE.md)
 - [M030-CONTEXT](M030-CONTEXT.md)
 - [M030 Evaluation](M030-EVALUATION.md)

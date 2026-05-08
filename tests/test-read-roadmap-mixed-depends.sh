@@ -113,6 +113,60 @@ else
   fail "malformed phase token should block scheduling (got active='$active2')"
 fi
 
+# --- Test 3: Decimal phase ID in Depends: (P01.5) → active-phase resolves ---
+# Decimal phase IDs (P01.5, P09.1) are a roadmap-author convention for
+# post-roadmap insertions. The phase-ID extraction regex (line 117)
+# already accepts them; the dep-token validation regex must mirror that.
+# Surfaced 2026-05-08 against M035 P02 (Depends: P01.5) blocking auto.
+RM3="$TMPDIR_FX/roadmap-decimal.md"
+cat >"$RM3" <<'ROADMAP'
+---
+milestone: M999
+feature_ref: "999-decimal-phase"
+feature_spec: "specs/999-decimal-phase/spec.md"
+vision: "Decimal phase ID in Depends: does not block scheduling"
+tier: C
+created_at: "2026-05-08T00:00:00Z"
+updated_at: "2026-05-08T00:00:00Z"
+---
+
+## Phases
+
+- [x] **P01**: Foundation — "P01 demo"
+  - Risk: low
+  - Depends: none
+  - Boundary Map:
+    - Produces: foundation
+    - Consumes: none
+
+- [x] **P01.5**: Insertion — "P01.5 demo"
+  - Risk: low
+  - Depends: P01
+  - Boundary Map:
+    - Produces: insertion
+    - Consumes: P01/foundation
+
+- [ ] **P02**: Decimal Dep — "P02 demo"
+  - Risk: low
+  - Depends: P01.5
+  - Boundary Map:
+    - Produces: feature
+    - Consumes: P01.5/insertion
+ROADMAP
+
+active3="$(bash "$READ_ROADMAP" "$RM3" active-phase 2>/dev/null)" || true
+stderr3="$(bash "$READ_ROADMAP" "$RM3" active-phase 2>&1 >/dev/null)" || true
+if [[ "$active3" = "P02" ]]; then
+  pass "decimal phase ID (P01.5) in Depends: resolves; active-phase=P02"
+else
+  fail "active-phase should be P02 with decimal dep (got: '$active3', stderr: $stderr3)"
+fi
+if printf '%s\n' "$stderr3" | grep -qE "unparseable dependency token"; then
+  fail "decimal phase ID should not emit unparseable warning (stderr: $stderr3)"
+else
+  pass "decimal phase ID emits no parser warning"
+fi
+
 echo "----"
 echo "PASS: $PASS_COUNT  FAIL: $FAIL_COUNT"
 [[ "$FAIL_COUNT" -eq 0 ]]

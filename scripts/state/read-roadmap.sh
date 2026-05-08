@@ -278,12 +278,15 @@ case "$QUERY" in
           # the load-bearing dep.
           #
           # Discriminator: tokens that begin with `P<digit>` but don't match
-          # `^P[0-9]+$` (e.g. `Pfoo`, `P-1`, `P3a`) are still parser-bug
-          # candidates — keep the load-bearing warn+refuse path for those.
-          # Tokens with any other shape (`BG-002`, prose words, residue from
-          # a `Blocked by:` line that leaked into a `Depends:` parse) are
-          # silently skipped per the documented convention.
-          if [[ ! "$dep" =~ ^P[0-9]+$ ]]; then
+          # `^P[0-9]+(\.[0-9]+)?$` (e.g. `Pfoo`, `P-1`, `P3a`) are still
+          # parser-bug candidates — keep the load-bearing warn+refuse path
+          # for those. Decimal phase IDs (`P01.5`, `P09.1`) are valid per
+          # the phase-ID extraction regex (line 117) and the roadmap-author
+          # convention documented above. Tokens with any other shape
+          # (`BG-002`, prose words, residue from a `Blocked by:` line that
+          # leaked into a `Depends:` parse) are silently skipped per the
+          # documented convention.
+          if [[ ! "$dep" =~ ^P[0-9]+(\.[0-9]+)?$ ]]; then
             case "$dep" in
               P[0-9]*)
                 echo "read-roadmap.sh: phase $pid has unparseable dependency token '$dep' (full Depends: '$pdepends')" >&2

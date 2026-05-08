@@ -1,6 +1,6 @@
 # UTILIZATION.iteration_1.md -- Spec-Kit Revised Position
 
-**Spec under review**: `specs/001-speckit-orchestrator/spec.md`
+**Spec under review**: `specs/001-orchestrator/spec.md`
 **Reviewer perspective**: spec-kit extension system (the framework the orchestrator extends)
 **Iteration**: 1 (post cross-review)
 **Date**: 2026-03-18

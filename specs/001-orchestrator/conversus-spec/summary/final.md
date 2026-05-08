@@ -1,7 +1,7 @@
 # Conversus Final Summary: speckit-orchestrator Spec Review
 
 **Date**: 2026-03-19
-**Spec**: `specs/001-speckit-orchestrator/spec.md`
+**Spec**: `specs/001-orchestrator/spec.md`
 **Process**: 3 tool perspectives (APM, spec-kit, gh-aw) x 3 iterations
 
 ---

@@ -1,6 +1,6 @@
 # UTILIZATION.md -- Spec-Kit Capability Review
 
-**Spec under review**: `specs/001-speckit-orchestrator/spec.md`
+**Spec under review**: `specs/001-orchestrator/spec.md`
 **Reviewer perspective**: spec-kit extension system (the framework the orchestrator extends)
 **Date**: 2026-03-18
 

@@ -307,7 +307,7 @@ finalized_at: null  # set when finalized
 schema_version: 1
 tier: C
 feature_ref: "001-speckit-orchestrator"
-feature_spec: "specs/001-speckit-orchestrator/spec.md"
+feature_spec: "specs/001-orchestrator/spec.md"
 classified_at: "2026-03-19T10:00:00Z"
 override: false
 ---

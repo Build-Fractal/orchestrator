@@ -1,7 +1,7 @@
 # APM Utilization Review: Speckit-Orchestrator Spec
 
 **Reviewer perspective**: APM (Agent Package Manager)
-**Spec under review**: `specs/001-speckit-orchestrator/spec.md`
+**Spec under review**: `specs/001-orchestrator/spec.md`
 **Date**: 2026-03-18
 
 ---

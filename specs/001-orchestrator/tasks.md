@@ -1,6 +1,6 @@
 # Tasks: Speckit-Orchestrator Extension
 
-**Input**: Design documents from `specs/001-speckit-orchestrator/`
+**Input**: Design documents from `specs/001-orchestrator/`
 **Prerequisites**: plan.md (required), spec.md (required), data-model.md, contracts/, research.md, quickstart.md
 **Branch**: `001-speckit-orchestrator`
 

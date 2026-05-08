@@ -85,7 +85,7 @@ All orchestrator runtime state lives at `.orchestrator/` in this repo. The const
 - `docs/` — 5 user guides (getting started, recipe authoring, hook development, knowledge management, migrating from spec-kit)
 - `packaging/` — installable bundle + per-runtime installers
 - `tests/` — 7 test suites (334+ assertions)
-- `specs/001-speckit-orchestrator/spec.md` — original feature specification
+- `specs/001-orchestrator/spec.md` — original feature specification
 - `.orchestrator/memory/constitution.md` — 7 governing principles
 - `.orchestrator/KNOWLEDGE.md` — consolidated patterns, decisions, lessons
 - `.orchestrator/milestone-summary.md` — build summary + extension guide

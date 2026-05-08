@@ -2,7 +2,7 @@
 
 **Reviewer perspective**: GitHub Agentic Workflows (gh-aw) -- Go CLI extension for GitHub Actions enabling autonomous agent dispatch in CI.
 
-**Spec reviewed**: `/spec-kit-orc/specs/001-speckit-orchestrator/spec.md`
+**Spec reviewed**: `/spec-kit-orc/specs/001-orchestrator/spec.md`
 
 **Date**: 2026-03-18
 

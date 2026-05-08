@@ -52,7 +52,7 @@ Every file write is idempotent (FR-066): writing a file that already exists is a
 ---
 milestone: M001                              # Milestone ID
 feature_ref: "001-speckit-orchestrator"       # Originating feature branch
-feature_spec: "specs/001-speckit-orchestrator/spec.md"  # Path to spec
+feature_spec: "specs/001-orchestrator/spec.md"  # Path to spec
 vision: "Core orchestration engine..."        # One-sentence vision
 tier: C                                      # A, B, or C
 created_at: "2026-03-19T10:00:00Z"           # ISO 8601

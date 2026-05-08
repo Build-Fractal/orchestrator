@@ -65,7 +65,7 @@ The speckit-orchestrator plan presents a well-structured, file-based state machi
 
 ## Actionable Recommendations
 
-1. **[P1] Design the gh-aw adapter's dispatch mode explicitly.** Decide between `dispatch-workflow` (async, each task is an independent workflow run) and `call-workflow` (sync, tasks run within the orchestrator's workflow). For Tier C autonomous mode with 70+ tasks, `dispatch-workflow` is the only viable option because `call-workflow` shares timeout budgets. Document this in the runtime-adapter contract under `specs/001-speckit-orchestrator/contracts/runtime-adapter.md`. Reference: orchestration.md lines 43-47.
+1. **[P1] Design the gh-aw adapter's dispatch mode explicitly.** Decide between `dispatch-workflow` (async, each task is an independent workflow run) and `call-workflow` (sync, tasks run within the orchestrator's workflow). For Tier C autonomous mode with 70+ tasks, `dispatch-workflow` is the only viable option because `call-workflow` shares timeout budgets. Document this in the runtime-adapter contract under `specs/001-orchestrator/contracts/runtime-adapter.md`. Reference: orchestration.md lines 43-47.
 
 2. **[P1] Replace PID-based liveness with run-ID-based liveness in the CI adapter.** Store `github.run_id` and `github.run_attempt` instead of `pid` in the lock file when running in gh-aw. Use `gh api /repos/{owner}/{repo}/actions/runs/{run_id}` to check if the run is still `in_progress` or `queued`. This is the only reliable liveness signal on ephemeral runners. Reference: data-model.md lines 237-249.
 

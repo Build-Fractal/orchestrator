@@ -1,7 +1,7 @@
 ---
 milestone: M001
 feature_ref: "001-speckit-orchestrator"
-feature_spec: "specs/001-speckit-orchestrator/spec.md"
+feature_spec: "specs/001-orchestrator/spec.md"
 vision: "Core orchestration engine with state machine, dispatch, and verification"
 tier: C
 created_at: "2026-03-19T10:00:00Z"

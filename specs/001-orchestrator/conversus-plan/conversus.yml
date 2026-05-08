@@ -1,12 +1,12 @@
 mode: cooperative
-output: spec-kit-orc/specs/001-speckit-orchestrator/conversus-plan/
+output: spec-kit-orc/specs/001-orchestrator/conversus-plan/
 iterations: 1
 
 target:
-  - spec-kit-orc/specs/001-speckit-orchestrator/data-model.md
-  - spec-kit-orc/specs/001-speckit-orchestrator/plan.md
-  - spec-kit-orc/specs/001-speckit-orchestrator/quickstart.md
-  - spec-kit-orc/specs/001-speckit-orchestrator/research.md
+  - spec-kit-orc/specs/001-orchestrator/data-model.md
+  - spec-kit-orc/specs/001-orchestrator/plan.md
+  - spec-kit-orc/specs/001-orchestrator/quickstart.md
+  - spec-kit-orc/specs/001-orchestrator/research.md
 
 agents:
   - name: apm

@@ -33,7 +33,7 @@ All orchestrator state is persisted to disk under `.specify/orchestrator/`. This
 schema_version: 1
 milestone: M001
 feature_ref: "001-speckit-orchestrator"
-feature_spec: "specs/001-speckit-orchestrator/spec.md"
+feature_spec: "specs/001-orchestrator/spec.md"
 vision: "Core orchestration engine with state machine, dispatch, and verification"
 tier: C
 success_criteria:
@@ -86,7 +86,7 @@ updated_at: "2026-03-19T10:00:00Z"
 schema_version: 1
 tier: C
 feature_ref: "001-speckit-orchestrator"
-feature_spec: "specs/001-speckit-orchestrator/spec.md"
+feature_spec: "specs/001-orchestrator/spec.md"
 classified_at: "2026-03-19T10:00:00Z"
 override: false
 ---

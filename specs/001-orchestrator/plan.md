@@ -1,7 +1,7 @@
 # Implementation Plan: Speckit-Orchestrator Extension
 
 **Branch**: `001-speckit-orchestrator` | **Date**: 2026-03-19 | **Spec**: [spec.md](spec.md)
-**Input**: Feature specification from `specs/001-speckit-orchestrator/spec.md`
+**Input**: Feature specification from `specs/001-orchestrator/spec.md`
 
 ## Summary
 
@@ -50,7 +50,7 @@ Build a spec-kit extension that adds autonomous multi-phase orchestration to spe
 ### Documentation (this feature)
 
 ```text
-specs/001-speckit-orchestrator/
+specs/001-orchestrator/
 ├── plan.md              # This file
 ├── research.md          # Pre-implementation: resolved technical decisions
 ├── data-model.md        # Phase 3: entity model and state file schemas

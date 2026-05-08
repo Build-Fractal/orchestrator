@@ -6,6 +6,31 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This pr
 
 ## [Unreleased]
 
+### Added (PBJ-2026-05-08 — Spikes registry scaffold + constitution title version-tracking)
+
+- Wiki tooling now ships a **Spikes registry** scaffold. When a project carries
+  `.orchestrator/spikes-registry.md`, `wiki-scan-sources.sh` emits a
+  `top:spikes` record, `wiki-generate-stubs.sh` projects it onto
+  `wiki/docs/spikes/index.md` (folder + index so per-spike subpages can land
+  later without a nav refactor), and `wiki-generate-nav.sh` adds a top-level
+  **Spikes** nav leaf alongside Decisions / Knowledge. Additive — projects
+  without the file see zero behavior change.
+- `wiki-init.sh` seeds an empty `.orchestrator/spikes-registry.md` template on
+  first run when the file is absent. Idempotent (never overwrites). Skipped
+  in self-application mode (the orchestrator source repo doesn't dogfood a
+  spikes registry against itself). The seeded template carries the row schema
+  (ID / Name / Status / Owner / Parent / Scope+exit-criteria / Related DRs /
+  Notes), the status legend, and an optional per-spike subsection convention
+  for spikes whose Notes need more than a single table row.
+- `wiki-scan-sources.sh::extract_title` now composes H1 with the body's
+  `**Version**: vX.Y` marker. When the body version is present and the H1
+  carries a different `vN.M` token, the body version replaces the H1's
+  version segment (the body is the canonical source of truth per the
+  Constitution convention). When the H1 has no version token, the body
+  version is appended. Resolves the PBJ-observed "constitution wiki title
+  is stale after version bump" case, where the H1 fallback could lag the
+  body's `**Version**:` marker. Idempotent against in-sync H1+body pairs.
+
 ### Changed (PBJ-2026-05-07 — wiki forward-roadmap consolidation)
 
 - Wiki nav consolidates `.orchestrator/milestone-summary.md` (forward roadmap) into `wiki/docs/milestones/index.md` when both the file AND at least one milestone:* record exist. The redundant top-level **Milestone Summary** nav leaf is suppressed; its content now leads the **Milestones** section index page. Greenfield projects with only `milestone-summary.md` (no `milestones/` tree yet) keep the existing top-level leaf so the file stays nav-reachable. Projects with only the `milestones/` tree (no forward roadmap) see no behavior change. Operators wanting the old two-section shape can delete `.orchestrator/milestone-summary.md` and rely on per-milestone `M###-CONTEXT.md` / `M###-ROADMAP.md` for forward planning, but the consolidation is the IA-correct default.

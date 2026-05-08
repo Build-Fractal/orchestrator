@@ -9,6 +9,7 @@
 #   top:decisions          (single .orchestrator/DECISIONS.md)
 #   top:knowledge
 #   top:milestone-summary
+#   top:spikes             (single .orchestrator/spikes-registry.md — PBJ 2026-05-08)
 #   spec:<basename>        (.orchestrator/spec/*.md)
 #   decisions-extra:<base> (.orchestrator/decisions/*.md siblings)
 #   milestone:M###
@@ -203,6 +204,7 @@ INCLUDE_FEEDBACK_RESOLVED=$(resolve_include_feedback)
 extract_title() {
   _p="$1"
   _t=""
+  _body_ver=""
   if [ -f "$_p" ]; then
     _t=$(awk '
       BEGIN { state="pre" }
@@ -220,6 +222,48 @@ extract_title() {
     ' "$_p" 2>/dev/null)
     if [ -z "$_t" ]; then
       _t=$(grep -m 1 '^# ' "$_p" 2>/dev/null | sed 's/^# //' | head -n 1)
+    fi
+    # PBJ-2026-05-08: scan the first ~30 body lines for a `**Version**: vX.Y`
+    # marker (the Constitution convention). When present AND the H1 we already
+    # captured does not already contain that version substring, append it so
+    # the rendered nav title stays in sync with constitution version bumps
+    # even if the H1's trailing version text drifts. Idempotent: returns the
+    # body version verbatim (e.g., `v0.3 (amended ...)` collapses to the
+    # leading `vX.Y` token).
+    _body_ver=$(awk '
+      BEGIN { lines=0 }
+      /^---$/ && lines == 0 { fm=(fm?0:1); next }
+      fm == 1 { next }
+      { lines++ }
+      lines > 30 { exit }
+      match($0, /^\*\*Version\*\*[[:space:]]*:[[:space:]]*v[0-9][0-9.]*[A-Za-z0-9.-]*/) {
+        v=substr($0, RSTART, RLENGTH)
+        sub(/^\*\*Version\*\*[[:space:]]*:[[:space:]]*/, "", v)
+        print v
+        exit
+      }
+    ' "$_p" 2>/dev/null)
+    if [ -n "$_t" ] && [ -n "$_body_ver" ]; then
+      case "$_t" in
+        *"$_body_ver"*)
+          # H1 already carries the canonical body version — pass through.
+          :
+          ;;
+        *)
+          # H1 carries either no version token or a stale one. Replace any
+          # `vN.M[.K]` token in the H1 with the body's authoritative version;
+          # if no version token is present, append the body version. This
+          # keeps the rendered nav title in lockstep with the body's
+          # `**Version**:` line, which is the canonical source-of-truth per
+          # the Constitution convention (see PBJ-2026-05-08 patch handoff).
+          _t_new=$(printf '%s' "$_t" | sed -E "s/v[0-9]+(\\.[0-9]+)+/$_body_ver/")
+          if [ "$_t_new" = "$_t" ]; then
+            _t="$_t $_body_ver"
+          else
+            _t="$_t_new"
+          fi
+          ;;
+      esac
     fi
   fi
   if [ -z "$_t" ]; then
@@ -392,6 +436,16 @@ fi
 
 if [ -f "$ORCH/milestone-summary.md" ]; then
   emit_record "top:milestone-summary" "milestone-summary.md" "$ORCH/milestone-summary.md"
+fi
+
+# PBJ-2026-05-08: spikes registry. Single-file canonical source under
+# `.orchestrator/spikes-registry.md` (operator-authored), projected to
+# `wiki/docs/spikes/index.md` by wiki-generate-stubs.sh and given a top-level
+# `Spikes` nav leaf by wiki-generate-nav.sh. Additive — no behavior change for
+# projects without the file. wiki-init.sh seeds an empty template on first run
+# (idempotent).
+if [ -f "$ORCH/spikes-registry.md" ]; then
+  emit_record "top:spikes" "spikes-registry.md" "$ORCH/spikes-registry.md"
 fi
 
 # ---- scan: milestones -------------------------------------------------------

@@ -177,6 +177,7 @@ map_record_to_stub_rel() {
     top:decisions)         printf 'decisions.md' ;;
     top:knowledge)         printf 'knowledge.md' ;;
     top:milestone-summary) printf 'milestone-summary.md' ;;
+    top:spikes)            printf 'spikes/index.md' ;;
     milestone:*)
       # orch-rel is of form "milestones/M###/...". Mirror directly.
       printf '%s' "$_rel"
@@ -206,7 +207,7 @@ map_record_to_stub_rel() {
 # fragment-only hrefs by prepending the source-relative path
 # (e.g., `#foo` → `../../.orchestrator#foo`), producing silent 404s.
 # Singleton top-level docs (constitution, decisions, knowledge,
-# milestone-summary, glossary, knowledge-flat, proposals) opt out.
+# milestone-summary, spikes, glossary, knowledge-flat, proposals) opt out.
 write_stub() {
   _target="$1"
   _canonical="$2"

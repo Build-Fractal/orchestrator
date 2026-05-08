@@ -644,6 +644,64 @@ elif [ -f "$GLOSSARY_PROJECT_SRC" ] && glossary_is_empty_stub "$GLOSSARY_TARGET"
   echo "wiki-init: replaced empty glossary stub at $GLOSSARY_TARGET with include-wrapper (source: .orchestrator/knowledge/glossary.md)"
 fi
 
+# PBJ-2026-05-08: Spikes registry template. Seeded into the consumer project's
+# .orchestrator/spikes-registry.md on first wiki-init when absent. Operators
+# author the registry; the wiki-generate-stubs.sh top:spikes routing projects
+# it onto wiki/docs/spikes/index.md and wiki-generate-nav.sh emits a Spikes
+# top-level nav leaf. Idempotent — never overwrites an existing file. Skipped
+# in self-application mode (the orchestrator source repo doesn't dogfood a
+# spikes registry against itself).
+SPIKES_TARGET="$PROJECT_DIR/.orchestrator/spikes-registry.md"
+if [ "$SELF_APPLICATION" -eq 0 ] && [ ! -f "$SPIKES_TARGET" ]; then
+  mkdir -p "$(dirname "$SPIKES_TARGET")"
+  cat > "$SPIKES_TARGET" <<'SPIKESEOF'
+# Spikes Registry
+
+Discovery / unblocking spikes for this project. A spike is a time-boxed
+investigation whose deliverable is **clarity** (a decision, a verified
+constraint, a discarded option) rather than shipped product code. Once a
+spike's exit criteria are met, file the resulting decisions/learnings into
+`.orchestrator/DECISIONS.md` or the relevant milestone artifact and mark the
+spike `closed`.
+
+This file is operator-authored. The orchestrator's wiki tooling projects it
+onto `wiki/docs/spikes/index.md` so SMEs can review the registry alongside
+the rest of the project's knowledge graph.
+
+## Status legend
+
+| Status | Meaning |
+|--------|---------|
+| `active` | Spike is currently being worked. |
+| `queued` | Spike is named and scoped but not yet staffed. |
+| `named-not-staffed` | Spike is acknowledged in planning but no owner yet. |
+| `closed` | Exit criteria met; learnings filed. |
+| `blocked` | Spike paused on an external dependency (note the dependency). |
+
+## Registry
+
+| ID | Name | Status | Owner | Parent | Scope / exit criteria | Related DRs / gates | Notes |
+|----|------|--------|-------|--------|-----------------------|---------------------|-------|
+| `SPIKE-EXAMPLE-001` | Example: replace this row | `closed` | TBD | — | One-line statement of what closing the spike looks like (decision, verified constraint, discarded option). | DR-EXAMPLE-001 | Free-form notes — multi-path spikes can spell out each path here, or break out subsections below the table. |
+
+<!-- Optional per-spike subsections for spikes whose Notes need more than one
+     row. Pattern:
+
+## SPIKE-XYZ-NNN — Name
+
+**Status**: active · **Owner**: TBD · **Parent**: M### · **Opened**: YYYY-MM-DD
+
+**Scope** — one paragraph.
+
+**Path A** — first investigation track.
+
+**Path B** — second investigation track (if any).
+
+**Exit criteria** — bulleted list of what closing looks like. -->
+SPIKESEOF
+  echo "wiki-init: seeded spikes registry template at $SPIKES_TARGET (operator-authored — edit to populate)"
+fi
+
 # M037 P03 round-4 — framework-managed wiki/overrides/ refresh.
 #
 # Round-3.5 introduced wiki/overrides/main.html (P3.1 breadcrumb shim) and

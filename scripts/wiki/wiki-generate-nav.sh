@@ -435,6 +435,7 @@ HAS_KNOWLEDGE_FLAT=0     # M032/P04/T01 FR-19
 HAS_SPEC=0               # PBJ-2026-05-07 ask 1
 HAS_DECISIONS_EXTRA=0    # PBJ-2026-05-07 ask 2
 HAS_FEEDBACK=0           # PBJ-2026-05-08 — feedback nav arm (Item E)
+HAS_SPIKES=0             # PBJ-2026-05-08 — spikes registry (top:spikes)
 
 # Per-extra-dir presence is tracked via a /tmp accumulator because the dirname
 # slot is dynamic. Each line "extra:<dn>" appears once per distinct dirname.
@@ -465,6 +466,7 @@ while IFS='|' read -r CAT REL TITLE; do
     top:decisions)         HAS_DECISIONS=1 ;;
     top:knowledge)         HAS_KNOWLEDGE=1 ;;
     top:milestone-summary) HAS_MILSUM=1 ;;
+    top:spikes)            HAS_SPIKES=1 ;;
     proposals:*)           HAS_PROPOSALS=1 ;;
     knowledge-flat)        HAS_KNOWLEDGE_FLAT=1 ;;
     spec:*)                HAS_SPEC=1 ;;
@@ -597,6 +599,14 @@ if [ "$HAS_DECISIONS" -eq 1 ]; then
 fi
 if [ "$HAS_KNOWLEDGE" -eq 1 ]; then
   emit_leaf 1 "Knowledge" "knowledge.md"
+fi
+# PBJ-2026-05-08: Spikes registry leaf. Emitted after Decisions/Knowledge
+# (project-knowledge tier) and before milestone-grain nav so the registry
+# reads as same-tier project state. Stub lives at wiki/docs/spikes/index.md
+# (folder + index per `top:spikes` mapping in wiki-generate-stubs.sh) so
+# operators can add per-spike subpages later without a second nav refactor.
+if [ "$HAS_SPIKES" -eq 1 ]; then
+  emit_leaf 1 "Spikes" "spikes/index.md"
 fi
 
 # ---- Knowledge Entries subtree (M012/P02/T02) ------------------------------

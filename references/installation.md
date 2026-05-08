@@ -304,6 +304,22 @@ The constraints:
 
 In practice: symlink mode is for the orchestrator-developer's own machine. Adopters should use copy mode (the default).
 
+### Rollback-and-symlink-mode-interaction
+
+`orchestrator:update --rollback` (FR-12, M035 P05) reverts a copy-mode install to the previous version's manifest byte-for-byte using the `.orchestrator/.previous-version` rollback marker.
+
+In symlink mode the runtime tree is a set of symlinks into the orchestrator source repo; the runtime is always at HEAD by construction. There is no "previous version" of a symlink to restore — the symlink resolves to whatever the source repo currently contains.
+
+Therefore `--rollback` is unsupported in symlink mode. P05 will emit the documented advisory:
+
+```
+rollback not available for symlink-mode installs -- symlink-mode consumers
+are always at HEAD; to revert, run `git checkout <prior-sha>` in the
+orchestrator source repo.
+```
+
+and exit non-zero. This constraint is recorded here so P05 plan-phase has the contract on disk; M035 P01 ships no `--rollback` code (the `#Q-G8` resolution).
+
 ## Uninstall
 
 All three installers support `--uninstall`:

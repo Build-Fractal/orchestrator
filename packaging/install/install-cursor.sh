@@ -179,17 +179,39 @@ if [ "$UNINSTALL" = "1" ]; then
 
   manifest_file="$PROJECT_DIR/.orchestrator/installed-files.txt"
   if [ -f "$manifest_file" ]; then
-    while IFS= read -r rel; do
+    # M035/P01/T02: branch on the `mode:` token. symlink-mode entries refer to
+    # a single symlink at <PROJECT_DIR>/<rel> (target inside the orchestrator
+    # source repo); uninstall must remove only the symlink, never the source.
+    # copy-mode entries are regular files (per-file rows); uninstall removes
+    # the staged file as today.
+    while IFS= read -r line; do
+      [ -z "$line" ] && continue
+      rel=$(printf '%s\n' "$line" | awk -F'\t' '{print $1}')
+      mode_tok=$(printf '%s\n' "$line" | awk -F'\t' '{print $2}')
       [ -z "$rel" ] && continue
       f="$PROJECT_DIR/$rel"
-      if [ -f "$f" ]; then
-        if [ "$DRY_RUN" = "1" ]; then
-          echo "would_remove=$f"
-        else
-          rm -f "$f"
-        fi
-        runtime_removed=$((runtime_removed + 1))
-      fi
+      case "$mode_tok" in
+        mode:symlink)
+          if [ -L "$f" ]; then
+            if [ "$DRY_RUN" = "1" ]; then
+              echo "would_remove=$f"
+            else
+              rm -f "$f"
+            fi
+            runtime_removed=$((runtime_removed + 1))
+          fi
+          ;;
+        mode:copy|*)
+          if [ -f "$f" ]; then
+            if [ "$DRY_RUN" = "1" ]; then
+              echo "would_remove=$f"
+            else
+              rm -f "$f"
+            fi
+            runtime_removed=$((runtime_removed + 1))
+          fi
+          ;;
+      esac
     done < "$manifest_file"
     if [ "$DRY_RUN" = "0" ]; then
       for d in scripts templates references commands; do
@@ -477,10 +499,22 @@ if [ "$DRY_RUN" = "0" ]; then
     tgt_rel=$(printf '%s\n' "$tuple" | awk -F'\t' '{for(i=1;i<=NF;i++){if($i ~ /^target=/){sub(/^target=/, "", $i); print $i}}}')
     mode_val=$(printf '%s\n' "$tuple" | awk -F'\t' '{for(i=1;i<=NF;i++){if($i ~ /^mode=/){sub(/^mode=/, "", $i); print $i}}}')
     [ -n "${ASSET_MODE_OVERRIDE:-}" ] && mode_val="$ASSET_MODE_OVERRIDE"
-    if [ -d "$PROJECT_DIR/${tgt_rel%/}" ]; then
-      ( cd "$PROJECT_DIR" && find "${tgt_rel%/}" -type f ) | \
-        awk -v m="$mode_val" '{printf "%s\tmode:%s\n", $0, m}' >> "$manifest_file"
-    fi
+    case "$mode_val" in
+      symlink)
+        # M035/P01/T02: symlink-mode records the symlink path itself, NOT the
+        # files beneath the linked directory. uninstall removes only the
+        # symlink, leaving the orchestrator source repo untouched (CON-1).
+        if [ -L "$PROJECT_DIR/${tgt_rel%/}" ] || [ -e "$PROJECT_DIR/${tgt_rel%/}" ]; then
+          printf '%s\tmode:symlink\n' "${tgt_rel%/}" >> "$manifest_file"
+        fi
+        ;;
+      copy|*)
+        if [ -d "$PROJECT_DIR/${tgt_rel%/}" ]; then
+          ( cd "$PROJECT_DIR" && find "${tgt_rel%/}" -type f ) | \
+            awk -v m="$mode_val" '{printf "%s\tmode:%s\n", $0, m}' >> "$manifest_file"
+        fi
+        ;;
+    esac
   done < "$_manifest_tmp"
   rm -f "$_manifest_tmp"
   echo "staged=$runtime_staged files manifest=$manifest_file"

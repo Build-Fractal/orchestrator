@@ -1,0 +1,5 @@
+commands/migrate.md
+docs/migrating-from-speckit.md
+references/RENAME-PLAN.md
+scripts/verify/m015-p03-helpers/changelog-historical-snapshot.txt
+scripts/state/namespace-aliases.sh

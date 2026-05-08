@@ -396,3 +396,101 @@ Closes Q-15. The +/-20% figure carries from M019/P01 token-estimate library desi
 Re-gating would re-run conversus advocates against an amended spec whose textual surface now answers each landed risk with a structural FR commitment — the most likely outcome is PASS at the cost of additional LLM calls. Skipping it makes P00's mechanical gates the load-bearing proof, which is arguably stronger evidence than another deliberation round (Constitution Principle II — Evidence Before Claims). The original BLOCK was about the spec being incomplete on measurement infrastructure; the amended spec made the missing infrastructure into structural prerequisites, so the spec-completeness concern is resolved by construction.
 
 ---
+
+### D-RN-1 — npm package name `@build-fractal/orchestrator` { #dr-code-029 }
+
+<span class="md-tag md-tag-icon md-tag--decision">DR-CODE-029</span>
+{: .code-chip-row }
+
+- **When**: M035/P01.5 (pre-rename branch open)
+- **Scope**: rename
+- **Choice**: npm publish target is `@build-fractal/orchestrator` (scoped). The unscoped `orchestrator` is taken on npm; collision check ran at M035/P00 (recorded in P00 SUMMARY) and confirmed `@build-fractal/orchestrator` available. Determines repo basename, binary name, and CLI command-cohort prefix downstream (D-RN-2 through D-RN-4).
+- **Revisable**: No — npm v1 tarball publication in P02 bakes the scope forever; revising would mean a deprecated package + forced rename.
+
+Resolved at M035/P00 collision-check; recorded here at P01.5 plan-phase per RENAME-PLAN.md § 2.
+
+---
+
+### D-RN-2 — GitHub repo basename `Build-Fractal/orchestrator` { #dr-code-030 }
+
+<span class="md-tag md-tag-icon md-tag--decision">DR-CODE-030</span>
+{: .code-chip-row }
+
+- **When**: M035/P01.5 (pre-rename branch open)
+- **Scope**: rename
+- **Choice**: GitHub repository renamed off-tree to `Build-Fractal/orchestrator`. Operator action; GitHub auto-redirect handles the legacy URL surface so existing clones / CI references / outbound docs keep resolving. Timing: AFTER the in-tree rename branch lands, BEFORE merge to main, so post-rename HEAD lines up with the new origin name.
+- **Revisable**: Yes (off-tree rename is reversible by renaming back; GitHub redirect persists either direction) until npm publication in P02 bakes the scope.
+
+Off-tree decision; recorded here for archaeology and to anchor the in-tree text references being rewritten in T03.
+
+---
+
+### D-RN-3 — Command-cohort prefix `orchestrator:<cmd>` { #dr-code-031 }
+
+<span class="md-tag md-tag-icon md-tag--decision">DR-CODE-031</span>
+{: .code-chip-row }
+
+- **When**: M035/P01.5 (pre-rename branch open)
+- **Scope**: rename
+- **Choice**: All operator-facing commands use the `orchestrator:<cmd>` cohort prefix (already canonical in `CLAUDE.md` and `commands/*.md`). T06 finishes the 4 remaining operational template surfaces that still carry the legacy `speckit:<cmd>` form. Legacy-form references are preserved verbatim in 5 allowlisted files (`commands/migrate.md`, `docs/migrating-from-speckit.md`, `references/RENAME-PLAN.md`, `scripts/verify/m015-p03-helpers/changelog-historical-snapshot.txt`, `scripts/state/namespace-aliases.sh`) as documented historical reference.
+- **Revisable**: No — operator muscle-memory is already `orchestrator:*`; reverting would invalidate every existing user-facing doc and CLAUDE.md instruction.
+
+Cohort-prefix decision is mostly already-shipped; T06 closes the remaining 4 surfaces and SC-7 acceptance verifier consumes the allowlist authored at T01.
+
+---
+
+### D-RN-4 — Homebrew tap `build-fractal/orchestrator` (single-formula) { #dr-code-032 }
+
+<span class="md-tag md-tag-icon md-tag--decision">DR-CODE-032</span>
+{: .code-chip-row }
+
+- **When**: M035/P01.5 (pre-rename branch open)
+- **Scope**: rename
+- **Choice**: Homebrew tap is `build-fractal/orchestrator` as a single-formula tap (one `Formula/orchestrator.rb` per tap). Single-formula simplifies the M035/P03 tap-publishing plan (one tap repo + one formula path); multi-formula taps are deferred until a second build-fractal tool earns the cost.
+- **Revisable**: Yes — converting a single-formula tap to multi-formula is mechanical (move `orchestrator.rb` under `Formula/` already, add new formulae alongside); shipping single-formula does not foreclose later expansion.
+
+Recorded at P01.5 to give P03 a stable target name; consumes D-RN-1's `build-fractal` org choice.
+
+---
+
+### D-RN-5 — Local clone path `~/Sites/orchestrator` { #dr-code-033 }
+
+<span class="md-tag md-tag-icon md-tag--decision">DR-CODE-033</span>
+{: .code-chip-row }
+
+- **When**: M035/P01.5 (pre-rename branch open)
+- **Scope**: rename
+- **Choice**: Operator's local clone path is renamed off-tree from `~/Sites/spec-kit-orchestrator` to `~/Sites/orchestrator`. In-tree references to the legacy path are rewritten in T03 (operator-paths). Off-tree filesystem rename is the operator's action; in-tree code/docs that hard-coded the legacy path are the framework's job.
+- **Revisable**: Yes — `mv ~/Sites/orchestrator ~/Sites/spec-kit-orchestrator` reverses the off-tree side trivially; in-tree references would need to be rewritten back if reverted.
+
+Drives D-RN-6 (Claude memory dir is derived from this path).
+
+---
+
+### D-RN-6 — Migrate Claude memory dir alongside path rename { #dr-code-034 }
+
+<span class="md-tag md-tag-icon md-tag--decision">DR-CODE-034</span>
+{: .code-chip-row }
+
+- **When**: M035/P01.5 (pre-rename branch open)
+- **Scope**: rename
+- **Choice**: Migrate Claude memory dir from `~/.claude/projects/-Users-brettkellgren-Sites-spec-kit-orchestrator/` to `~/.claude/projects/-Users-brettkellgren-Sites-orchestrator/`. Without the migration, Claude memory entries become orphaned because Claude's project key is derived from the working-dir path; entries written under the legacy key are not visible from the new path.
+- **Revisable**: Yes — `mv` the dir back if D-RN-5 is reverted.
+
+Off-tree operator step paired with D-RN-5; recorded so the T08 runbook documents both halves of the path rename.
+
+---
+
+### D-RN-7 — Pre-rename version tag `v0.9.X-final-spec-kit-name` { #dr-code-035 }
+
+<span class="md-tag md-tag-icon md-tag--decision">DR-CODE-035</span>
+{: .code-chip-row }
+
+- **When**: M035/P01.5/T01 (pre-rename branch open)
+- **Scope**: rename
+- **Choice**: Author a local-only git tag `v0.9.X-final-spec-kit-name` at HEAD immediately before the rename branch lands, where `X` is the current `CHANGELOG.md` top-line patch number (resolved via `awk '/^## \[[0-9]/{print; exit}' CHANGELOG.md` per CON-4 — skips `## [Unreleased]`). Captured at T01 execution time as `v0.9.2-final-spec-kit-name`. Tag gives post-rename archaeology a clean cutover marker without polluting the SemVer release stream (no `v` release tag is published — this is not a release).
+- **Revisable**: Yes — trivially reversible via `git tag -d v0.9.2-final-spec-kit-name` (local) and `git push --delete origin v0.9.2-final-spec-kit-name` (remote, only if pushed).
+
+Authored at T01 step 5 against CHANGELOG.md top-line `## [0.9.2]`; verifier `m035-p015-pre-rename-tag.sh` asserts a `v0.9.*-final-spec-kit-name` tag exists and resolves to a real commit.
+
+---

@@ -46,6 +46,34 @@ bash scripts/lifecycle/run-update.sh --dry-run
 
 When invoked as `orchestrator:update` (the slash-command form), the skill executes `bash scripts/lifecycle/run-update.sh "$@"` from the project root and reports the result.
 
+## Rollback
+
+`orchestrator:update --rollback` reverts the orchestrator runtime to the prior installed version, restoring the manifest byte-for-byte (copy-mode installs only).
+
+### Behavior
+
+1. Reads `.orchestrator/.previous-version` for the prior version's metadata.
+2. Reads the snapshotted manifest at `.orchestrator/.rollback/manifest-<prior-version>.txt`.
+3. Replays each asset from the source-repo at the prior commit SHA (for `update_source: git`).
+4. Updates `installed-files.txt` to the snapshotted version.
+5. Emits one `update_run` JSONL event with `op: rollback`.
+
+### Symlink-mode refusal
+
+Symlink-mode installs (per `--mode=symlink`) cannot be rolled back via this skill: the runtime files ARE the source repo at HEAD, so "rollback" is a `git checkout <prior-sha>` operation in the orchestrator source repo, not a copy-revert in the consumer project. `--rollback` against a symlink-mode install exits non-zero with the exact advisory:
+
+```
+rollback not available for symlink-mode installs — symlink-mode consumers are always at HEAD; to revert, run `git checkout <prior-sha>` in the orchestrator source repo.
+```
+
+### Missing-marker behavior
+
+`--rollback` against a project with no `.orchestrator/.previous-version` marker (i.e. no prior install on record) exits non-zero with `no prior version recorded — rollback unavailable`. This includes greenfield first installs.
+
+### Unsupported source dispatches
+
+`update_source: npm` and `update_source: homebrew` rollback dispatches are stubbed in M035 P05 with `SKIP: rollback not yet implemented for source=<value>` and exit non-zero. Full implementation lands when the corresponding distribution channels close (P03 / P04 / P06).
+
 ## Output
 
 ```

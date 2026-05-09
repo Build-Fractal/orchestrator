@@ -552,3 +552,50 @@ Authored at T01 step 5 against CHANGELOG.md top-line `## [0.9.2]`; verifier `m03
      the PAT writes to, so swapping the auth principal is a
      one-secret rotation with no formula changes.
 - **Bound to**: FR-9 / CON-6 / SC-14 / MOS-2.
+
+### D009 — Curl-pipe-bash install.sh URL host: GitHub release asset URL
+
+**Date**: 2026-05-09
+**Phase**: M035 P04 T01
+**Status**: bound
+
+`install.sh` is hosted as a GitHub release asset, NOT on a separate
+domain (e.g. `orchestrator.dev`), NOT on github.io / fly.io / R2-backed
+CDN, NOT on a sub-path of an existing domain, NOT on the canonical
+repo's `/raw` URL.
+
+- Latest (unpinned): `https://github.com/Build-Fractal/orchestrator/releases/latest/download/install.sh`
+- Pinned (versioned): `https://github.com/Build-Fractal/orchestrator/releases/download/v<X.Y.Z>/install.sh`
+
+**Rationale**:
+
+1. **No new infrastructure.** Every alternative requires either a
+   new domain registration, a new hosting provider, or a stable-mainline-commit-SHA
+   strategy — each introduces an external dependency M035 cannot
+   reverse cheaply post-launch. The GitHub release `latest/download`
+   URL is a stable redirect provided by GitHub itself, automatically
+   resolves to the newest release's asset, and has zero new
+   infrastructure surface.
+2. **Symmetric with the npm tarball + homebrew formula publication
+   paths.** Both already use GitHub releases as the artifact source
+   (D007 — homebrew formula's `url` field points at the npm pack
+   tarball uploaded to the release; install.sh is one more asset
+   on the same release). Adopting a different host for install.sh
+   would fork the release-artifact distribution model.
+3. **Versioned + unversioned URLs both ship for free.**
+   `latest/download/install.sh` resolves to the newest release;
+   `download/v<X.Y.Z>/install.sh` pins to a specific tag.
+   Operators pinning to a known-good version (per Constitution
+   Principle XVI integrity-first ethos) get a stable URL without
+   any redirect indirection.
+4. **Reversible.** If post-launch demand surfaces for a polished
+   short URL (e.g., `orchestrator.dev/install.sh`), wiring a
+   redirect against the same canonical asset is a one-line DNS
+   change with no change to install.sh's content or signing
+   surface. Picking the GitHub release URL today does not
+   foreclose any future option.
+
+**Bound to**: FR-10, US-8, SC-14.
+
+**Cross-references**: `packaging/install/install.sh`,
+`references/installation.md § Installing via curl-pipe-bash`.

@@ -76,10 +76,82 @@ rollback not available for symlink-mode installs — symlink-mode consumers are 
 
 ## Update sources
 
-- **`update_source: git`** — dispatches `install-claude-code.sh --force` against a locally-resolved orchestrator source repo (default; the pre-M035 interim documented above).
-- **`update_source: npm`** — dispatches `npm update -g @build-fractal/orchestrator` against the npm registry. The package and install path are documented in `references/installation.md § Installing via npm`. P06 wires the dispatch into `scripts/lifecycle/run-update.sh`; M035 P02 records the surface only.
-- **`update_source: homebrew`** — dispatches `brew upgrade orchestrator` against the `build-fractal/orchestrator` tap. The tap and formula install path are documented in `references/installation.md § Installing via Homebrew`. P06 wires the dispatch into `scripts/lifecycle/run-update.sh`; M035 P03 records the surface only.
-- **`update_source: curl-pipe-bash`** — dispatches `curl -sSL https://github.com/Build-Fractal/orchestrator/releases/latest/download/install.sh | bash` against the canonical GitHub release asset URL (D009). The curl-pipe-bash channel re-runs `install.sh` from the latest release on update, re-bootstrapping the runtime tree from the newest published `v*` tag. Consumer-facing recipe is documented in `references/installation.md § Installing via curl-pipe-bash`; operator-facing release procedure is documented in `references/installation.md § Releasing via curl-pipe-bash`. P06 wires the dispatch into `scripts/lifecycle/run-update.sh`; M035 P04 records the surface only.
+`orchestrator:update` reads `update_source` from
+`.orchestrator/config.yml` and dispatches to the channel-appropriate
+command. The schema enumeration is `git|npm|homebrew|none`
+(per FR-13 and D012). Curl-pipe-bash users are auto-detected as
+`npm` because the curl-pipe-bash installer extracts the npm
+tarball — D007/D009 single-source-of-truth.
+
+### Dispatch table
+
+| `update_source` | Dispatched command | Pre-flight check | Notes |
+|---|---|---|---|
+| `git` | `bash <source-repo>/packaging/install/install-claude-code.sh --force` | `<source-repo>` exists with `packaging/install/install-claude-code.sh` | Pre-M035 interim path; default for dogfooders. Resolves source via `--source-repo` / `$ORCHESTRATOR_SOURCE_REPO` / `~/Sites/orchestrator`. |
+| `npm` | `npm update -g @build-fractal/orchestrator` | `npm` on PATH AND `[ -d "$(npm root -g)/@build-fractal/orchestrator" ]` | Default for npm consumers. Dispatch is direct; no source-repo resolution required. |
+| `homebrew` | `brew upgrade orchestrator` | `brew` on PATH AND `[ -d "$(brew --prefix)/Cellar/orchestrator" ]` | Default for brew consumers via the `build-fractal/orchestrator` tap. |
+| `none` | `<no-op>` (operator opt-out) | none | Suppresses both `orchestrator:update` dispatch and the FR-4 drift-render in `orchestrator:status`. No JSONL emission. |
+
+### AD-5 detection (when `update_source` is absent)
+
+When `update_source` is absent from `.orchestrator/config.yml` (the
+case for every pre-launch consumer), the driver auto-detects per
+D014's ordering:
+
+1. Read `.orchestrator/install-meta.txt` `runtime=` field. If the
+   value contains the literal substring `npm` / `homebrew` /
+   `brew` / `curl` / `git` (case-insensitive), use that. (`curl`
+   resolves to `npm` per D012.)
+2. If `runtime=` doesn't disambiguate AND `npm` is on PATH AND
+   `[ -d "$(npm root -g)/@build-fractal/orchestrator" ]`, resolve
+   to `npm`.
+3. If still unresolved AND `brew` is on PATH AND
+   `[ -d "$(brew --prefix)/Cellar/orchestrator" ]`, resolve to
+   `homebrew`.
+4. Fallback: `git`.
+
+When detection lands on a non-`git` source, the resolved value is
+**persisted** to `.orchestrator/config.yml` as a top-level
+`update_source: <value>` line. Subsequent runs hit the persisted
+value and skip detection. Git-fallback resolutions are NOT
+persisted (default behavior; persisting would noise up every fresh
+consumer's config).
+
+### `update_run` JSONL emission
+
+Each successful dispatch decision-point appends one `update_run`
+event to `.orchestrator/observability/<YYYY-MM-DD>.jsonl`:
+
+```json
+{"event":"update_run","op":"update","source":"<channel>","target_version":"<version-or-unknown>","result":"success","timestamp":"2026-05-09T18:42:00Z"}
+```
+
+`op=rollback` events come from `--rollback` (see `## Rollback`).
+`result=failure` events fire for post-validation dispatch failures
+(e.g. `npm update` exits non-zero); pre-validation failures (npm
+not on PATH, package not installed) emit nothing.
+
+### Suppression knobs (5-condition matrix per D013)
+
+`update_run` emission honors M027's 5-condition suppression matrix
+verbatim:
+
+1. **`--no-emit-jsonl` flag** on `run-update.sh` short-circuits
+   emission. Opt-out only; does NOT abort dispatch.
+2. **`ORCHESTRATOR_AUTO=1` env var** short-circuits emission.
+   Auto-loop runs are not metering events the operator cares to
+   see.
+3. **`update_source: none`** short-circuits both dispatch and
+   emission.
+4. **`compression.efficiency_footer.enabled: false`** does NOT
+   apply (orthogonal surface — that knob gates efficiency-footer
+   rendering, not JSONL stream writes).
+5. **Structural carve-out**: emission is bound to a successful
+   dispatch decision-point. Pre-dispatch validation failures emit
+   nothing.
+
+M035 introduces no new suppression knob beyond `--no-emit-jsonl`
+(FR-16: M035 inherits M025/M027 conventions).
 
 ## Output
 
@@ -123,3 +195,4 @@ The driver itself is read-only — it stats files, reads git metadata, and resol
 - **`.orchestrator/proposals/M035-packaging-distribution.md`** — Finding D documents this skill as the pre-M035 interim; P06 evolves the driver to dispatch by `update_source: git|npm|homebrew` once package-manager publishing ships.
 - **`references/installation.md`** — manual upgrade workflow this skill mechanizes.
 - **`commands/init.md`** — sister command that scaffolds a project before `update` becomes applicable.
+- **`references/installation.md § Channel-specific metadata files`** — MIT-2 canonical exclusion list referenced by the cross-channel byte-equivalence test (CON-5).

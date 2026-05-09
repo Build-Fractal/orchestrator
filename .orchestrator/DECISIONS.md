@@ -500,3 +500,27 @@ Authored at T01 step 5 against CHANGELOG.md top-line `## [0.9.2]`; verifier `m03
 | D004 | M035/P05 | signing-strategy | Release-artifact signing for the npm publishing pipeline (FR-11 / SC-11 / #Q-3 binding) | sigstore (cosign keyless) primary + SHA-256 checksum fallback | Keyless cosign signing in `.github/workflows/release.yml` (`npm-publish` job) binds each release artifact's signature to the workflow's GitHub OIDC identity (canonical-repo `v*` tag-push) and records it in the public Rekor transparency log — eliminates the GPG private-key blast radius (no long-lived signing key to rotate or compromise). `SHA256SUMS` published alongside the signed artifacts gives operators without `cosign` installed a tooling-free verification path (`shasum -a 256 -c SHA256SUMS`). The signing job uses a job-level `permissions: id-token: write` override; the workflow-level `permissions: contents: read` stays unchanged so other jobs (pr-validate) inherit least-privilege. CON-6 secret-scope discipline preserved (no new long-lived secrets; `secrets.GITHUB_TOKEN` is the default token, scoped by GHA). | No |
 | D005 | M035/P05 | schema | Rollback-marker schema for `.orchestrator/.previous-version` (FR-12 / SC-12 / #Q-G8 binding) | Five-field structured `key=value` sidecar (`prior_version`, `prior_commit_sha`, `prior_manifest_path`, `prior_install_mode`, `rolled_at`) + byte-for-byte snapshot of prior `installed-files.txt` to `.orchestrator/.rollback/manifest-<prior-version>.txt` | Snapshot-at-upgrade-time decouples rollback from source-repo reachability — the rollback path must succeed even when the source repo is unreachable (e.g. `update_source: npm` upgrades against a published tarball with no local clone). `prior_install_mode` field captures `copy` / `symlink` / `mixed` / `unknown`; T02's `--rollback` driver consults this field to refuse the rollback per #Q-G8 when symlink-mode is anywhere in the prior tree (the more restrictive interpretation: any symlink in the runtime tree makes byte-equivalent revert undefined). T01 records; T02 enforces. | No |
 | D006 | M036/P02 | taxonomy | Add `business-doc` reference category for internal business strategy/operational/legal/sales-prep documents (FR-1 binding) | New `business-doc` category in `references/reference-taxonomy.md` + `references/reference-source-types.yaml` + `scripts/knowledge/lib/validate-chunk-frontmatter.sh`; `default_tier: 1` (plain text + operator summary until P03 Tier 2 lands); `topic_tags` carry sub-classification (strategy, go-to-market, outreach, legal, marketing, sales-prep) per FR-2 | The closed four-category taxonomy (cms-rule\|training-material\|glossary\|regulatory-doc) is CMS-regulatory-shaped and rejects internal business material at the validator. Adopter projects need to persist business-strategy/sales/operational docs as queryable references with edge-traceability to spec chunks; bbt-crm (M036/036-project-onboarding-experience downstream) was the surfacing case. Single umbrella with `topic_tags` chosen over 3-4 narrow categories (strategy-doc/legal-doc/marketing-content/sales-asset) to minimize SSOT churn — topic_tags are flexible per-doc and don't require taxonomy changes. Four-consumer lockstep maintained: taxonomy.md + source-types.yaml + validator updated in this commit; `scripts/wiki/build-nav.sh` (P08) gets it for free since it reads taxonomy.md as SSOT. | Yes — removable via reverse-D-row + revert of the 3 SSOT files; would orphan any extant REF-business-doc-* chunks until re-categorized. |
+
+---
+
+### D007 — Homebrew tarball source: re-use the P05-signed `npm pack` tarball
+
+- **Decided at**: M035 P03 plan-phase (2026-05-09).
+- **Decision**: The homebrew formula's `url` field points at the
+  `build-fractal-orchestrator-<version>.tgz` artifact published on
+  the GitHub release by P02's `npm-publish` job + P05's signing
+  pass. NO separate brew-tarball is built.
+- **Rationale**:
+  1. **CON-5 byte-equivalence is structural, not channel-specific.**
+     A separate brew-tarball would introduce an independent build
+     path whose hash drift versus the npm tarball would mask the
+     very divergence CON-5 exists to catch.
+  2. **Single signing chain.** P05's cosign + SHA256SUMS pass already
+     covers the npm tarball; re-using it means the formula's
+     `sha256` is sourced from the same `SHA256SUMS` file, no
+     duplicate signing surface.
+  3. **CON-6 secret-scoping carries over.** The
+     `homebrew-publish` job consumes the published tarball URL +
+     SHA-256 — no fresh build, no fresh secrets, just the
+     `secrets.HOMEBREW_TAP_TOKEN` PAT for the cross-repo write.
+- **Bound to**: FR-9 / FR-14 / SC-9 / SC-10 / CON-5.

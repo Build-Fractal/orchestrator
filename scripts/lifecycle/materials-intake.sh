@@ -640,7 +640,11 @@ reconcile_terminal() {
     local line
     local IFSO="$IFS"
     IFS=$'\n'
-    while IFS= read -r line; do
+    # FD-0 isolation: read conflicts on FD 3 so ask_one's `read` (which
+    # consumes FD 0 inside a command substitution) sees the operator's
+    # terminal, not the conflicts accumulator. Mirrors the labeling-loop
+    # fix; same root cause.
+    while IFS= read -r line <&3; do
         local cat
         cat=$(echo "$line" | cut -d: -f1)
         local resolution=""
@@ -666,7 +670,7 @@ reconcile_terminal() {
         esac
         echo "${i}|${resolution}|${line}" >> "$out_file"
         i=$((i + 1))
-    done < "$acc_file"
+    done 3< "$acc_file"
     IFS="$IFSO"
 }
 

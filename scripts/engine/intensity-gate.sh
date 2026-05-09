@@ -55,10 +55,16 @@ if [[ -z "$INTENSITY" ]]; then
   exit 1
 fi
 
-case "$INTENSITY" in
-  Quick|Standard|Full) ;;
+# Normalize intensity to canonical Title-Case. Accept any case from operator
+# input, config.yml (lowercase convention), or upstream commands (Title-Case
+# convention). Convention-divergence between the two surfaces is itself the
+# friction this gate's caller hits — see PBJ Stage 3 dogfood, 2026-05-08.
+case "$(printf '%s' "$INTENSITY" | tr '[:upper:]' '[:lower:]')" in
+  quick)    INTENSITY="Quick" ;;
+  standard) INTENSITY="Standard" ;;
+  full)     INTENSITY="Full" ;;
   *)
-    echo "ERROR: unknown intensity '$INTENSITY' (expected Quick|Standard|Full)" >&2
+    echo "ERROR: unknown intensity '$INTENSITY' (expected quick|standard|full)" >&2
     exit 2 ;;
 esac
 

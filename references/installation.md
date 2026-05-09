@@ -610,3 +610,145 @@ tap repo only. The migration is a single-secret rotation; no
 formula or workflow changes are required (the PAT is consumed via
 the standard `x-access-token:<token>@github.com` HTTPS pattern,
 which a GitHub App installation token also satisfies).
+
+## Installing via curl-pipe-bash
+
+The simplest way to bootstrap orchestrator on a fresh machine is the
+curl-pipe-bash one-liner — no clone, no package manager, just
+`install.sh` from the GitHub release.
+
+**Latest release**:
+
+```bash
+curl -sSL https://github.com/Build-Fractal/orchestrator/releases/latest/download/install.sh | bash
+```
+
+**Pinned to a specific version**:
+
+```bash
+ORCHESTRATOR_VERSION=v1.0.0 \
+  curl -sSL https://github.com/Build-Fractal/orchestrator/releases/download/v1.0.0/install.sh | bash
+```
+
+`install.sh` downloads the npm tarball asset from the GitHub release
+(D007 single source of truth — same tarball as `npm install -g
+@build-fractal/orchestrator` consumes), verifies its SHA-256 against
+the published `SHA256SUMS` file, extracts it into a temporary
+staging directory, and dispatches into `packaging/install/install-claude-code.sh`
+with the current working directory as the project root.
+
+**Smoke test post-install**:
+
+```bash
+orchestrator --version
+# → matches the latest published release version
+```
+
+**Per-project setup** (run once per project after install):
+
+```bash
+/orchestrator-init
+```
+
+Registers the orchestrator skills under `~/.claude/skills/` so the
+`orchestrator:<cmd>` cohort is discoverable in any Claude Code
+session in that project.
+
+**Uninstall**:
+
+```bash
+bash packaging/install/install-claude-code.sh --uninstall
+```
+
+The uninstall reads `.orchestrator/installed-files.txt` and removes
+exactly the files staged at install time, mirroring the npm and
+homebrew uninstall paths.
+
+**Runtime support at v1**: Claude Code only. `install.sh` detects
+`~/.claude/` presence; absence triggers a Codex-CLI-/Cursor-deferred-to-M009
+advisory and exits non-zero. Post-launch M009 (multi-runtime parity
+audit) extends to Codex CLI and Cursor.
+
+**Verifying integrity before install** (optional, recommended for
+production deployments): see `## Verifying integrity` above for the
+sigstore keyless cosign-verify-blob recipe + SHA256SUMS-shasum-c
+fallback. The same verification applies to install.sh as to the npm
+tarball — both are signed by the same workflow at the same release
+tag (P05 D004).
+
+## Releasing via curl-pipe-bash
+
+`install.sh` is published as a release asset on the canonical repo
+`Build-Fractal/orchestrator` GitHub release for every `v*` tag push.
+Three load-bearing decisions govern the release procedure:
+
+### D009 — install.sh URL host: GitHub release asset URL
+
+`install.sh` is hosted at `https://github.com/Build-Fractal/orchestrator/releases/latest/download/install.sh`
+(latest, unpinned) and `https://github.com/Build-Fractal/orchestrator/releases/download/v<X.Y.Z>/install.sh`
+(version-pinned). Rationale: zero new infrastructure, symmetric with
+the npm + homebrew release-asset distribution model, reversible to
+a polished short URL post-launch. See `.orchestrator/DECISIONS.md`
+D009 for the full decision record.
+
+### D010 / CON-8 — Release-workflow CI timeout: 20 minutes on ubuntu-latest
+
+Both `npm-publish` and `homebrew-publish` jobs in `.github/workflows/release.yml`
+carry `timeout-minutes: 20` at job level. Nominal wall-clock is ~3min;
+the 20min budget provides 6× headroom for OIDC issuance latency,
+transient network failures, and cosign/sigstore log-write retries.
+
+**CON-8 escalation clause**: if measured wall-clock consistently
+exceeds 15 minutes across three synthetic-tag runs, the next
+plan-phase author either splits the workflow into parallel jobs or
+documents a revised timeout. CON-8 is documentation-only at v1 (no
+automation enforces the watermark); future work could add a CI-side
+measurement-and-alert step.
+
+### D011 — Release cadence: manual stable releases pre-1.0
+
+Pre-1.0, releases are operator-driven: the operator authors
+`CHANGELOG.md` for the release, bumps the version in `package.json`
+(CON-4 SemVer source of truth), commits, and pushes a `v*` tag. The
+release-workflow fires automatically on the tag push.
+
+Post-1.0, the spec recommends conventional-commits-driven version
+bumping with PR-merge auto-tagging — that is post-launch fast-follow
+scope (no code surface at v1).
+
+See `.orchestrator/DECISIONS.md` D011 for the full decision record.
+
+### MOS-4 (operator) — One-time `curl … | bash` smoke against the first published release
+
+On first publication of a `v*` tag (e.g., the v1.0.0 launch), the
+operator validates end-to-end:
+
+```bash
+# Fresh machine (or container with bash + curl + tar + shasum):
+curl -sSL https://github.com/Build-Fractal/orchestrator/releases/latest/download/install.sh | bash
+orchestrator --version
+# → matches v1.0.0
+```
+
+Asserts the GitHub `latest/download` URL resolves, install.sh is
+signed (sigstore + SHA-256 fallback per P05 D004), the dispatched
+install-claude-code.sh runs to completion. SC-14 is satisfied by
+this manual smoke.
+
+### MOS-5 (operator) — Synthetic `v0.0.0-test` tag push against a fork
+
+Before the v1.0.0 launch, exercise SC-14 end-to-end via a synthetic
+tag push against a personal fork of `Build-Fractal/orchestrator`:
+
+```bash
+git tag v0.0.0-test
+git push origin v0.0.0-test
+```
+
+Observe the release workflow runs to completion within the CON-8
+20-minute timeout, the resulting GitHub release contains the four
+required artifacts (npm tarball, homebrew bottle, signed install.sh,
+SHA256SUMS file). Same workflow on a PR build does NOT run
+secret-bearing steps (verified by the existing CON-6 negative-assertions
+in `pr-validate`). After verification, delete the synthetic release
+and tag from the fork.

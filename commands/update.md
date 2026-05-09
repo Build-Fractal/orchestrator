@@ -79,6 +79,7 @@ rollback not available for symlink-mode installs — symlink-mode consumers are 
 - **`update_source: git`** — dispatches `install-claude-code.sh --force` against a locally-resolved orchestrator source repo (default; the pre-M035 interim documented above).
 - **`update_source: npm`** — dispatches `npm update -g @build-fractal/orchestrator` against the npm registry. The package and install path are documented in `references/installation.md § Installing via npm`. P06 wires the dispatch into `scripts/lifecycle/run-update.sh`; M035 P02 records the surface only.
 - **`update_source: homebrew`** — dispatches `brew upgrade orchestrator` against the `build-fractal/orchestrator` tap. The tap and formula install path are documented in `references/installation.md § Installing via Homebrew`. P06 wires the dispatch into `scripts/lifecycle/run-update.sh`; M035 P03 records the surface only.
+- **`update_source: curl-pipe-bash`** — dispatches `curl -sSL https://github.com/Build-Fractal/orchestrator/releases/latest/download/install.sh | bash` against the canonical GitHub release asset URL (D009). The curl-pipe-bash channel re-runs `install.sh` from the latest release on update, re-bootstrapping the runtime tree from the newest published `v*` tag. Consumer-facing recipe is documented in `references/installation.md § Installing via curl-pipe-bash`; operator-facing release procedure is documented in `references/installation.md § Releasing via curl-pipe-bash`. P06 wires the dispatch into `scripts/lifecycle/run-update.sh`; M035 P04 records the surface only.
 
 ## Output
 

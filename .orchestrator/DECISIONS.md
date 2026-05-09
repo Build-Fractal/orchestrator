@@ -634,3 +634,40 @@ repo's `/raw` URL.
 **Cross-references**: `.github/workflows/release.yml`,
 `references/installation.md § Releasing via curl-pipe-bash` (T04
 adds the operator-facing note).
+
+### D011 — Release cadence: manual stable releases pre-1.0 (operator-policy)
+
+**Date**: 2026-05-09
+**Phase**: M035 P04 T04
+**Status**: bound
+
+Pre-1.0 release cadence is **manual operator-driven tag push**. The
+operator authors `CHANGELOG.md` for the release, bumps the version
+in `package.json` (CON-4 SemVer source of truth), commits, and
+pushes a `v*` tag. The release-workflow fires automatically on the
+tag push.
+
+**Rationale**:
+
+1. **Spec recommendation honored.** The spec's `#Q-5` recommendation
+   is "manual stable releases pre-1.0, automatic post-1.0 with
+   conventional-commits-driven version bumping". D011 adopts the
+   pre-1.0 portion and defers post-1.0 automation to a post-launch
+   fast-follow.
+2. **No code surface at v1.** The release-workflow already fires
+   on `v*` tag push (operator-driven). No CI cron, no PR-merge
+   auto-tagging, no conventional-commits parsing.
+3. **Reversible.** Switching to automatic post-1.0 is purely
+   additive: a new `.github/workflows/auto-tag.yml` + the
+   conventional-commits parser ship as their own plan-phase work.
+   D011 declares the v1 posture; future work supersedes via a new
+   D### or by amending the documentation block.
+4. **Symmetric with operator-driven first-release MOS-4 / MOS-5.**
+   The launch is itself an operator-driven tag push; pre-1.0
+   cadence inherits the same shape for consistency.
+
+**Bound to**: US-8, FR-10. Operator workflow under MOS-1 / MOS-2 /
+MOS-3 / MOS-4 / MOS-5 precedent.
+
+**Cross-references**: `references/installation.md § Releasing via
+curl-pipe-bash`, `commands/update.md § Update sources`.

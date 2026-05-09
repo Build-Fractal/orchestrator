@@ -115,6 +115,59 @@ FR numbers continue from M037's series (last assigned: FR-22 in M037).
   accidentally commit decorator output. Marker-delimited block
   preserves operator edits outside the block.
 
+## CI runtime posture (Option B — verbatim-mirror fallback)
+
+**The structural gap.** The framework's managed-gitignore (per
+`scripts/lifecycle/emit-managed-gitignore.sh`) excludes the entire
+`scripts/` tree from consumer-project commits — so consumer-project CI
+checkouts (`actions/checkout@v4`) never have `scripts/wiki/wiki-decorate-build.py`
+on disk. The decorator step's `[ -f ... ]` cross-version gate (FR-25) is
+therefore *always false in CI*, the `wiki/.staged/` tree is never
+materialized, and `mkdocs build` fails with `ERROR - No files found
+including '../.staged/<rel>'` once any stub has been rewritten by a local
+decorate run. This was first surfaced in `pbj-central-mono-repo` after
+commit `4a11407` (2026-05-08); the upstream handoff is at
+`/tmp/upstream-handoff-pages-decorator-ci-gap-2026-05-09.md` (preserved
+here as `proposals/`-equivalent reference).
+
+**Chosen posture: Option B (verbatim-mirror fallback in the workflow
+template).** The decorator step's `else` branch — when
+`scripts/wiki/wiki-decorate-build.py` is absent — copies `.orchestrator/`
+verbatim into `wiki/.staged/` so mkdocs include directives resolve. CI
+deploys ship **stub-baked admonitions** (the `!!! info "In plain English"`
+blocks the decorator wrote into stubs at local-preview time, which ARE
+committed) but **NOT body-text hyperlink decoration** (codes / §-refs /
+bare paths / bare milestone names render as plain text in CI deploys
+because the verbatim mirror skips decoration). Local previews retain full
+decoration via the regen sequence in `wiki-serve.sh`.
+
+**Why not Option A (install orchestrator at CI time)?** Option A is the
+architecturally clean answer — preserves `scripts/`-as-framework-managed,
+ships full decoration in CI — but requires a published install endpoint
+(`https://raw.githubusercontent.com/<org>/spec-kit-orchestrator/<tag>/packaging/install/install-claude-code.sh`)
+to pin against. M035 packaging (npm + homebrew + curl-pipe-bash) is
+in-flight and *constitutes the launch event*; no canonical release tag
+exists yet. Wiring CI to a not-yet-published endpoint is premature
+coupling.
+
+**Why not Option C (move decorator out of `scripts/`)?** Breaks the
+"framework code lives authoritatively upstream, consumer projects
+gitignore it" architecture rule. Consumers would lose
+`orchestrator:update --force` regenerating the script; script versioning
+would fragment across consumer repos.
+
+**Why not Option D (commit `wiki/.staged/`)?** Every decorator run
+mutates 60–100 files; merge conflicts on every PR that touches
+`.orchestrator/`; defeats the gitignore rationale.
+
+**Upgrade path (post-M035 follow-up).** Once M035 P02–P06 publish a
+stable install endpoint, the workflow template's `else` branch should
+flip from verbatim-mirror to *install-at-CI-time* (Option A): pin a
+release tag in `.orchestrator/config.yml`, have the workflow `curl |
+bash` the per-runtime installer with a `--scripts-only` flag (yet to
+ship), then run the decorator. Tracked as a post-launch demand-driven
+follow-up under `external-tool-adapters` / `wiki-ux-deep`.
+
 ## Migration
 
 - **`scripts/wiki/wiki-decorate-codes.sh` deleted.** The Principle-XIV
@@ -130,6 +183,17 @@ FR numbers continue from M037's series (last assigned: FR-22 in M037).
   `wiki-stubs-fresh.sh` and the `pages.yml` workflow template skip the
   decorate step when `scripts/wiki/wiki-decorate-build.py` is absent,
   so pre-`orchestrator:update` consumer projects continue to build.
+- **Consumers on the readability-rollout-but-pre-CI-fallback workflow.**
+  Any consumer project that ran `wiki-init.sh` between commit `69293440`
+  (M040 backport, 2026-05-08) and the CI-fallback amendment lands has
+  the bare `echo skip` shape in `.github/workflows/pages.yml`. After this
+  amendment lands, those consumers must re-emit the workflow — either
+  delete `.github/workflows/pages.yml` and re-run `wiki-init.sh`, or
+  manually fold the verbatim-mirror `else` branch from
+  `scripts/lifecycle/wiki-init.sh::emit_pages_workflow()` into their
+  workflow file. PBJ-central is the canonical case (workaround at
+  commits `26a1f35` + `c4701af`); after the upstream amendment lands,
+  PBJ should drop its local workaround and re-emit.
 
 ## Validating Dogfood
 
@@ -202,3 +266,13 @@ report pass on:
 4. PBJ-side commit lands the `.gitignore` + `pages.yml` + 75 stub
    updates + `mkdocs.yml` deliverables (the decorator itself is now
    framework-tracked and stays out of the project commit).
+5. **CI-gap amendment (this revision, 2026-05-09).** Operators on the
+   readability rollout MUST re-run `wiki-init.sh` (or
+   `orchestrator:update`) to pick up the verbatim-mirror fallback in
+   `.github/workflows/pages.yml`. Without it, the next CI deploy after
+   any local decorator run will fail at `mkdocs build` with `No files
+   found including '../.staged/<rel>'`. The fixture-driven acceptance
+   test at `tests/m040-acceptance/p02-pages-ci-fallback.sh` simulates a
+   consumer-CI checkout (no `scripts/` present) and asserts the
+   verbatim-mirror `else` branch materializes `wiki/.staged/` so
+   mkdocs build succeeds against rewritten stubs.

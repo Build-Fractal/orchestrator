@@ -520,15 +520,37 @@ jobs:
           else
             echo "wiki-stubs-fresh: scripts/diagnostics/wiki-stubs-fresh.sh not present -- skipping (older orchestrator runtime)"
           fi
-      - name: Materialize wiki/.staged/ via decorator
-        # Stubs include from wiki/.staged/ (gitignored); regenerate it
+      - name: Materialize wiki/.staged/ via decorator (or verbatim fallback)
+        # Stubs include from wiki/.staged/ (managed-gitignored); regenerate it
         # from .orchestrator/ source before mkdocs build, otherwise
         # include-markdown directives will fail on missing files.
+        #
+        # CI runtime posture (M040 spec amendment, Option B): the framework's
+        # managed-gitignore excludes scripts/ — so consumer-project CI
+        # checkouts (`actions/checkout@v4`) never have the decorator script.
+        # This step gracefully degrades to a verbatim mirror of .orchestrator/
+        # into wiki/.staged/ so mkdocs build can resolve the rewritten include
+        # directives. CI deploys therefore ship stub-baked admonitions but
+        # NOT body-text hyperlink decoration (codes/§-refs/paths/milestone
+        # names render as plain text). Local previews retain full decoration.
+        # Upgrade path: post-M035, switch to install-at-CI-time once the
+        # framework's install endpoint is published.
         run: |
           if [ -f scripts/wiki/wiki-decorate-build.py ]; then
             python3 scripts/wiki/wiki-decorate-build.py --force
           else
-            echo "wiki-decorate-build: scripts/wiki/wiki-decorate-build.py not present -- skipping (pre-readability-rollout tree)"
+            echo "wiki-decorate-build: scripts/wiki/wiki-decorate-build.py not present in CI checkout -- mirroring .orchestrator/ verbatim into wiki/.staged/ (admonitions-only fallback per M040 Option B)"
+            mkdir -p wiki/.staged
+            for d in memory spec decisions knowledge milestones proposals; do
+              if [ -d ".orchestrator/$d" ]; then
+                cp -R ".orchestrator/$d" "wiki/.staged/"
+              fi
+            done
+            for f in DECISIONS.md KNOWLEDGE.md milestone-summary.md spikes-registry.md; do
+              if [ -f ".orchestrator/$f" ]; then
+                cp ".orchestrator/$f" "wiki/.staged/"
+              fi
+            done
           fi
       - run: mkdocs build -f wiki/mkdocs.yml
       - uses: actions/configure-pages@v5

@@ -145,9 +145,12 @@ else
   # block (T01) does `prefix.install Dir["package/*"]` to flatten,
   # so the staged Cellar layout puts package/* contents directly
   # under <Cellar>/<version>/.
-  PKG_VERSION="$(grep -E '^\s*"version"\s*:' "$REPO_ROOT/package.json" \
+  # Use POSIX [[:space:]] rather than \s — BSD sed (macOS) doesn't
+  # recognize \s and silently no-ops the substitution, leaving
+  # PKG_VERSION as the entire matched line. Surfaced after T03 dispatch.
+  PKG_VERSION="$(grep -E '^[[:space:]]*"version"[[:space:]]*:' "$REPO_ROOT/package.json" \
     | head -1 \
-    | sed -E 's/.*"version"\s*:\s*"([^"]+)".*/\1/')"
+    | sed -E 's/.*"version"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')"
   CELLAR="$BREW_FIXTURE/Cellar/orchestrator/$PKG_VERSION"
   mkdir -p "$CELLAR"
   tar -xzf "$TARBALL" -C "$BREW_FIXTURE" >/dev/null 2>&1

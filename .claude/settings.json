@@ -127,7 +127,15 @@
       "Bash(sed -n *)",
       "Bash(head *)",
       "Bash(tail *)",
-      "Bash(stat *)"
+      "Bash(stat *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(yarn *)",
+      "Bash(pnpm *)",
+      "Bash(bun *)",
+      "Bash(npm run postinstall)",
+      "Bash(yarn postinstall)",
+      "Bash(pnpm postinstall)"
     ]
   },
   "_generated_end": "# END_ORCHESTRATOR_GENERATED v1",

@@ -345,6 +345,28 @@ else
   } > "$meta_file"
 fi
 
+# --- 4.4.6 Rollback marker (M035 P05 T01, FR-12 / D005) ---
+# Snapshots the prior install's manifest and writes the
+# .orchestrator/.previous-version marker BEFORE the new manifest is
+# staged at Stage 4.5. Greenfield installs (no prior installed-files.txt)
+# are a no-op via the writer's internal greenfield check.
+#
+# The writer is idempotent: re-installs at the same version overwrite
+# both the marker and the snapshot in place.
+if [ "$DRY_RUN" = "1" ]; then
+  bash "$REPO_ROOT/scripts/lifecycle/write-rollback-marker.sh" \
+    --project-dir "$PROJECT_DIR" --dry-run
+  _wrm_rc=$?
+else
+  bash "$REPO_ROOT/scripts/lifecycle/write-rollback-marker.sh" \
+    --project-dir "$PROJECT_DIR"
+  _wrm_rc=$?
+fi
+if [ "$_wrm_rc" -ne 0 ]; then
+  echo "FAIL: write-rollback-marker.sh exited $_wrm_rc" >&2
+  exit "$_wrm_rc"
+fi
+
 # --- 4.4.5 Managed .gitignore block (M035 P00 T02, FR-6 / SC-6) ---
 # Append/replace the orchestrator-managed marker block in
 # <PROJECT_DIR>/.gitignore covering installer-owned sidecars (currently only

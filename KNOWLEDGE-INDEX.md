@@ -46,34 +46,34 @@ SPEC-NG-003 | Rewriting non-autonomous scripts (one-off diagnostics, migration t
 SPEC-US-001 | Full Phase Runs To Completion Without Prompts | 
 SPEC-US-002 | Anti-Pattern Guardrails Prevent Regression | 
 SPEC-US-003 | Verify Suites Run Via A Single Wrapper | 
-MEM001 | [project] | patterns | 0.95 | 2026-04-14 | verified:2026-04-14 | hits:881 | Shell Script Conventions
-MEM002 | [project] | patterns | 0.95 | 2026-04-14 | verified:2026-04-14 | hits:881 | Test Conventions
-MEM003 | [project] | patterns | 0.95 | 2026-04-14 | verified:2026-04-14 | hits:881 | State Machine Design
-MEM004 | [project], [milestone:M005] | patterns | 0.90 | 2026-04-14 | verified:2026-04-14 | hits:881 | Pure Lib Extraction Pattern
-MEM005 | [project], [milestone:M005] | patterns | 0.90 | 2026-04-14 | verified:2026-04-14 | hits:765 | Content-Hash Idempotency
-MEM006 | [project], [milestone:M005] | patterns | 0.90 | 2026-04-14 | verified:2026-04-14 | hits:765 | Scored Health Reporting
-MEM007 | [project], [milestone:M005] | patterns | 0.90 | 2026-04-14 | verified:2026-04-14 | hits:765 | Autonomy Permission Pipeline
-MEM008 | [project], [milestone:M001] | patterns | 0.85 | 2026-04-14 | verified:2026-04-14 | hits:881 | Audit Remediation Patterns
-MEM009 | [project], [milestone:M006] | patterns | 0.90 | 2026-04-14 | verified:2026-04-14 | hits:765 | Documentation-as-Verification
-MEM010 | [project], [milestone:M006] | patterns | 0.90 | 2026-04-14 | verified:2026-04-14 | hits:765 | Cross-Link Validation Scripts
-MEM011 | [project], [milestone:M002] | patterns | 0.90 | 2026-04-14 | verified:2026-04-14 | hits:765 | Validation-as-Task Pattern
-MEM012 | [project] | conventions | 0.95 | 2026-04-14 | verified:2026-04-14 | hits:881 | Command File Structure
-MEM013 | [project] | conventions | 0.95 | 2026-04-14 | verified:2026-04-14 | hits:881 | Template Convention
-MEM014 | [project] | conventions | 0.95 | 2026-04-14 | verified:2026-04-14 | hits:881 | Interface Contracts
-MEM015 | [project], [milestone:M005] | conventions | 0.90 | 2026-04-14 | verified:2026-04-14 | hits:765 | DOCTOR Structured Output Protocol
-MEM016 | [project], [milestone:M005] | conventions | 0.85 | 2026-04-14 | verified:2026-04-14 | hits:765 | Cost Source Closed Enum
-MEM017 | [project], [milestone:M005] | conventions | 0.90 | 2026-04-14 | verified:2026-04-14 | hits:765 | Gate Verdict Protocol
-MEM018 | [project] | conventions | 0.90 | 2026-04-14 | verified:2026-04-14 | hits:881 | Runtime Adapter Interface
-MEM019 | [project], [milestone:M002] | conventions | 0.95 | 2026-04-14 | verified:2026-04-14 | hits:765 | Three-Temperature Knowledge Architecture
-MEM020 | [project], [milestone:M002] | conventions | 0.95 | 2026-04-14 | verified:2026-04-14 | hits:765 | Dispatched Agents Must Write Summaries
-MEM021 | [project] | lessons | 0.95 | 2026-04-14 | verified:2026-04-14 | hits:881 | PID 1 macOS kill -0 Behavior
-MEM022 | [project] | lessons | 0.95 | 2026-04-14 | verified:2026-04-14 | hits:881 | Lock Manager PID Subshell Issue
-MEM023 | [project], [milestone:M004] | lessons | 0.95 | 2026-04-14 | verified:2026-04-14 | hits:765 | Backtick-in-Plan-Artifacts Breaks Must-Have Checks
-MEM024 | [project], [milestone:M004] | lessons | 0.95 | 2026-04-14 | verified:2026-04-14 | hits:765 | Lib Path Resolution in Task Plans
-MEM025 | [project], [milestone:M004] | lessons | 0.95 | 2026-04-14 | verified:2026-04-14 | hits:765 | Verification Script Grep Patterns
-MEM026 | [project], [milestone:M025] | lessons | 0.95 | 2026-04-23 | verified:2026-04-23 | hits:420 | M013/P04/T04 hook-config regression
-MEM027 | [project], [milestone:M025] | patterns | 0.90 | 2026-04-23 | verified:2026-04-23 | hits:420 | merge-not-overwrite user-scope config
-MEM028 | [project], [milestone:M014], [concern:bash-compat] | lessons | 0.95 | 2026-04-23 | verified:2026-04-23 | hits:420 | Bash arithmetic silently interprets zero-padded numerics as octal
-MEM029 | [project], [milestone:M026] | patterns | 0.90 | 2026-04-24 | verified:2026-04-24 | hits:457 | Edition-resolution two-tier detection (env-var primary, metadata-probe fallback)
-MEM030 | [project], [milestone:M026] | conventions | 0.90 | 2026-04-24 | verified:2026-04-24 | hits:457 | `<TOOL>_EDITION=<value>` env-var convention for OSS-default escape hatches
-MEM031 | [project], [milestone:M020] | conventions | 0.90 | 2026-04-25 | verified:2026-04-25 | hits:447 | Knowledge entry `status:` field vocabulary (M020 schema evolution)
+MEM001 | [project] | patterns | 0.95 | 2026-04-14 | verified:2026-04-14 | hits:882 | Shell Script Conventions
+MEM002 | [project] | patterns | 0.95 | 2026-04-14 | verified:2026-04-14 | hits:882 | Test Conventions
+MEM003 | [project] | patterns | 0.95 | 2026-04-14 | verified:2026-04-14 | hits:882 | State Machine Design
+MEM004 | [project], [milestone:M005] | patterns | 0.90 | 2026-04-14 | verified:2026-04-14 | hits:882 | Pure Lib Extraction Pattern
+MEM005 | [project], [milestone:M005] | patterns | 0.90 | 2026-04-14 | verified:2026-04-14 | hits:766 | Content-Hash Idempotency
+MEM006 | [project], [milestone:M005] | patterns | 0.90 | 2026-04-14 | verified:2026-04-14 | hits:766 | Scored Health Reporting
+MEM007 | [project], [milestone:M005] | patterns | 0.90 | 2026-04-14 | verified:2026-04-14 | hits:766 | Autonomy Permission Pipeline
+MEM008 | [project], [milestone:M001] | patterns | 0.85 | 2026-04-14 | verified:2026-04-14 | hits:882 | Audit Remediation Patterns
+MEM009 | [project], [milestone:M006] | patterns | 0.90 | 2026-04-14 | verified:2026-04-14 | hits:766 | Documentation-as-Verification
+MEM010 | [project], [milestone:M006] | patterns | 0.90 | 2026-04-14 | verified:2026-04-14 | hits:766 | Cross-Link Validation Scripts
+MEM011 | [project], [milestone:M002] | patterns | 0.90 | 2026-04-14 | verified:2026-04-14 | hits:766 | Validation-as-Task Pattern
+MEM012 | [project] | conventions | 0.95 | 2026-04-14 | verified:2026-04-14 | hits:882 | Command File Structure
+MEM013 | [project] | conventions | 0.95 | 2026-04-14 | verified:2026-04-14 | hits:882 | Template Convention
+MEM014 | [project] | conventions | 0.95 | 2026-04-14 | verified:2026-04-14 | hits:882 | Interface Contracts
+MEM015 | [project], [milestone:M005] | conventions | 0.90 | 2026-04-14 | verified:2026-04-14 | hits:766 | DOCTOR Structured Output Protocol
+MEM016 | [project], [milestone:M005] | conventions | 0.85 | 2026-04-14 | verified:2026-04-14 | hits:766 | Cost Source Closed Enum
+MEM017 | [project], [milestone:M005] | conventions | 0.90 | 2026-04-14 | verified:2026-04-14 | hits:766 | Gate Verdict Protocol
+MEM018 | [project] | conventions | 0.90 | 2026-04-14 | verified:2026-04-14 | hits:882 | Runtime Adapter Interface
+MEM019 | [project], [milestone:M002] | conventions | 0.95 | 2026-04-14 | verified:2026-04-14 | hits:766 | Three-Temperature Knowledge Architecture
+MEM020 | [project], [milestone:M002] | conventions | 0.95 | 2026-04-14 | verified:2026-04-14 | hits:766 | Dispatched Agents Must Write Summaries
+MEM021 | [project] | lessons | 0.95 | 2026-04-14 | verified:2026-04-14 | hits:882 | PID 1 macOS kill -0 Behavior
+MEM022 | [project] | lessons | 0.95 | 2026-04-14 | verified:2026-04-14 | hits:882 | Lock Manager PID Subshell Issue
+MEM023 | [project], [milestone:M004] | lessons | 0.95 | 2026-04-14 | verified:2026-04-14 | hits:766 | Backtick-in-Plan-Artifacts Breaks Must-Have Checks
+MEM024 | [project], [milestone:M004] | lessons | 0.95 | 2026-04-14 | verified:2026-04-14 | hits:766 | Lib Path Resolution in Task Plans
+MEM025 | [project], [milestone:M004] | lessons | 0.95 | 2026-04-14 | verified:2026-04-14 | hits:766 | Verification Script Grep Patterns
+MEM026 | [project], [milestone:M025] | lessons | 0.95 | 2026-04-23 | verified:2026-04-23 | hits:421 | M013/P04/T04 hook-config regression
+MEM027 | [project], [milestone:M025] | patterns | 0.90 | 2026-04-23 | verified:2026-04-23 | hits:421 | merge-not-overwrite user-scope config
+MEM028 | [project], [milestone:M014], [concern:bash-compat] | lessons | 0.95 | 2026-04-23 | verified:2026-04-23 | hits:421 | Bash arithmetic silently interprets zero-padded numerics as octal
+MEM029 | [project], [milestone:M026] | patterns | 0.90 | 2026-04-24 | verified:2026-04-24 | hits:458 | Edition-resolution two-tier detection (env-var primary, metadata-probe fallback)
+MEM030 | [project], [milestone:M026] | conventions | 0.90 | 2026-04-24 | verified:2026-04-24 | hits:458 | `<TOOL>_EDITION=<value>` env-var convention for OSS-default escape hatches
+MEM031 | [project], [milestone:M020] | conventions | 0.90 | 2026-04-25 | verified:2026-04-25 | hits:448 | Knowledge entry `status:` field vocabulary (M020 schema evolution)

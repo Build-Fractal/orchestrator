@@ -103,6 +103,18 @@ jobs:
     # condition mechanically via tools/verify/m035-p02-release-
     # workflow-shape.sh.
     if: ${{ startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push' }}
+    # M035 P05 T03 — job-level permissions override.
+    # The workflow-level `permissions: contents: read` (top of file)
+    # stays unchanged; this block opts THIS job into the additional
+    # scopes it needs:
+    #   contents: write — gh release create writes the GitHub release.
+    #   id-token: write — sigstore cosign keyless signing binds the
+    #                     workflow's OIDC identity into the Rekor log.
+    # Other jobs (pr-validate) inherit the workflow-level read-only
+    # permission and gain neither scope. Least-privilege preserved.
+    permissions:
+      contents: write
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -140,6 +152,100 @@ jobs:
           # --access public is required for scoped packages (@scope/name)
           # to be published as public. Default for scoped is restricted.
           npm publish --access public
+
+      # ---------------------------------------------------------------
+      # M035 P05 T03 — sigstore (cosign keyless) signing + SHA-256
+      # checksum publication. Resolves D004:
+      #   * sigstore primary (cosign sign-blob keyless, OIDC bound)
+      #   * SHA256SUMS fallback (tooling-free verification path).
+      # SC-11 asserts both surfaces succeed against the published
+      # release artifacts. The signing block iterates over a glob so
+      # P03 (homebrew bottle), P04 (curl-pipe-bash install.sh), and
+      # any future channel artifacts extend by simply staging their
+      # artifact into release-artifacts/ — no edit to the loop needed.
+      # ---------------------------------------------------------------
+
+      - name: Setup cosign
+        # Pin both the action version AND the cosign release version
+        # for reproducibility (Constitution Principle XVI: dependency
+        # immutability at release time).
+        uses: sigstore/cosign-installer@v3.5.0
+        with:
+          cosign-release: 'v2.2.4'
+
+      - name: Stage release artifacts
+        run: |
+          mkdir -p release-artifacts
+          # npm tarball: re-pack locally rather than re-downloading
+          # from the registry. The npm-pack output is byte-identical
+          # to what `npm publish` just uploaded a moment ago.
+          TAG="${GITHUB_REF#refs/tags/v}"
+          # @build-fractal/orchestrator -> build-fractal-orchestrator
+          # npm pack produces build-fractal-orchestrator-<version>.tgz
+          npm pack
+          mv build-fractal-orchestrator-"$TAG".tgz release-artifacts/
+          # P03 hook: homebrew bottle would land here.
+          # P04 hook: install.sh would land here.
+          ls -la release-artifacts/
+
+      - name: Generate SHA256SUMS
+        working-directory: release-artifacts
+        run: |
+          # shasum -a 256 emits "<hex>  <filename>" lines.
+          # LC_ALL=C sort guarantees locale-independent reproducible
+          # ordering (same convention as P02 T03 byte-equivalence
+          # helper).
+          find . -maxdepth 1 -type f ! -name SHA256SUMS \
+            -exec shasum -a 256 {} \; \
+            | LC_ALL=C sort -k 2 \
+            > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Sign release artifacts (sigstore keyless)
+        working-directory: release-artifacts
+        env:
+          # Defensive belt-and-suspenders for older cosign versions.
+          # cosign v2.2+ does not strictly require this; harmless when set.
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          # Sign every release artifact (excluding SHA256SUMS itself
+          # and any pre-existing .sig/.pem outputs from a prior step).
+          # --yes skips the interactive Y/N prompt cosign normally
+          # requires for keyless signing under CI.
+          for artifact in *; do
+            case "$artifact" in
+              *.sig|*.pem|SHA256SUMS)
+                continue
+                ;;
+            esac
+            echo "Signing $artifact ..."
+            cosign sign-blob \
+              --yes \
+              --output-signature "$artifact.sig" \
+              --output-certificate "$artifact.pem" \
+              "$artifact"
+          done
+          # Also sign SHA256SUMS itself so operators can verify the
+          # checksum file's authenticity before relying on it.
+          cosign sign-blob \
+            --yes \
+            --output-signature SHA256SUMS.sig \
+            --output-certificate SHA256SUMS.pem \
+            SHA256SUMS
+          ls -la
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF#refs/tags/v}"
+          # --generate-notes auto-generates release notes from the
+          # commit history since the last release. The job-level
+          # `permissions: contents: write` override grants the scope.
+          gh release create "v$TAG" \
+            --title "v$TAG" \
+            --generate-notes \
+            release-artifacts/*
 
       - name: Confirm publish succeeded
         env:

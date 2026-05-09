@@ -280,12 +280,27 @@ enumerate_materials() {
                     ;;
             esac
             if [ "$ext" = "pdf" ]; then
-                if ! command -v textutil >/dev/null 2>&1; then
-                    if ! command -v pdftotext >/dev/null 2>&1; then
-                        echo "missing-binary: pdf converter not found for $base" >&2
-                        continue
-                    fi
+                # textutil(1) does NOT extract PDF text — it converts
+                # rich-text formats (rtf/doc/html/txt). The previous
+                # darwin probe was a false positive: the PDF then fell
+                # through and was grep'd verbatim, producing phantom
+                # orphan-reference tokens from binary byte sequences.
+                # Gate only on pdftotext; convert to a sidecar .txt in
+                # the intake dir's _originals/ subdir; append the
+                # sidecar (not the binary) to the materials list.
+                if ! command -v pdftotext >/dev/null 2>&1; then
+                    echo "missing-binary: pdftotext not found - skipping $base" >&2
+                    continue
                 fi
+                local sidecar_dir="$INTAKE_DIR/_originals"
+                mkdir -p "$sidecar_dir"
+                local sidecar="$sidecar_dir/${base%.pdf}.txt"
+                if pdftotext -layout "$f" "$sidecar" 2>/dev/null; then
+                    echo "$sidecar" >> "$out_file"
+                else
+                    echo "pdf-conversion-failed: pdftotext could not convert $base - skipping" >&2
+                fi
+                continue
             fi
             echo "$f" >> "$out_file"
         done

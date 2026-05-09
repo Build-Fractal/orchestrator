@@ -1004,7 +1004,17 @@ clean_phase() {
   fi
   # Count first for reporting.
   _list="/tmp/wiki-stubs-clean-$$.list"
+  # M040 follow-up (2026-05-09): exclude `*.summary.md` siblings from
+  # the stale-file sweep. The wiki-readability decorator (FR-24) reads a
+  # sibling `<stub>.summary.md` next to each stub and bakes its body into
+  # the stub as an `!!! info "In plain English"` admonition. The summary
+  # file is operator-authored content, not regenerable from
+  # `.orchestrator/`. Without this exclusion, regen sweeps every
+  # `*.summary.md` as "stale" — silent data loss surfaced in PBJ-central
+  # 2026-05-09 (44 summaries deleted on a single `wiki-init --refresh`).
+  # See specs/040-wiki-readability-decorator/spec.md FR-28.
   find "$DOCS" -mindepth 1 -type f -name '*.md' \
+    ! -name '*.summary.md' \
     ! -path "$DOCS/index.md" \
     ! -path "$DOCS/README.md" \
     -print > "$_list" 2>/dev/null || true

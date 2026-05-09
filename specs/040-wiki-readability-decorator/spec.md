@@ -115,6 +115,41 @@ FR numbers continue from M037's series (last assigned: FR-22 in M037).
   accidentally commit decorator output. Marker-delimited block
   preserves operator edits outside the block.
 
+- **FR-28 (regen-preservation contract)**: `wiki-init.sh --refresh` and
+  the regen scripts it dispatches (`wiki-generate-stubs.sh`,
+  `wiki-generate-nav.sh`, `yaml-merge.sh`) MUST preserve two classes of
+  operator-authored content across regens. Both surfaces are
+  silent-data-loss-shaped — consumer notices days later when content
+  goes missing — so the contract is enforced by the regression battery
+  at `tests/m040-acceptance/p03-regen-preservation.sh`:
+
+    1. **Sibling `<stub>.summary.md` files** under `wiki/docs/`: the
+       stale-file sweep in `wiki-generate-stubs.sh::clean_phase()`
+       MUST exclude `*.summary.md` from the candidate set. The sibling
+       summary convention (FR-24) is operator-authored, not regenerable
+       from `.orchestrator/`. Originally surfaced in PBJ-central
+       2026-05-09 (44 operator-curated summaries deleted on a single
+       `wiki-init --refresh`).
+
+    2. **Marker-bound regions in `wiki/mkdocs.yml`**: specifically the
+       region between `# >>> custom-nav` and `# <<< custom-nav end`
+       (operator-authored nav entries that aren't `.orchestrator/`-
+       derived). The yaml-merge step in `wiki-init.sh` MUST capture-
+       and-restore content between these markers around the framework's
+       `nav:` namespace overwrite — structurally the inverse of the
+       `emit-managed-gitignore.sh` preserve-outside-block convention,
+       inverted to preserve-inside-block. Originally surfaced in the
+       same PBJ-central session (one operator nav line dropped).
+
+  Future regen helpers that touch consumer-owned files MUST extend this
+  contract: name the operator-owned surface, name the framework-owned
+  surface, document the preservation strategy. Marker-pair conventions
+  read as "edits between markers preserved byte-for-byte"; sibling-
+  pair conventions read as "files matching pattern X are first-class
+  operator content and exempt from sweep". New regen helpers without an
+  explicit answer to "what does this overwrite that the operator
+  authored?" do not ship.
+
 ## CI runtime posture (Option B — verbatim-mirror fallback)
 
 **The structural gap.** The framework's managed-gitignore (per

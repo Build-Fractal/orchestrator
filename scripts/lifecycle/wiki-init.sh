@@ -461,15 +461,65 @@ if [ -f "$MKDOCS_TARGET" ]; then
   YAML_MERGE="$REPO_ROOT/scripts/lib/yaml-merge.sh"
   MKDOCS_MANAGED="docs_dir,site_dir,theme,plugins,markdown_extensions,extra_css,nav"
   if [ -f "$BUNDLE_MKDOCS" ] && [ -f "$YAML_MERGE" ] && [ "$BUNDLE_MKDOCS" != "$MKDOCS_TARGET" ]; then
+    # M040 follow-up (2026-05-09): capture the operator-authored content
+    # between the `# >>> custom-nav` / `# <<< custom-nav end` markers
+    # before yaml-merge overwrites the `nav:` namespace. The bundle's
+    # mkdocs.yml carries an empty custom-nav region; without this
+    # capture-restore wrapper, yaml-merge silently erases operator nav
+    # entries on every refresh. Surfaced in PBJ-central 2026-05-09 (one
+    # `- How to review this wiki: sme-review-guide.md` line dropped).
+    # See specs/040-wiki-readability-decorator/spec.md FR-28.
+    CUSTOM_NAV_CAPTURED="$(mktemp -t wiki-init-custom-nav.XXXXXX)"
+    awk '
+      BEGIN { state="pre" }
+      {
+        if (state == "pre") { if ($0 == "# >>> custom-nav") { state="in" }; next }
+        if (state == "in")  { if ($0 == "# <<< custom-nav end") { state="post"; next }; print; next }
+      }
+    ' "$MKDOCS_TARGET" > "$CUSTOM_NAV_CAPTURED" 2>/dev/null || true
+
     set +e
     bash "$YAML_MERGE" merge --target "$MKDOCS_TARGET" --framework-default "$BUNDLE_MKDOCS" --managed-namespaces "$MKDOCS_MANAGED"
     merge_rc=$?
     set -e
     if [ "$merge_rc" -ne 0 ]; then
       echo "FAIL: wiki-init: yaml-merge against $MKDOCS_TARGET exited $merge_rc" >&2
+      rm -f "$CUSTOM_NAV_CAPTURED"
       exit 6
     fi
     echo "wiki-init: yaml-merge applied to $MKDOCS_TARGET (managed=${MKDOCS_MANAGED})"
+
+    # Restore captured custom-nav content. If capture is empty (no markers
+    # in target, or markers present but body empty), the awk pass is a
+    # structural no-op. Marker pair contract: edits between markers
+    # preserved byte-for-byte; structurally identical to the
+    # managed-gitignore emitter's preserve-outside-block convention,
+    # inverted to preserve-inside-block.
+    if [ -s "$CUSTOM_NAV_CAPTURED" ]; then
+      tmp_restore="$(mktemp -t wiki-init-custom-nav-restore.XXXXXX)"
+      awk -v src="$CUSTOM_NAV_CAPTURED" '
+        BEGIN { state="pre" }
+        {
+          if (state == "pre") {
+            print
+            if ($0 == "# >>> custom-nav") {
+              state="in"
+              while ((getline line < src) > 0) print line
+              close(src)
+            }
+            next
+          }
+          if (state == "in") {
+            if ($0 == "# <<< custom-nav end") { print; state="post"; next }
+            next
+          }
+          print
+        }
+      ' "$MKDOCS_TARGET" > "$tmp_restore"
+      mv "$tmp_restore" "$MKDOCS_TARGET"
+      echo "wiki-init: restored custom-nav region in $MKDOCS_TARGET (preserved $(wc -l < "$CUSTOM_NAV_CAPTURED" | tr -d ' ') lines)"
+    fi
+    rm -f "$CUSTOM_NAV_CAPTURED"
   fi
 fi
 

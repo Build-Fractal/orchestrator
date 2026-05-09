@@ -671,3 +671,52 @@ MOS-3 / MOS-4 / MOS-5 precedent.
 
 **Cross-references**: `references/installation.md § Releasing via
 curl-pipe-bash`, `commands/update.md § Update sources`.
+
+### D012 — `update_source` config schema (M035 P06)
+
+**Date**: 2026-05-09
+**Phase**: M035 P06 T01
+**Status**: bound
+
+`.orchestrator/config.yml` accepts a top-level scalar key
+`update_source: git|npm|homebrew|none`. Default behavior when the
+key is absent: AD-5 detect-by-install-method-first (read
+`install-meta.txt` provenance + npm/brew/curl signals; first match
+wins; persist resolved source back to config). The literal value
+`none` is the operator opt-out: when set, both
+`orchestrator:update` dispatch and the FR-4 drift-render path
+suppress silently — no dispatch, no JSONL emission, no warning.
+
+Curl-pipe-bash users whose install resolved through `install.sh`
+are detected as `npm` (because curl-pipe-bash extracts the npm
+tarball — D007/D009 single-source-of-truth) and persist as `npm`
+for future runs. This narrows the schema enumeration to the
+spec-FR-13 literal three-channel contract (plus `none`) without
+losing channel coverage.
+
+**Rationale**:
+
+1. **CON-7 / M027 alignment.** `update_source` joins the canonical
+   `VALID_KEYS` list at `scripts/state/read-config.sh:17` using
+   the existing append discipline (single-line edit, end-of-list
+   position) rather than introducing a new schema surface. Every
+   downstream consumer (T02 dispatch, T03 JSONL emission, T04
+   doc) reads via the existing `read-config.sh` pipeline.
+2. **Schema-agnostic on values.** `read-config.sh` validates keys
+   only — value-enumeration enforcement (`git|npm|homebrew|none`
+   set membership) is T02's `run-update.sh` dispatch
+   responsibility. Invalid values surface a stderr advisory at
+   dispatch time but do not block the read.
+3. **Null-sentinel parity.** When the key is absent, the existing
+   M027 P03/T01 null-sentinel pattern returns the literal string
+   `null`; T02 treats `null` and empty as "use AD-5 detection"
+   uniformly.
+4. **FR-16 compliance.** No new suppression knob. The `none`
+   value reuses the existing operator-opt-out semantics rather
+   than introducing a parallel `update.disabled: true` toggle.
+
+**Bound to**: FR-13, FR-16, SC-13, AD-5, #Q-5.
+
+**Cross-references**: `scripts/state/read-config.sh § VALID_KEYS`,
+`commands/update.md § Update sources`,
+`tools/verify/m035-p06-config-schema-shape.sh`.

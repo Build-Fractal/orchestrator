@@ -106,6 +106,11 @@ jobs:
   npm-publish:
     name: npm-publish (tag-push only)
     runs-on: ubuntu-latest
+    # CON-8 (M035 P04 T02 / D010): 20-minute timeout on ubuntu-latest.
+    # Escalation: if measured wall-clock consistently >15min across
+    # three synthetic-tag runs, split into parallel jobs or document
+    # a revised timeout.
+    timeout-minutes: 20
     # CON-6: this job runs ONLY on v* tag push events, never on
     # PRs and never on main-branch pushes. SC-14 verifies this
     # condition mechanically via tools/verify/m035-p02-release-
@@ -193,7 +198,13 @@ jobs:
           npm pack
           mv build-fractal-orchestrator-"$TAG".tgz release-artifacts/
           # P03 hook: homebrew bottle would land here.
-          # P04 hook: install.sh would land here.
+          # P04 (T02): stage install.sh into release-artifacts/.
+          # The downstream cosign-sign loop signs install.sh
+          # automatically (for artifact in *); SHA256SUMS step
+          # computes its digest automatically; gh release create
+          # uploads it via release-artifacts/* glob. No edit to
+          # those steps required.
+          cp packaging/install/install.sh release-artifacts/
           ls -la release-artifacts/
 
       - name: Generate SHA256SUMS
@@ -275,6 +286,10 @@ jobs:
     name: homebrew-publish (tag-push only)
     runs-on: ubuntu-latest
     needs: npm-publish
+    # CON-8 (M035 P04 T02 / D010): 20-minute timeout on ubuntu-latest.
+    # Same shape as npm-publish; per-job timeout means a hung
+    # homebrew-publish doesn't block npm-publish's success signal.
+    timeout-minutes: 20
     if: ${{ startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push' }}
     permissions:
       contents: read

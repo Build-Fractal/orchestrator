@@ -599,3 +599,38 @@ repo's `/raw` URL.
 
 **Cross-references**: `packaging/install/install.sh`,
 `references/installation.md § Installing via curl-pipe-bash`.
+
+### D010 — Release-workflow CI timeout: 20 minutes on ubuntu-latest (CON-8)
+
+**Date**: 2026-05-09
+**Phase**: M035 P04 T02
+**Status**: bound
+
+`npm-publish` and `homebrew-publish` jobs each carry
+`timeout-minutes: 20` at job level in `.github/workflows/release.yml`.
+
+**Rationale**:
+
+1. **Spec recommendation honored.** The spec's `#Q-G6` recommendation
+   is "20 minutes on Ubuntu-latest" + new CON-8 escalation clause.
+   D010 adopts the recommendation without deviation.
+2. **Headroom over typical run.** Current heaviest steps (`npm publish`
+   ~30s, `npm pack` ~5s, cosign-keyless sign over ~4 artifacts ~30s
+   total, SHA256SUMS ~1s, `gh release create` ~10s, downstream
+   `homebrew-publish` ~45s) total ~3min nominal; 20min provides 6×
+   headroom for OIDC issuance latency, transient network failures,
+   cosign/sigstore log-write retries.
+3. **CON-8 escalation clause is the safety net.** If wall-clock
+   consistently >15min across three synthetic-tag runs, plan-phase
+   author splits the workflow into parallel jobs or documents a
+   revised timeout. CON-8 makes the contract explicit so future
+   plan-phase authors don't re-litigate the value.
+4. **Job-level not workflow-level.** `timeout-minutes` is per-job in
+   GitHub Actions. Per-job timeout means a hung `homebrew-publish`
+   doesn't block `npm-publish`'s success signal (and vice versa).
+
+**Bound to**: SC-14, CON-8, FR-10.
+
+**Cross-references**: `.github/workflows/release.yml`,
+`references/installation.md § Releasing via curl-pipe-bash` (T04
+adds the operator-facing note).

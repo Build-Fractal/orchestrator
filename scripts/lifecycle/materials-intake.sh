@@ -149,15 +149,30 @@ case "$THRESHOLD" in
         ;;
 esac
 
-# Timestamp for the intake directory. M033_INTAKE_TIMESTAMP overrides
-# for SC-4 byte-determinism.
-INTAKE_TIMESTAMP="${M033_INTAKE_TIMESTAMP:-}"
-if [ -z "$INTAKE_TIMESTAMP" ]; then
-    INTAKE_TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
-fi
+# Resolve mode: --resolve <path-to-conflicts.md> reuses the parent
+# intake directory from the original detection run rather than starting
+# a new timestamped intake. Re-detection is intentionally skipped — the
+# operator-supplied conflicts.md IS the authoritative input on this pass.
+if [ -n "$RESOLVE_PATH" ]; then
+    if [ ! -f "$RESOLVE_PATH" ]; then
+        echo "--resolve target not found: $RESOLVE_PATH" >&2
+        exit 2
+    fi
+    # Resolve to absolute then take its directory as the intake dir.
+    RESOLVE_PATH=$(cd "$(dirname "$RESOLVE_PATH")" && pwd)/$(basename "$RESOLVE_PATH")
+    INTAKE_DIR=$(dirname "$RESOLVE_PATH")
+    INTAKE_TIMESTAMP=$(basename "$INTAKE_DIR")
+else
+    # Timestamp for the intake directory. M033_INTAKE_TIMESTAMP overrides
+    # for SC-4 byte-determinism.
+    INTAKE_TIMESTAMP="${M033_INTAKE_TIMESTAMP:-}"
+    if [ -z "$INTAKE_TIMESTAMP" ]; then
+        INTAKE_TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
+    fi
 
-INTAKE_DIR="$PROJECT_DIR/.orchestrator/intake/$INTAKE_TIMESTAMP"
-mkdir -p "$INTAKE_DIR"
+    INTAKE_DIR="$PROJECT_DIR/.orchestrator/intake/$INTAKE_TIMESTAMP"
+    mkdir -p "$INTAKE_DIR"
+fi
 
 ACCUMULATOR="$INTAKE_DIR/accumulator.txt"
 LABELS_FILE="$INTAKE_DIR/labels.txt"
@@ -166,10 +181,74 @@ RESOLUTIONS_FILE="$INTAKE_DIR/resolutions.txt"
 PRESPEC_PATH="$INTAKE_DIR/reconciled-pre-spec.md"
 CONFLICTS_MD="$INTAKE_DIR/conflicts.md"
 
-: > "$ACCUMULATOR"
-: > "$LABELS_FILE"
-: > "$CONFLICTS_ACC"
-: > "$RESOLUTIONS_FILE"
+if [ -z "$RESOLVE_PATH" ]; then
+    : > "$ACCUMULATOR"
+    : > "$LABELS_FILE"
+    : > "$CONFLICTS_ACC"
+    : > "$RESOLUTIONS_FILE"
+fi
+
+# ---------------------------------------------------------------------------
+# Helper: parse_resolve_md
+# ---------------------------------------------------------------------------
+#
+# Parses an operator-edited conflicts.md and emits resolutions.txt rows
+# in the same `<i>|<resolution>|<original-conflict-line>` shape that
+# reconcile_terminal produces. Walks `## Conflict N` blocks and extracts
+# the matching `- Detail:` and `- Resolution:` lines. Unrecognized
+# resolutions fall back to accept-primary with a stderr diagnostic.
+# ---------------------------------------------------------------------------
+parse_resolve_md() {
+    local md_path="$1"
+    local out_file="$2"
+    : > "$out_file"
+    local current_idx=""
+    local current_detail=""
+    local current_resolution=""
+    local line
+    local IFSO="$IFS"
+    IFS=$'\n'
+    while IFS= read -r line; do
+        case "$line" in
+            '## Conflict '*)
+                # Flush prior block before starting a new one.
+                if [ -n "$current_idx" ]; then
+                    case "$current_resolution" in
+                        accept-primary|accept-supplementary|manual-edit|defer)
+                            ;;
+                        *)
+                            echo "unrecognized resolution '$current_resolution' for conflict ${current_idx} - falling back to accept-primary" >&2
+                            current_resolution="accept-primary"
+                            ;;
+                    esac
+                    echo "${current_idx}|${current_resolution}|${current_detail}" >> "$out_file"
+                fi
+                current_idx=$(echo "$line" | sed -E 's/^## Conflict[[:space:]]+([0-9]+).*/\1/')
+                current_detail=""
+                current_resolution=""
+                ;;
+            '- Detail: '*)
+                current_detail=$(echo "$line" | sed -E 's/^- Detail:[[:space:]]*//')
+                ;;
+            '- Resolution: '*)
+                current_resolution=$(echo "$line" | sed -E 's/^- Resolution:[[:space:]]*//')
+                ;;
+        esac
+    done < "$md_path"
+    IFS="$IFSO"
+    # Flush trailing block.
+    if [ -n "$current_idx" ]; then
+        case "$current_resolution" in
+            accept-primary|accept-supplementary|manual-edit|defer)
+                ;;
+            *)
+                echo "unrecognized resolution '$current_resolution' for conflict ${current_idx} - falling back to accept-primary" >&2
+                current_resolution="accept-primary"
+                ;;
+        esac
+        echo "${current_idx}|${current_resolution}|${current_detail}" >> "$out_file"
+    fi
+}
 
 # ---------------------------------------------------------------------------
 # Helper: enumerate_materials
@@ -694,6 +773,38 @@ emit_reconciled_prespec() {
 # ---------------------------------------------------------------------------
 # Main flow
 # ---------------------------------------------------------------------------
+
+# Resolve mode: short-circuit re-detection. Reuse the parent intake dir's
+# labels.txt + conflicts-acc.txt from the original run, parse resolutions
+# from the operator-edited conflicts.md, then emit the pre-spec + markers.
+if [ -n "$RESOLVE_PATH" ]; then
+    if [ ! -s "$LABELS_FILE" ]; then
+        echo "--resolve: prior labels.txt missing or empty under $INTAKE_DIR" >&2
+        exit 2
+    fi
+    parse_resolve_md "$RESOLVE_PATH" "$RESOLUTIONS_FILE"
+
+    CONFLICT_COUNT=0
+    if [ -s "$RESOLUTIONS_FILE" ]; then
+        CONFLICT_COUNT=$(grep -c . "$RESOLUTIONS_FILE" || true)
+    fi
+    LABELED_COUNT=$(grep -c . "$LABELS_FILE" || true)
+
+    emit_reconciled_prespec "$LABELS_FILE" "$RESOLUTIONS_FILE" "$PRESPEC_PATH"
+
+    bash "$REPO_ROOT/scripts/util/start-state-markers.sh" write materials-intake "$PROJECT_DIR"
+    PAYLOAD="{\"materials_count\":${LABELED_COUNT},\"conflicts_resolved\":${CONFLICT_COUNT}}"
+    PROJECT_DIR="$PROJECT_DIR" bash "$REPO_ROOT/scripts/util/jsonl-event-emitter.sh" emit materials_intake_completed "$PAYLOAD"
+    DUAL_WRITE_HELPER="$REPO_ROOT/scripts/util/dual-write-runtime-md.sh"
+    if [ -x "$DUAL_WRITE_HELPER" ]; then
+        FRAGMENT="materials-intake: reconciled ${LABELED_COUNT} materials with ${CONFLICT_COUNT} conflicts resolved"
+        bash "$DUAL_WRITE_HELPER" --root "$PROJECT_DIR" --marker recent-changes --append-entry "$FRAGMENT" || true
+    fi
+
+    echo "PASS: materials-intake completed"
+    echo "SUMMARY: materials-intake.sh materials=${LABELED_COUNT} conflicts=${CONFLICT_COUNT} prespec=${PRESPEC_PATH}"
+    exit 0
+fi
 
 MATERIALS_LIST="$INTAKE_DIR/materials.txt"
 enumerate_materials "$PROJECT_DIR" "$MATERIALS_LIST"

@@ -173,3 +173,21 @@ display_thresholds:
 wiki:
   landing_cards: []             # M037 FR-2 — operator-customizable card list.
 
+  # --- Wiki readability decorator (scripts/wiki/wiki-decorate-build.py) ---
+  # Two project-tunable knobs that drive code-decoration. With both
+  # empty, the decorator still operates against .orchestrator/DECISIONS.md
+  # (zero-config behavior — every orchestrator-managed project gets DR-###
+  # hover-tooltip links for free).
+  #
+  # code_prefixes: spec-table column-A prefixes to scan in spec_paths.
+  #   Each prefix matches `| <prefix>-\d+ | Title | …` rows. Common
+  #   project conventions include AN/BG/OD (PBJ Analyzer), FR/SC/US
+  #   (spec-kit features), AC (acceptance), MIT (mitigation). Define
+  #   only the prefixes that appear as table-row codes in your spec(s).
+  # spec_paths: .orchestrator-relative paths to spec markdown files
+  #   that contain pipe-table-coded rows. Multiple paths are scanned
+  #   in order; later entries do not override earlier ones for the
+  #   same code.
+  code_prefixes: []             # e.g. [AN, BG, OD]
+  spec_paths: []                # e.g. [spec/<plan>.md]
+

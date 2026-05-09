@@ -80,6 +80,7 @@ fi
 # ----- Environment preflight ------------------------------------------------
 STUB_GEN="$ROOT/scripts/wiki/wiki-generate-stubs.sh"
 NAV_GEN="$ROOT/scripts/wiki/wiki-generate-nav.sh"
+DECORATE="$ROOT/scripts/wiki/wiki-decorate-build.py"
 
 if [ ! -f "$STUB_GEN" ]; then
   printf 'FAIL: wiki-generate-stubs.sh not found at %s\n' "$STUB_GEN" >&2
@@ -88,6 +89,12 @@ fi
 if [ ! -f "$NAV_GEN" ]; then
   printf 'FAIL: wiki-generate-nav.sh not found at %s\n' "$NAV_GEN" >&2
   exit 1
+fi
+# wiki-decorate-build.py is optional for older trees that haven't picked
+# up the readability rollout yet -- skip the decorate step in that case.
+DECORATE_PRESENT=0
+if [ -f "$DECORATE" ]; then
+  DECORATE_PRESENT=1
 fi
 if ! command -v diff >/dev/null 2>&1; then
   printf 'FAIL: diff(1) not on PATH\n' >&2
@@ -144,6 +151,22 @@ if ! bash "$STUB_GEN" --root "$TMP_ROOT" >"$GEN_LOG" 2>&1; then
   printf '%s\n' '----- generator output -----' >&2
   cat "$GEN_LOG" >&2
   exit 1
+fi
+
+# Decorate-build (wiki readability rollout) runs between stubs and nav.
+# It mutates each stub to include from wiki/.staged/ and emits decorated
+# copies of every .orchestrator/**.md include source. The committed stub
+# form points at .staged/, so freshness must run decorate before diffing
+# or every PR will trip drift. Gated on $DECORATE_PRESENT for cross-version
+# safety -- consumer projects on pre-readability-rollout runtimes keep
+# passing freshness without the decorator installed.
+if [ "$DECORATE_PRESENT" -eq 1 ]; then
+  if ! python3 "$DECORATE" --root "$TMP_ROOT" --force >"$GEN_LOG" 2>&1; then
+    printf 'FAIL: wiki-decorate-build.py exited non-zero against tmp tree\n' >&2
+    printf '%s\n' '----- decorator output -----' >&2
+    cat "$GEN_LOG" >&2
+    exit 1
+  fi
 fi
 
 if ! bash "$NAV_GEN" --root "$TMP_ROOT" >"$GEN_LOG" 2>&1; then

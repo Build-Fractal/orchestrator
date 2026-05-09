@@ -520,6 +520,16 @@ jobs:
           else
             echo "wiki-stubs-fresh: scripts/diagnostics/wiki-stubs-fresh.sh not present -- skipping (older orchestrator runtime)"
           fi
+      - name: Materialize wiki/.staged/ via decorator
+        # Stubs include from wiki/.staged/ (gitignored); regenerate it
+        # from .orchestrator/ source before mkdocs build, otherwise
+        # include-markdown directives will fail on missing files.
+        run: |
+          if [ -f scripts/wiki/wiki-decorate-build.py ]; then
+            python3 scripts/wiki/wiki-decorate-build.py --force
+          else
+            echo "wiki-decorate-build: scripts/wiki/wiki-decorate-build.py not present -- skipping (pre-readability-rollout tree)"
+          fi
       - run: mkdocs build -f wiki/mkdocs.yml
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

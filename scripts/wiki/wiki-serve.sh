@@ -73,9 +73,13 @@ fi
 # obscure real wiki feedback. The generators are idempotent and clean stale
 # files first, so this is safe to run on every serve.
 if [ "$SKIP_REGEN" -eq 0 ]; then
-  printf 'REGEN: stubs + nav (use --skip-regen to skip)\n' >&2
+  printf 'REGEN: stubs + decorate + nav (use --skip-regen to skip)\n' >&2
   bash "$PROJECT_ROOT/scripts/wiki/wiki-generate-stubs.sh" --root "$PROJECT_ROOT" >/dev/null
+  python3 "$PROJECT_ROOT/scripts/wiki/wiki-decorate-build.py" 2>&1 | tail -1 >&2
   bash "$PROJECT_ROOT/scripts/wiki/wiki-generate-nav.sh" --root "$PROJECT_ROOT" >/dev/null
 fi
 
-exec mkdocs serve -f "$CONFIG"
+# `--watch wiki/.staged` so mkdocs picks up decorator-only changes
+# (mkdocs only watches docs_dir by default; decorate-build.py also
+# touches the stub so this is defensive belt-and-suspenders).
+exec mkdocs serve -f "$CONFIG" --watch "$PROJECT_ROOT/wiki/.staged"

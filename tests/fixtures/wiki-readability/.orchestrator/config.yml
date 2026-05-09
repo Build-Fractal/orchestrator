@@ -1,0 +1,13 @@
+schema_version: "1.0"
+type: orchestrator-config
+
+# Wiki readability decorator config — exercised by the M040 acceptance
+# fixture. Both keys are populated so the spec-table-codes path runs.
+wiki:
+  landing_cards: []
+  code_prefixes:
+    - AN
+    - BG
+    - OD
+  spec_paths:
+    - spec/synthetic-plan.md

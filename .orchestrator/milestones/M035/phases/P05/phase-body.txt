@@ -1,0 +1,131 @@
+P05 ships install-script integrity for the M035 launch event: signing,
+checksums, and a rollback marker contract with `orchestrator:update
+--rollback` dispatch. Six tasks (T01–T06) closed in dependency order; the
+phase-suite aggregator reports `BATTERY: pass=50 fail=0 skip=1`.
+
+## What was built
+
+- **Rollback marker (FR-12, T01)** — `.orchestrator/.previous-version` is
+  a five-field key=value sidecar (`prior_version`, `prior_commit_sha`,
+  `prior_manifest_path`, `prior_install_mode`, `rolled_at`). The prior
+  install's `installed-files.txt` is snapshotted to
+  `.orchestrator/.rollback/manifest-<prior-version>.txt` at upgrade-time,
+  decoupling rollback from source-repo reachability under
+  `update_source: npm|homebrew`. Stage-4.4.6 hooks land in all three
+  installers (`install-claude-code.sh`, `install-codex.sh`,
+  `install-cursor.sh`).
+
+- **Rollback dispatch (FR-12, T02)** — `scripts/lifecycle/run-update.sh
+  --rollback` consumes the marker, refuses symlink-mode and mixed-mode
+  rollback with the spec-amendment's verbatim advisory pointing
+  operators to `git checkout` in the source repo (#Q-G8), and replays
+  the snapshotted manifest under `update_source: git` (npm/homebrew/curl
+  arms emit SKIP per the P02 cross-channel pattern). `commands/update.md`
+  gains a `## Rollback` section.
+
+- **Sigstore keyless signing + SHA-256 fallback (D004, T03)** — five
+  steps inserted into the npm-publish job of `.github/workflows/
+  release.yml`: setup cosign / stage release artifacts / generate
+  SHA256SUMS / sign release artifacts / create GitHub release.
+  Job-level `permissions: id-token: write, contents: write` overrides
+  the workflow-level `contents: read` baseline so least-privilege
+  survives outside this job. SHA256SUMS itself is signed; the cosign
+  action AND the cosign release version are both pinned (Constitution
+  Principle XVI). D004 resolves spec `#Q-3`.
+
+- **Operator verification doc (FR-11, T04)** — `references/installation.md
+  ## Verifying integrity` ships two paths: cosign verify-blob with the
+  canonical-repo identity URL `https://github.com/Build-Fractal/orchestrator
+  /.github/workflows/release.yml@refs/tags/v$VERSION` and OIDC issuer
+  `https://token.actions.githubusercontent.com`, plus a no-cosign-required
+  `shasum -a 256 -c SHA256SUMS --ignore-missing` fallback. The identity
+  URL is byte-identical to the signing-workflow path; T03 declares it,
+  T04 documents it, drift would make verification fail end-to-end.
+
+- **Acceptance tests + fixture quartet (SC-11/SC-12/SC-12b, T05)** —
+  `tools/verify/m035-p05-signature-verification.sh` exercises the
+  always-on `shasum -c` path against real fixture data and SKIPs the
+  cosign live-verify path unless `COSIGN_AVAILABLE=1` AND
+  `M035_P05_LIVE_RELEASE_DIR=<path>` are both set (M030 P03 live-LLM
+  gating precedent — default is SKIP, not mock).
+  `tests/m035-acceptance/m035-p05-rollback-byte-equivalence.sh` runs
+  install N → re-install N+1 → rollback → payload-tree byte-equality
+  assertion plus the symlink-mode refusal contract.
+
+- **Phase-suite aggregator (T06)** — `tools/verify/m035-p05-phase-suite.sh`
+  chains all eight task-grain verifiers in T01→T05 order, sums the
+  per-verifier `BATTERY:` lines, and emits the consolidated
+  `BATTERY: pass=50 fail=0 skip=1`. Load-bearing for
+  `validate-milestone.sh M035` invocation.
+
+## Key decisions
+
+- **D004 — sigstore keyless primary + SHA-256 fallback** (resolves
+  spec `#Q-3`). Eliminates GPG private-key management blast-radius,
+  binds signing identity to the GHA OIDC token via the canonical
+  workflow-file URL, and ships SHA256SUMS as a tooling-free
+  verification path for operators without cosign installed.
+
+- **D005 — rollback-marker schema** (resolves dispatch-context `#Q-4`).
+  Five-field sidecar plus snapshotted manifest at upgrade-time. The
+  `prior_install_mode` field is the single point of enforcement for
+  `#Q-G8`'s symlink-mode refusal.
+
+## Verification
+
+- Phase-suite aggregator (`m035-p05-phase-suite.sh`) → `BATTERY: pass=50
+  fail=0 skip=1` end-to-end.
+- All eight task-grain verifiers green: rollback-marker-shape (pass=6),
+  rollback-snapshot-presence (pass=3), rollback-driver-shape (pass=4),
+  update-skill-doc-shape (pass=5), release-workflow-signing-shape
+  (pass=10), installation-doc-verifying-integrity (pass=9),
+  signature-verification (pass=7 skip=1), rollback-byte-equivalence
+  (pass=6).
+- Wall-clock dominated by the byte-equivalence acceptance test (~12min
+  due to real install + re-install + rollback against mktemp fixtures);
+  task-grain shape verifiers complete in <2s combined.
+
+## Caveats and follow-ups
+
+- **BSD-sed bracket-class papercut surfaced (T05 finding, not fixed)**
+  — the P02 helper `tests/m035-acceptance/_byte-equivalence-hash.sh`
+  uses a `sed -E '[][.^$*+?(){}|\\]'` bracket class that errors on
+  macOS BSD sed, silently degrading the EXCLUSION_LIST mechanism to a
+  no-op locally. P02's cross-channel test passes by accident because
+  single-channel reflexive equality holds. T05 sidestepped by rolling
+  a local `hash_payload_tree()` scoped to project_assets subtrees.
+  Captured as a paper-cut for future cross-channel hardening.
+
+- **`scripts/util/run-probe.sh` does not export `REPO_ROOT`** — same
+  paper-cut P02 T01/T02/T05 hit and noted. Staged probes apply
+  parameter-expansion fallback. Recommended follow-up: export
+  `REPO_ROOT` in `run-probe.sh` or update its docstring.
+
+- **Phase-suite wall-clock dominated by acceptance test (~12min)** —
+  if `validate-milestone.sh M035` runs phase aggregators sequentially,
+  P05 will dominate milestone validation runtime. Captured as a
+  paper-cut follow-up (parallelize phase aggregators and/or cache
+  byte-equivalence fixture state).
+
+- **Branch-discipline incidents (procedural, no work lost)** — three
+  P05 task agents committed onto detached HEAD after running
+  `git checkout <sha>` post-commit. Dispatcher fast-forwarded `main`
+  three times. All commits remained on the linear `main` history; no
+  branch divergence. Contributing factor: agent-side branch operations
+  not gated by the dispatcher. Open question for M035 close: whether
+  to add a "do NOT run git checkout/switch in task agents" clause to
+  the orchestrator-agent system prompt or fold it into the task-plan
+  template.
+
+## Roadmap reassessment
+
+- No deviations from the original P05 boundary map. Produces / Consumes
+  match the roadmap declaration. P04 (curl-pipe-bash + GH release
+  automation) consumes P05's signing infrastructure + rollback-marker
+  contract as declared; no downstream-stale signal.
+- `roadmap_sync` reports `SYNC:OK`.
+
+P05 is the second-to-last functional phase before launch. Remaining:
+P03 (homebrew tap, ready), P04 (curl-pipe-bash, gated on M033
+friendly-tester pass), P06 (`orchestrator:update` multi-source
+dispatch + acceptance battery, gated on P03/P04).

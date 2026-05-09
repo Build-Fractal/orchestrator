@@ -47,7 +47,7 @@ updated_at: "2026-05-07T00:00:00Z"
     - Produces: `Build-Fractal/homebrew-orchestrator` tap repo (D-RN-4 single-formula tap); the formula (FR-9, registers skills via M025's manifest mechanism, no formula-specific install logic, uninstall cascades through M025); `.github/workflows/release.yml` extended with homebrew-bottle upload step (CON-6 secret scoping); `cross-channel-byte-equivalence.sh` extended with homebrew-channel hash assertion.
     - Consumes: P02 release-workflow shape; M025 manifest mechanism (uninstall cascade contract).
 
-- [ ] **P05**: Install-script integrity — signing + checksums + rollback marker — "`gpg --verify install.sh.sig install.sh` (or sigstore-equivalent per `#Q-3`) succeeds for every published release (SC-11); `shasum -a 256 install.sh` matches the value in GH release notes; rollback marker `.orchestrator/.previous-version` is written by every install/update; `orchestrator:update --rollback` reverts a fixture from N+1 to N byte-for-byte (SC-12)."
+- [x] **P05**: Install-script integrity — signing + checksums + rollback marker — "`gpg --verify install.sh.sig install.sh` (or sigstore-equivalent per `#Q-3`) succeeds for every published release (SC-11); `shasum -a 256 install.sh` matches the value in GH release notes; rollback marker `.orchestrator/.previous-version` is written by every install/update; `orchestrator:update --rollback` reverts a fixture from N+1 to N byte-for-byte (SC-12)."
   - Risk: high
   - Depends: P02
   - Blocked by: none

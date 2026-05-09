@@ -259,7 +259,11 @@ bash tests/installer-acceptance/m035-collision-exit-status.sh
 ```
 
 ```bash
-bash tools/verify/m029-p01-headline-shape.sh
+bash tools/verify/m029-p01-status-headline-shape.sh
+```
+
+```bash
+bash tools/verify/m029-p01-headline-shape-contract.sh
 ```
 
 ## Inputs

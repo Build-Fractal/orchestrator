@@ -87,8 +87,16 @@ echo "$out2" | grep -q '^branch: greenfield-with-materials' && pass "fixture-2 d
 echo "$out2" | grep -q 'would-execute: materials-intake-stub' && pass "fixture-2 dispatches materials-intake-stub" || fail "fixture-2 wrong stub"
 
 # Test 3: existing-codebase
+# Note (2026-05-09 friendly-tester UX patch): dropped --dry-run from this
+# invocation. The Patch C pre-flight, when it sees existing-codebase +
+# --dry-run, exits 0 BEFORE invoke_init runs (preview-only contract),
+# so the would-execute: ingest-codebase-stub token would not fire under
+# --dry-run. The fixture is a tempdir, so running the full path (init +
+# dispatch_stub) is safe and exercises the whole onboarding shape end-
+# to-end. SC-1's invariant is "branch detected and matching stub
+# dispatched", not "dry-run dispatch routing".
 f3=$(make_fixture_3_existing_codebase)
-out3=$(cd "$PROJECT_ROOT" && bash scripts/lifecycle/start.sh --project-dir "$f3" --yes --dry-run 2>&1) || fail "fixture-3 start failed"
+out3=$(cd "$PROJECT_ROOT" && bash scripts/lifecycle/start.sh --project-dir "$f3" --yes 2>&1) || fail "fixture-3 start failed"
 echo "$out3" | grep -q '^branch: existing-codebase' && pass "fixture-3 detects existing-codebase" || fail "fixture-3 wrong branch"
 echo "$out3" | grep -q 'would-execute: ingest-codebase-stub' && pass "fixture-3 dispatches ingest-codebase-stub" || fail "fixture-3 wrong stub"
 

@@ -103,8 +103,57 @@ load_detect_state() {
     fi
 }
 
-USAGE='usage: start.sh [--project-dir PATH] [--yes] [--branch NAME] [--stack NAME] [--dry-run] [--no-resume] [--with-wiki] [--with-giscus] [--deploy] [--with-github] [--auto-chain]'
+USAGE='usage: start.sh [--project-dir PATH] [--yes] [--branch NAME] [--stack NAME] [--dry-run] [--no-resume] [--with-wiki] [--with-giscus] [--deploy] [--with-github] [--auto-chain] [--help|-h]'
 BRANCH_ENUM='greenfield-empty | greenfield-with-materials | existing-codebase | migrating'
+
+# ---------------------------------------------------------------------------
+# Patch B (M033 friendly-tester UX): --help / -h support.
+#
+# Prints a one-paragraph header, the USAGE line, and a per-flag legend.
+# Exits 0. Wired into the flag-parsing loop below as `--help|-h)` BEFORE
+# the catch-all `*)` branch (which currently rejects unknown flags with
+# exit 2). Pre-patch behavior was `unknown flag: --help` -> exit 2.
+# ---------------------------------------------------------------------------
+
+print_help() {
+    cat <<'HELP'
+start.sh -- orchestrator project onboarding entry point. Detects which of
+four onboarding branches your project needs (empty / with-materials /
+existing-codebase / migrating) and dispatches the appropriate sub-flow.
+After detection, runs scripts/lifecycle/init-project.sh (idempotent) and
+the matching sub-flow stub. SSOT for branch-detection patterns lives at
+references/branch-detection.md.
+
+usage: start.sh [--project-dir PATH] [--yes] [--branch NAME] [--stack NAME]
+                [--dry-run] [--no-resume] [--with-wiki] [--with-giscus]
+                [--deploy] [--with-github] [--auto-chain] [--help|-h]
+
+flags:
+  --project-dir PATH   target project directory (default: $PWD).
+  --yes                non-interactive: accept disambiguation defaults and
+                       skip the existing-codebase pre-flight prompt.
+  --branch NAME        force a specific onboarding branch, bypassing
+                       detection. NAME in: greenfield-empty,
+                       greenfield-with-materials, existing-codebase,
+                       migrating.
+  --stack NAME         hint for stack-aware constitution starter (P03).
+  --dry-run            preview-only: emits would-execute stubs and (for
+                       existing-codebase) the pre-flight warning, then
+                       exits without invoking init-project.sh.
+  --no-resume          ignore start-state markers and force the full
+                       baseline path (escape valve for FR-20 / CON-6).
+  --with-wiki          after onboarding, invoke wiki-init.sh (FR-15).
+  --with-giscus        passed through to wiki-init.sh.
+  --deploy             passed through to wiki-init.sh.
+  --with-github        after onboarding (and after --with-wiki when
+                       paired), invoke github-init.sh (FR-16).
+  --auto-chain         after onboarding, walk evaluate -> discuss ->
+                       roadmap -> plan-phase one stage at a time
+                       (M029 / FR-10).
+  --help, -h           print this help and exit 0.
+HELP
+    return 0
+}
 
 # ---------------------------------------------------------------------------
 # Sub-flow stubs (P01 — deliberately vacuous; P02–P05 replace these)
@@ -186,8 +235,14 @@ translate_from_to_source() {
 # ---------------------------------------------------------------------------
 migrate_routing() {
     # Unsupported tooling: DETECTED_FROM empty despite migrating branch.
+    # Patch D (2026-05-09): preserve the legacy 'no orchestrator:migrate
+    # adapter for this tooling -- please file a request' diagnostic on
+    # stderr (load-bearing token grep'd by m033-p04-migrate-routing-
+    # shape.sh + p05-migrate-routing.sh test 5). Append the actionable
+    # footer on stdout via emit_migrate_dead_end_footer.
     if [ -z "${DETECTED_FROM:-}" ]; then
         printf 'no orchestrator:migrate adapter for this tooling -- please file a request\n' 1>&2
+        emit_migrate_dead_end_footer "$PROJECT_DIR"
         return 0
     fi
 
@@ -196,6 +251,7 @@ migrate_routing() {
     source_kind=$(translate_from_to_source "$from_kind")
     if [ -z "$source_kind" ]; then
         printf 'no orchestrator:migrate adapter for this tooling -- please file a request\n' 1>&2
+        emit_migrate_dead_end_footer "$PROJECT_DIR"
         return 0
     fi
 
@@ -332,6 +388,11 @@ while [ $# -gt 0 ]; do
         --auto-chain)
             AUTO_CHAIN=1
             shift
+            ;;
+        --help|-h)
+            # Patch B: --help / -h prints the long-form help and exits 0.
+            print_help
+            exit 0
             ;;
         *)
             printf 'unknown flag: %s\n' "$1" 1>&2
@@ -771,10 +832,370 @@ github_init_passthrough() {
 }
 
 # ---------------------------------------------------------------------------
+# Patch A (M033 friendly-tester UX): warm welcome footer.
+#
+# Emits a per-branch human-readable footer AFTER the existing machine
+# tokens (SUMMARY:, branch:, would-execute:, migrate-routed:, proposed:,
+# start-state:, branch-override:). Strictly ADDITIVE -- preserves all
+# load-bearing tokens grep'd by the M033 verifier suite. Always written
+# to stdout. Box-drawing uses U+2500 horizontal-line; no emoji.
+#
+# The footer answers the three friendly-tester questions every operator
+# asks at this point:
+#   1. WHAT to type next (concrete `/orchestrator-*` skill name).
+#   2. WHY this branch fired (one-sentence "we detected ... so we'll ...").
+#   3. HOW to course-correct (force a different branch).
+# ---------------------------------------------------------------------------
+
+# Count PBJ-shape .md files for the greenfield-with-materials footer.
+# Mirrors detect_branch's rule-2 find invocation byte-for-byte (same
+# patterns, same maxdepth) so the count we report is exactly what
+# detection saw.
+count_pbj_md_files() {
+    local proj="$1"
+    find "$proj" -maxdepth 1 -type f -name '*.md' \
+        \( -iname '*BRIEF*' -o -iname '*PLAN*' -o -iname '*DECISIONS*' \
+           -o -iname '*HANDOFF*' -o -iname '*AUDIT*' \) 2>/dev/null \
+        | wc -l \
+        | tr -d ' '
+}
+
+# Compose the existing-codebase "we detected ..." sentence by listing
+# only the signals that actually fired. Mirrors detect_branch's rule-3
+# probe shape; called from emit_welcome_footer when the branch is
+# existing-codebase.
+existing_codebase_signal_sentence() {
+    local proj="$1"
+    local has_src=0 has_many=0 has_git=0
+    local src_count=0 commit_count=0
+    if [ -d "$proj/src" ]; then has_src=1; fi
+    src_count=$(find "$proj" -maxdepth 1 -type f \
+        \( -name '*.js' -o -name '*.ts' -o -name '*.jsx' -o -name '*.tsx' \
+           -o -name '*.py' -o -name '*.rs' -o -name '*.go' -o -name '*.rb' \
+           -o -name '*.java' -o -name '*.kt' -o -name '*.swift' -o -name '*.cs' \
+           -o -name '*.cpp' -o -name '*.c' -o -name '*.h' \) 2>/dev/null \
+        | wc -l \
+        | tr -d ' ')
+    if [ "$src_count" -ge 10 ]; then has_many=1; fi
+    if [ -d "$proj/.git" ]; then
+        commit_count=$(git -C "$proj" rev-list --count HEAD 2>/dev/null || echo 0)
+        if [ "$commit_count" -ge 1 ]; then has_git=1; fi
+    fi
+    local parts=""
+    if [ "$has_src" -eq 1 ]; then
+        parts="src/ directory present"
+    fi
+    if [ "$has_many" -eq 1 ]; then
+        if [ -n "$parts" ]; then parts="$parts; "; fi
+        parts="${parts}${src_count} source files at root (>=10)"
+    fi
+    if [ "$has_git" -eq 1 ]; then
+        if [ -n "$parts" ]; then parts="$parts; "; fi
+        parts="${parts}.git/ with ${commit_count} commit(s)"
+    fi
+    if [ -z "$parts" ]; then
+        parts="existing-codebase signal (forced via --branch override)"
+    fi
+    # No trailing newline -- caller embeds in a printf format string and
+    # adds its own '\n'.
+    printf 'an existing codebase (%s)' "$parts"
+}
+
+emit_welcome_footer() {
+    local branch_name="$1"
+    local proj="$2"
+
+    local sep='---------------------------------------------------------------------'
+    # Use box-drawing horizontal line (U+2500).
+    sep='─────────────────────────────────────────────────────'
+
+    case "$branch_name" in
+        greenfield-empty)
+            printf '%s\n' "$sep"
+            printf ' [OK] Setup complete\n'
+            printf '\n'
+            printf '   We detected: an empty project (no code, no docs)\n'
+            printf "   So we'll: walk you through ideating what to build\n"
+            printf '\n'
+            printf ' NEXT STEP -- in your Claude Code session, type:\n'
+            printf '   /orchestrator-evaluate\n'
+            printf '\n'
+            printf ' Need a different path? Force a branch:\n'
+            printf '   start.sh --branch greenfield-with-materials | existing-codebase | migrating\n'
+            printf '%s\n' "$sep"
+            ;;
+        greenfield-with-materials)
+            local pbj_n
+            pbj_n=$(count_pbj_md_files "$proj")
+            printf '%s\n' "$sep"
+            printf ' [OK] Setup complete\n'
+            printf '\n'
+            printf '   We detected: a project with %s markdown brief documents (no source code)\n' "$pbj_n"
+            printf "   So we'll: ingest your materials and walk you through scoping a roadmap\n"
+            printf '\n'
+            printf ' NEXT STEP -- in your Claude Code session, type:\n'
+            printf '   /orchestrator-materials-intake\n'
+            printf '\n'
+            printf ' Need a different path? Force a branch:\n'
+            printf '   start.sh --branch greenfield-empty | existing-codebase | migrating\n'
+            printf '%s\n' "$sep"
+            ;;
+        existing-codebase)
+            local sig_sentence
+            sig_sentence=$(existing_codebase_signal_sentence "$proj")
+            printf '%s\n' "$sep"
+            printf ' [OK] Setup complete\n'
+            printf '\n'
+            printf '   We detected: %s\n' "$sig_sentence"
+            printf "   So we'll: scan your codebase to seed an orchestrator knowledge graph (5-15 architecture/conventions/decisions chunks)\n"
+            printf '\n'
+            printf ' NEXT STEP -- in your Claude Code session, type:\n'
+            printf '   /orchestrator-ingest-codebase\n'
+            printf '\n'
+            printf ' Need a different path? Force a branch:\n'
+            printf '   start.sh --branch greenfield-empty | greenfield-with-materials | migrating\n'
+            printf '%s\n' "$sep"
+            ;;
+        migrating)
+            if [ -n "${DETECTED_FROM:-}" ]; then
+                printf '%s\n' "$sep"
+                printf ' [OK] Setup complete\n'
+                printf '\n'
+                printf '   We detected: a project from %s\n' "$DETECTED_FROM"
+                printf "   So we'll: migrate your existing tooling state into orchestrator format\n"
+                printf '\n'
+                printf ' NEXT STEP -- in your Claude Code session, type:\n'
+                printf '   /orchestrator-migrate\n'
+                printf '\n'
+                printf ' Need a different path? Force a branch:\n'
+                printf '   start.sh --branch greenfield-empty | greenfield-with-materials | existing-codebase\n'
+                printf '%s\n' "$sep"
+            fi
+            # The DETECTED_FROM-empty case is handled by the dead-end
+            # footer in emit_migrate_dead_end_footer (Patch D), invoked
+            # from migrate_routing on the unsupported-tooling branch.
+            ;;
+        *)
+            : # Unknown branch: silent (the dispatch_stub already errors).
+            ;;
+    esac
+    return 0
+}
+
+# ---------------------------------------------------------------------------
+# Patch C (M033 friendly-tester UX): existing-codebase pre-flight.
+#
+# The friendly-tester walkthrough (2026-05-09) found that pointing
+# start.sh at a real repo silently writes 8+ items at the project root
+# (commands/, scripts/, references/, templates/, wiki/, .gitignore,
+# CLAUDE.md, AGENTS.md, .orchestrator/). A stranger loses confidence.
+#
+# This pre-flight runs BEFORE invoke_init in the existing-codebase case:
+#   1. Lists what install-claude-code.sh's project_assets stage will
+#      create (cross-checked against packaging/bundle/manifest.yml on
+#      2026-05-09: commands/ scripts/ references/ templates/ wiki/).
+#      Plus .orchestrator/, CLAUDE.md, AGENTS.md, .gitignore.
+#   2. Checks each item against the project root for collisions.
+#   3. On collision -> exit 2 (refuse). Operator resolves manually or
+#      passes --branch <other> to bypass.
+#   4. No collision + TTY + no --yes -> prompt for confirmation.
+#   5. --yes -> skip prompt, but still print the warning + would-create
+#      list (transparency contract).
+#   6. --dry-run -> print + emit "DRY-RUN: no changes made" + exit 0
+#      BEFORE invoke_init runs.
+#
+# Out-of-tree footprint refactor (the deeper fix that would move
+# commands/ scripts/ references/ templates/ wiki/ under .orchestrator/)
+# is filed as a separate post-launch proposal.
+# ---------------------------------------------------------------------------
+
+# Items the install-claude-code.sh project_assets stage creates at the
+# project root. Two-column "name  description" rows for the warning
+# block. Source: packaging/bundle/manifest.yml project_assets list +
+# .orchestrator/, CLAUDE.md, AGENTS.md, .gitignore (added by the
+# installer's hook + state-root + instruction-file phases).
+existing_codebase_would_create_items() {
+    cat <<'EOF'
+.orchestrator/    state directory
+CLAUDE.md         instruction file for Claude Code
+AGENTS.md         instruction file for Codex CLI
+.gitignore        orchestrator state ignores
+commands/         skill definitions
+references/       architectural docs
+scripts/          helper scripts
+templates/        output templates
+wiki/             wiki tooling
+EOF
+}
+
+# Print the existing-codebase pre-flight warning block. Detects
+# collisions; populates COLLISIONS_DETECTED (global) for the caller to
+# act on. Uses awk to split the "name  description" rows into the
+# bullet shape.
+emit_existing_codebase_preflight() {
+    local proj="$1"
+    local sep='─────────────────────────────────────────────────────'
+
+    # Compute collisions first so the COLLISIONS DETECTED block can be
+    # included in the same warning frame.
+    PREFLIGHT_COLLISIONS=""
+    local item
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        item="${line%% *}"
+        if [ -e "$proj/$item" ]; then
+            if [ -z "$PREFLIGHT_COLLISIONS" ]; then
+                PREFLIGHT_COLLISIONS="$item"
+            else
+                PREFLIGHT_COLLISIONS="$PREFLIGHT_COLLISIONS
+$item"
+            fi
+        fi
+    done <<EOF
+$(existing_codebase_would_create_items)
+EOF
+
+    printf '%s\n' "$sep"
+    printf ' [WARN] About to install orchestrator into an existing codebase\n'
+    printf '\n'
+    printf '    Target: %s\n' "$proj"
+    printf "    We'll create these items at the project root:\n"
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        item="${line%% *}"
+        # Description = the rest after the first run of spaces.
+        local desc="${line#* }"
+        # Trim leading spaces from desc.
+        while [ "${desc#" "}" != "$desc" ]; do desc="${desc#" "}"; done
+        printf '      - %-18s(%s)\n' "$item" "$desc"
+    done <<EOF
+$(existing_codebase_would_create_items)
+EOF
+
+    if [ -n "$PREFLIGHT_COLLISIONS" ]; then
+        printf '\n'
+        printf '  COLLISIONS DETECTED:\n'
+        local cline
+        while IFS= read -r cline; do
+            [ -z "$cline" ] && continue
+            printf '    - %s     (will be modified or refused -- review first)\n' "$cline"
+        done <<EOF
+$PREFLIGHT_COLLISIONS
+EOF
+    fi
+    printf '\n'
+    printf '  Tip: re-run with --dry-run to preview without writing.\n'
+    printf '%s\n' "$sep"
+    return 0
+}
+
+# ---------------------------------------------------------------------------
+# Patch D (M033 friendly-tester UX): actionable migrate dead-end.
+#
+# The legacy line `no orchestrator:migrate adapter for this tooling --
+# please file a request` (still emitted by migrate_routing on stderr to
+# preserve the load-bearing token grep'd by m033-p04-migrate-routing-
+# shape.sh + p05-migrate-routing.sh) tells operators "file a request"
+# with no path forward. Append a multi-line actionable footer on stdout
+# explaining the supported sources and the two course-correction paths.
+# ---------------------------------------------------------------------------
+
+emit_migrate_dead_end_footer() {
+    local proj="$1"
+    local sep='─────────────────────────────────────────────────────'
+    printf '%s\n' "$sep"
+    printf ' [FAIL] No migration adapter for this tooling\n'
+    printf '\n'
+    printf '   We detected: a project with prior tooling (.gsd / .gsd2 / .specify marker)\n'
+    printf "   But: the layout doesn't match a known migration adapter.\n"
+    printf '\n'
+    printf '   Supported sources: gsd-v1, gsd-v2, spec-kit\n'
+    printf '   Your project: marker present but no recognizable internal layout\n'
+    printf '\n'
+    printf ' OPTIONS:\n'
+    printf '   1. Force a different branch:\n'
+    printf '        start.sh --project-dir %s --branch existing-codebase\n' "$proj"
+    printf '   2. Request adapter support:\n'
+    printf "        File an issue describing your project's tooling layout.\n"
+    # TODO: post-launch -- replace with GitHub Issues URL once M035 P06
+    # closure publishes the public repo.
+    printf '        (No public issue tracker yet -- for now, attach project tree + email.)\n'
+    printf '%s\n' "$sep"
+    return 0
+}
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
 main() {
+    # ---------------------------------------------------------------------
+    # Patch C (M033 friendly-tester UX): existing-codebase pre-flight.
+    # Runs BEFORE invoke_init so the operator sees what's about to be
+    # written into a real codebase (and can refuse / dry-run / accept).
+    #
+    # We need the would-be branch to gate this. When --branch is given,
+    # use it directly. Otherwise peek-detect via detect_branch (peek-only
+    # -- the "real" detection later in main() runs again to populate
+    # DETECTED_FROM via load_detect_state and emit the final 'branch:'
+    # line). The peek is idempotent and side-effect-free apart from
+    # writing DETECT_STATE_FILE (which the real detection overwrites).
+    # ---------------------------------------------------------------------
+    PREFLIGHT_BRANCH=""
+    PREFLIGHT_MIT006=0
+    if [ -n "$BRANCH_OVERRIDE" ]; then
+        PREFLIGHT_BRANCH="$BRANCH_OVERRIDE"
+    else
+        # Skip peek if config.yml already present -- the pre-flight is
+        # for first-install only. On a re-invoke against an
+        # already-initialized project, init prints 'init already
+        # complete' and we go straight through.
+        if [ ! -f "$PROJECT_DIR/.orchestrator/config.yml" ]; then
+            PREFLIGHT_BRANCH=$(detect_branch "$PROJECT_DIR" 2>/dev/null || echo "")
+            load_detect_state
+            PREFLIGHT_MIT006="$MIT006_ELIGIBLE"
+        fi
+    fi
+
+    # MIT-006 / RISK-006 carve-out: when rule-3 fired solely on .git/
+    # with <=9 source files (the thin-signal case), suppress the
+    # pre-flight. Without this, the dry-run pre-flight would exit
+    # before the MIT-006 disambiguation prompt could fire and the
+    # operator would never see the recommendation to flip to
+    # greenfield-empty. The disambiguation question (prompt_case_b
+    # in resolve_branch) is the load-bearing UX for this case.
+    if [ "$PREFLIGHT_BRANCH" = "existing-codebase" ] \
+       && [ "$PREFLIGHT_MIT006" = "1" ] \
+       && [ "$YES" -ne 1 ] \
+       && [ -z "$BRANCH_OVERRIDE" ]; then
+        PREFLIGHT_BRANCH=""
+    fi
+
+    if [ "$PREFLIGHT_BRANCH" = "existing-codebase" ] \
+       && [ ! -f "$PROJECT_DIR/.orchestrator/config.yml" ]; then
+        emit_existing_codebase_preflight "$PROJECT_DIR"
+        if [ -n "$PREFLIGHT_COLLISIONS" ]; then
+            printf 'orchestrator install would collide with existing project files; resolve manually or use --branch to force a different branch\n' 1>&2
+            exit 2
+        fi
+        if [ "$DRY_RUN" -eq 1 ]; then
+            printf 'DRY-RUN: no changes made\n'
+            exit 0
+        fi
+        if [ "$YES" -ne 1 ] && [ -t 0 ]; then
+            printf 'Proceed? [y/N] '
+            local _reply
+            if ! IFS= read -r _reply; then _reply=""; fi
+            case "$_reply" in
+                y|Y|yes|YES) ;;
+                *)
+                    printf 'aborted -- re-invoke with --yes or accept the prompt\n' 1>&2
+                    exit 1
+                    ;;
+            esac
+        fi
+    fi
+
     invoke_init "$PROJECT_DIR"
 
     # FR-20: post-init, write the init-invoked marker for symmetry with
@@ -826,6 +1247,15 @@ main() {
     fi
 
     dispatch_stub "$final_branch"
+
+    # Patch A (M033 friendly-tester UX): per-branch warm welcome footer.
+    # Strictly additive -- emitted AFTER all machine tokens (SUMMARY:,
+    # branch:, would-execute:, migrate-routed:, proposed:). For the
+    # migrating-with-empty-DETECTED_FROM (unsupported tooling) case,
+    # the dead-end footer is emitted by migrate_routing instead and
+    # this welcome footer is suppressed (see emit_welcome_footer's
+    # migrating branch).
+    emit_welcome_footer "$final_branch" "$PROJECT_DIR"
 
     # FR-15 wiki-init paired-launch passthrough (post-onboarding gate).
     # Fires after the branch sub-flow has completed (US-1..US-7 markers

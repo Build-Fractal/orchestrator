@@ -818,7 +818,11 @@ fi
 LABELED_COUNT=0
 OUT_OF_SCOPE_COUNT=0
 TOTAL_COUNT=0
-while IFS= read -r M; do
+# FD-0 isolation: the materials list is read on FD 3 so the loop body
+# (which calls label_material -> ask_one) inherits the operator's
+# stdin on FD 0. Without this, ask_one's `read` would consume the
+# materials list instead of operator input. Bash 3.2 safe.
+while IFS= read -r M <&3; do
     if [ -z "$M" ]; then
         continue
     fi
@@ -829,7 +833,7 @@ while IFS= read -r M; do
     if [ "$LBL" = "out-of-scope" ]; then
         OUT_OF_SCOPE_COUNT=$((OUT_OF_SCOPE_COUNT + 1))
     fi
-done < "$MATERIALS_LIST"
+done 3< "$MATERIALS_LIST"
 
 # US-4 AS-5 fallback: ALL materials labeled out-of-scope -> exit 0.
 if [ "$TOTAL_COUNT" -gt 0 ] && [ "$OUT_OF_SCOPE_COUNT" -eq "$TOTAL_COUNT" ]; then

@@ -54,6 +54,7 @@ PROJECT_DIR="$PWD"
 DRY_RUN=0
 VERBOSE=0
 ROLLBACK=0
+NO_EMIT_JSONL=0
 
 usage() {
   sed -n '2,44p' "$0"
@@ -156,6 +157,87 @@ persist_update_source() {
   fi
 }
 
+# --- update_run JSONL emission helpers (M035 P06 T03 / FR-13 / FR-15 / D013) -
+#
+# Emit one update_run JSONL event for non-rollback dispatch paths, honoring
+# the 5-condition suppression matrix (D013):
+#   1. --no-emit-jsonl flag                 -> short-circuit
+#   2. ORCHESTRATOR_AUTO=1 env var          -> short-circuit
+#   3. update_source=none                   -> defensive guard (never reached)
+#   4. compression.efficiency_footer.enabled=false -> orthogonal, NOT bound
+#   5. structural carve-out                 -> only fires post-dispatch
+#
+# Args: $1=source $2=target_version $3=result (success|failure)
+# Side effect: appends one line to .orchestrator/observability/<date>.jsonl
+# Exit: always 0 (emission failure must NOT abort the caller).
+emit_update_run_event() {
+  source_val="$1"
+  target_version="$2"
+  result_val="$3"
+
+  # Condition 1: --no-emit-jsonl flag.
+  if [ "${NO_EMIT_JSONL:-0}" = "1" ]; then
+    return 0
+  fi
+  # Condition 2: ORCHESTRATOR_AUTO env var.
+  if [ "${ORCHESTRATOR_AUTO:-0}" = "1" ]; then
+    return 0
+  fi
+  # Condition 3: defensive guard against update_source=none.
+  if [ "$source_val" = "none" ]; then
+    return 0
+  fi
+
+  obs_dir="$PROJECT_DIR/.orchestrator/observability"
+  mkdir -p "$obs_dir" 2>/dev/null || return 0
+  today_emit=""
+  today_emit="$(date -u +%Y-%m-%d)"
+  jsonl_emit="$obs_dir/$today_emit.jsonl"
+  ts_emit=""
+  ts_emit="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  printf '{"event":"update_run","op":"update","source":"%s","target_version":"%s","result":"%s","timestamp":"%s"}\n' \
+    "$source_val" "$target_version" "$result_val" "$ts_emit" >> "$jsonl_emit" 2>/dev/null || return 0
+  return 0
+}
+
+# Best-effort post-dispatch version resolution. Returns "unknown" when the
+# channel-appropriate version probe fails. In-function pipelines are AP-009
+# permitted (caller-side inline compound shapes are what trip the guard).
+# Bash 3.2 + POSIX-sh-safe.
+resolve_target_version() {
+  source_val="$1"
+  case "$source_val" in
+    git)
+      if [ -n "${bundle_version:-}" ]; then
+        echo "$bundle_version"
+      else
+        echo "unknown"
+      fi
+      ;;
+    npm)
+      v_npm=""
+      v_npm="$(npm view @build-fractal/orchestrator version 2>/dev/null | head -1 | tr -d '"' | tr -d "'")"
+      if [ -n "$v_npm" ]; then
+        echo "$v_npm"
+      else
+        echo "unknown"
+      fi
+      ;;
+    homebrew)
+      v_brew=""
+      v_brew="$(brew info --json=v2 orchestrator 2>/dev/null | grep -E '"versions"' | head -1 | sed -E 's/.*"stable":"([^"]+)".*/\1/')"
+      if [ -n "$v_brew" ]; then
+        echo "$v_brew"
+      else
+        echo "unknown"
+      fi
+      ;;
+    *)
+      echo "unknown"
+      ;;
+  esac
+}
+
 while [ $# -gt 0 ]; do
   case "$1" in
     --source-repo)
@@ -186,6 +268,8 @@ while [ $# -gt 0 ]; do
       VERBOSE=1; shift ;;
     --rollback)
       ROLLBACK=1; shift ;;
+    --no-emit-jsonl)
+      NO_EMIT_JSONL=1; shift ;;
     -h|--help)
       usage
       exit 0
@@ -404,7 +488,11 @@ case "$update_source" in
     echo "running npm update -g @build-fractal/orchestrator..."
     npm update -g @build-fractal/orchestrator
     rc=$?
-    # T03 hooks update_run JSONL emission here (success path).
+    # T03: update_run JSONL emission (npm channel).
+    _tv="$(resolve_target_version npm)"
+    _rv="success"
+    if [ "$rc" -ne 0 ]; then _rv="failure"; fi
+    emit_update_run_event "npm" "$_tv" "$_rv"
     echo "---"
     if [ "$rc" -eq 0 ]; then
       echo "orchestrator:update OK -- npm channel"
@@ -431,7 +519,11 @@ case "$update_source" in
     echo "running brew upgrade orchestrator..."
     brew upgrade orchestrator
     rc=$?
-    # T03 hooks update_run JSONL emission here (success path).
+    # T03: update_run JSONL emission (homebrew channel).
+    _tv="$(resolve_target_version homebrew)"
+    _rv="success"
+    if [ "$rc" -ne 0 ]; then _rv="failure"; fi
+    emit_update_run_event "homebrew" "$_tv" "$_rv"
     echo "---"
     if [ "$rc" -eq 0 ]; then
       echo "orchestrator:update OK -- homebrew channel"
@@ -550,4 +642,11 @@ if [ "$rc" -eq 0 ]; then
 else
   echo "FAIL: installer exited $rc -- runtime may be in a partial state" >&2
 fi
+
+# T03: update_run JSONL emission (git arm fall-through).
+_tv="$(resolve_target_version git)"
+_rv="success"
+if [ "$rc" -ne 0 ]; then _rv="failure"; fi
+emit_update_run_event "git" "$_tv" "$_rv"
+
 exit "$rc"

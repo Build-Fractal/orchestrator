@@ -721,6 +721,59 @@ losing channel coverage.
 `commands/update.md § Update sources`,
 `tools/verify/m035-p06-config-schema-shape.sh`.
 
+### D013 — `update_run` JSONL emission 5-condition suppression matrix (M035 P06)
+
+**Date**: 2026-05-09
+**Phase**: M035 P06 T03
+**Status**: bound
+
+The `update_run` JSONL emission for non-rollback dispatch paths
+(`git` / `npm` / `homebrew`) honors M027's 5-condition suppression
+matrix verbatim:
+
+1. **`--no-emit-jsonl` flag** (`run-update.sh`, T03 introduces) →
+   short-circuits emission. Opt-out only; does NOT abort dispatch.
+2. **`ORCHESTRATOR_AUTO=1` env var** → short-circuits emission.
+   Mirrors M027 auto-loop suppression convention.
+3. **`update_source: none`** → no dispatch, no event. Defensive
+   guard inside `emit_update_run_event` protects against future
+   refactors that might restructure dispatch order; in practice the
+   `none)` arm exits 0 before the emission code path is reached.
+4. **`compression.efficiency_footer.enabled: false`** → does NOT
+   apply (orthogonal surface; that knob gates efficiency-footer
+   rendering, not JSONL stream writes). Documented as carve-out so
+   future authors don't mistakenly bind it.
+5. **Structural carve-out** → emission is bound to a successful
+   dispatch decision-point, not to invocation. Pre-dispatch
+   validation failures (npm not on PATH, package not installed,
+   unknown source) emit nothing; post-dispatch failures (npm/brew
+   exit non-zero) emit one event with `result=failure` so the
+   observability stream captures the failure-rate signal too.
+
+M035 introduces no new suppression knob beyond `--no-emit-jsonl`
+(FR-16: "M035 introduces no new suppression knob; it inherits
+M025/M027 conventions"). The flag is documented as inheriting the
+M027 opt-out pattern rather than a new knob class.
+
+The event schema (single-line JSON, newline-terminated):
+
+```json
+{"event":"update_run","op":"update","source":"<channel>","target_version":"<version-or-unknown>","result":"success","timestamp":"<ISO 8601 UTC>"}
+```
+
+`op=update` is T03's contribution; the rollback path (P05 T02)
+emits the same shape with `op=rollback` and is unchanged. Emission
+failure (`mkdir -p` / `printf >>` non-zero) must NOT abort the
+caller — `emit_update_run_event` always returns 0; observability is
+best-effort and dispatch success/failure stays authoritative.
+
+**Bound to**: FR-13, FR-15, FR-16, CON-7, SC-13.
+
+**Cross-references**: `scripts/lifecycle/run-update.sh §
+emit_update_run_event`, `commands/update.md § Update sources`,
+`tools/verify/m035-p06-update-run-jsonl-emission-shape.sh`, D012,
+D014.
+
 ### D014 — AD-5 detection ordering for orchestrator:update (M035 P06)
 
 **Date**: 2026-05-09

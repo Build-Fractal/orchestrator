@@ -510,3 +510,103 @@ every existing `--with-` flag, and (c) a documented reversibility path.
   test discipline (`--deploy` is the highest-blast-radius `--with-` flag
   in M032; CON-5 mandates live-fixture testing rather than synthetic
   stubs).
+
+## Installing via Homebrew
+
+The `build-fractal/orchestrator` Homebrew tap publishes a single
+formula (`orchestrator`) for macOS and Linuxbrew users.
+
+**Install**:
+
+```bash
+brew tap build-fractal/orchestrator
+brew install orchestrator
+```
+
+**Verify**:
+
+```bash
+orchestrator --version
+# → should match the latest published tap version
+```
+
+**Per-project setup**: `brew install orchestrator` stages the
+runtime tree into the Homebrew Cellar and wires `orchestrator` onto
+PATH. Skill registration is per-project — run `/orchestrator-init`
+inside each project directory where you want orchestrator skills
+available. Same model as the npm channel.
+
+**Uninstall**:
+
+```bash
+brew uninstall orchestrator
+brew untap build-fractal/orchestrator
+```
+
+`brew uninstall` removes the Cellar files; per-project skill
+registrations cascade away the next time you run
+`/orchestrator-update` or `/orchestrator-init` in a project that
+previously had skills registered, via M025's manifest mechanism.
+
+**Cross-channel byte-equivalence**: at any given release tag, the
+runtime layout produced by `brew install orchestrator` is
+byte-identical to the layout produced by `npm install -g
+@build-fractal/orchestrator` and (post-P04) `curl -sSL <install-
+url> | bash`, modulo the per-channel metadata files documented
+above in § Channel-specific metadata files. This is enforced by
+`tests/m035-acceptance/cross-channel-byte-equivalence.sh`
+(Constitution Principle XVI).
+
+## Releasing via Homebrew
+
+This section is operator-only — adopters do not need to follow it.
+
+The Homebrew formula is published to the
+`Build-Fractal/homebrew-orchestrator` tap repo automatically by the
+`homebrew-publish` job in `.github/workflows/release.yml` on every
+`v*` tag push to the canonical `Build-Fractal/orchestrator` repo.
+The job:
+
+1. Reads the SHA-256 of the just-published `.tgz` from the
+   release's `SHA256SUMS` file.
+2. Renders `Formula/orchestrator.rb` from
+   `packaging/homebrew/orchestrator.rb.tmpl` via
+   `packaging/homebrew/render-formula.sh`.
+3. Pushes the rendered formula to the tap repo's `main` branch.
+
+**One-time operator setup** (before the first `v*` tag push that
+should publish a formula):
+
+1. Create the `Build-Fractal/homebrew-orchestrator` GitHub repo
+   (empty or with a stub README pointing back to the canonical
+   repo). Default branch `main`. No protection rules required for
+   v1.
+2. Generate a Personal Access Token (PAT) scoped to
+   `Build-Fractal/homebrew-orchestrator:contents:write` only — no
+   other scope, no other repo. Store it as
+   `secrets.HOMEBREW_TAP_TOKEN` in the canonical
+   `Build-Fractal/orchestrator` repo's Actions secrets.
+
+**PAT rotation cadence**: rotate before each major release, or
+annually, whichever comes first. PATs default to 90-day expiry; if
+the PAT expires unobserved, the next tap-push fails with a 401 and
+the operator regenerates the PAT and re-runs the workflow against
+the same tag (no artifact corruption, no orphan formula).
+
+**PAT revocation**: revoke immediately if the canonical repo's
+secrets are rotated for any reason; regenerate after rotation. The
+`homebrew-publish` job is the only consumer of this secret.
+
+**CON-6 (secrets-scoped-to-tag-push) compliance**: the
+`homebrew-publish` job's `if:` predicate
+(`startsWith(github.ref, 'refs/tags/v') && github.event_name ==
+'push'`) gates secret access. The `pr-validate` job carries an
+explicit negative-assertion step asserting `HOMEBREW_TAP_TOKEN` is
+empty in PR context (SC-14 verified).
+
+**GitHub App migration**: if PAT rotation friction surfaces, swap
+the PAT for a GitHub App token with `contents:write` scope on the
+tap repo only. The migration is a single-secret rotation; no
+formula or workflow changes are required (the PAT is consumed via
+the standard `x-access-token:<token>@github.com` HTTPS pattern,
+which a GitHub App installation token also satisfies).

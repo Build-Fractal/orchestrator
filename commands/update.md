@@ -74,6 +74,12 @@ rollback not available for symlink-mode installs — symlink-mode consumers are 
 
 `update_source: npm` and `update_source: homebrew` rollback dispatches are stubbed in M035 P05 with `SKIP: rollback not yet implemented for source=<value>` and exit non-zero. Full implementation lands when the corresponding distribution channels close (P03 / P04 / P06).
 
+## Update sources
+
+- **`update_source: git`** — dispatches `install-claude-code.sh --force` against a locally-resolved orchestrator source repo (default; the pre-M035 interim documented above).
+- **`update_source: npm`** — dispatches `npm update -g @build-fractal/orchestrator` against the npm registry. The package and install path are documented in `references/installation.md § Installing via npm`. P06 wires the dispatch into `scripts/lifecycle/run-update.sh`; M035 P02 records the surface only.
+- **`update_source: homebrew`** — dispatches `brew upgrade orchestrator` against the `build-fractal/orchestrator` tap. The tap and formula install path are documented in `references/installation.md § Installing via Homebrew`. P06 wires the dispatch into `scripts/lifecycle/run-update.sh`; M035 P03 records the surface only.
+
 ## Output
 
 ```

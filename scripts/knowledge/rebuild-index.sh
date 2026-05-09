@@ -91,6 +91,12 @@ for file in "$knowledge_dir"/*/*.md "$knowledge_dir"/*/*/*.md; do
 
   # Extract frontmatter fields
   id="$(fm_field "$file" "id")"
+  if [ -z "$id" ]; then
+    # REF chunks (M036/P05) use chunk_id instead of id. Heading shape is
+    # `# REF-<category>-<cite_id>: <title>` so the same heading-grep at L111
+    # works once $id is populated.
+    id="$(fm_field "$file" "chunk_id")"
+  fi
   scope_tags="$(fm_field "$file" "scope_tags")"
   category="$(fm_field "$file" "category")"
   confidence="$(fm_field "$file" "confidence")"

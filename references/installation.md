@@ -339,6 +339,76 @@ The hash MUST exclude **per-install metadata files** that are legitimately chann
 
 Plan-phase authors extending this list (P03, P04, future distribution channels) MUST update this section first, then reference it from `tests/m035-acceptance/cross-channel-byte-equivalence.sh`. The test reads the exclusion globs from this document at runtime via grep — no hardcoded list duplication.
 
+## Verifying integrity
+
+Every published release ships with cryptographic integrity primitives so operators can verify what they're installing. Two verification paths are supported.
+
+### Path 1: Sigstore keyless verification (recommended)
+
+Sigstore provides keyless signature verification — the signing identity is the GitHub Actions OIDC token bound to the canonical release workflow at the moment of signing. No project-managed GPG key, no key import ceremony.
+
+**Prerequisites**: [`cosign`](https://docs.sigstore.dev/cosign/installation) installed (typically `brew install cosign` on macOS or download from the [GitHub releases page](https://github.com/sigstore/cosign/releases)).
+
+**Verification**:
+
+1. Download the release artifact, signature, and certificate:
+
+   ```bash
+   VERSION="<X.Y.Z>"  # the release version, e.g. 1.0.0
+   ARTIFACT="install.sh"  # or build-fractal-orchestrator-$VERSION.tgz, etc.
+   curl -sSL -O "https://github.com/Build-Fractal/orchestrator/releases/download/v$VERSION/$ARTIFACT"
+   curl -sSL -O "https://github.com/Build-Fractal/orchestrator/releases/download/v$VERSION/$ARTIFACT.sig"
+   curl -sSL -O "https://github.com/Build-Fractal/orchestrator/releases/download/v$VERSION/$ARTIFACT.pem"
+   ```
+
+2. Verify the signature:
+
+   ```bash
+   cosign verify-blob \
+     --certificate-identity "https://github.com/Build-Fractal/orchestrator/.github/workflows/release.yml@refs/tags/v$VERSION" \
+     --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+     --signature "$ARTIFACT.sig" \
+     --certificate "$ARTIFACT.pem" \
+     "$ARTIFACT"
+   ```
+
+   Expected output: `Verified OK`. Exit code: 0.
+
+The identity URL embeds the canonical repo (`Build-Fractal/orchestrator`), the workflow file path (`.github/workflows/release.yml`), and the exact tag (`refs/tags/v<VERSION>`) — three load-bearing constraints that make a forged signature impossible without a compromise of GitHub's OIDC issuer.
+
+### Path 2: SHA-256 checksum verification (no cosign required)
+
+Every release also ships a `SHA256SUMS` file that operators can verify with stock `shasum`. This path requires no third-party tooling.
+
+**Verification**:
+
+1. Download the artifact and `SHA256SUMS`:
+
+   ```bash
+   VERSION="<X.Y.Z>"
+   curl -sSL -O "https://github.com/Build-Fractal/orchestrator/releases/download/v$VERSION/install.sh"
+   curl -sSL -O "https://github.com/Build-Fractal/orchestrator/releases/download/v$VERSION/SHA256SUMS"
+   ```
+
+2. Verify the checksum:
+
+   ```bash
+   shasum -a 256 -c SHA256SUMS --ignore-missing
+   ```
+
+   Expected output: `install.sh: OK`. Exit code: 0.
+
+The `--ignore-missing` flag skips checksum lines for artifacts not downloaded (e.g. if you downloaded only `install.sh`, the npm tarball line is silently skipped).
+
+**Defense-in-depth**: `SHA256SUMS` itself is signed with cosign — `SHA256SUMS.sig` and `SHA256SUMS.pem` are also published. Operators who want both paths verified can run Path 1 against `SHA256SUMS` first, then Path 2 against the artifacts.
+
+### What to do if verification fails
+
+1. **Do not install.** A failed verification means the artifact you downloaded does not match what was published.
+2. **Re-download** in case of a transient corruption — different CDN edge, different network — and re-run verification.
+3. **If verification still fails**, file an issue at [Build-Fractal/orchestrator/issues](https://github.com/Build-Fractal/orchestrator/issues) with the exact `cosign`/`shasum` output. Attach the failing artifact's SHA-256 hash so maintainers can compare against the published value.
+4. **Audit the Sigstore Rekor transparency log** at [search.sigstore.dev](https://search.sigstore.dev/) to confirm the published signature was issued by the canonical workflow. The release notes for each version include a direct Rekor entry link.
+
 ## Uninstall
 
 All three installers support `--uninstall`:

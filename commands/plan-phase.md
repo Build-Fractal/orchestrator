@@ -32,6 +32,20 @@ Determine which phase to plan:
 2. **Auto-select the next phase**: Use `bash scripts/state/read-roadmap.sh <roadmap-file> active-phase` to identify the next phase that needs planning (first incomplete phase in dependency order).
 3. **Manual override**: Accept `--phase P##` to plan a specific phase instead of the auto-selected one. Verify that the specified phase exists in the roadmap and that its dependencies are satisfied (upstream phases have summaries).
 
+### Brand-new milestone bootstrap path (no roadmap yet)
+
+If the milestone directory exists with a finalized `<MID>-CONTEXT.md` but no `<MID>-ROADMAP.md`, the planner MAY author a minimal roadmap inline as the first step of plan-phase, provided:
+
+1. The milestone is operator-scaffolded (CONTEXT.md exists with `status: finalized`).
+2. The first phase to be planned is unambiguous from CONTEXT.md (single-phase milestones; or first-phase-of-a-decomposable-milestone where CONTEXT.md or a parent reshape DR identifies the entry phase).
+3. The inline roadmap covers at least the phase being planned + a placeholder for follow-on phases (so subsequent plan-phase passes have something to extend).
+
+Author the roadmap before authoring the phase plan; verify state derives to `planning` after the roadmap lands; then proceed with the standard phase-selection flow above.
+
+If conditions 1-3 don't hold, exit with the existing "No roadmap found. Run `/orchestrator-roadmap` first." error.
+
+This bootstrap path is the operator-driven roadmap-light pattern; PBJ Stage 3 dogfood (2026-05-08) exercised it across 3 brand-new milestones (M2a-min, M2b-min, M-Spike-BG001) without an explicit prior `orchestrator:roadmap` invocation.
+
 ## Context Gathering
 
 Assemble the information needed to plan the phase:

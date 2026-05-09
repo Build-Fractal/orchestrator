@@ -247,6 +247,9 @@ if [ -x "$DUAL_WRITE_HELPER" ]; then
     printf 'runtime=%s\n'                "$RUNTIME"
     printf 'cap_score=%s\n'              "$CAP_SCORE"
     printf 'recommended_intensity=%s\n'  "$RECOMMENDED_INTENSITY"
+    printf '# ^ Recommendation at init time. The OPERATIVE value lives in\n'
+    printf '# .orchestrator/config.yml at intensity.default -- read that on\n'
+    printf '# every plan-phase / dispatch / verify invocation.\n'
     printf 'initialized_at=%s\n'         "$INITIALIZED_AT"
   } > "$FRAG_FILE"
 

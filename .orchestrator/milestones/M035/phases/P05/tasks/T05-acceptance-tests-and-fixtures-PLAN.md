@@ -356,15 +356,10 @@ verification gated behind an env flag; default-closed in CI).
 
 ## Must-Haves
 
-- `tests/m035-acceptance/fixtures/m035-p05-release-fixture/install.sh`
-  exists, ~10 lines.
-- `tests/m035-acceptance/fixtures/m035-p05-release-fixture/install.sh.sig`
-  exists, non-empty.
-- `tests/m035-acceptance/fixtures/m035-p05-release-fixture/install.sh.pem`
-  exists, non-empty.
-- `tests/m035-acceptance/fixtures/m035-p05-release-fixture/SHA256SUMS`
-  exists, contains a valid `<sha256>  install.sh` line that matches
-  the fixture install.sh's actual hash.
+- Fixture file `tests/m035-acceptance/fixtures/m035-p05-release-fixture/install.sh` exists, ~10 lines.
+- Fixture file `tests/m035-acceptance/fixtures/m035-p05-release-fixture/install.sh.sig` exists, non-empty.
+- Fixture file `tests/m035-acceptance/fixtures/m035-p05-release-fixture/install.sh.pem` exists, non-empty.
+- Fixture file `tests/m035-acceptance/fixtures/m035-p05-release-fixture/SHA256SUMS` exists, contains a valid `<sha256>  install.sh` line that matches the fixture install.sh's actual hash.
 - `tests/m035-acceptance/m035-p05-rollback-byte-equivalence.sh` exists,
   exits 0 against the repo, emits `BATTERY: pass=N fail=0`.
 - `tools/verify/m035-p05-signature-verification.sh` exists, exits 0

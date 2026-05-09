@@ -40,7 +40,7 @@ updated_at: "2026-05-07T00:00:00Z"
     - Produces: `package.json` declaring `@build-fractal/orchestrator` (D-RN-1); `bin/orchestrator` entry point delegating to the orchestrator command surface (FR-8); postinstall script wrapping `install-claude-code.sh` or runtime-detected equivalent; `.github/workflows/release.yml` skeleton with npm-tarball build + publish job (CON-6 secrets scoped to `v*` tag-push events only, SC-14 PR-build job-condition assertion); `tests/m035-acceptance/cross-channel-byte-equivalence.sh` skeleton with npm-channel hash assertion (CON-5, AD-2 Constitution Principle XVI test).
     - Consumes: P01.5 cohort prefix and `@build-fractal/orchestrator` rename surface; P00 npm-name collision-check evidence; `CHANGELOG.md` SemVer source-of-truth (CON-4).
 
-- [ ] **P03**: Homebrew formula + tap (`build-fractal/orchestrator`) — "From a fresh brew-equipped machine, `brew tap build-fractal/orchestrator && brew install orchestrator` exits 0; `orchestrator --version` matches the latest published tap version (SC-9); `cross-channel-byte-equivalence.sh` is extended with the homebrew-channel hash assertion."
+- [x] **P03**: Homebrew formula + tap (`build-fractal/orchestrator`) — "From a fresh brew-equipped machine, `brew tap build-fractal/orchestrator && brew install orchestrator` exits 0; `orchestrator --version` matches the latest published tap version (SC-9); `cross-channel-byte-equivalence.sh` is extended with the homebrew-channel hash assertion." Closed 2026-05-09 — `tools/verify/m035-p03-phase-suite.sh` BATTERY pass=7 fail=0; CON-5 cross-channel byte-equivalence verified end-to-end (NPM_HASH = HOMEBREW_HASH); MOS-1 + MOS-2 cleared, MOS-3 deferred to first-release smoke per plan.
   - Risk: medium
   - Depends: P02
   - Boundary Map:

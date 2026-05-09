@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tools/verify/p00-taxonomy-shape.sh — M036 P00 T01 shape gate for
 # references/reference-taxonomy.md. Asserts frontmatter + ## Categories
-# heading + each of the four taxonomy categories appears as a level-3
+# heading + each of the five taxonomy categories appears as a level-3
 # heading. Single-script-file shape per AD-19.
 set -eu
 FILE="${1:-references/reference-taxonomy.md}"
@@ -12,7 +12,7 @@ if [ ! -f "$FILE" ]; then
   echo "SUMMARY: p00-taxonomy-shape.sh pass=0 fail=1"
   exit 1
 fi
-for token in 'schema_version' 'type: reference-taxonomy' '## Categories' '### cms-rule' '### training-material' '### glossary' '### regulatory-doc'; do
+for token in 'schema_version' 'type: reference-taxonomy' '## Categories' '### cms-rule' '### training-material' '### glossary' '### regulatory-doc' '### business-doc'; do
   if grep -qF "$token" "$FILE"; then
     pass=$((pass + 1))
   else

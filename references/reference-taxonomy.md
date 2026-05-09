@@ -10,7 +10,7 @@ created_at: "2026-05-01"
 
 The orchestrator's reference-corpus ingest (M036, spec
 `specs/033-reference-corpus-ingest/spec.md`) recognizes a closed
-four-category taxonomy. Files declared with a `category` field
+five-category taxonomy. Files declared with a `category` field
 outside this list are rejected at ingest (FR-1 / US-1 acceptance
 scenario 3).
 
@@ -54,6 +54,25 @@ conversion is expensive and produces a worse retrieval surface
 than searchable plain text + read-section workflows. Default
 extraction tier: 1 (searchable text via `pdftotext -layout`).
 Example `cite_id`: `regulatory-cms-som-app-pp`.
+
+### business-doc
+
+Internal, authoritative-but-not-external business documents:
+strategy plans, operational/activation playbooks, outreach
+plans, investor-facing decks/summaries, legal agreements
+(NDAs, contracts), marketing content, and sales-enablement
+material. Distinguished from the four CMS-shaped categories
+above in that the publishing body is the project itself (or
+its commercial counterparties), not an external regulator or
+SME training authority. Frequently cited from feature-spec
+chunks when adopter projects build software to support their
+own business processes. Default extraction tier: 1
+(plain text + operator-authored summary; promotes to tier 2
+when P03 Tier 2 LLM pipeline lands). Sub-classification lives
+in `topic_tags` (e.g. `strategy`, `go-to-market`, `outreach`,
+`legal`, `marketing`, `sales-prep`) — adding a new
+sub-classification does NOT require a taxonomy change.
+Example `cite_id`: `bbt-30-60-90-activation`.
 
 ## Cross-References
 

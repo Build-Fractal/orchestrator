@@ -66,7 +66,7 @@ review_emit_for_superseded_chunks() {
   local root
   root="${ORCHESTRATOR_ROOT:-$(cd "$(dirname "$0")/../../.." && pwd)}"
   local category cat_dir chunk superseded_by_id chunk_id citer
-  for category in cms-rule training-material glossary regulatory-doc; do
+  for category in cms-rule training-material glossary regulatory-doc business-doc; do
     cat_dir="$ref_root/$category"
     [ -d "$cat_dir" ] || continue
     for chunk in "$cat_dir"/REF-*.md; do
@@ -102,7 +102,7 @@ review_emit_for_removed_chunks() {
     case "$prior_id" in ''|\#*) continue ;; esac
     # Check presence under any taxonomy category.
     present_anywhere=0
-    for category in cms-rule training-material glossary regulatory-doc; do
+    for category in cms-rule training-material glossary regulatory-doc business-doc; do
       if [ -f "$ref_root/$category/${prior_id}.md" ]; then
         present_anywhere=1
         break

@@ -49,14 +49,14 @@ fi
 
 reject=0
 
-# Category check -- must be one of the four taxonomy values when present.
+# Category check -- must be one of the five taxonomy values when present.
 if [ -n "${CATEGORY:-}" ]; then
   case "$CATEGORY" in
-    cms-rule|training-material|glossary|regulatory-doc)
+    cms-rule|training-material|glossary|regulatory-doc|business-doc)
       echo "ACCEPT: category=$CATEGORY"
       ;;
     *)
-      echo "REJECT: category=$CATEGORY (not in taxonomy: cms-rule|training-material|glossary|regulatory-doc)"
+      echo "REJECT: category=$CATEGORY (not in taxonomy: cms-rule|training-material|glossary|regulatory-doc|business-doc)"
       reject=1
       ;;
   esac

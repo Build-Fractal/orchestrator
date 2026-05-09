@@ -5,7 +5,7 @@
 #   - scripts/dispatch/extract.sh (P02) — resolves `tier` for
 #     manifest entries that don't declare a per-document override.
 #
-# The keys of `source_types:` MUST match the four categories in
+# The keys of `source_types:` MUST match the five categories in
 # references/reference-taxonomy.md exactly (Principle XI). The
 # taxonomy SSOT and this file are kept in lockstep — adding or
 # removing a category requires updating both files in the same
@@ -22,6 +22,9 @@
 #   - regulatory-doc:    1  (long-form, clean conversion expensive;
 #                            grep+read-section is the load-bearing
 #                            retrieval pattern)
+#   - business-doc:      1  (D006: internal business prose; plain text
+#                            + operator summary suffices until P03 Tier 2
+#                            LLM pipeline lands)
 
 schema_version: "1.0"
 type: reference-source-types
@@ -41,3 +44,6 @@ source_types:
   regulatory-doc:
     default_tier: 1
     rationale: "long-form; grep+read-section retrieval pattern"
+  business-doc:
+    default_tier: 1
+    rationale: "internal business prose; plain text + operator summary suffices until P03 Tier 2 lands"

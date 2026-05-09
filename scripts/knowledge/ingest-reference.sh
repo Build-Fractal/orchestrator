@@ -98,9 +98,9 @@ fm_field() {
   grep -E "^${k}:" "$f" | head -n 1 | sed -E "s/^${k}:[[:space:]]*//" | sed -E 's/^"//; s/"$//'
 }
 
-# Walk the four taxonomy categories. Anything NOT in this list (e.g.
+# Walk the five taxonomy categories. Anything NOT in this list (e.g.
 # _negative/) is silently skipped per the T01 fixture-corpus convention.
-for category in cms-rule training-material glossary regulatory-doc; do
+for category in cms-rule training-material glossary regulatory-doc business-doc; do
   cat_dir="$REF_ROOT/$category"
   if [ ! -d "$cat_dir" ]; then
     continue

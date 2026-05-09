@@ -182,29 +182,103 @@ else
   fi
 fi
 
+# --- 4. curl-pipe-bash-channel arm (D007 + T03 / FR-10) ----------
+
+# Pre-compute curl-pipe-bash exclusion list (re-uses the existing
+# _exclusion-list-by-channel.sh helper; CHANNEL=curl-pipe-bash matches
+# rows in the references/installation.md table that list "all" or
+# "curl-pipe-bash" or comma-separated lists containing curl-pipe-bash).
+CHANNEL=curl-pipe-bash
+export CHANNEL
+EXCLUSION_LIST_CURL_BASH="$(bash "$REPO_ROOT/tests/m035-acceptance/_exclusion-list-by-channel.sh")"
+unset CHANNEL
+
+CURL_HASH=""
+if [ -z "${TARBALL:-}" ] || [ ! -f "$TARBALL" ]; then
+  echo "SKIP: curl-pipe-bash-channel arm requires npm-channel tarball — npm-channel did not produce one"
+  skip=$((skip + 1))
+elif [ ! -x "$REPO_ROOT/packaging/install/install.sh" ]; then
+  echo "SKIP: curl-pipe-bash-channel arm requires packaging/install/install.sh — not on disk or not executable"
+  skip=$((skip + 1))
+else
+  CURL_FIXTURE="$(mktemp -d 2>/dev/null || mktemp -d -t m035p04t03curl)"
+  trap 'rm -rf "$NPM_FIXTURE" "$BREW_FIXTURE" "$CURL_FIXTURE" 2>/dev/null || true' EXIT
+
+  # Invoke install.sh in test-mode: LOCAL_TARBALL short-circuits
+  # the download + SHA-verify steps; STAGE_ONLY=1 extracts and
+  # exits without dispatching install-claude-code.sh; STAGE_DIR
+  # lets us control where the staged tree lands.
+  CURL_STAGE="$CURL_FIXTURE/staged"
+  mkdir -p "$CURL_STAGE"
+  M035_P04_LOCAL_TARBALL="$TARBALL" \
+  M035_P04_STAGE_ONLY=1 \
+  M035_P04_STAGE_DIR="$CURL_STAGE" \
+    bash "$REPO_ROOT/packaging/install/install.sh" \
+    >"$CURL_FIXTURE/install.log" 2>&1 \
+    || { echo "FAIL: install.sh STAGE_ONLY mode failed (see $CURL_FIXTURE/install.log)"; fail=$((fail + 1)); }
+
+  if [ -d "$CURL_STAGE" ] && [ -f "$CURL_STAGE/package.json" ]; then
+    echo "PASS: curl-pipe-bash-channel staged into $CURL_STAGE"
+    pass=$((pass + 1))
+
+    # Hash the staged tree with curl-pipe-bash exclusion list.
+    STAGED="$CURL_STAGE"
+    EXCLUSION_LIST="$EXCLUSION_LIST_CURL_BASH"
+    export STAGED EXCLUSION_LIST
+    CURL_HASH="$(bash "$REPO_ROOT/tests/m035-acceptance/_byte-equivalence-hash.sh" \
+      2>"$CURL_FIXTURE/hash.err")"
+    if [ -n "$CURL_HASH" ]; then
+      echo "CURL_HASH=$CURL_HASH"
+      echo "PASS: curl-pipe-bash-channel hash emitted"
+      pass=$((pass + 1))
+    else
+      echo "FAIL: curl-pipe-bash-channel hash not emitted (see $CURL_FIXTURE/hash.err)"
+      fail=$((fail + 1))
+    fi
+  else
+    echo "FAIL: curl-pipe-bash-channel staged tree missing or empty"
+    fail=$((fail + 1))
+  fi
+fi
+
 # --- 5. Cross-channel equality assertion (CON-5 / Principle XVI) -
 
-if [ -n "${NPM_HASH:-}" ] && [ -n "$HOMEBREW_HASH" ]; then
-  if [ "$NPM_HASH" = "$HOMEBREW_HASH" ]; then
-    echo "PASS: cross-channel byte-equivalence — NPM_HASH = HOMEBREW_HASH"
+# 3-way assertion: fires when ALL THREE arms emit hashes.
+# 2-way fallback: fires when only npm + homebrew emit hashes (curl
+# arm SKIPped). 1-way fallback: SKIP entirely when fewer than two
+# arms emit hashes.
+
+if [ -n "${NPM_HASH:-}" ] && [ -n "${HOMEBREW_HASH:-}" ] && [ -n "$CURL_HASH" ]; then
+  # 3-way path — load-bearing CON-5 / Constitution Principle XVI test.
+  if [ "$NPM_HASH" = "$HOMEBREW_HASH" ] && [ "$HOMEBREW_HASH" = "$CURL_HASH" ]; then
+    echo "PASS: cross-channel byte-equivalence (3-way) — NPM_HASH = HOMEBREW_HASH = CURL_HASH"
     pass=$((pass + 1))
   else
-    echo "FAIL: cross-channel byte-equivalence violated"
+    echo "FAIL: cross-channel byte-equivalence violated (3-way)"
     echo "  NPM_HASH=$NPM_HASH"
     echo "  HOMEBREW_HASH=$HOMEBREW_HASH"
+    echo "  CURL_HASH=$CURL_HASH"
     echo "  See references/installation.md § Channel-specific metadata files"
     echo "  for the per-channel exclusion list. If the divergence is a"
     echo "  legitimate channel-specific metadata file, add it to that"
     echo "  table and re-run."
     fail=$((fail + 1))
   fi
+elif [ -n "${NPM_HASH:-}" ] && [ -n "${HOMEBREW_HASH:-}" ]; then
+  # 2-way fallback: curl arm unavailable.
+  if [ "$NPM_HASH" = "$HOMEBREW_HASH" ]; then
+    echo "PASS: cross-channel byte-equivalence (2-way) — NPM_HASH = HOMEBREW_HASH (CURL_HASH unavailable)"
+    pass=$((pass + 1))
+  else
+    echo "FAIL: cross-channel byte-equivalence violated (2-way, curl arm SKIPped)"
+    echo "  NPM_HASH=$NPM_HASH"
+    echo "  HOMEBREW_HASH=$HOMEBREW_HASH"
+    fail=$((fail + 1))
+  fi
 else
-  echo "SKIP: cross-channel equality assertion requires both NPM_HASH and HOMEBREW_HASH"
+  echo "SKIP: cross-channel equality assertion requires at least NPM_HASH and HOMEBREW_HASH"
   skip=$((skip + 1))
 fi
-
-echo "SKIP: pending P04 -- curl-pipe-bash-channel hash assertion"
-skip=$((skip + 1))
 
 echo "BATTERY: pass=$pass fail=$fail skip=$skip"
 [ "$fail" -eq 0 ]

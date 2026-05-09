@@ -195,3 +195,4 @@
 {"timestamp":"2026-05-09T16:43:39Z","unitId":"M035/P04/T01","milestone":"M035","phase":"P04","task":"T01","tier":"C","outcome":"success","dispatch_method":"sequential","attempt":1,"verification_result":"pass","duration_s":600}
 {"timestamp":"2026-05-09T17:13:27Z","unitId":"M035/P04/T02","milestone":"M035","phase":"P04","task":"T02","tier":"C","outcome":"success","dispatch_method":"sequential","attempt":1,"verification_result":"pass","duration_s":480}
 {"timestamp":"2026-05-09T17:16:46Z","unitId":"M035/P04/T03","milestone":"M035","phase":"P04","task":"T03","tier":"C","outcome":"success","dispatch_method":"sequential","attempt":1,"verification_result":"pass","duration_s":540}
+{"timestamp":"2026-05-09T17:21:10Z","unitId":"M035/P04/T04","milestone":"M035","phase":"P04","task":"T04","tier":"C","outcome":"success","dispatch_method":"sequential","attempt":1,"verification_result":"pass","duration_s":720}

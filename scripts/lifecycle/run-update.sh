@@ -59,6 +59,103 @@ usage() {
   sed -n '2,44p' "$0"
 }
 
+# --- Multi-source resolution helpers (M035 P06 T02 / FR-13 / AD-5 / D014) ----
+#
+# Resolves update_source via AD-5 ordering (config first, then detection),
+# persists detected non-git resolutions back to .orchestrator/config.yml.
+# Bash 3.2 / POSIX-sh-safe; no compound chains; no plain subshells used as
+# command-substitution-with-pipes. Helpers are inline (not separate scripts)
+# to preserve AD-19 single-script-file shape for the dispatch surface.
+
+resolve_update_source() {
+  proj="$1"
+  cfg="$proj/.orchestrator/config.yml"
+  resolved=""
+  detected=""
+
+  # Path 1: read from config (operator wins).
+  if [ -f "$cfg" ]; then
+    resolved="$(grep -E '^update_source:' "$cfg" 2>/dev/null \
+      | head -1 | sed -E 's/^update_source:[[:space:]]*//' \
+      | tr -d '"' | tr -d "'")"
+  fi
+
+  if [ -n "$resolved" ]; then
+    echo "$resolved"
+    return 0
+  fi
+
+  # Path 2: AD-5 detection ordering (D014).
+  # 2a: install-meta.txt runtime= field.
+  meta="$proj/.orchestrator/install-meta.txt"
+  if [ -f "$meta" ]; then
+    runtime=""
+    runtime="$(grep -E '^runtime=' "$meta" 2>/dev/null \
+      | head -1 | sed -E 's/^runtime=//' \
+      | tr '[:upper:]' '[:lower:]')"
+    case "$runtime" in
+      *npm*)      detected="npm" ;;
+      *homebrew*) detected="homebrew" ;;
+      *brew*)     detected="homebrew" ;;
+      *curl*)     detected="npm" ;;
+      *git*)      detected="git" ;;
+    esac
+  fi
+
+  # 2b: npm global presence.
+  if [ -z "$detected" ]; then
+    if command -v npm >/dev/null 2>&1; then
+      npm_root_probe=""
+      npm_root_probe="$(npm root -g 2>/dev/null)"
+      if [ -n "$npm_root_probe" ] && [ -d "$npm_root_probe/@build-fractal/orchestrator" ]; then
+        detected="npm"
+      fi
+    fi
+  fi
+
+  # 2c: homebrew formula presence.
+  if [ -z "$detected" ]; then
+    if command -v brew >/dev/null 2>&1; then
+      brew_prefix_probe=""
+      brew_prefix_probe="$(brew --prefix 2>/dev/null)"
+      if [ -n "$brew_prefix_probe" ] && [ -d "$brew_prefix_probe/Cellar/orchestrator" ]; then
+        detected="homebrew"
+      fi
+    fi
+  fi
+
+  # 2d: fallback.
+  if [ -z "$detected" ]; then
+    detected="git"
+  fi
+
+  # Persist non-git detections (single-resolve discipline). Git fallback is
+  # NOT persisted: persisting would noise up every fresh consumer's config.
+  if [ "$detected" != "git" ] && [ -d "$proj/.orchestrator" ]; then
+    persist_update_source "$cfg" "$detected"
+  fi
+
+  echo "$detected"
+}
+
+persist_update_source() {
+  cfg="$1"
+  val="$2"
+  # If config doesn't exist, write a minimal one.
+  if [ ! -f "$cfg" ]; then
+    printf 'schema_version: "1.0"\ntype: orchestrator-config\nupdate_source: %s\n' "$val" > "$cfg"
+    return 0
+  fi
+  # If line exists, sed-replace; else append at EOF.
+  if grep -qE '^update_source:' "$cfg" 2>/dev/null; then
+    tmp="$cfg.tmp"
+    sed -E "s/^update_source:.*/update_source: $val/" "$cfg" > "$tmp"
+    mv "$tmp" "$cfg"
+  else
+    printf 'update_source: %s\n' "$val" >> "$cfg"
+  fi
+}
+
 while [ $# -gt 0 ]; do
   case "$1" in
     --source-repo)
@@ -263,6 +360,103 @@ symlink-mode consumers are always at HEAD; to revert, run \
   exit 0
 fi
 
+# --- Multi-source dispatch (M035 P06 T02 / FR-13 / AD-5 / D014) --------------
+#
+# Resolves update_source: config first (via T01's registered key), then
+# AD-5 detection (install-meta.txt runtime= / npm presence / brew presence /
+# git fallback). Persists detected non-git source to config for future runs.
+# The four channel arms dispatch to the appropriate update command;
+# --dry-run emits the would_invoke= line and exits 0.
+#
+# Rollback path above short-circuits before this block; the existing
+# git-source dispatch (formerly the only path) is now the git arm via :
+# fall-through into the source-repo validation that follows.
+
+if [ ! -d "$PROJECT_DIR" ]; then
+  echo "FAIL: project dir not found: $PROJECT_DIR" >&2
+  exit 1
+fi
+
+update_source="$(resolve_update_source "$PROJECT_DIR")"
+
+case "$update_source" in
+  git)
+    # Existing path — fall through to the source-repo validation and
+    # install dispatch below. The git-arm dry-run emits the canonical
+    # would_invoke= line in the existing dispatch block (see below).
+    :
+    ;;
+  npm)
+    if ! command -v npm >/dev/null 2>&1; then
+      echo "FAIL: update_source=npm but npm not on PATH" >&2
+      exit 1
+    fi
+    npm_root=""
+    npm_root="$(npm root -g 2>/dev/null)"
+    if [ -z "$npm_root" ] || [ ! -d "$npm_root/@build-fractal/orchestrator" ]; then
+      echo "FAIL: @build-fractal/orchestrator not installed at npm global root: $npm_root" >&2
+      exit 1
+    fi
+    if [ "$DRY_RUN" -eq 1 ]; then
+      echo "would_invoke=npm update -g @build-fractal/orchestrator"
+      exit 0
+    fi
+    echo "running npm update -g @build-fractal/orchestrator..."
+    npm update -g @build-fractal/orchestrator
+    rc=$?
+    # T03 hooks update_run JSONL emission here (success path).
+    echo "---"
+    if [ "$rc" -eq 0 ]; then
+      echo "orchestrator:update OK -- npm channel"
+    else
+      echo "FAIL: npm update exited $rc" >&2
+    fi
+    exit "$rc"
+    ;;
+  homebrew)
+    if ! command -v brew >/dev/null 2>&1; then
+      echo "FAIL: update_source=homebrew but brew not on PATH" >&2
+      exit 1
+    fi
+    brew_prefix=""
+    brew_prefix="$(brew --prefix 2>/dev/null)"
+    if [ -z "$brew_prefix" ] || [ ! -d "$brew_prefix/Cellar/orchestrator" ]; then
+      echo "FAIL: orchestrator not installed via brew at: $brew_prefix" >&2
+      exit 1
+    fi
+    if [ "$DRY_RUN" -eq 1 ]; then
+      echo "would_invoke=brew upgrade orchestrator"
+      exit 0
+    fi
+    echo "running brew upgrade orchestrator..."
+    brew upgrade orchestrator
+    rc=$?
+    # T03 hooks update_run JSONL emission here (success path).
+    echo "---"
+    if [ "$rc" -eq 0 ]; then
+      echo "orchestrator:update OK -- homebrew channel"
+    else
+      echo "FAIL: brew upgrade exited $rc" >&2
+    fi
+    exit "$rc"
+    ;;
+  none)
+    if [ "$DRY_RUN" -eq 1 ]; then
+      echo "would_invoke=<no-op: update_source=none>"
+      exit 0
+    fi
+    echo "update_source: none — dispatch suppressed (operator opt-out)"
+    exit 0
+    ;;
+  *)
+    echo "FAIL: unknown update_source=$update_source (expected git|npm|homebrew|none)" >&2
+    exit 1
+    ;;
+esac
+
+# Fall-through: update_source=git. The existing source-repo validation +
+# install dispatch below is now the git arm.
+
 # --- Source-repo validation --------------------------------------------------
 
 if [ ! -d "$SOURCE_REPO" ]; then
@@ -331,6 +525,7 @@ echo "---"
 if [ "$DRY_RUN" -eq 1 ]; then
   echo "DRY RUN: would invoke:"
   echo "  bash $INSTALLER --project-dir $PROJECT_DIR --force"
+  echo "would_invoke=bash $INSTALLER --project-dir $PROJECT_DIR --force"
   exit 0
 fi
 

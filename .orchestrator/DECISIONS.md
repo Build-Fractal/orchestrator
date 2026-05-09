@@ -720,3 +720,57 @@ losing channel coverage.
 **Cross-references**: `scripts/state/read-config.sh § VALID_KEYS`,
 `commands/update.md § Update sources`,
 `tools/verify/m035-p06-config-schema-shape.sh`.
+
+### D014 — AD-5 detection ordering for orchestrator:update (M035 P06)
+
+**Date**: 2026-05-09
+**Phase**: M035 P06 T02
+**Status**: bound
+
+When `update_source` is absent from `.orchestrator/config.yml`, the
+`scripts/lifecycle/run-update.sh` driver resolves the channel via the
+following first-match-wins ordering:
+
+1. `.orchestrator/install-meta.txt` `runtime=` field — if value contains
+   the literal substring `npm` / `homebrew` / `brew` / `curl` / `git`
+   (case-insensitive). `curl` resolves to `npm` per D012 (curl-pipe-bash
+   extracts the npm tarball — D007/D009 single-source-of-truth).
+2. npm global presence: `command -v npm` AND
+   `[ -d "$(npm root -g)/@build-fractal/orchestrator" ]`.
+3. homebrew formula presence: `command -v brew` AND
+   `[ -d "$(brew --prefix)/Cellar/orchestrator" ]`.
+4. Fallback: `git`.
+
+Detected non-`git` resolutions persist back to
+`.orchestrator/config.yml` via in-place sed-replace (when an existing
+`update_source:` line is present) or EOF append (when absent). This is
+the **single-resolve discipline**: subsequent runs hit the persisted
+config and skip detection. `git`-fallback resolutions are NOT persisted
+— persisting them would noise up every fresh consumer's config with a
+default that's already the implicit behavior.
+
+**Rationale**:
+
+1. **Provenance trumps discovery.** `install-meta.txt` is authored by
+   the installer at install time and records the actual channel that
+   provisioned this runtime. It is the most reliable signal and is
+   checked first.
+2. **Curl-pipe-bash collapse to npm.** D007/D009 fix the curl-pipe-bash
+   tarball as the npm tarball; AD-5 honors that by mapping the `curl`
+   substring to `npm` rather than introducing a fourth update channel.
+3. **Detection fallbacks favor presence over PATH.** Steps 2 and 3
+   both gate on installed-package presence (`@build-fractal/orchestrator`
+   under `npm root -g`, `orchestrator` under `brew --prefix Cellar`),
+   not just `command -v` of the package manager — `npm` and `brew`
+   on PATH without our package present should not resolve to those
+   channels.
+4. **Single-resolve via persistence.** Persisting resolved non-git
+   sources lets the second run skip `npm root -g` and `brew --prefix`
+   spawn cost. Git fallback persistence is intentionally suppressed
+   so fresh `.orchestrator/` trees don't accumulate config noise.
+
+**Bound to**: FR-13, AD-5, SC-13.
+
+**Cross-references**: `scripts/lifecycle/run-update.sh § Multi-source
+dispatch`, `commands/update.md § Update sources`,
+`tools/verify/m035-p06-multi-source-dispatch-shape.sh`, D012.

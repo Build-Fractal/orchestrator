@@ -524,3 +524,31 @@ Authored at T01 step 5 against CHANGELOG.md top-line `## [0.9.2]`; verifier `m03
      SHA-256 — no fresh build, no fresh secrets, just the
      `secrets.HOMEBREW_TAP_TOKEN` PAT for the cross-repo write.
 - **Bound to**: FR-9 / FR-14 / SC-9 / SC-10 / CON-5.
+
+### D008 — Tap-push mechanism: `secrets.HOMEBREW_TAP_TOKEN` PAT (contents:write only)
+
+- **Decided at**: M035 P03 plan-phase (2026-05-09).
+- **Decision**: The `homebrew-publish` job in
+  `.github/workflows/release.yml` writes to
+  `Build-Fractal/homebrew-orchestrator` using a Personal Access
+  Token stored as `secrets.HOMEBREW_TAP_TOKEN`. The PAT MUST be
+  scoped to
+  `Build-Fractal/homebrew-orchestrator:contents:write` only — no
+  other scope, no other repo.
+- **Rationale**:
+  1. **Symmetry with `secrets.NPM_TOKEN` precedent** (P02 D001 /
+     D002). Operator already manages PATs for the npm channel;
+     adding one more under the same review cadence is lower
+     friction than introducing GitHub App ownership semantics.
+  2. **CON-6 job-condition gating identical to npm.** PAT is only
+     visible inside the `homebrew-publish` job, which gates on the
+     same `startsWith(github.ref, 'refs/tags/v') &&
+     github.event_name == 'push'` predicate as `npm-publish`.
+     PR-build exfiltration vector closed by the SC-14 assertion
+     shape; `pr-validate` carries an explicit negative-assertion
+     step asserting `HOMEBREW_TAP_TOKEN` is empty in PR context.
+  3. **GitHub App migration is a clean fast-follow** if rotation
+     friction surfaces — `homebrew-orchestrator` is the only repo
+     the PAT writes to, so swapping the auth principal is a
+     one-secret rotation with no formula changes.
+- **Bound to**: FR-9 / CON-6 / SC-14 / MOS-2.

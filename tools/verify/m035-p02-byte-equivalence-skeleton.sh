@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 # tools/verify/m035-p02-byte-equivalence-skeleton.sh
 # Asserts the cross-channel byte-equivalence test skeleton meets
-# the M035 P02 T03 contract:
+# the M035 P02 T03 contract, reconciled M035 P06 T05.5 to match
+# post-P03/P04 state:
 #   * test file exists, executable
 #   * helper hash script exists, executable
 #   * test reads exclusion list from references/installation.md
 #   * npm-channel arm emits NPM_HASH=<sha>
-#   * homebrew + curl-pipe-bash arms emit SKIP: pending P03/P04
+#   * homebrew arm is implemented and emits HOMEBREW_HASH= (P03/T03
+#     replaced the original `SKIP: pending P03` stub)
+#   * curl-pipe-bash arm is implemented and emits CURL_HASH= (P04/T03
+#     replaced the original `SKIP: pending P04` stub)
 #   * BATTERY: line shape present
 #
 # Bash 3.2 compatible.
@@ -50,8 +54,8 @@ check_grep() {
 check_grep "$TEST" 'references/installation\.md' \
   "test reads exclusion list from references/installation.md (MIT-2)"
 check_grep "$TEST" 'NPM_HASH=' "npm-channel arm emits NPM_HASH= line"
-check_grep "$TEST" 'SKIP: pending P03' "homebrew arm stubbed (SKIP: pending P03)"
-check_grep "$TEST" 'SKIP: pending P04' "curl-pipe-bash arm stubbed (SKIP: pending P04)"
+check_grep "$TEST" 'HOMEBREW_HASH=' "homebrew arm implemented (emits HOMEBREW_HASH=)"
+check_grep "$TEST" 'CURL_HASH=' "curl-pipe-bash arm implemented (emits CURL_HASH=)"
 check_grep "$TEST" 'BATTERY:' "BATTERY: line shape present"
 check_grep "$TEST" 'DRY_RUN=1' "npm-channel arm runs postinstall under DRY_RUN=1 (D002)"
 

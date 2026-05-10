@@ -39,6 +39,11 @@
 #       Fixture data exercised by P01 verifiers (drift detection).
 #   - tests/fixtures/m036-live-llm-smoke/
 #       Live-LLM smoke regression artifacts (pre-rename absolute paths).
+#   - tools/verify/m035-p015-operator-paths.sh
+#       This verifier itself — its top-of-file comment + impl regex +
+#       FAIL message all literally contain `~/Sites/spec-kit-orchestrator`
+#       as part of the contract definition. Self-match added under
+#       M035 P06 T05.5 reconciliation.
 
 set -u
 
@@ -50,7 +55,7 @@ cd "$REPO_ROOT" || exit 1
 # `git grep -n` line (`<path>:<lineno>:<content>`) — the `:` separator
 # comes after the filename, not after a directory prefix, so we don't
 # anchor a trailing `:` here.
-allowlist_re='^(references/RENAME-PLAN\.md:|\.orchestrator/milestones/M008/archive/|\.orchestrator/milestones/M0[0-9][0-9]/(phases|archive)/|\.orchestrator/milestones/M035/M035-ROADMAP\.md:|\.orchestrator/milestones/M035/phases/P01\.5/|\.orchestrator/milestones/M035/phases/P01/tasks/T0[13]-|\.orchestrator/DECISIONS\.md:|\.orchestrator/proposals/|\.orchestrator/scratch/|\.orchestrator/handoffs/|\.orchestrator/KNOWLEDGE\.md:|CHANGELOG\.md:|tests/m035-acceptance/fixtures/|tests/fixtures/m036-live-llm-smoke/)'
+allowlist_re='^(references/RENAME-PLAN\.md:|\.orchestrator/milestones/M008/archive/|\.orchestrator/milestones/M0[0-9][0-9]/(phases|archive)/|\.orchestrator/milestones/M035/M035-ROADMAP\.md:|\.orchestrator/milestones/M035/phases/P01\.5/|\.orchestrator/milestones/M035/phases/P01/tasks/T0[13]-|\.orchestrator/DECISIONS\.md:|\.orchestrator/proposals/|\.orchestrator/scratch/|\.orchestrator/handoffs/|\.orchestrator/KNOWLEDGE\.md:|CHANGELOG\.md:|tests/m035-acceptance/fixtures/|tests/fixtures/m036-live-llm-smoke/|tools/verify/m035-p015-operator-paths\.sh:)'
 
 residue=$(git grep -nE '~?/Sites/spec-kit-orchestrator' 2>/dev/null \
   | grep -vE "$allowlist_re" || true)

@@ -51,6 +51,7 @@ title: "proposals"
 - [Paper-Cut: `orchestrator:specify` emits a Pass-1 `unit_close` only — Pass 2 + Pass 3 never log a follow-up](papercut-specify-pass23-unit-close.md)
 - [Paper-cut Sweep round 2 — M032 wiki tooling, PBJ-central dogfood](papercut-sweep-m032-pbj-dogfood-round2.md)
 - [Paper-cut Sweep — M032 wiki tooling, PBJ-central dogfood](papercut-sweep-m032-pbj-dogfood.md)
+- [Handoff — Paper-Cut Sweep Post-M035 (Mid-Sweep)](papercut-sweep-post-M035-HANDOFF.md)
 - [Paper-Cut Sweep PR Brief — Post-M035](papercut-sweep-post-M035.md)
 - [Paper-Cut Sweep PR Brief — Pre-M030](papercut-sweep-pre-M030.md)
 - [Paper-Cut Sweep — wiki-deploy session (2026-05-07, PBJ-central round 3)](papercut-sweep-wiki-deploy-2026-05-07.md)

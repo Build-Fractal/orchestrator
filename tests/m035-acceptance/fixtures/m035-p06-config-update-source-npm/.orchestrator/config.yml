@@ -1,0 +1,4 @@
+schema_version: "1.0"
+type: orchestrator-config
+# M035 P06 T05 fixture: drives SC-13 dispatch arm.
+update_source: npm

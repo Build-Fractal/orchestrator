@@ -330,9 +330,9 @@ The hash MUST exclude **per-install metadata files** that are legitimately chann
 |-----------------------------------|------------|---------------------------------------------------------------|
 | `.orchestrator/install-meta.txt`  | all        | Operator-specific absolute paths (FR-6).                      |
 | `.orchestrator/.previous-version` | all        | Per-install rollback marker (FR-12).                          |
-| `package.json`                    | npm        | npm-channel manifest; absent in homebrew/curl channels.       |
-| `package-lock.json`               | npm        | npm transitive lock; not authored at release time.            |
-| `node_modules/`                   | npm        | npm-installed dependencies; absent in non-npm channels.       |
+| `package.json`                    | all        | Package manifest carried in the npm pack tarball; identical across channels. Excluded for symmetric hashing (papercut-sweep-post-M035 PC-3). |
+| `package-lock.json`               | all        | npm transitive lock; only present after `npm install` against a non-pack-tarball source. Excluded defensively in case a future change creates one. |
+| `node_modules/`                   | all        | npm-installed dependencies. Not present in our pack tarball today; excluded defensively. |
 | `.brew/*.bottle.tab`              | homebrew   | Homebrew receipt files (P03 will introduce).                  |
 | `Library/Caches/Homebrew/`        | homebrew   | Homebrew bottle cache (P03).                                  |
 | `.git/`, `.github/`               | all        | Repository metadata; not staged into adopter projects.        |

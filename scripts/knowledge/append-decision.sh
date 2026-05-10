@@ -53,14 +53,32 @@ if [ ! -f "$DECISIONS_FILE" ]; then
   exit 1
 fi
 
-# Find the highest existing D### ID
-# Look for patterns like "| D001 " or "| D123 " in table rows
+# Find the highest existing D### ID. Three shapes are recognized
+# (papercut-sweep-post-M035 PC-2):
+#
+#   1. Table-row shape:     `| D### | ...` (M001..M021 era)
+#   2. Heading shape:       `### D### — title` (D004..D014, M032..M035 era)
+#   3. Anchor heading shape: `### D### — title { #dr-code-NNN }` (used by
+#      contiguous decision cohorts; also matched by shape 2 modulo trailing
+#      anchor — the alternation here is permissive of the leading prefix only)
+#
+# The D-RN-N anchor cohort is intentionally OUT of the numeric D### sequence
+# (it lives under its own dr-code-NNN anchor space, not D###). The regex below
+# matches `^### D[0-9]+` only, so D-RN-* lines are correctly ignored.
 highest_id=0
 while IFS= read -r line; do
-  # Match lines that contain a D### pattern in a table cell
+  # Match table-row shape: `| D### |`
   if echo "$line" | grep -qE '^\|[[:space:]]*D[0-9]+'; then
-    # Extract the number after D
     d_num=$(echo "$line" | sed -E 's/^\|[[:space:]]*D0*([0-9]+).*/\1/')
+    if [ "$d_num" -gt "$highest_id" ] 2>/dev/null; then
+      highest_id=$d_num
+    fi
+    continue
+  fi
+  # Match heading-shape (with or without trailing anchor):
+  # `### D### — <title>[ { #anchor }]`
+  if echo "$line" | grep -qE '^### D[0-9]+([[:space:]]|$)'; then
+    d_num=$(echo "$line" | sed -E 's/^### D0*([0-9]+).*/\1/')
     if [ "$d_num" -gt "$highest_id" ] 2>/dev/null; then
       highest_id=$d_num
     fi

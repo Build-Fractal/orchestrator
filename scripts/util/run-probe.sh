@@ -15,6 +15,10 @@
 # (typically via the Write tool, which does not trigger Bash heuristics),
 # so by the time run-probe.sh fires, the path is a plain file on disk.
 #
+# Exports REPO_ROOT to the child probe's environment. Probes can rely
+# on $REPO_ROOT pointing at the orchestrator repo root without computing
+# it themselves (papercut-sweep-post-M035 PC-1).
+#
 # Exit: passes through the child's exit code. Exits 1 when the file is
 # missing or not readable. Exits 2 on usage error. Exits 3 when the
 # path is not under an approved root.
@@ -35,8 +39,10 @@ if [ -z "$probe" ]; then
   exit 2
 fi
 
-# Resolve repo root (parent of scripts/util/).
+# Resolve repo root (parent of scripts/util/) and export so child
+# probes inherit it without re-deriving (PC-1).
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+export REPO_ROOT
 
 # Normalize probe: if it's relative, resolve against $PWD; if it's already
 # absolute, keep it. We avoid `realpath` (not on stock macOS) and instead

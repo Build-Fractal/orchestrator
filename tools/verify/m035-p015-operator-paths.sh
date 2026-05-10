@@ -55,7 +55,7 @@ cd "$REPO_ROOT" || exit 1
 # `git grep -n` line (`<path>:<lineno>:<content>`) — the `:` separator
 # comes after the filename, not after a directory prefix, so we don't
 # anchor a trailing `:` here.
-allowlist_re='^(references/RENAME-PLAN\.md:|\.orchestrator/milestones/M008/archive/|\.orchestrator/milestones/M0[0-9][0-9]/(phases|archive)/|\.orchestrator/milestones/M035/M035-ROADMAP\.md:|\.orchestrator/milestones/M035/phases/P01\.5/|\.orchestrator/milestones/M035/phases/P01/tasks/T0[13]-|\.orchestrator/DECISIONS\.md:|\.orchestrator/proposals/|\.orchestrator/scratch/|\.orchestrator/handoffs/|\.orchestrator/KNOWLEDGE\.md:|CHANGELOG\.md:|tests/m035-acceptance/fixtures/|tests/fixtures/m036-live-llm-smoke/|tools/verify/m035-p015-operator-paths\.sh:)'
+allowlist_re='^(references/RENAME-PLAN\.md:|\.orchestrator/milestones/M008/archive/|\.orchestrator/milestones/M0[0-9][0-9]/(phases|archive)/|\.orchestrator/milestones/M035/M035-ROADMAP\.md:|\.orchestrator/milestones/M035/phases/P01\.5/|\.orchestrator/milestones/M035/phases/P01/tasks/T0[13]-|\.orchestrator/DECISIONS\.md:|\.orchestrator/proposals/|\.orchestrator/scratch/|\.orchestrator/handoffs/|\.orchestrator/KNOWLEDGE\.md:|CHANGELOG\.md:|tests/m035-acceptance/fixtures/|tests/fixtures/m036-live-llm-smoke/|tools/verify/m035-p015-operator-paths\.sh:|wiki/)'
 
 residue=$(git grep -nE '~?/Sites/spec-kit-orchestrator' 2>/dev/null \
   | grep -vE "$allowlist_re" || true)

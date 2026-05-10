@@ -1,0 +1,26 @@
+---
+schema_version: "1.0"
+type: task-summary
+id: "T01"
+parent: "P05"
+milestone: "M020"
+provides:
+  - "scripts/knowledge/lib/cluster.sh sourceable helper exposing cluster_compute <root> <threshold> (walks <root>/**/MEM*.md, filters to status: candidate, computes pairwise Jaccard via subprocess invocation of jaccard.sh, builds union-find similarity graph with edges where similarity >= threshold, emits TAB-separated <cluster-id>\t<member-id> lines on stdout sorted by cluster-id then member-id; singletons form one-member clusters; pure read, no knowledge/** or .orchestrator/** mutations) and cluster_id_for <sorted-csv> (deterministic AD-3 C<8-hex-of-sha1(sorted-csv)>); three contract verifiers covering function exposure + AD-3 ID shape + determinism + empty + singleton + 10-entry singleton-coverage"
+requires:
+  - "from:P01/T04 what:scripts/knowledge/lib/jaccard.sh::pairwise_jaccard subcommand (invoked as subprocess to dodge jaccard.sh's set -euo pipefail + dollar-zero-based SCRIPT_DIR resolution which kills the host shell on source); from:P01/T02 what:knowledge/conventions/MEM031.md status: closed-enum (consumed via inline awk reader to filter candidates)"
+affects:
+  - "P05/T02,P05/T03,P05/T04"
+key_files:
+  - "scripts/knowledge/lib/cluster.sh,scripts/verify/m020-p05-cluster-helper-contract.sh,scripts/verify/m020-p05-cluster-determinism.sh,scripts/verify/m020-p05-cluster-singleton-coverage.sh"
+key_decisions:
+  - "none-new,AD-3"
+patterns_established:
+  - "cluster.sh invokes jaccard.sh as subprocess (bash <jaccard.sh> pairwise_jaccard a b) NOT as sourced function -- jaccard.sh's file-scope set -euo pipefail + dollar-zero-based SCRIPT_DIR + bottom-of-file case dispatch makes sourcing it from another helper hostile (missing subcommand triggers exit 1 in host shell; dollar-zero resolves to bash not the script when sourced via bash -c). Subprocess invocation is AD-19-compatible since cluster.sh internals are not Bash-tool-call-shape gated; awk-pass-with-scratch-file pattern for cluster grouping (subshell-locality of bash while loops would lose current_members at exit; awk's associative arrays are bash-3.2-constraint-exempt because the constraint applies to bash code only); cluster_id_for as pure deterministic content-hash decouples ID generation from the union-find result so the same sorted-CSV always yields the same C<8-hex>; bash 3.2 union-find via parallel newline-joined parent_arr scalars with awk-indexed get/set helpers (path compression on find); inline awk-based status reader instead of sourcing fm_read_status -- keeps the candidate-filter contract visible to verifier readers in one place and dodges nested-source quirks; reference-implementation drift caught and corrected at execution time (payload reference impl sourced jaccard.sh which fails for the reasons above; T01 substituted subprocess invocation while preserving the documented external contract)"
+drill_down_paths:
+  - ".orchestrator/milestones/M020/phases/P05/tasks/T01-cluster-helper-PAYLOAD.md"
+duration: "20m"
+verification_result: "pass"
+completed_at: "2026-04-25T15:06:54Z"
+---
+
+Created scripts/knowledge/lib/cluster.sh implementing FR-5 connected-components clustering on top of the P01 pairwise_jaccard primitive. The helper exposes two functions: cluster_compute <root> <threshold> (walks the knowledge tree, filters to status: candidate, computes pairwise similarities, runs union-find to group, emits sorted <cluster-id>\t<member-id> lines on stdout) and cluster_id_for <sorted-csv> (AD-3 deterministic C<8-hex-of-sha1>). Three verifier scripts created and green: helper-contract (function exposure, AD-3 ID shape, determinism, empty-root, singleton fixture), determinism (3-entry fixture, byte-identical run1==run2), and singleton-coverage (10-entry fixture: 4 near-duplicates + 6 fully-disjoint distinct entries -- 7 distinct cluster IDs, 10 members covered exactly once). Key implementation deviation from payload reference: jaccard.sh uses file-scope set -euo pipefail + dollar-zero-based SCRIPT_DIR resolution + bottom-of-file subcommand case dispatch, which makes 'source jaccard.sh' from cluster.sh hostile (when invoked via 'bash -c ". cluster.sh"' the dollar-zero resolves to 'bash' and SCRIPT_DIR points at cwd, missing the lib/ siblings; AND the empty-arg case branch's exit 1 kills the host shell). Substituted subprocess invocation (bash <jaccard.sh> pairwise_jaccard a b) which matches the bottom-of-file dispatch contract and is AD-19-compatible (the harness shape-guard inspects Bash tool-call shapes, not script internals -- per P03 lesson). Singleton-coverage fixture revised: the payload's 6 'distinct' entries shared body words ('unique', 'body', 'for', 'distinct', 'word') which made them cluster together at threshold 0.1; replaced with fully-disjoint single-vocabulary entries (zebra/walrus/quokka/narwhal/ferret/platypus). All three T01 verifiers PASS. git status .orchestrator/execution-log.jsonl unchanged (T01 emits no JSONL records). git status knowledge/ pre-existing dirtiness from prior sessions (P03 carry-forward lesson #9: future verifiers should not assert clean knowledge/, only that the verifier under test did not write to it; T01 verifiers use tempdir fixtures and never touch the live tree).

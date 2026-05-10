@@ -6,8 +6,8 @@ title: "P03-SUMMARY"
      Source of truth: ../../../../../../.orchestrator/milestones/M036/phases/P03/P03-SUMMARY.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../.orchestrator/milestones/M036/phases/P03/P03-SUMMARY.md"
+  include-markdown "../../../../../.staged/milestones/M036/phases/P03/P03-SUMMARY.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

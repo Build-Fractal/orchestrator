@@ -6,8 +6,8 @@ title: "Preferences Layer (M020 / FR-6 / US-5)"
      Source of truth: ../../../../../../../.orchestrator/milestones/M020/phases/P06/tasks/T04-docs-integration-test-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M020/phases/P06/tasks/T04-docs-integration-test-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M020/phases/P06/tasks/T04-docs-integration-test-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

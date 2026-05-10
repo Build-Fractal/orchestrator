@@ -6,7 +6,7 @@ title: "Paper-cut — M036a P03: hardcoded `model: claude-opus-4-7` in `unit_clo
      Source of truth: ../../../.orchestrator/proposals/papercut-m036a-p03-smoke-hardcoded-model.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/papercut-m036a-p03-smoke-hardcoded-model.md"
+  include-markdown "../../.staged/proposals/papercut-m036a-p03-smoke-hardcoded-model.md"
   start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=false

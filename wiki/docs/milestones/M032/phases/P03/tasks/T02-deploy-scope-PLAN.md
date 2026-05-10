@@ -6,8 +6,8 @@ title: "-------- gate 0: FR-10 cwd-vs-repo_url sanity gate (Finding J counter-pa
      Source of truth: ../../../../../../../.orchestrator/milestones/M032/phases/P03/tasks/T02-deploy-scope-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M032/phases/P03/tasks/T02-deploy-scope-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M032/phases/P03/tasks/T02-deploy-scope-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

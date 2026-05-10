@@ -6,7 +6,7 @@ title: "Paper-Cut Sweep — wiki-deploy session (2026-05-07, PBJ-central round 3
      Source of truth: ../../../.orchestrator/proposals/papercut-sweep-wiki-deploy-2026-05-07.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/papercut-sweep-wiki-deploy-2026-05-07.md"
+  include-markdown "../../.staged/proposals/papercut-sweep-wiki-deploy-2026-05-07.md"
   start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=false

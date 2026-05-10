@@ -6,8 +6,8 @@ title: "M018/P03/T01: Tier 1 microcompact config."
      Source of truth: ../../../../../../../.orchestrator/milestones/M018/phases/P03/tasks/T01-tier1-paging-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M018/phases/P03/tasks/T01-tier1-paging-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M018/phases/P03/tasks/T01-tier1-paging-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

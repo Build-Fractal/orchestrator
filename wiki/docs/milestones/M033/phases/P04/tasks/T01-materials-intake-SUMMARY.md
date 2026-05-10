@@ -6,8 +6,8 @@ title: "T01-materials-intake-SUMMARY"
      Source of truth: ../../../../../../../.orchestrator/milestones/M033/phases/P04/tasks/T01-materials-intake-SUMMARY.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M033/phases/P04/tasks/T01-materials-intake-SUMMARY.md"
+  include-markdown "../../../../../../.staged/milestones/M033/phases/P04/tasks/T01-materials-intake-SUMMARY.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

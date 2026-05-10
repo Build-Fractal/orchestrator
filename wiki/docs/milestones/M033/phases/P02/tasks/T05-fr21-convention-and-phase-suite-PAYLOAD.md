@@ -6,8 +6,8 @@ title: "Dispatch Context -- T05-fr21-convention-and-phase-suite (Phase P02, Mile
      Source of truth: ../../../../../../../.orchestrator/milestones/M033/phases/P02/tasks/T05-fr21-convention-and-phase-suite-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M033/phases/P02/tasks/T05-fr21-convention-and-phase-suite-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M033/phases/P02/tasks/T05-fr21-convention-and-phase-suite-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

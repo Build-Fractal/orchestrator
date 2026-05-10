@@ -6,7 +6,7 @@ title: "Proposal: M030 — Adaptive Model Selection"
      Source of truth: ../../../.orchestrator/proposals/M030-adaptive-model-selection.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/M030-adaptive-model-selection.md"
+  include-markdown "../../.staged/proposals/M030-adaptive-model-selection.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

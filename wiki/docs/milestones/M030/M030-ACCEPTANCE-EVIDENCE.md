@@ -6,8 +6,8 @@ title: "M030 Acceptance Evidence"
      Source of truth: ../../../../.orchestrator/milestones/M030/M030-ACCEPTANCE-EVIDENCE.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../.orchestrator/milestones/M030/M030-ACCEPTANCE-EVIDENCE.md"
+  include-markdown "../../../.staged/milestones/M030/M030-ACCEPTANCE-EVIDENCE.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

@@ -6,8 +6,8 @@ title: "Dispatch Context -- T01-feedback-routing-arm (Phase P02, Milestone M037)
      Source of truth: ../../../../../../../.orchestrator/milestones/M037/phases/P02/tasks/T01-feedback-routing-arm-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M037/phases/P02/tasks/T01-feedback-routing-arm-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M037/phases/P02/tasks/T01-feedback-routing-arm-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

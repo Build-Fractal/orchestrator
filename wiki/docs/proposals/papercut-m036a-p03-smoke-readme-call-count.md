@@ -6,7 +6,7 @@ title: "Paper-cut — M036a P03: README under-counts conversus deliberation call
      Source of truth: ../../../.orchestrator/proposals/papercut-m036a-p03-smoke-readme-call-count.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/papercut-m036a-p03-smoke-readme-call-count.md"
+  include-markdown "../../.staged/proposals/papercut-m036a-p03-smoke-readme-call-count.md"
   start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=false

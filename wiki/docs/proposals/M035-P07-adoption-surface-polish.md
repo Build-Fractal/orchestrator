@@ -6,7 +6,7 @@ title: "Proposal: Adoption-Surface Polish (candidate M035 P07)"
      Source of truth: ../../../.orchestrator/proposals/M035-P07-adoption-surface-polish.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/M035-P07-adoption-surface-polish.md"
+  include-markdown "../../.staged/proposals/M035-P07-adoption-surface-polish.md"
   start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=false

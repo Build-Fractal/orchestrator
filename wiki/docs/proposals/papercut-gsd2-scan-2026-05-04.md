@@ -6,7 +6,7 @@ title: "Paper-Cut Sweep: GSD 2 Adoption — 2026-05-04"
      Source of truth: ../../../.orchestrator/proposals/papercut-gsd2-scan-2026-05-04.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/papercut-gsd2-scan-2026-05-04.md"
+  include-markdown "../../.staged/proposals/papercut-gsd2-scan-2026-05-04.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

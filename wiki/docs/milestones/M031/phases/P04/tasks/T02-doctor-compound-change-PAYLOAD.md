@@ -6,8 +6,8 @@ title: "Dispatch Context -- T02-doctor-compound-change (Phase P04, Milestone M03
      Source of truth: ../../../../../../../.orchestrator/milestones/M031/phases/P04/tasks/T02-doctor-compound-change-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M031/phases/P04/tasks/T02-doctor-compound-change-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M031/phases/P04/tasks/T02-doctor-compound-change-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

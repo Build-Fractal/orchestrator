@@ -6,7 +6,7 @@ title: "Brief — M032 cross-link rewrite warnings (B5)"
      Source of truth: ../../../.orchestrator/proposals/m032-cross-link-rewrite-warnings.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/m032-cross-link-rewrite-warnings.md"
+  include-markdown "../../.staged/proposals/m032-cross-link-rewrite-warnings.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

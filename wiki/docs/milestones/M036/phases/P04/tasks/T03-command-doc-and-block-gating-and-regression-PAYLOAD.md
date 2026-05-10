@@ -6,8 +6,8 @@ title: "Dispatch Context -- T03-command-doc-and-block-gating-and-regression (Pha
      Source of truth: ../../../../../../../.orchestrator/milestones/M036/phases/P04/tasks/T03-command-doc-and-block-gating-and-regression-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M036/phases/P04/tasks/T03-command-doc-and-block-gating-and-regression-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M036/phases/P04/tasks/T03-command-doc-and-block-gating-and-regression-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

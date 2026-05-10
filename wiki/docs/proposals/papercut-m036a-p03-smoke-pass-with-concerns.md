@@ -6,7 +6,7 @@ title: "Paper-cut — M036a P03: PASS verdict promotes artifact unchanged despit
      Source of truth: ../../../.orchestrator/proposals/papercut-m036a-p03-smoke-pass-with-concerns.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/papercut-m036a-p03-smoke-pass-with-concerns.md"
+  include-markdown "../../.staged/proposals/papercut-m036a-p03-smoke-pass-with-concerns.md"
   start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=false

@@ -6,8 +6,8 @@ title: "scripts/util/node-eval.sh -- Run a Node.js script file (not an inline -e
      Source of truth: ../../../../../../../.orchestrator/milestones/M028/phases/P04/tasks/T02-investigation-wrappers-B-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M028/phases/P04/tasks/T02-investigation-wrappers-B-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M028/phases/P04/tasks/T02-investigation-wrappers-B-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

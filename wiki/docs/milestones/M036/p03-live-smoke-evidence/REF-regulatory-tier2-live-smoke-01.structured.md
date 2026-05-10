@@ -6,7 +6,7 @@ title: "Synthetic Long-Term-Care Staffing Calculation Rule"
      Source of truth: ../../../../../.orchestrator/milestones/M036/p03-live-smoke-evidence/REF-regulatory-tier2-live-smoke-01.structured.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../.orchestrator/milestones/M036/p03-live-smoke-evidence/REF-regulatory-tier2-live-smoke-01.structured.md"
+  include-markdown "../../../../.staged/milestones/M036/p03-live-smoke-evidence/REF-regulatory-tier2-live-smoke-01.structured.md"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

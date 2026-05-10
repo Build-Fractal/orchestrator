@@ -6,8 +6,8 @@ title: "T02-tier-2-llm-helper-and-unit-close-SUMMARY"
      Source of truth: ../../../../../../../.orchestrator/milestones/M036/phases/P03/tasks/T02-tier-2-llm-helper-and-unit-close-SUMMARY.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M036/phases/P03/tasks/T02-tier-2-llm-helper-and-unit-close-SUMMARY.md"
+  include-markdown "../../../../../../.staged/milestones/M036/phases/P03/tasks/T02-tier-2-llm-helper-and-unit-close-SUMMARY.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

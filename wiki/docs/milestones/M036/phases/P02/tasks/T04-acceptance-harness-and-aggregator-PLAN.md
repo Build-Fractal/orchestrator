@@ -6,8 +6,8 @@ title: "tests/test-tier-0-manifest.sh -- M036 P02 SC-10 acceptance harness."
      Source of truth: ../../../../../../../.orchestrator/milestones/M036/phases/P02/tasks/T04-acceptance-harness-and-aggregator-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M036/phases/P02/tasks/T04-acceptance-harness-and-aggregator-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M036/phases/P02/tasks/T04-acceptance-harness-and-aggregator-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

@@ -6,7 +6,7 @@ title: "Proposal: Constitution Amendment — Inclusion Criteria + Governance Log
      Source of truth: ../../../.orchestrator/proposals/constitution-amendment-inclusion-criteria.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/constitution-amendment-inclusion-criteria.md"
+  include-markdown "../../.staged/proposals/constitution-amendment-inclusion-criteria.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

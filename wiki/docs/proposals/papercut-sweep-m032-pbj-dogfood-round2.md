@@ -6,7 +6,7 @@ title: "Paper-cut Sweep round 2 — M032 wiki tooling, PBJ-central dogfood"
      Source of truth: ../../../.orchestrator/proposals/papercut-sweep-m032-pbj-dogfood-round2.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/papercut-sweep-m032-pbj-dogfood-round2.md"
+  include-markdown "../../.staged/proposals/papercut-sweep-m032-pbj-dogfood-round2.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

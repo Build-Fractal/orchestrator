@@ -6,8 +6,8 @@ title: "Dispatch Context -- T03-installer-payload-and-dedup (Phase P02, Mileston
      Source of truth: ../../../../../../../.orchestrator/milestones/M028/phases/P02/tasks/T03-installer-payload-and-dedup-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M028/phases/P02/tasks/T03-installer-payload-and-dedup-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M028/phases/P02/tasks/T03-installer-payload-and-dedup-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

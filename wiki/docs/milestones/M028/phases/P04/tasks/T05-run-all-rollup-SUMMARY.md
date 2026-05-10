@@ -6,8 +6,8 @@ title: "T05-run-all-rollup-SUMMARY"
      Source of truth: ../../../../../../../.orchestrator/milestones/M028/phases/P04/tasks/T05-run-all-rollup-SUMMARY.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M028/phases/P04/tasks/T05-run-all-rollup-SUMMARY.md"
+  include-markdown "../../../../../../.staged/milestones/M028/phases/P04/tasks/T05-run-all-rollup-SUMMARY.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

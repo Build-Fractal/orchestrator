@@ -6,8 +6,8 @@ title: "T06-yaml-merge-and-install-emission-PLAN"
      Source of truth: ../../../../../../../.orchestrator/milestones/M037/phases/P01/tasks/T06-yaml-merge-and-install-emission-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M037/phases/P01/tasks/T06-yaml-merge-and-install-emission-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M037/phases/P01/tasks/T06-yaml-merge-and-install-emission-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

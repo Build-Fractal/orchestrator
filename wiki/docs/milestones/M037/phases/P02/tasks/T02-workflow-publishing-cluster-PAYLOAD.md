@@ -6,8 +6,8 @@ title: "Dispatch Context -- T02-workflow-publishing-cluster (Phase P02, Mileston
      Source of truth: ../../../../../../../.orchestrator/milestones/M037/phases/P02/tasks/T02-workflow-publishing-cluster-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M037/phases/P02/tasks/T02-workflow-publishing-cluster-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M037/phases/P02/tasks/T02-workflow-publishing-cluster-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

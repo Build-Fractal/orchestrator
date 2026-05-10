@@ -6,8 +6,8 @@ title: "T03: Command surface + apply / reject / triage + human-gate invariant"
      Source of truth: ../../../../../../.orchestrator/milestones/M014/archive/P03/T03-action-surfaces-SUMMARY.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../.orchestrator/milestones/M014/archive/P03/T03-action-surfaces-SUMMARY.md"
+  include-markdown "../../../../../.staged/milestones/M014/archive/P03/T03-action-surfaces-SUMMARY.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

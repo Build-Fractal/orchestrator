@@ -6,8 +6,8 @@ title: "M013 Evaluation"
      Source of truth: ../../../../.orchestrator/milestones/M013/M013-EVALUATION.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../.orchestrator/milestones/M013/M013-EVALUATION.md"
+  include-markdown "../../../.staged/milestones/M013/M013-EVALUATION.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

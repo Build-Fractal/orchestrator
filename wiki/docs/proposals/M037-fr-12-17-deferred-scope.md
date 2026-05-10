@@ -6,7 +6,7 @@ title: "M037 FR-12..FR-17 — Deferred to Post-Launch"
      Source of truth: ../../../.orchestrator/proposals/M037-fr-12-17-deferred-scope.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/M037-fr-12-17-deferred-scope.md"
+  include-markdown "../../.staged/proposals/M037-fr-12-17-deferred-scope.md"
   start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=false

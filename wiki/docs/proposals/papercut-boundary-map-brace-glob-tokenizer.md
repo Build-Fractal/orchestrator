@@ -6,7 +6,7 @@ title: "Proposal: Papercut — `check-boundary-map.sh` brace-glob tokenization f
      Source of truth: ../../../.orchestrator/proposals/papercut-boundary-map-brace-glob-tokenizer.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/papercut-boundary-map-brace-glob-tokenizer.md"
+  include-markdown "../../.staged/proposals/papercut-boundary-map-brace-glob-tokenizer.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

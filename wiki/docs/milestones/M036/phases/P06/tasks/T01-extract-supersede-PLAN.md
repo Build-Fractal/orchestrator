@@ -6,8 +6,8 @@ title: "T01 — Extract-side supersede authoring + helper lib + end-to-end behav
      Source of truth: ../../../../../../../.orchestrator/milestones/M036/phases/P06/tasks/T01-extract-supersede-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M036/phases/P06/tasks/T01-extract-supersede-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M036/phases/P06/tasks/T01-extract-supersede-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

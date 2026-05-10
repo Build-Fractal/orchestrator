@@ -6,8 +6,8 @@ title: "scripts/migrate/m014-p02-migrate-recent-changes.sh — one-time migratio
      Source of truth: ../../../../../../.orchestrator/milestones/M014/archive/P02/T05-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../.orchestrator/milestones/M014/archive/P02/T05-PLAN.md"
+  include-markdown "../../../../../.staged/milestones/M014/archive/P02/T05-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

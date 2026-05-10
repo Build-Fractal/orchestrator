@@ -6,8 +6,8 @@ title: "Dispatch Context -- T03 (Phase P02, Milestone M026)"
      Source of truth: ../../../../../../.orchestrator/milestones/M026/archive/P02/T03-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../.orchestrator/milestones/M026/archive/P02/T03-PAYLOAD.md"
+  include-markdown "../../../../../.staged/milestones/M026/archive/P02/T03-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

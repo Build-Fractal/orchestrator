@@ -6,8 +6,8 @@ title: "T04-phase-suite-and-demo-SUMMARY"
      Source of truth: ../../../../../../.orchestrator/milestones/M027/archive/P00/T04-phase-suite-and-demo-SUMMARY.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../.orchestrator/milestones/M027/archive/P00/T04-phase-suite-and-demo-SUMMARY.md"
+  include-markdown "../../../../../.staged/milestones/M027/archive/P00/T04-phase-suite-and-demo-SUMMARY.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

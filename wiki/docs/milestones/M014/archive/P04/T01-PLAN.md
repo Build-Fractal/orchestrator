@@ -6,8 +6,8 @@ title: "Calibration Memo: FR-5 Spec-Complexity-Probe Thresholds"
      Source of truth: ../../../../../../.orchestrator/milestones/M014/archive/P04/T01-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../.orchestrator/milestones/M014/archive/P04/T01-PLAN.md"
+  include-markdown "../../../../../.staged/milestones/M014/archive/P04/T01-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

@@ -6,8 +6,8 @@ title: "T01-rollup-engine-PLAN"
      Source of truth: ../../../../../../.orchestrator/milestones/M027/archive/P00/T01-rollup-engine-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../.orchestrator/milestones/M027/archive/P00/T01-rollup-engine-PLAN.md"
+  include-markdown "../../../../../.staged/milestones/M027/archive/P00/T01-rollup-engine-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

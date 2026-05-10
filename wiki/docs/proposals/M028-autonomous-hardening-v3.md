@@ -6,7 +6,7 @@ title: "Proposal: M028 — Autonomous Hardening v3"
      Source of truth: ../../../.orchestrator/proposals/M028-autonomous-hardening-v3.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/M028-autonomous-hardening-v3.md"
+  include-markdown "../../.staged/proposals/M028-autonomous-hardening-v3.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

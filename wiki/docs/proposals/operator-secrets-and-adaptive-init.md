@@ -6,7 +6,7 @@ title: "Thinking-Document — Operator Secrets Surface + Adaptive-Init UX"
      Source of truth: ../../../.orchestrator/proposals/operator-secrets-and-adaptive-init.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/operator-secrets-and-adaptive-init.md"
+  include-markdown "../../.staged/proposals/operator-secrets-and-adaptive-init.md"
   start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=false

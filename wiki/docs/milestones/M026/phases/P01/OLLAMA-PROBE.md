@@ -6,8 +6,8 @@ title: "Ollama + pipx-venv environment probe"
      Source of truth: ../../../../../../.orchestrator/milestones/M026/phases/P01/OLLAMA-PROBE.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../.orchestrator/milestones/M026/phases/P01/OLLAMA-PROBE.md"
+  include-markdown "../../../../../.staged/milestones/M026/phases/P01/OLLAMA-PROBE.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

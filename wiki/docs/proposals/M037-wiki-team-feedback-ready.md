@@ -6,7 +6,7 @@ title: "Proposal: M037 — Wiki Team-Feedback-Ready (PBJ Round 3)"
      Source of truth: ../../../.orchestrator/proposals/M037-wiki-team-feedback-ready.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/M037-wiki-team-feedback-ready.md"
+  include-markdown "../../.staged/proposals/M037-wiki-team-feedback-ready.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

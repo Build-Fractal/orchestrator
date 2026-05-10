@@ -6,8 +6,8 @@ title: "Source graph-db.sh when --graph mode is active"
      Source of truth: ../../../../../../../.orchestrator/milestones/M007/phases/P02/tasks/T02-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M007/phases/P02/tasks/T02-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M007/phases/P02/tasks/T02-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

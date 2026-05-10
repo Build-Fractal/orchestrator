@@ -6,8 +6,8 @@ title: "---- markers (FR-14 region split) --------------------------------------
      Source of truth: ../../../../../../../.orchestrator/milestones/M032/phases/P03/tasks/T03-custom-nav-region-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M032/phases/P03/tasks/T03-custom-nav-region-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M032/phases/P03/tasks/T03-custom-nav-region-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

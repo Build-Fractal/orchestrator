@@ -6,7 +6,7 @@ title: "Red Advocate Revised Position: Compression Grammar Contract"
      Source of truth: ../../../../../../../../.orchestrator/milestones/M018/phases/P01/conversus/red-advocate/revision.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../../.orchestrator/milestones/M018/phases/P01/conversus/red-advocate/revision.md"
+  include-markdown "../../../../../../../.staged/milestones/M018/phases/P01/conversus/red-advocate/revision.md"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

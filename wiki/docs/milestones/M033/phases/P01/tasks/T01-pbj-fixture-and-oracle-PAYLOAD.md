@@ -6,8 +6,8 @@ title: "Dispatch Context -- T01-pbj-fixture-and-oracle (Phase P01, Milestone M03
      Source of truth: ../../../../../../../.orchestrator/milestones/M033/phases/P01/tasks/T01-pbj-fixture-and-oracle-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M033/phases/P01/tasks/T01-pbj-fixture-and-oracle-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M033/phases/P01/tasks/T01-pbj-fixture-and-oracle-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

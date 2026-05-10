@@ -6,8 +6,8 @@ title: "Gate Result: compression-grammar"
      Source of truth: ../../../../../../../.orchestrator/milestones/M018/phases/P01/conversus/gate-result.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M018/phases/P01/conversus/gate-result.md"
+  include-markdown "../../../../../../.staged/milestones/M018/phases/P01/conversus/gate-result.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

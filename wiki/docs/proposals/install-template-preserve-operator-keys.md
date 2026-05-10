@@ -6,7 +6,7 @@ title: "Brief — install-template should preserve operator-authored config.yml 
      Source of truth: ../../../.orchestrator/proposals/install-template-preserve-operator-keys.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/install-template-preserve-operator-keys.md"
+  include-markdown "../../.staged/proposals/install-template-preserve-operator-keys.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

@@ -6,7 +6,7 @@ title: "Proposal: M035 — Packaging & Distribution"
      Source of truth: ../../../.orchestrator/proposals/M035-packaging-distribution.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/M035-packaging-distribution.md"
+  include-markdown "../../.staged/proposals/M035-packaging-distribution.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

@@ -6,7 +6,7 @@ title: "M007 Integration Handoff — Wire SQLite Graph Backend Into Execution Pi
      Source of truth: ../../../../.orchestrator/milestones/M007/M007-INTEGRATION-HANDOFF.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../.orchestrator/milestones/M007/M007-INTEGRATION-HANDOFF.md"
+  include-markdown "../../../.staged/milestones/M007/M007-INTEGRATION-HANDOFF.md"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

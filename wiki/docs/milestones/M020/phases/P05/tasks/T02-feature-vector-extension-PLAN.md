@@ -6,8 +6,8 @@ title: "CON-5 v2 (P05 extension): feature vector = title + topic + tags[] +"
      Source of truth: ../../../../../../../.orchestrator/milestones/M020/phases/P05/tasks/T02-feature-vector-extension-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M020/phases/P05/tasks/T02-feature-vector-extension-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M020/phases/P05/tasks/T02-feature-vector-extension-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

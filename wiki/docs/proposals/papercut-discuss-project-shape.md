@@ -6,7 +6,7 @@ title: "Paper-Cut Proposal: Project-Shape Classifier in `orchestrator:discuss`"
      Source of truth: ../../../.orchestrator/proposals/papercut-discuss-project-shape.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/papercut-discuss-project-shape.md"
+  include-markdown "../../.staged/proposals/papercut-discuss-project-shape.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

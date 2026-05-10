@@ -6,8 +6,8 @@ title: "T04 Summary — Phase tests + suite + commands/evaluate.md row update"
      Source of truth: ../../../../../../.orchestrator/milestones/M024/archive/P05/T04-SUMMARY.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../.orchestrator/milestones/M024/archive/P05/T04-SUMMARY.md"
+  include-markdown "../../../../../.staged/milestones/M024/archive/P05/T04-SUMMARY.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

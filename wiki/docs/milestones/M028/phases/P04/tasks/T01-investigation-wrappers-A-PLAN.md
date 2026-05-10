@@ -6,8 +6,8 @@ title: "scripts/util/grep-files.sh -- Grep one pattern across multiple files wit
      Source of truth: ../../../../../../../.orchestrator/milestones/M028/phases/P04/tasks/T01-investigation-wrappers-A-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M028/phases/P04/tasks/T01-investigation-wrappers-A-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M028/phases/P04/tasks/T01-investigation-wrappers-A-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

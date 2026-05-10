@@ -6,8 +6,8 @@ title: "Milestone Summary: M018 — Context Compression Layer"
      Source of truth: ../../../../.orchestrator/milestones/M018/M018-SUMMARY.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../.orchestrator/milestones/M018/M018-SUMMARY.md"
+  include-markdown "../../../.staged/milestones/M018/M018-SUMMARY.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

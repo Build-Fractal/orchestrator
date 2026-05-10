@@ -6,8 +6,8 @@ title: "Dispatch Context -- T01-schema-extensions (Phase P05, Milestone M018)"
      Source of truth: ../../../../../../../.orchestrator/milestones/M018/phases/P05/tasks/T01-schema-extensions-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M018/phases/P05/tasks/T01-schema-extensions-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M018/phases/P05/tasks/T01-schema-extensions-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

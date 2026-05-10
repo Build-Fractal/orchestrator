@@ -6,8 +6,8 @@ title: "Dispatch Context -- T01-corpus-and-verdict-gates (Phase P07, Milestone M
      Source of truth: ../../../../../../../.orchestrator/milestones/M030/phases/P07/tasks/T01-corpus-and-verdict-gates-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M030/phases/P07/tasks/T01-corpus-and-verdict-gates-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M030/phases/P07/tasks/T01-corpus-and-verdict-gates-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

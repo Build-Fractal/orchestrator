@@ -6,8 +6,8 @@ title: "tools/verify/m033-p05-phase-suite.sh"
      Source of truth: ../../../../../../../.orchestrator/milestones/M033/phases/P05/tasks/T05-milestone-close-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M033/phases/P05/tasks/T05-milestone-close-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M033/phases/P05/tasks/T05-milestone-close-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

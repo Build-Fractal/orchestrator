@@ -6,8 +6,8 @@ title: "Dispatch Context -- T03-conversus-gate (Phase P01, Milestone M018)"
      Source of truth: ../../../../../../../.orchestrator/milestones/M018/phases/P01/tasks/T03-conversus-gate-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M018/phases/P01/tasks/T03-conversus-gate-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M018/phases/P01/tasks/T03-conversus-gate-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

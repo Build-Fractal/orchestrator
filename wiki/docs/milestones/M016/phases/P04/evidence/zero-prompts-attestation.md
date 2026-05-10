@@ -6,8 +6,8 @@ title: "Zero-Prompts Attestation — M016 Dogfood Evidence"
      Source of truth: ../../../../../../../.orchestrator/milestones/M016/phases/P04/evidence/zero-prompts-attestation.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M016/phases/P04/evidence/zero-prompts-attestation.md"
+  include-markdown "../../../../../../.staged/milestones/M016/phases/P04/evidence/zero-prompts-attestation.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

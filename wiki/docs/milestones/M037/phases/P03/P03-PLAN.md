@@ -6,8 +6,8 @@ title: "M037 P03 — Round-3.5 / Round-4 / Round-5 PBJ-Feedback Polish Series"
      Source of truth: ../../../../../../.orchestrator/milestones/M037/phases/P03/P03-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../.orchestrator/milestones/M037/phases/P03/P03-PLAN.md"
+  include-markdown "../../../../../.staged/milestones/M037/phases/P03/P03-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

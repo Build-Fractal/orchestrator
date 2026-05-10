@@ -6,8 +6,8 @@ title: "--- P05 / FR-5 cluster proposal short-circuit ---"
      Source of truth: ../../../../../../../.orchestrator/milestones/M020/phases/P05/tasks/T03-consolidate-cluster-extension-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M020/phases/P05/tasks/T03-consolidate-cluster-extension-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M020/phases/P05/tasks/T03-consolidate-cluster-extension-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

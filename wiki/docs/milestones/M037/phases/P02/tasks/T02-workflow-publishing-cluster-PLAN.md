@@ -6,8 +6,8 @@ title: "T02-workflow-publishing-cluster-PLAN"
      Source of truth: ../../../../../../../.orchestrator/milestones/M037/phases/P02/tasks/T02-workflow-publishing-cluster-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M037/phases/P02/tasks/T02-workflow-publishing-cluster-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M037/phases/P02/tasks/T02-workflow-publishing-cluster-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

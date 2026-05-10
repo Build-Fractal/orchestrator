@@ -6,7 +6,7 @@ title: "Cross-Review: Red Advocate Dismantling Blue Team Defense"
      Source of truth: ../../../../../../../../../.orchestrator/milestones/M018/phases/P01/conversus/red-advocate/cross-reviews/blue-advocate.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../../../.orchestrator/milestones/M018/phases/P01/conversus/red-advocate/cross-reviews/blue-advocate.md"
+  include-markdown "../../../../../../../../.staged/milestones/M018/phases/P01/conversus/red-advocate/cross-reviews/blue-advocate.md"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

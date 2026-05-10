@@ -6,8 +6,8 @@ title: "T02-surface-extensions-SUMMARY"
      Source of truth: ../../../../../../../.orchestrator/milestones/M018/phases/P05/tasks/T02-surface-extensions-SUMMARY.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M018/phases/P05/tasks/T02-surface-extensions-SUMMARY.md"
+  include-markdown "../../../../../../.staged/milestones/M018/phases/P05/tasks/T02-surface-extensions-SUMMARY.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

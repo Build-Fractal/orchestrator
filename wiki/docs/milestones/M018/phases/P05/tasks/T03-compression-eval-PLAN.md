@@ -6,8 +6,8 @@ title: "scripts/diagnostics/compression-eval.sh — M018/P05/T03 cohort-segmenta
      Source of truth: ../../../../../../../.orchestrator/milestones/M018/phases/P05/tasks/T03-compression-eval-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M018/phases/P05/tasks/T03-compression-eval-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M018/phases/P05/tasks/T03-compression-eval-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

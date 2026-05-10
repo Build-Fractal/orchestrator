@@ -6,8 +6,8 @@ title: "T04-per-finding-verifiers-SUMMARY"
      Source of truth: ../../../../../../../.orchestrator/milestones/M028/phases/P04/tasks/T04-per-finding-verifiers-SUMMARY.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M028/phases/P04/tasks/T04-per-finding-verifiers-SUMMARY.md"
+  include-markdown "../../../../../../.staged/milestones/M028/phases/P04/tasks/T04-per-finding-verifiers-SUMMARY.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

@@ -6,8 +6,8 @@ title: "Dispatch Context -- T02-traverser-extension (Phase P05, Milestone M036)"
      Source of truth: ../../../../../../../.orchestrator/milestones/M036/phases/P05/tasks/T02-traverser-extension-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M036/phases/P05/tasks/T02-traverser-extension-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M036/phases/P05/tasks/T02-traverser-extension-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

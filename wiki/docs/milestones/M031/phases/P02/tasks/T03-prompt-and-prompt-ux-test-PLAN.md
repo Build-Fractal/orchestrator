@@ -6,8 +6,8 @@ title: "T03-prompt-and-prompt-ux-test-PLAN"
      Source of truth: ../../../../../../../.orchestrator/milestones/M031/phases/P02/tasks/T03-prompt-and-prompt-ux-test-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M031/phases/P02/tasks/T03-prompt-and-prompt-ux-test-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M031/phases/P02/tasks/T03-prompt-and-prompt-ux-test-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

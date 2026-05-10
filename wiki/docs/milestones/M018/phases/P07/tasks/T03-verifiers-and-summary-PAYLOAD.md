@@ -6,8 +6,8 @@ title: "Dispatch Context -- T03-verifiers-and-summary (Phase P07, Milestone M018
      Source of truth: ../../../../../../../.orchestrator/milestones/M018/phases/P07/tasks/T03-verifiers-and-summary-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M018/phases/P07/tasks/T03-verifiers-and-summary-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M018/phases/P07/tasks/T03-verifiers-and-summary-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

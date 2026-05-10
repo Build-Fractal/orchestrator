@@ -6,8 +6,8 @@ title: "Dispatch Context -- T03-collapse-decision-evidence (Phase P01, Milestone
      Source of truth: ../../../../../../../.orchestrator/milestones/M028/phases/P01/tasks/T03-collapse-decision-evidence-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M028/phases/P01/tasks/T03-collapse-decision-evidence-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M028/phases/P01/tasks/T03-collapse-decision-evidence-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

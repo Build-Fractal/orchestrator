@@ -6,8 +6,8 @@ title: "T05 — Phase tests + manifest superset (with T01/T04 loop-back)"
      Source of truth: ../../../../../../.orchestrator/milestones/M024/archive/P01/T05-SUMMARY.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../.orchestrator/milestones/M024/archive/P01/T05-SUMMARY.md"
+  include-markdown "../../../../../.staged/milestones/M024/archive/P01/T05-SUMMARY.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

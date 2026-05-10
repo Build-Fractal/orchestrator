@@ -6,8 +6,8 @@ title: "Dispatch Context -- T04-phase-suite-and-scope-guard (Phase P01, Mileston
      Source of truth: ../../../../../../../.orchestrator/milestones/M031/phases/P01/tasks/T04-phase-suite-and-scope-guard-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M031/phases/P01/tasks/T04-phase-suite-and-scope-guard-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M031/phases/P01/tasks/T04-phase-suite-and-scope-guard-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

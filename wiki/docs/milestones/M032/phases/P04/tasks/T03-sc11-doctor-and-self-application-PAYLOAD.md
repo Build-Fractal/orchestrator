@@ -6,8 +6,8 @@ title: "Dispatch Context -- T03-sc11-doctor-and-self-application (Phase P04, Mil
      Source of truth: ../../../../../../../.orchestrator/milestones/M032/phases/P04/tasks/T03-sc11-doctor-and-self-application-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M032/phases/P04/tasks/T03-sc11-doctor-and-self-application-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M032/phases/P04/tasks/T03-sc11-doctor-and-self-application-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

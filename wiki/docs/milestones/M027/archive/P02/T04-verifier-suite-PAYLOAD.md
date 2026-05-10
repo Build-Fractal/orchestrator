@@ -6,8 +6,8 @@ title: "Dispatch Context -- T04-verifier-suite (Phase P02, Milestone M027)"
      Source of truth: ../../../../../../.orchestrator/milestones/M027/archive/P02/T04-verifier-suite-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../.orchestrator/milestones/M027/archive/P02/T04-verifier-suite-PAYLOAD.md"
+  include-markdown "../../../../../.staged/milestones/M027/archive/P02/T04-verifier-suite-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

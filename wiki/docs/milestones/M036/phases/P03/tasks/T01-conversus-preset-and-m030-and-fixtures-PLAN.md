@@ -6,8 +6,8 @@ title: "---------- M036/P03: task_type registration (FR-19) ----------"
      Source of truth: ../../../../../../../.orchestrator/milestones/M036/phases/P03/tasks/T01-conversus-preset-and-m030-and-fixtures-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M036/phases/P03/tasks/T01-conversus-preset-and-m030-and-fixtures-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M036/phases/P03/tasks/T01-conversus-preset-and-m030-and-fixtures-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

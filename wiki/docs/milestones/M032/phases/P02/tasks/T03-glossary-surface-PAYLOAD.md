@@ -6,8 +6,8 @@ title: "Dispatch Context -- T03-glossary-surface (Phase P02, Milestone M032)"
      Source of truth: ../../../../../../../.orchestrator/milestones/M032/phases/P02/tasks/T03-glossary-surface-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M032/phases/P02/tasks/T03-glossary-surface-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M032/phases/P02/tasks/T03-glossary-surface-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

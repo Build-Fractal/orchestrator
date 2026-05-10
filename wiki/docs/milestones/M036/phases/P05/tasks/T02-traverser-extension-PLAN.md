@@ -6,8 +6,8 @@ title: "T02-traverser-extension-PLAN"
      Source of truth: ../../../../../../../.orchestrator/milestones/M036/phases/P05/tasks/T02-traverser-extension-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M036/phases/P05/tasks/T02-traverser-extension-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M036/phases/P05/tasks/T02-traverser-extension-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

@@ -6,8 +6,8 @@ title: "T03-gate-helper-and-driver-auto-branch-SUMMARY"
      Source of truth: ../../../../../../../.orchestrator/milestones/M036/phases/P03/tasks/T03-gate-helper-and-driver-auto-branch-SUMMARY.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M036/phases/P03/tasks/T03-gate-helper-and-driver-auto-branch-SUMMARY.md"
+  include-markdown "../../../../../../.staged/milestones/M036/phases/P03/tasks/T03-gate-helper-and-driver-auto-branch-SUMMARY.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

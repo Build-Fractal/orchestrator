@@ -6,7 +6,7 @@ title: "Launch Sequencing Amendment — 2026-05-03"
      Source of truth: ../../../.orchestrator/proposals/launch-sequencing-amendment-2026-05-03.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/launch-sequencing-amendment-2026-05-03.md"
+  include-markdown "../../.staged/proposals/launch-sequencing-amendment-2026-05-03.md"
   start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=false

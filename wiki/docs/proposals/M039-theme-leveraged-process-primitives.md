@@ -6,7 +6,7 @@ title: "Proposal: M039 — Theme-Leveraged Process Primitives (post-launch, dema
      Source of truth: ../../../.orchestrator/proposals/M039-theme-leveraged-process-primitives.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/M039-theme-leveraged-process-primitives.md"
+  include-markdown "../../.staged/proposals/M039-theme-leveraged-process-primitives.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

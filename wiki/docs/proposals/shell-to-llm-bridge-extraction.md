@@ -6,7 +6,7 @@ title: "Proposal — Shell-to-LLM Bridge for Tier 2 Extraction Live: Branch"
      Source of truth: ../../../.orchestrator/proposals/shell-to-llm-bridge-extraction.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/shell-to-llm-bridge-extraction.md"
+  include-markdown "../../.staged/proposals/shell-to-llm-bridge-extraction.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

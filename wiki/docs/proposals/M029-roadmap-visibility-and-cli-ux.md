@@ -6,7 +6,7 @@ title: "Proposal: M029 — Roadmap Visibility & CLI UX"
      Source of truth: ../../../.orchestrator/proposals/M029-roadmap-visibility-and-cli-ux.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/M029-roadmap-visibility-and-cli-ux.md"
+  include-markdown "../../.staged/proposals/M029-roadmap-visibility-and-cli-ux.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

@@ -6,8 +6,8 @@ title: "Conversus-OSS Dogfood Smoke — Post-P01 Empirical Validation"
      Source of truth: ../../../../../../.orchestrator/milestones/M026/phases/P01/DOGFOOD-SMOKE-OSS.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../.orchestrator/milestones/M026/phases/P01/DOGFOOD-SMOKE-OSS.md"
+  include-markdown "../../../../../.staged/milestones/M026/phases/P01/DOGFOOD-SMOKE-OSS.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

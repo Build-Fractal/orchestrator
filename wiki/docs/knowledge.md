@@ -6,7 +6,7 @@ title: "Orchestrator Knowledge Base"
      Source of truth: ../../.orchestrator/KNOWLEDGE.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../.orchestrator/KNOWLEDGE.md"
+  include-markdown "../.staged/KNOWLEDGE.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

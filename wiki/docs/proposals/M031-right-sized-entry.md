@@ -6,7 +6,7 @@ title: "Proposal: M031 — Right-Sized Entry"
      Source of truth: ../../../.orchestrator/proposals/M031-right-sized-entry.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/M031-right-sized-entry.md"
+  include-markdown "../../.staged/proposals/M031-right-sized-entry.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

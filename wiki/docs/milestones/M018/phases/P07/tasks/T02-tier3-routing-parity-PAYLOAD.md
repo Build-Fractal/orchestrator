@@ -6,8 +6,8 @@ title: "Dispatch Context -- T02-tier3-routing-parity (Phase P07, Milestone M018)
      Source of truth: ../../../../../../../.orchestrator/milestones/M018/phases/P07/tasks/T02-tier3-routing-parity-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M018/phases/P07/tasks/T02-tier3-routing-parity-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M018/phases/P07/tasks/T02-tier3-routing-parity-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

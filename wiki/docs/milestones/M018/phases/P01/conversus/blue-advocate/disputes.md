@@ -6,7 +6,7 @@ title: "Blue Team Final Defense Posture"
      Source of truth: ../../../../../../../../.orchestrator/milestones/M018/phases/P01/conversus/blue-advocate/disputes.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../../.orchestrator/milestones/M018/phases/P01/conversus/blue-advocate/disputes.md"
+  include-markdown "../../../../../../../.staged/milestones/M018/phases/P01/conversus/blue-advocate/disputes.md"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

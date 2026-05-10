@@ -6,7 +6,7 @@ title: "Brief — M036 Tier 1 DOCX extraction gap (B6)"
      Source of truth: ../../../.orchestrator/proposals/m036-tier-1-docx-extraction-gap.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/m036-tier-1-docx-extraction-gap.md"
+  include-markdown "../../.staged/proposals/m036-tier-1-docx-extraction-gap.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

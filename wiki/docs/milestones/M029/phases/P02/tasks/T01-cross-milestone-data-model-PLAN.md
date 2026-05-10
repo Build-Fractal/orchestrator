@@ -6,8 +6,8 @@ title: "T01-cross-milestone-data-model-PLAN"
      Source of truth: ../../../../../../../.orchestrator/milestones/M029/phases/P02/tasks/T01-cross-milestone-data-model-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M029/phases/P02/tasks/T01-cross-milestone-data-model-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M029/phases/P02/tasks/T01-cross-milestone-data-model-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

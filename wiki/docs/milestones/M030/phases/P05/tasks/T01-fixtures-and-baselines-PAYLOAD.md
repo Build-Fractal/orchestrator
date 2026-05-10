@@ -6,8 +6,8 @@ title: "Dispatch Context -- T01-fixtures-and-baselines (Phase P05, Milestone M03
      Source of truth: ../../../../../../../.orchestrator/milestones/M030/phases/P05/tasks/T01-fixtures-and-baselines-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M030/phases/P05/tasks/T01-fixtures-and-baselines-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M030/phases/P05/tasks/T01-fixtures-and-baselines-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

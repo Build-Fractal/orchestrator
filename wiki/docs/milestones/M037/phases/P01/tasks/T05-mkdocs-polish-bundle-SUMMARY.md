@@ -6,8 +6,8 @@ title: "T05 — CON-4 default-branch helper + mkdocs.yml polish bundle"
      Source of truth: ../../../../../../../.orchestrator/milestones/M037/phases/P01/tasks/T05-mkdocs-polish-bundle-SUMMARY.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M037/phases/P01/tasks/T05-mkdocs-polish-bundle-SUMMARY.md"
+  include-markdown "../../../../../../.staged/milestones/M037/phases/P01/tasks/T05-mkdocs-polish-bundle-SUMMARY.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

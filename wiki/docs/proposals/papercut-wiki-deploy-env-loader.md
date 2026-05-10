@@ -6,7 +6,7 @@ title: "Paper-Cut: `wiki-deploy.sh` and `wiki-init.sh --with-giscus` are not"
      Source of truth: ../../../.orchestrator/proposals/papercut-wiki-deploy-env-loader.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/papercut-wiki-deploy-env-loader.md"
+  include-markdown "../../.staged/proposals/papercut-wiki-deploy-env-loader.md"
   start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=false

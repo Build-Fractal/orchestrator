@@ -6,8 +6,8 @@ title: "Dispatch Context -- T04 (Phase P04, Milestone M004)"
      Source of truth: ../../../../../../../.orchestrator/milestones/M004/phases/P05/fixtures/golden-compressed-budget2000.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M004/phases/P05/fixtures/golden-compressed-budget2000.md"
+  include-markdown "../../../../../../.staged/milestones/M004/phases/P05/fixtures/golden-compressed-budget2000.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

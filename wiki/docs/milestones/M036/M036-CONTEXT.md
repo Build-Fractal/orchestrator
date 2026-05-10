@@ -6,8 +6,8 @@ title: "M036 Context Draft"
      Source of truth: ../../../../.orchestrator/milestones/M036/M036-CONTEXT.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../.orchestrator/milestones/M036/M036-CONTEXT.md"
+  include-markdown "../../../.staged/milestones/M036/M036-CONTEXT.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

@@ -6,7 +6,7 @@ title: "Proposal: M033 — Project Onboarding Experience"
      Source of truth: ../../../.orchestrator/proposals/M033-onboarding-experience.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/M033-onboarding-experience.md"
+  include-markdown "../../.staged/proposals/M033-onboarding-experience.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

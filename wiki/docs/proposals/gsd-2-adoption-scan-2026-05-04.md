@@ -6,7 +6,7 @@ title: "GSD 2 Adoption Scan — 2026-05-04"
      Source of truth: ../../../.orchestrator/proposals/gsd-2-adoption-scan-2026-05-04.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/gsd-2-adoption-scan-2026-05-04.md"
+  include-markdown "../../.staged/proposals/gsd-2-adoption-scan-2026-05-04.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

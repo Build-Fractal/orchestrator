@@ -6,8 +6,8 @@ title: "Dispatch Context -- T03-wiki-stubs-fresh-diagnostic-and-gate (Phase P00,
      Source of truth: ../../../../../../../.orchestrator/milestones/M035/phases/P00/tasks/T03-wiki-stubs-fresh-diagnostic-and-gate-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M035/phases/P00/tasks/T03-wiki-stubs-fresh-diagnostic-and-gate-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M035/phases/P00/tasks/T03-wiki-stubs-fresh-diagnostic-and-gate-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

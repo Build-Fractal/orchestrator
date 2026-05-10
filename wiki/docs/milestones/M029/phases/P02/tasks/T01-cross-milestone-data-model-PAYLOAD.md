@@ -6,8 +6,8 @@ title: "Dispatch Context -- T01-cross-milestone-data-model (Phase P02, Milestone
      Source of truth: ../../../../../../../.orchestrator/milestones/M029/phases/P02/tasks/T01-cross-milestone-data-model-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M029/phases/P02/tasks/T01-cross-milestone-data-model-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M029/phases/P02/tasks/T01-cross-milestone-data-model-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

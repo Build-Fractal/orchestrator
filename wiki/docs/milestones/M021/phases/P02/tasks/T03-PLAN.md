@@ -6,8 +6,8 @@ title: "Class A fixture: command substitution"
      Source of truth: ../../../../../../../.orchestrator/milestones/M021/phases/P02/tasks/T03-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M021/phases/P02/tasks/T03-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M021/phases/P02/tasks/T03-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

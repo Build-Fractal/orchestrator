@@ -6,8 +6,8 @@ title: "T03-per-contract-verifiers-PLAN"
      Source of truth: ../../../../../../.orchestrator/milestones/M027/archive/P00/T03-per-contract-verifiers-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../.orchestrator/milestones/M027/archive/P00/T03-per-contract-verifiers-PLAN.md"
+  include-markdown "../../../../../.staged/milestones/M027/archive/P00/T03-per-contract-verifiers-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

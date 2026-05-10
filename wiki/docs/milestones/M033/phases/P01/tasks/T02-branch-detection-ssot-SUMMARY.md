@@ -6,8 +6,8 @@ title: "T02-branch-detection-ssot-SUMMARY"
      Source of truth: ../../../../../../../.orchestrator/milestones/M033/phases/P01/tasks/T02-branch-detection-ssot-SUMMARY.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M033/phases/P01/tasks/T02-branch-detection-ssot-SUMMARY.md"
+  include-markdown "../../../../../../.staged/milestones/M033/phases/P01/tasks/T02-branch-detection-ssot-SUMMARY.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

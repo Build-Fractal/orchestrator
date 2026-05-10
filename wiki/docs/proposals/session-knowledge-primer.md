@@ -6,7 +6,7 @@ title: "Proposal — Session Knowledge Primer (ambient knowledge-graph injection
      Source of truth: ../../../.orchestrator/proposals/session-knowledge-primer.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/session-knowledge-primer.md"
+  include-markdown "../../.staged/proposals/session-knowledge-primer.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

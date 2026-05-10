@@ -6,7 +6,7 @@ title: "Proposal: Delegation Policy — Per-Tool Background-Safety Table"
      Source of truth: ../../../.orchestrator/proposals/delegation-policy-table.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/delegation-policy-table.md"
+  include-markdown "../../.staged/proposals/delegation-policy-table.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

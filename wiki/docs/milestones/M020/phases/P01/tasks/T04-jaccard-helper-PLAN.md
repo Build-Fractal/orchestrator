@@ -6,8 +6,8 @@ title: "scripts/knowledge/lib/jaccard.sh — pairwise Jaccard similarity helper"
      Source of truth: ../../../../../../../.orchestrator/milestones/M020/phases/P01/tasks/T04-jaccard-helper-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M020/phases/P01/tasks/T04-jaccard-helper-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M020/phases/P01/tasks/T04-jaccard-helper-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

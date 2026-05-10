@@ -6,8 +6,8 @@ title: "P01 parity-matrix pointer"
      Source of truth: ../../../../../../.orchestrator/milestones/M026/phases/P01/P01-CONVERSUS-PARITY-MATRIX.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../.orchestrator/milestones/M026/phases/P01/P01-CONVERSUS-PARITY-MATRIX.md"
+  include-markdown "../../../../../.staged/milestones/M026/phases/P01/P01-CONVERSUS-PARITY-MATRIX.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

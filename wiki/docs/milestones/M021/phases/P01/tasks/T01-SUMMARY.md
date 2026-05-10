@@ -6,8 +6,8 @@ title: "T01-SUMMARY"
      Source of truth: ../../../../../../../.orchestrator/milestones/M021/phases/P01/tasks/T01-SUMMARY.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M021/phases/P01/tasks/T01-SUMMARY.md"
+  include-markdown "../../../../../../.staged/milestones/M021/phases/P01/tasks/T01-SUMMARY.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

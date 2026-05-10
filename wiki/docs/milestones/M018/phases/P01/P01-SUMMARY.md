@@ -6,8 +6,8 @@ title: "Phase Summary: M018/P01 — Grammar Contract + Conversus Gate"
      Source of truth: ../../../../../../.orchestrator/milestones/M018/phases/P01/P01-SUMMARY.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../.orchestrator/milestones/M018/phases/P01/P01-SUMMARY.md"
+  include-markdown "../../../../../.staged/milestones/M018/phases/P01/P01-SUMMARY.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

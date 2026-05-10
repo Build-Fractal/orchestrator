@@ -6,8 +6,8 @@ title: "T01-scanner-extensions-SUMMARY"
      Source of truth: ../../../../../../../.orchestrator/milestones/M032/phases/P04/tasks/T01-scanner-extensions-SUMMARY.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M032/phases/P04/tasks/T01-scanner-extensions-SUMMARY.md"
+  include-markdown "../../../../../../.staged/milestones/M032/phases/P04/tasks/T01-scanner-extensions-SUMMARY.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

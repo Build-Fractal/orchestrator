@@ -6,8 +6,8 @@ title: "T03 — Dispatcher integration + fixture task-plans + baseline + cross-p
      Source of truth: ../../../../../../../.orchestrator/milestones/M036/phases/P07/tasks/T03-dispatcher-integration-and-regression-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M036/phases/P07/tasks/T03-dispatcher-integration-and-regression-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M036/phases/P07/tasks/T03-dispatcher-integration-and-regression-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

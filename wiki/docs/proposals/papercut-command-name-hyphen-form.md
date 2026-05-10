@@ -6,7 +6,7 @@ title: "Paper-cut: User-facing command names use `/orchestrator-X` form, not `or
      Source of truth: ../../../.orchestrator/proposals/papercut-command-name-hyphen-form.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/papercut-command-name-hyphen-form.md"
+  include-markdown "../../.staged/proposals/papercut-command-name-hyphen-form.md"
   start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=false

@@ -6,7 +6,7 @@ title: "Blue Advocate Cross-Review: Red Team Threat Analysis"
      Source of truth: ../../../../../../../../../.orchestrator/milestones/M018/phases/P01/conversus/blue-advocate/cross-reviews/red-advocate.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../../../.orchestrator/milestones/M018/phases/P01/conversus/blue-advocate/cross-reviews/red-advocate.md"
+  include-markdown "../../../../../../../../.staged/milestones/M018/phases/P01/conversus/blue-advocate/cross-reviews/red-advocate.md"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

@@ -6,8 +6,8 @@ title: "M031 -- Acceptance Evidence Ledger"
      Source of truth: ../../../../.orchestrator/milestones/M031/M031-ACCEPTANCE-EVIDENCE.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../.orchestrator/milestones/M031/M031-ACCEPTANCE-EVIDENCE.md"
+  include-markdown "../../../.staged/milestones/M031/M031-ACCEPTANCE-EVIDENCE.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

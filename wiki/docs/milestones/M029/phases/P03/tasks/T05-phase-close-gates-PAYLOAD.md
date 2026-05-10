@@ -6,8 +6,8 @@ title: "Dispatch Context -- T05-phase-close-gates (Phase P03, Milestone M029)"
      Source of truth: ../../../../../../../.orchestrator/milestones/M029/phases/P03/tasks/T05-phase-close-gates-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M029/phases/P03/tasks/T05-phase-close-gates-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M029/phases/P03/tasks/T05-phase-close-gates-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

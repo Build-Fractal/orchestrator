@@ -6,8 +6,8 @@ title: "Per scenario, capture the appended JSONL line."
      Source of truth: ../../../../../../../.orchestrator/milestones/M030/phases/P03/tasks/T01-fixtures-and-enum-gate-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M030/phases/P03/tasks/T01-fixtures-and-enum-gate-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M030/phases/P03/tasks/T01-fixtures-and-enum-gate-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

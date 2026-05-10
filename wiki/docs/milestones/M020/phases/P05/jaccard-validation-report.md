@@ -6,7 +6,7 @@ title: "Jaccard Validation Report -- M020/P05 (CON-5 v2)"
      Source of truth: ../../../../../../.orchestrator/milestones/M020/phases/P05/jaccard-validation-report.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../.orchestrator/milestones/M020/phases/P05/jaccard-validation-report.md"
+  include-markdown "../../../../../.staged/milestones/M020/phases/P05/jaccard-validation-report.md"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

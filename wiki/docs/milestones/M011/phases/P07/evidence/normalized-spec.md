@@ -6,7 +6,7 @@ title: "Feature Specification: Inventory Reconciliation"
      Source of truth: ../../../../../../../.orchestrator/milestones/M011/phases/P07/evidence/normalized-spec.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M011/phases/P07/evidence/normalized-spec.md"
+  include-markdown "../../../../../../.staged/milestones/M011/phases/P07/evidence/normalized-spec.md"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

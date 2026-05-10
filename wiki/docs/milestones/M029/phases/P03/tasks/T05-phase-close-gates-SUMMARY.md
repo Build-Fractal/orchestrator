@@ -6,8 +6,8 @@ title: "T05-phase-close-gates-SUMMARY"
      Source of truth: ../../../../../../../.orchestrator/milestones/M029/phases/P03/tasks/T05-phase-close-gates-SUMMARY.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M029/phases/P03/tasks/T05-phase-close-gates-SUMMARY.md"
+  include-markdown "../../../../../../.staged/milestones/M029/phases/P03/tasks/T05-phase-close-gates-SUMMARY.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

@@ -6,7 +6,7 @@ title: "Proposal: `orchestrator:exec` — Subprocess-Output Context Discipline (
      Source of truth: ../../../.orchestrator/proposals/orchestrator-exec-primitive.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/orchestrator-exec-primitive.md"
+  include-markdown "../../.staged/proposals/orchestrator-exec-primitive.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

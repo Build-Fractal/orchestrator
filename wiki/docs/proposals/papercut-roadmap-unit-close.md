@@ -6,7 +6,7 @@ title: "Paper-Cut: `orchestrator:roadmap` emits no `unit_close` record at all â€
      Source of truth: ../../../.orchestrator/proposals/papercut-roadmap-unit-close.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/papercut-roadmap-unit-close.md"
+  include-markdown "../../.staged/proposals/papercut-roadmap-unit-close.md"
   start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=false

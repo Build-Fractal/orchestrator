@@ -6,8 +6,8 @@ title: "tests/run-prompt-corpus-replay.sh -- M028 SC-1 + FR-22 regression gate."
      Source of truth: ../../../../../../../.orchestrator/milestones/M028/phases/P03/tasks/T05-replay-harness-and-verifiers-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M028/phases/P03/tasks/T05-replay-harness-and-verifiers-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M028/phases/P03/tasks/T05-replay-harness-and-verifiers-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

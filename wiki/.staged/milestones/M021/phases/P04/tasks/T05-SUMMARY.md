@@ -1,0 +1,26 @@
+---
+schema_version: "1.0"
+type: task-summary
+id: "T05"
+parent: "P04"
+milestone: "M021"
+provides:
+  - "scripts/verify/m021-p04-corpus-shape.sh (44 PASS structural assertions on tests/fixtures/m021-prompt-corpus.txt); scripts/verify/m021-p04-decisions-d012.sh (18 PASS assertions: D001..D011 preserved, D012 row with sequencing+M019+M021+zero-prompt substrings, single-row uniqueness); scripts/verify/m021-p04-antipatterns-crossrefs.sh (20 PASS assertions: AP-001..AP-009 headings plus per-AP-005..AP-009 cross-ref citations); scripts/verify/m021-p04-bash32-compat.sh (14 PASS: bash -n + self-match-safe forbidden-construct scan for all 7 P04 shell files); scripts/verify/m021-p04-phase-suite.sh (orchestrates run-suite.sh m021 P04 plus replay-prompt-corpus.sh plus m021-p04-dogfood-attestation.sh with self-recursion guard via M021_P04_SUITE_ACTIVE env flag)"
+requires:
+  - "from:P04/T01 what:tests/fixtures/m021-prompt-corpus.txt (corpus-shape gate target); from:P04/T02 what:scripts/verify/replay-prompt-corpus.sh (phase-suite invokes); from:P04/T03 what:scripts/verify/m021-p04-dogfood-attestation.sh (phase-suite invokes); from:P04/T04 what:.orchestrator/DECISIONS.md D012 row plus ANTIPATTERNS.md AP-005..AP-009 Cross-Refs blocks; from-disk:scripts/verify/run-suite.sh + scripts/verify/anti-pattern-lint.sh"
+affects:
+  - "P04,M021"
+key_files:
+  - "scripts/verify/m021-p04-corpus-shape.sh,scripts/verify/m021-p04-decisions-d012.sh,scripts/verify/m021-p04-antipatterns-crossrefs.sh,scripts/verify/m021-p04-bash32-compat.sh,scripts/verify/m021-p04-phase-suite.sh"
+key_decisions:
+  - "AD-19 single-script-file gate invocation; MEM004 gate-internals carve-out for awk/pipes/command-sub; constitution IX Bash 3.2 compat; constitution XV surgical precision"
+patterns_established:
+  - "Self-recursion guard via env flag (M021_P04_SUITE_ACTIVE=1) so that a phase-suite script discovered by its own run-suite.sh glob no-ops on the nested call rather than infinite-looping; concatenation-split forbidden-construct literals in bash32-compat.sh so the gate's own source does not self-match its own needles during forbidden-scan (continuing P03 pattern); awk state-machine section slicer in antipatterns-crossrefs.sh that bounds each AP-XXX content block by the next ^## AP- heading and asserts both cross-ref paths appear inside; non-fatal NOTE lines for pattern-classes not present in corpus so the structural gate degrades gracefully when T02's strict grammar assertion is the true source of truth"
+drill_down_paths:
+  - ".orchestrator/milestones/M021/phases/P04/tasks/T05-PAYLOAD.md, .orchestrator/milestones/M021/phases/P04/tasks/T05-PLAN.md"
+duration: "25m"
+verification_result: "pass"
+completed_at: "2026-04-17T21:54:42Z"
+---
+
+Authored and verified five P04 integration gates per T05-PLAN.md. All five gates are Bash 3.2 compatible, single-script-file invocable, and hermetic (no repo-tree writes). Individual gate runs: m021-p04-corpus-shape.sh reports PASS across 44 structural assertions over tests/fixtures/m021-prompt-corpus.txt (20 entries, 21 separators, ID range 01..20, grammar check, coverage thresholds rewrite>=6 reject>=4 allow>=4, total=20). m021-p04-decisions-d012.sh reports PASS across 18 assertions over [.orchestrator/DECISIONS.md](../../../../../decisions.md) (D001..D011 byte-preserved, D012 row present with required substrings sequencing/M019/M021/zero-prompt, single-row uniqueness). m021-p04-antipatterns-crossrefs.sh reports PASS across 20 assertions over ANTIPATTERNS.md (AP-001..AP-009 headings, and per AP-005..AP-009 the Cross-Refs block cites both scripts/hooks/pre-bash-shape-guard.sh and tests/fixtures/m021-prompt-corpus.txt). m021-p04-bash32-compat.sh reports PASS across 14 assertions (bash -n parse + forbidden-construct scan for all 7 P04 shell files including replay-prompt-corpus.sh and m021-p04-dogfood-attestation.sh). m021-p04-phase-suite.sh orchestrates run-suite.sh m021 P04 plus replay-prompt-corpus.sh plus m021-p04-dogfood-attestation.sh and reports PASS. Phase suite run-suite.sh m021 P04 reports PASS: 6 / FAIL: 0. Key deviation: the phase-suite script matches the m021-p04-*.sh glob used by run-suite.sh, so the naive phase-suite-that-invokes-run-suite shape infinite-recurses. Resolved with a self-recursion guard: at top, the script checks M021_P04_SUITE_ACTIVE and short-circuits with a no-op PASS when nested; the outer invocation exports M021_P04_SUITE_ACTIVE=1 before calling run-suite.sh. This preserves the payload must-have (invokes run-suite.sh + explicitly invokes replay-prompt-corpus.sh) while making the recursive case degenerate. Second deviation: the bash32-compat.sh forbidden-construct scan uses concatenation-split literals for 'declare -A', 'mapfile', 'readarray', the case-conversion parameter expansions, indirect prefix expansion, and process substitution open-paren, so the gate's own source does not match its own needles during self-inspection (continues P03 pattern per AD-19). Anti-pattern linter repo sweep currently flags 160 violations all inside T05-PAYLOAD.md (illustrative embedded bash snippets); these clear once this T05-SUMMARY.md lands because the active-task PAYLOAD exclusion fires on sibling summary presence (P02 pattern, consistent with T04-SUMMARY note).

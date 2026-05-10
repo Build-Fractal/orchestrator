@@ -6,8 +6,8 @@ title: "Dispatch Context -- T05-acceptance-and-seam-and-suite (Phase P02, Milest
      Source of truth: ../../../../../../../.orchestrator/milestones/M032/phases/P02/tasks/T05-acceptance-and-seam-and-suite-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M032/phases/P02/tasks/T05-acceptance-and-seam-and-suite-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M032/phases/P02/tasks/T05-acceptance-and-seam-and-suite-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

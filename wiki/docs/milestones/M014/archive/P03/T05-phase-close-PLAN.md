@@ -6,8 +6,8 @@ title: "T05-phase-close-PLAN"
      Source of truth: ../../../../../../.orchestrator/milestones/M014/archive/P03/T05-phase-close-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../.orchestrator/milestones/M014/archive/P03/T05-phase-close-PLAN.md"
+  include-markdown "../../../../../.staged/milestones/M014/archive/P03/T05-phase-close-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

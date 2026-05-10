@@ -6,8 +6,8 @@ title: "Dispatch Context -- T03-render-position-and-where-skill (Phase P02, Mile
      Source of truth: ../../../../../../../.orchestrator/milestones/M029/phases/P02/tasks/T03-render-position-and-where-skill-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M029/phases/P02/tasks/T03-render-position-and-where-skill-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M029/phases/P02/tasks/T03-render-position-and-where-skill-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

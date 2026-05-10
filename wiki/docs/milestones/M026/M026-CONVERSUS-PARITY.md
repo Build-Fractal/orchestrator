@@ -6,8 +6,8 @@ title: "Conversus OSS vs Paid Parity Matrix (M026-authoritative)"
      Source of truth: ../../../../.orchestrator/milestones/M026/M026-CONVERSUS-PARITY.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../.orchestrator/milestones/M026/M026-CONVERSUS-PARITY.md"
+  include-markdown "../../../.staged/milestones/M026/M026-CONVERSUS-PARITY.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

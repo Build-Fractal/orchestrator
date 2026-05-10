@@ -6,8 +6,8 @@ title: "Dispatch Context -- T02-feature-vector-extension (Phase P05, Milestone M
      Source of truth: ../../../../../../../.orchestrator/milestones/M020/phases/P05/tasks/T02-feature-vector-extension-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M020/phases/P05/tasks/T02-feature-vector-extension-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M020/phases/P05/tasks/T02-feature-vector-extension-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

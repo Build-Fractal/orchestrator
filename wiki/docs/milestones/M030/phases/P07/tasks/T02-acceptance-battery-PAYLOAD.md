@@ -6,8 +6,8 @@ title: "Dispatch Context -- T02-acceptance-battery (Phase P07, Milestone M030)"
      Source of truth: ../../../../../../../.orchestrator/milestones/M030/phases/P07/tasks/T02-acceptance-battery-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M030/phases/P07/tasks/T02-acceptance-battery-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M030/phases/P07/tasks/T02-acceptance-battery-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

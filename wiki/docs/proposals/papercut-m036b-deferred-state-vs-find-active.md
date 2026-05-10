@@ -6,7 +6,7 @@ title: "Paper-cut: M036b deferred state collides with find-active-milestone sele
      Source of truth: ../../../.orchestrator/proposals/papercut-m036b-deferred-state-vs-find-active.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/papercut-m036b-deferred-state-vs-find-active.md"
+  include-markdown "../../.staged/proposals/papercut-m036b-deferred-state-vs-find-active.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

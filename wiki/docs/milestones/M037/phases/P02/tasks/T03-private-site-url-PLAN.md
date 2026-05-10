@@ -6,8 +6,8 @@ title: "T03-private-site-url-PLAN"
      Source of truth: ../../../../../../../.orchestrator/milestones/M037/phases/P02/tasks/T03-private-site-url-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M037/phases/P02/tasks/T03-private-site-url-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M037/phases/P02/tasks/T03-private-site-url-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

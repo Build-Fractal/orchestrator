@@ -6,8 +6,8 @@ title: "Should output \"heavy\" (keyword signals: \"new subsystem\", \"from scra
      Source of truth: ../../../../../../../.orchestrator/milestones/M002/phases/P06/tasks/T03-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M002/phases/P06/tasks/T03-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M002/phases/P06/tasks/T03-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

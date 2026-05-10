@@ -6,8 +6,8 @@ title: "Dispatch Context -- T02-markdown-and-pdf-adapters (Phase P01, Milestone 
      Source of truth: ../../../../../../../.orchestrator/milestones/M036/phases/P01/tasks/T02-markdown-and-pdf-adapters-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M036/phases/P01/tasks/T02-markdown-and-pdf-adapters-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M036/phases/P01/tasks/T02-markdown-and-pdf-adapters-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

@@ -6,8 +6,8 @@ title: "scripts/verify/knowledge-schema-lint.sh — FR-9 schema-authority enforc
      Source of truth: ../../../../../../../.orchestrator/milestones/M020/phases/P03/tasks/T03-schema-authority-lint-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M020/phases/P03/tasks/T03-schema-authority-lint-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M020/phases/P03/tasks/T03-schema-authority-lint-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

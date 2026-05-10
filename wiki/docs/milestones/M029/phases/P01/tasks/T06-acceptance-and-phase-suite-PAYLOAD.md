@@ -6,8 +6,8 @@ title: "Dispatch Context -- T06-acceptance-and-phase-suite (Phase P01, Milestone
      Source of truth: ../../../../../../../.orchestrator/milestones/M029/phases/P01/tasks/T06-acceptance-and-phase-suite-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M029/phases/P01/tasks/T06-acceptance-and-phase-suite-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M029/phases/P01/tasks/T06-acceptance-and-phase-suite-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

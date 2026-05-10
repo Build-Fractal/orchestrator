@@ -6,8 +6,8 @@ title: "Dispatch Context -- T04-fixture-and-acceptance-tests (Phase P01, Milesto
      Source of truth: ../../../../../../../.orchestrator/milestones/M032/phases/P01/tasks/T04-fixture-and-acceptance-tests-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M032/phases/P01/tasks/T04-fixture-and-acceptance-tests-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M032/phases/P01/tasks/T04-fixture-and-acceptance-tests-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

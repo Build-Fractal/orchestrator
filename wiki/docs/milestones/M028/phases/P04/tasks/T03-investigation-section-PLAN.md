@@ -6,8 +6,8 @@ title: "scripts/verify/m028/p04-investigation-section.sh -- M028 P04/T03 plan-le
      Source of truth: ../../../../../../../.orchestrator/milestones/M028/phases/P04/tasks/T03-investigation-section-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M028/phases/P04/tasks/T03-investigation-section-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M028/phases/P04/tasks/T03-investigation-section-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

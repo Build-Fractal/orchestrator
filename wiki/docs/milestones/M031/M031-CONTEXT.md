@@ -6,8 +6,8 @@ title: "M031-CONTEXT"
      Source of truth: ../../../../.orchestrator/milestones/M031/M031-CONTEXT.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../.orchestrator/milestones/M031/M031-CONTEXT.md"
+  include-markdown "../../../.staged/milestones/M031/M031-CONTEXT.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

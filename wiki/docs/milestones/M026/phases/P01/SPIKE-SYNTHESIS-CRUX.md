@@ -6,8 +6,8 @@ title: "DC-6 Synthesis-Crux Spike — OSS linter.output_contract parseability"
      Source of truth: ../../../../../../.orchestrator/milestones/M026/phases/P01/SPIKE-SYNTHESIS-CRUX.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../.orchestrator/milestones/M026/phases/P01/SPIKE-SYNTHESIS-CRUX.md"
+  include-markdown "../../../../../.staged/milestones/M026/phases/P01/SPIKE-SYNTHESIS-CRUX.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

@@ -6,7 +6,7 @@ title: "Proposal: Post-Launch Arc — Wiki UX Deep + External Tool Adapters"
      Source of truth: ../../../.orchestrator/proposals/post-launch-wiki-ux-and-adapters.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/post-launch-wiki-ux-and-adapters.md"
+  include-markdown "../../.staged/proposals/post-launch-wiki-ux-and-adapters.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

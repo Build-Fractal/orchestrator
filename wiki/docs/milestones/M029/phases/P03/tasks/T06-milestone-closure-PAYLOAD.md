@@ -6,8 +6,8 @@ title: "Dispatch Context -- T06-milestone-closure (Phase P03, Milestone M029)"
      Source of truth: ../../../../../../../.orchestrator/milestones/M029/phases/P03/tasks/T06-milestone-closure-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M029/phases/P03/tasks/T06-milestone-closure-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M029/phases/P03/tasks/T06-milestone-closure-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

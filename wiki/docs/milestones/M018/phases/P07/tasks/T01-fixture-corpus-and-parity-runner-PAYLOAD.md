@@ -6,8 +6,8 @@ title: "Dispatch Context -- T01-fixture-corpus-and-parity-runner (Phase P07, Mil
      Source of truth: ../../../../../../../.orchestrator/milestones/M018/phases/P07/tasks/T01-fixture-corpus-and-parity-runner-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M018/phases/P07/tasks/T01-fixture-corpus-and-parity-runner-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M018/phases/P07/tasks/T01-fixture-corpus-and-parity-runner-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

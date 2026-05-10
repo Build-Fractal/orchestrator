@@ -6,8 +6,8 @@ title: "M015-SUMMARY"
      Source of truth: ../../../../.orchestrator/milestones/M015/M015-SUMMARY.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../.orchestrator/milestones/M015/M015-SUMMARY.md"
+  include-markdown "../../../.staged/milestones/M015/M015-SUMMARY.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

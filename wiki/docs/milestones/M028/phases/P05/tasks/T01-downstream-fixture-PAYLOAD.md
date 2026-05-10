@@ -6,8 +6,8 @@ title: "Dispatch Context -- T01-downstream-fixture (Phase P05, Milestone M028)"
      Source of truth: ../../../../../../../.orchestrator/milestones/M028/phases/P05/tasks/T01-downstream-fixture-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M028/phases/P05/tasks/T01-downstream-fixture-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M028/phases/P05/tasks/T01-downstream-fixture-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

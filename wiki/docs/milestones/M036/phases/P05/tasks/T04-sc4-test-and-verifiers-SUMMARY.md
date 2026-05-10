@@ -6,8 +6,8 @@ title: "T04-sc4-test-and-verifiers-SUMMARY"
      Source of truth: ../../../../../../../.orchestrator/milestones/M036/phases/P05/tasks/T04-sc4-test-and-verifiers-SUMMARY.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M036/phases/P05/tasks/T04-sc4-test-and-verifiers-SUMMARY.md"
+  include-markdown "../../../../../../.staged/milestones/M036/phases/P05/tasks/T04-sc4-test-and-verifiers-SUMMARY.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

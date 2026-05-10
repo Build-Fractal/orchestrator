@@ -6,7 +6,7 @@ title: "Proposal: M036 — Reference-Corpus Ingest *(amended 2026-05-01)*"
      Source of truth: ../../../.orchestrator/proposals/M036-reference-corpus-ingest.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/M036-reference-corpus-ingest.md"
+  include-markdown "../../.staged/proposals/M036-reference-corpus-ingest.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

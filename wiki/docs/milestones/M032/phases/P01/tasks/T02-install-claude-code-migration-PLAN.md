@@ -6,8 +6,8 @@ title: "--- 4.5 Stage runtime payload via project_assets: manifest schema (FR-2 
      Source of truth: ../../../../../../../.orchestrator/milestones/M032/phases/P01/tasks/T02-install-claude-code-migration-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M032/phases/P01/tasks/T02-install-claude-code-migration-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M032/phases/P01/tasks/T02-install-claude-code-migration-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

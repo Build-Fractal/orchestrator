@@ -6,8 +6,8 @@ title: "T01-customblock-draft-SUMMARY"
      Source of truth: ../../../../../../../.orchestrator/milestones/M033/phases/P05/tasks/T01-customblock-draft-SUMMARY.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M033/phases/P05/tasks/T01-customblock-draft-SUMMARY.md"
+  include-markdown "../../../../../../.staged/milestones/M033/phases/P05/tasks/T01-customblock-draft-SUMMARY.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

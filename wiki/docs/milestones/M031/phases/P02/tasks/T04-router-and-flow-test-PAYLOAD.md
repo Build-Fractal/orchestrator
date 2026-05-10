@@ -6,8 +6,8 @@ title: "Dispatch Context -- T04-router-and-flow-test (Phase P02, Milestone M031)
      Source of truth: ../../../../../../../.orchestrator/milestones/M031/phases/P02/tasks/T04-router-and-flow-test-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M031/phases/P02/tasks/T04-router-and-flow-test-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M031/phases/P02/tasks/T04-router-and-flow-test-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

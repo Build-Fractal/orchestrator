@@ -6,7 +6,7 @@ title: "Proposal: M034 — Interactive Review Gates"
      Source of truth: ../../../.orchestrator/proposals/M034-interactive-review-gates.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/M034-interactive-review-gates.md"
+  include-markdown "../../.staged/proposals/M034-interactive-review-gates.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

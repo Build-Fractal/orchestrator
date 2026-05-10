@@ -6,8 +6,8 @@ title: "Dispatch Context -- T01-tier2-head-drop (Phase P04, Milestone M018)"
      Source of truth: ../../../../../../../.orchestrator/milestones/M018/phases/P04/tasks/T01-tier2-head-drop-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M018/phases/P04/tasks/T01-tier2-head-drop-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M018/phases/P04/tasks/T01-tier2-head-drop-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

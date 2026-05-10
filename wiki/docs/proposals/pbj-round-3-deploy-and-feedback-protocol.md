@@ -6,7 +6,7 @@ title: "PBJ Round-3 Wiki Deploy + Feedback Protocol"
      Source of truth: ../../../.orchestrator/proposals/pbj-round-3-deploy-and-feedback-protocol.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/pbj-round-3-deploy-and-feedback-protocol.md"
+  include-markdown "../../.staged/proposals/pbj-round-3-deploy-and-feedback-protocol.md"
   start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=false

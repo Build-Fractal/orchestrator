@@ -6,8 +6,8 @@ title: "Dispatch Context -- T01-compute-staleness-review-queue (Phase P04, Miles
      Source of truth: ../../../../../../../.orchestrator/milestones/M020/phases/P04/tasks/T01-compute-staleness-review-queue-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M020/phases/P04/tasks/T01-compute-staleness-review-queue-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M020/phases/P04/tasks/T01-compute-staleness-review-queue-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

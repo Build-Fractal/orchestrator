@@ -6,8 +6,8 @@ title: "Dispatch Context -- T01-wiki-init-default-scope (Phase P02, Milestone M0
      Source of truth: ../../../../../../../.orchestrator/milestones/M032/phases/P02/tasks/T01-wiki-init-default-scope-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M032/phases/P02/tasks/T01-wiki-init-default-scope-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M032/phases/P02/tasks/T01-wiki-init-default-scope-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

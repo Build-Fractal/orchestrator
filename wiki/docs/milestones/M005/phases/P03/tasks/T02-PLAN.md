@@ -6,8 +6,8 @@ title: "scripts/lib/manifest-builder.sh — Pure manifest table construction."
      Source of truth: ../../../../../../../.orchestrator/milestones/M005/phases/P03/tasks/T02-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M005/phases/P03/tasks/T02-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M005/phases/P03/tasks/T02-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

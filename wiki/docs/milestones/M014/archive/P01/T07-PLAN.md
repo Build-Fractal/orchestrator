@@ -6,8 +6,8 @@ title: "Gate: all P01-new shell scripts are Bash 3.2 compatible and lint-clean."
      Source of truth: ../../../../../../.orchestrator/milestones/M014/archive/P01/T07-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../.orchestrator/milestones/M014/archive/P01/T07-PLAN.md"
+  include-markdown "../../../../../.staged/milestones/M014/archive/P01/T07-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

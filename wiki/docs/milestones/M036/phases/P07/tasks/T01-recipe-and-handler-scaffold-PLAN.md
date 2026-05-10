@@ -6,8 +6,8 @@ title: "T01 — Recipe extension + handle_reference scaffold + shape verifiers"
      Source of truth: ../../../../../../../.orchestrator/milestones/M036/phases/P07/tasks/T01-recipe-and-handler-scaffold-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M036/phases/P07/tasks/T01-recipe-and-handler-scaffold-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M036/phases/P07/tasks/T01-recipe-and-handler-scaffold-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

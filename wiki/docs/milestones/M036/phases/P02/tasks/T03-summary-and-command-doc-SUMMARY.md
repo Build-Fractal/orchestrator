@@ -6,8 +6,8 @@ title: "T03-summary-and-command-doc-SUMMARY"
      Source of truth: ../../../../../../../.orchestrator/milestones/M036/phases/P02/tasks/T03-summary-and-command-doc-SUMMARY.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M036/phases/P02/tasks/T03-summary-and-command-doc-SUMMARY.md"
+  include-markdown "../../../../../../.staged/milestones/M036/phases/P02/tasks/T03-summary-and-command-doc-SUMMARY.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

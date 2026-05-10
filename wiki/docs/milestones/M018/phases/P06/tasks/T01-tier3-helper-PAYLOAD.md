@@ -6,8 +6,8 @@ title: "Dispatch Context -- T01-tier3-helper (Phase P06, Milestone M018)"
      Source of truth: ../../../../../../../.orchestrator/milestones/M018/phases/P06/tasks/T01-tier3-helper-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M018/phases/P06/tasks/T01-tier3-helper-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M018/phases/P06/tasks/T01-tier3-helper-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

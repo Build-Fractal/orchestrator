@@ -6,7 +6,7 @@ title: "EOS Patterns for the Orchestrator"
      Source of truth: ../../../.orchestrator/proposals/eos-patterns-for-orchestrator.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/eos-patterns-for-orchestrator.md"
+  include-markdown "../../.staged/proposals/eos-patterns-for-orchestrator.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

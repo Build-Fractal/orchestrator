@@ -6,8 +6,8 @@ title: "Dispatch Context -- T04-doctor-config-check-and-suite (Phase P01, Milest
      Source of truth: ../../../../../../../.orchestrator/milestones/M030/phases/P01/tasks/T04-doctor-config-check-and-suite-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M030/phases/P01/tasks/T04-doctor-config-check-and-suite-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M030/phases/P01/tasks/T04-doctor-config-check-and-suite-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

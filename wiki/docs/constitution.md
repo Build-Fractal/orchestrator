@@ -6,7 +6,7 @@ title: "Speckit-Orchestrator Constitution"
      Source of truth: ../../.orchestrator/memory/constitution.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../.orchestrator/memory/constitution.md"
+  include-markdown "../.staged/memory/constitution.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

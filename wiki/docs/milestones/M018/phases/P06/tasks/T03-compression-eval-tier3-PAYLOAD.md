@@ -6,8 +6,8 @@ title: "Dispatch Context -- T03-compression-eval-tier3 (Phase P06, Milestone M01
      Source of truth: ../../../../../../../.orchestrator/milestones/M018/phases/P06/tasks/T03-compression-eval-tier3-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M018/phases/P06/tasks/T03-compression-eval-tier3-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M018/phases/P06/tasks/T03-compression-eval-tier3-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

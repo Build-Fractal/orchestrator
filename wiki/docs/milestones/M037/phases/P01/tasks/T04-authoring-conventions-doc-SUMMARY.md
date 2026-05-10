@@ -6,8 +6,8 @@ title: "T04 — Authoring conventions doc + dispatch payload-guidance reference"
      Source of truth: ../../../../../../../.orchestrator/milestones/M037/phases/P01/tasks/T04-authoring-conventions-doc-SUMMARY.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M037/phases/P01/tasks/T04-authoring-conventions-doc-SUMMARY.md"
+  include-markdown "../../../../../../.staged/milestones/M037/phases/P01/tasks/T04-authoring-conventions-doc-SUMMARY.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

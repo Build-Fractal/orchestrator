@@ -6,7 +6,7 @@ title: "Decisions Register"
      Source of truth: ../../.orchestrator/DECISIONS.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../.orchestrator/DECISIONS.md"
+  include-markdown "../.staged/DECISIONS.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

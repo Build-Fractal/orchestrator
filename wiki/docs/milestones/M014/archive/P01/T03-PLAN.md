@@ -6,8 +6,8 @@ title: "scripts/util/dual-write-runtime-md.sh — FR-12 marker-bounded dual-writ
      Source of truth: ../../../../../../.orchestrator/milestones/M014/archive/P01/T03-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../.orchestrator/milestones/M014/archive/P01/T03-PLAN.md"
+  include-markdown "../../../../../.staged/milestones/M014/archive/P01/T03-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

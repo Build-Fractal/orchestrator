@@ -6,8 +6,8 @@ title: "Dispatch Context -- T04-integration-test (Phase P03, Milestone M020)"
      Source of truth: ../../../../../../../.orchestrator/milestones/M020/phases/P03/tasks/T04-integration-test-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M020/phases/P03/tasks/T04-integration-test-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M020/phases/P03/tasks/T04-integration-test-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

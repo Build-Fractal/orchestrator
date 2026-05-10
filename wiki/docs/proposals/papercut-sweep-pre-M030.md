@@ -6,7 +6,7 @@ title: "Paper-Cut Sweep PR Brief — Pre-M030"
      Source of truth: ../../../.orchestrator/proposals/papercut-sweep-pre-M030.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/papercut-sweep-pre-M030.md"
+  include-markdown "../../.staged/proposals/papercut-sweep-pre-M030.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

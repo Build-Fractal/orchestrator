@@ -1,0 +1,1800 @@
+---
+schema_version: "1.0"
+type: dispatch-prompt
+---
+
+# Dispatch Context -- T04-milestone-close-ceremony (Phase P07, Milestone M030)
+## Manifest
+| Section | Lines | Est. Tokens | Priority |
+|---------|-------|-------------|----------|
+| Knowledge (31 entries) | 20-891 | ~10100 | filtered |
+| Decisions | 893-895 | ~100 | filtered |
+| Constraints | 897-949 | ~600 | required |
+| Scope | 951-978 | ~300 | required |
+| Upstream Context | 980-1279 | ~16800 | required |
+| Task Plan | 1281-1693 | ~8400 | required |
+| State Context | 1695-1701 | ~100 | required |
+| First-Turn Completeness | 1703-1765 | ~1400 | required |
+| **Total** | | **~37800** | |
+
+## Knowledge
+
+<!-- 31 knowledge entries resolved from index -->
+
+---
+id: MEM001
+scope_tags: "[project]"
+category: patterns
+confidence: 0.95
+created_at: 2026-04-14
+last_verified: 2026-04-14
+hit_count: 686
+source_unit: "M001/P01"
+source_type: consolidation
+supersedes: ""
+superseded_by: ""
+relates_to: [MEM002, MEM004]
+content_hash: ""
+---
+
+# MEM001: Shell Script Conventions
+
+Bash 3.2 compatibility is mandatory — no `declare -A` (associative arrays). Use parallel indexed arrays (`arr_k_0`, `arr_v_0`, etc.) instead. macOS ships bash 3.2.
+
+YAML parsing uses `grep`/`sed`/`awk` only — no python3 or jq hard dependency. jq used as optional fallback via `json_field()` helper.
+
+Structured output: all scripts emit prefixed lines to stdout (`PASS:`, `FAIL:`, `LOCK:`, `STUCK:`, `BUDGET:`, `SUMMARY:`, `DECISION:`, `KNOWLEDGE:`, `ROLLBACK:`, `VALIDATE:`, `CONSOLIDATE:`). Errors to stderr. Exit 0 on success, 1 on failure.
+
+Dual argument style: scripts accept both positional subcommands and `--flag` style for human and programmatic use.
+
+Idempotent operations: all scaffolding/creation scripts check-before-create with early exit on existing state.
+
+---
+id: MEM002
+scope_tags: "[project]"
+category: patterns
+confidence: 0.95
+created_at: 2026-04-14
+last_verified: 2026-04-14
+hit_count: 686
+source_unit: "M001/P01"
+source_type: consolidation
+supersedes: ""
+superseded_by: ""
+relates_to: [MEM001]
+content_hash: ""
+---
+
+# MEM002: Test Conventions
+
+Pass/fail tracking: `pass()` and `fail()` functions with parallel indexed arrays (bash 3.2 safe). Summary count at end.
+
+Fixture pattern: state fixture directories under `tests/fixtures/` named by scenario (`state-executing`, `verify-pass`, `dispatch-state`).
+
+PID 1 trick: tests use PID 1 (launchd on macOS) as guaranteed-alive process for `ACTIVE` lock detection — subshell PIDs die before assertion.
+
+Cross-reference validation: integration tests extract script/template paths from command files via `grep -oE` regex, then verify existence/executability. Self-maintaining as commands evolve.
+
+Self-diagnostic pattern: test files verify their own `fail()` messages include actionable file paths or contract identifiers.
+
+---
+id: MEM003
+scope_tags: "[project]"
+category: patterns
+confidence: 0.95
+created_at: 2026-04-14
+last_verified: 2026-04-14
+hit_count: 686
+source_unit: "M001/P01"
+source_type: consolidation
+supersedes: ""
+superseded_by: ""
+relates_to: [MEM014]
+content_hash: ""
+---
+
+# MEM003: State Machine Design
+
+9 states derived from file presence on disk (priority-ordered rules in `derive-phase.sh`).
+
+Rule 3b addition: roadmap exists but active phase has no `P##-PLAN.md` -> `planning` (handles gap between roadmap creation and phase planning).
+
+Empty milestone directory (no `M###-*` files) -> `pre-planning` (distinct from scaffolded).
+
+Milestone ID detected from `M###-*.md` files inside directory, not from directory basename (enables arbitrary fixture names).
+
+---
+id: MEM004
+scope_tags: "[project], [milestone:[M005](../../../../../milestones/M005/index.md)]"
+category: patterns
+confidence: 0.90
+created_at: 2026-04-14
+last_verified: 2026-04-14
+hit_count: 686
+source_unit: "M005/P03"
+source_type: consolidation
+supersedes: ""
+superseded_by: ""
+relates_to: [MEM001]
+content_hash: ""
+---
+
+# MEM004: Pure Lib Extraction Pattern
+
+Dispatch scripts (build-context.sh, compress-payload.sh) source pure function libs (payload-transforms.sh, manifest-builder.sh) instead of defining inline duplicates. Pure functions take stdin/arguments, produce stdout, perform no file I/O. Established in P03 per AD-5.
+
+---
+id: MEM005
+scope_tags: "[project], [milestone:M005]"
+category: patterns
+confidence: 0.90
+created_at: 2026-04-14
+last_verified: 2026-04-14
+hit_count: 605
+source_unit: "M005/P01"
+source_type: consolidation
+supersedes: ""
+superseded_by: ""
+relates_to: [MEM019]
+content_hash: ""
+---
+
+# MEM005: Content-Hash Idempotency
+
+Knowledge entries carry `content_hash: sha256:{hex}` in frontmatter. `hash.sh` provides `compute_content_hash` (string) and `compute_file_body_hash` (file body). `create-entry.sh` writes hash at creation; `update-entry.sh` recomputes on `--body` changes; `rebuild-index.sh` compares stored vs computed hashes for change detection and self-heals drift. `record-result.sh` accepts `outcome=unchanged` for stagnation signaling.
+
+---
+id: MEM006
+scope_tags: "[project], [milestone:M005]"
+category: patterns
+confidence: 0.90
+created_at: 2026-04-14
+last_verified: 2026-04-14
+hit_count: 605
+source_unit: "M005/P04"
+source_type: consolidation
+supersedes: ""
+superseded_by: ""
+relates_to: [MEM015]
+content_hash: ""
+---
+
+# MEM006: Scored Health Reporting
+
+`run-doctor.sh` aggregates 12 checks (4 legacy + 8 DOCTOR:) into `Checks passed: N/M` with HEALTHY/NEEDS_ATTENTION status. Legacy checks use exit-code pass/fail; new checks parse DOCTOR: status lines. Advisory checks (check-plans.sh) counted separately. History appended to `doctor-history.jsonl` per run.
+
+---
+id: MEM007
+scope_tags: "[project], [milestone:M005]"
+category: patterns
+confidence: 0.90
+created_at: 2026-04-14
+last_verified: 2026-04-14
+hit_count: 605
+source_unit: "M005/P07"
+source_type: consolidation
+supersedes: ""
+superseded_by: ""
+relates_to: []
+content_hash: ""
+---
+
+# MEM007: Autonomy Permission Pipeline
+
+`generate-permissions.sh` introspects project toolchain (package.json, Makefile, config files, agent host markers) and emits canonical JSON. `write-permissions.sh` translates to `.claude/settings.json` with additive merge for user-authored files. `check-permissions.sh` detects permission drift. Policy is declarative in `autonomy-defaults.yaml` read via `recipe-parser.sh`.
+
+AD-19 script-file verification shape: task plan Check: commands must use single-script invocations, not inline compound bash.
+
+---
+id: MEM008
+scope_tags: "[project], [milestone:M001]"
+category: patterns
+confidence: 0.85
+created_at: 2026-04-14
+last_verified: 2026-04-14
+hit_count: 686
+source_unit: "M001/P01"
+source_type: consolidation
+supersedes: ""
+superseded_by: ""
+relates_to: [MEM001]
+content_hash: ""
+---
+
+# MEM008: Audit Remediation Patterns
+
+Shared JSON Utility: `scripts/util/json-field.sh` extracts `json_field()` into a sourceable utility. Lock-manager and recovery-briefing `source` it instead of duplicating the function. Pattern: extract shared functions into `scripts/util/` and `source` them.
+
+ISO 8601 Standardization: all timestamps use `date -u +%Y-%m-%dT%H:%M:%SZ` (UTC, ISO 8601). Rollback-phase.sh was using `date +%Y%m%dT%H%M%S` — fixed for consistency.
+
+IFS Safety: `IFS=',' read -ra` is local to the `read` built-in — safe, does not leak. For `IFS=','` in `for` loops, wrap in subshell `(IFS=','; ...)` to prevent leaking into parent scope.
+
+AGENTS.md -> README.md Convention: documentation files in `commands/`, `references/`, and `templates/` directories renamed from `AGENTS.md` to `README.md`. Integration tests exclude `README.md` from command file checks.
+
+---
+id: MEM009
+scope_tags: "[project], [milestone:[M006](../../../../../milestones/M006/index.md)]"
+category: patterns
+confidence: 0.90
+created_at: 2026-04-14
+last_verified: 2026-04-14
+hit_count: 605
+source_unit: "M006/P01"
+source_type: consolidation
+supersedes: ""
+superseded_by: ""
+relates_to: [MEM010, MEM011]
+content_hash: ""
+---
+
+# MEM009: Documentation-as-Verification
+
+Writing documentation and running every documented command catches drift that tests miss. M006 found and fixed a stale routing fallback value in references/file-formats.md through this process. The mechanical discipline of verify-as-you-write surfaces real bugs.
+
+---
+id: MEM010
+scope_tags: "[project], [milestone:M006]"
+category: patterns
+confidence: 0.90
+created_at: 2026-04-14
+last_verified: 2026-04-14
+hit_count: 605
+source_unit: "M006/P01"
+source_type: consolidation
+supersedes: ""
+superseded_by: ""
+relates_to: [MEM009]
+content_hash: ""
+---
+
+# MEM010: Cross-Link Validation Scripts
+
+Cross-link validation scripts (checking that doc A references doc B) catch missing references that manual review misses. Every P01-P06 phase in M006 required cross-link fixes during the verification step. Pattern: always create cross-link verification scripts during planning.
+
+---
+id: MEM011
+scope_tags: "[project], [milestone:[M002](../../../../../milestones/M002/index.md)]"
+category: patterns
+confidence: 0.90
+created_at: 2026-04-14
+last_verified: 2026-04-14
+hit_count: 605
+source_unit: "M002/P04"
+source_type: consolidation
+supersedes: ""
+superseded_by: ""
+relates_to: [MEM009]
+content_hash: ""
+---
+
+# MEM011: Validation-as-Task Pattern
+
+When scripts pre-exist from prior milestones, phase tasks verify correctness rather than creating new code. T01 creates verification scripts, T02+ runs them. Most phases in M002 P04-P07 required minimal or no code changes — the verification process itself was the deliverable.
+
+---
+id: MEM012
+scope_tags: "[project]"
+category: conventions
+confidence: 0.95
+created_at: 2026-04-14
+last_verified: 2026-04-14
+hit_count: 686
+source_unit: "M001/P01"
+source_type: consolidation
+supersedes: ""
+superseded_by: ""
+relates_to: [MEM013]
+content_hash: ""
+---
+
+# MEM012: Command File Structure
+
+All command `.md` files follow identical structure:
+
+```
+YAML frontmatter (description field)
+-> Title
+-> Prerequisites / State Check
+-> Core Workflow (numbered sections)
+-> Output
+-> Idempotency
+-> Error Handling
+-> Referenced Scripts/Templates
+```
+
+Commands reference scripts by relative path in "Referenced Scripts" sections. Integration tests verify all cross-references resolve to existing, executable files.
+
+---
+id: MEM013
+scope_tags: "[project]"
+category: conventions
+confidence: 0.95
+created_at: 2026-04-14
+last_verified: 2026-04-14
+hit_count: 686
+source_unit: "M001/P01"
+source_type: consolidation
+supersedes: ""
+superseded_by: ""
+relates_to: [MEM012]
+content_hash: ""
+---
+
+# MEM013: Template Convention
+
+YAML frontmatter with `schema_version` + `type` fields. Body uses `{{placeholder}}` syntax for dynamic values. No hardcoded milestone/phase/task IDs (context-free per FR-074).
+
+Summary frontmatter: 15-field base schema for tasks (`schema_version`, `type`, `id`, `parent`, `milestone`, `provides`, `requires`, `affects`, `key_files`, `key_decisions`, `patterns_established`, `drill_down_paths`, `duration`, `verification_result`, `completed_at`); phase/milestone summaries add `observability_surfaces` for 16 fields.
+
+---
+id: MEM014
+scope_tags: "[project]"
+category: conventions
+confidence: 0.95
+created_at: 2026-04-14
+last_verified: 2026-04-14
+hit_count: 686
+source_unit: "M001/P01"
+source_type: consolidation
+supersedes: ""
+superseded_by: ""
+relates_to: [MEM003, MEM018]
+content_hash: ""
+---
+
+# MEM014: Interface Contracts
+
+**Scripts -> Commands**: Commands reference scripts by relative path in "Referenced Scripts" sections. Integration tests verify all cross-references resolve to existing, executable files.
+
+**State -> Dispatch**: `derive-phase.sh` outputs single state word to stdout. `auto.md` reads this to determine loop action. Budget/stuck/lock checks gate dispatch.
+
+**Verification -> State Advancement**: Verification scripts output `PASS:`/`FAIL:` lines. `auto.md` consumes these: all-pass -> advance, any-fail -> retry once then pause. Phase advancement requires verification pass.
+
+**Knowledge -> Context Assembly**: `scope-filter.sh` filters `KNOWLEDGE.md`/`DECISIONS.md` by scope tags. `build-context.sh` assembles filtered knowledge + task plan + upstream summaries into dispatch payload. Budget metrics reported to stderr.
+
+**Templates -> Output**: Commands use `templates/*.md` as starting points. Agent fills `{{placeholder}}` values. Template `schema_version` field enables future format migration.
+
+---
+id: MEM015
+scope_tags: "[project], [milestone:M005]"
+category: conventions
+confidence: 0.90
+created_at: 2026-04-14
+last_verified: 2026-04-14
+hit_count: 605
+source_unit: "M005/P04"
+source_type: consolidation
+supersedes: ""
+superseded_by: ""
+relates_to: [MEM006, MEM017]
+content_hash: ""
+---
+
+# MEM015: DOCTOR Structured Output Protocol
+
+All diagnostic scripts emit a single structured line for machine parsing by run-doctor.sh:
+
+```
+DOCTOR:<CHECK> status=<ok|warn|skip|drift|missing> key=value ...
+```
+
+Advisory checks (like check-plans.sh) always exit 0; non-advisory checks exit 0 on ok, 1 on warn. Established in M005/P04, extended through P05-P07.
+
+---
+id: MEM016
+scope_tags: "[project], [milestone:M005]"
+category: conventions
+confidence: 0.85
+created_at: 2026-04-14
+last_verified: 2026-04-14
+hit_count: 605
+source_unit: "M005/P02"
+source_type: consolidation
+supersedes: ""
+superseded_by: ""
+relates_to: []
+content_hash: ""
+---
+
+# MEM016: Cost Source Closed Enum
+
+Telemetry entries carry `cost_source` field (estimated/reported/unknown) with closed enum validation. `aggregate-metrics.sh` groups by cost_source, distinguishes null cost (unknown) from zero cost (free). Legacy entries classified by presence of cost data.
+
+---
+id: MEM017
+scope_tags: "[project], [milestone:M005]"
+category: conventions
+confidence: 0.90
+created_at: 2026-04-14
+last_verified: 2026-04-14
+hit_count: 605
+source_unit: "M005/P05"
+source_type: consolidation
+supersedes: ""
+superseded_by: ""
+relates_to: [MEM015]
+content_hash: ""
+---
+
+# MEM017: Gate Verdict Protocol
+
+`scripts/lib/verdicts.sh` provides `emit_verdict`, `parse_verdict`, `orch_is_verdict` with four constants: PASS, BLOCK, WARN, NEEDS_REVIEW. `hooks.sh` captures hook stdout, parses VERDICT lines, resolves multiple verdicts to most severe, and maps to block/warn/continue behavior. Backward compatible when no VERDICT present. Provider convention documented in `references/provider-convention.md`.
+
+---
+id: MEM018
+scope_tags: "[project]"
+category: conventions
+confidence: 0.90
+created_at: 2026-04-14
+last_verified: 2026-04-14
+hit_count: 686
+source_unit: "M001/P01"
+source_type: consolidation
+supersedes: ""
+superseded_by: ""
+relates_to: [MEM014]
+content_hash: ""
+---
+
+# MEM018: Runtime Adapter Interface
+
+The spec defines 5 abstract adapter operations (`dispatch-task`, `await-completion`, `collect-result`, `signal-failure`, `inject-context`). In the v0.1.0 extension architecture (markdown commands + shell scripts), these are realized as:
+
+- **dispatch-task / inject-context**: `build-context.sh` assembles the payload; command documents instruct the agent to dispatch (subagent or sequential) based on `detect-capabilities.sh` output.
+- **await-completion / collect-result**: The agent runtime handles task execution and writes artifacts to disk. The orchestrator detects completion via file presence (task summary exists = done).
+- **signal-failure**: Verification scripts (`check-must-haves.sh`, `run-commands.sh`) detect failure by checking artifacts against must-haves. Failures are recorded in `execution-log.jsonl`.
+
+No formal `adapter-*.sh` scripts exist. The agent interpreting the markdown command IS the adapter. This satisfies FR-067-069's intent (no platform-specific branching in core logic) while being idiomatic for the extension architecture.
+
+---
+id: MEM019
+scope_tags: "[project], [milestone:M002]"
+category: conventions
+confidence: 0.95
+created_at: 2026-04-14
+last_verified: 2026-04-14
+hit_count: 605
+source_unit: "M002/P01"
+source_type: consolidation
+supersedes: ""
+superseded_by: ""
+relates_to: [MEM005, MEM020]
+content_hash: ""
+---
+
+# MEM019: Three-Temperature Knowledge Architecture
+
+- **Hot** (KNOWLEDGE-INDEX.md, always loaded): pipe-delimited index with 8 fields: id, scope_tags, category, confidence, created_at, last_verified, hit_count, description. Derived artifact — rebuildable from detail files via rebuild-index.sh.
+- **Warm** (knowledge/{category}/{entry-id}.md, loaded on scope-match): full detail files with YAML frontmatter and body content. Resolved by resolve-entries.sh from MEM IDs.
+- **Cold** (knowledge/archive/, never auto-injected): archived entries moved by archive-entry.sh. Excluded from index rebuild.
+
+---
+id: MEM020
+scope_tags: "[project], [milestone:M002]"
+category: conventions
+confidence: 0.95
+created_at: 2026-04-14
+last_verified: 2026-04-14
+hit_count: 605
+source_unit: "M002/P01"
+source_type: consolidation
+supersedes: ""
+superseded_by: ""
+relates_to: [MEM019]
+content_hash: ""
+---
+
+# MEM020: Dispatched Agents Must Write Summaries
+
+Dispatched agents must write `T##-SUMMARY.md` files using `write-summary.sh` — without the summary file, the auto-loop cannot advance to the next task. Include explicit write-summary.sh instructions in dispatch prompts.
+
+---
+id: MEM021
+scope_tags: "[project]"
+category: lessons
+confidence: 0.95
+created_at: 2026-04-14
+last_verified: 2026-04-14
+hit_count: 686
+source_unit: "M001/P01"
+source_type: consolidation
+supersedes: ""
+superseded_by: ""
+relates_to: [MEM022]
+content_hash: ""
+---
+
+# MEM021: PID 1 macOS kill -0 Behavior
+
+`kill -0 $pid` for PID 1 on macOS returns EPERM (exit 1) — same exit code as ESRCH (process not found). Fix: check stderr for "perm" — EPERM means alive (different user), ESRCH means dead.
+
+---
+id: MEM022
+scope_tags: "[project]"
+category: lessons
+confidence: 0.95
+created_at: 2026-04-14
+last_verified: 2026-04-14
+hit_count: 686
+source_unit: "M001/P01"
+source_type: consolidation
+supersedes: ""
+superseded_by: ""
+relates_to: [MEM021]
+content_hash: ""
+---
+
+# MEM022: Lock Manager PID Subshell Issue
+
+`$(bash lock-manager.sh create ...)` runs in a subshell whose PID dies before the status check. Fix: tests patch the lock file PID to a known-alive process (PID 1) after creation.
+
+---
+id: MEM023
+scope_tags: "[project], [milestone:[M004](../../../../../milestones/M004/index.md)]"
+category: lessons
+confidence: 0.95
+created_at: 2026-04-14
+last_verified: 2026-04-14
+hit_count: 605
+source_unit: "M004/P06"
+source_type: consolidation
+supersedes: ""
+superseded_by: ""
+relates_to: [MEM024, MEM025]
+content_hash: ""
+---
+
+# MEM023: Backtick-in-Plan-Artifacts Breaks Must-Have Checks
+
+`check-must-haves.sh` includes backtick characters literally when parsing Artifact and Key Links sections from phase plans. Paths in these sections must NOT be wrapped in markdown backticks or the artifact/key-link checks will fail with 'not found' errors pointing to paths like `` `path/to/file` `` instead of `path/to/file`. Truth Check: commands are unaffected because the parser strips the outer backticks from the fenced command.
+
+---
+id: MEM024
+scope_tags: "[project], [milestone:M004]"
+category: lessons
+confidence: 0.95
+created_at: 2026-04-14
+last_verified: 2026-04-14
+hit_count: 605
+source_unit: "M004/P06"
+source_type: consolidation
+supersedes: ""
+superseded_by: ""
+relates_to: [MEM023, MEM025]
+content_hash: ""
+---
+
+# MEM024: Lib Path Resolution in Task Plans
+
+Task plans for P06 specified `_LIB_DIR` as `../../lib` from `scripts/verify/`, `scripts/lifecycle/`, `scripts/telemetry/`, and `scripts/dispatch/`. The correct path from all of these directories to `scripts/lib/` is `../lib` (one level up, not two). All scripts under `scripts/*/` are one directory level below `scripts/`, so `../lib` always resolves correctly.
+
+---
+id: MEM025
+scope_tags: "[project], [milestone:M004]"
+category: lessons
+confidence: 0.95
+created_at: 2026-04-14
+last_verified: 2026-04-14
+hit_count: 605
+source_unit: "M004/P06"
+source_type: consolidation
+supersedes: ""
+superseded_by: ""
+relates_to: [MEM023, MEM024]
+content_hash: ""
+---
+
+# MEM025: Verification Script Grep Patterns
+
+Verification helper scripts that grep for library sourcing should use broad patterns (e.g. `errors\.sh`) not narrow literal patterns (e.g. `lib/errors\.sh`). Scripts may source libs via variable expansion (`$_LIB_DIR/errors.sh`) which does not match the literal path. The broader pattern still uniquely identifies the sourcing intent.
+
+---
+id: MEM026
+scope_tags: "[project], [milestone:[M025](../../../../../milestones/M025/index.md)]"
+category: lessons
+confidence: 0.95
+created_at: 2026-04-23
+last_verified: 2026-04-23
+hit_count: 260
+source_unit: "M025/P01"
+source_type: consolidation
+supersedes: ""
+superseded_by: ""
+relates_to: [MEM027]
+content_hash: ""
+---
+
+# MEM026: M013/P04/T04 hook-config regression
+
+## What regressed
+
+Commit `d33b8a7` (M013/P04/T04) shipped a `scripts/dispatch/adapters/runtime/claude-code.sh --hook-config` emitter whose root object carried wrapper metadata (`runtime`, `hook_count`, `target_file`) alongside orchestrator-internal event names (`before_tasks`, `after_tasks`, `before_implement`, `after_implement`, `before_commit`, `post_verify`) that Claude Code does not recognize. The companion installer `packaging/install/install-claude-code.sh` wrote that invalid document unconditionally to `$HOME/.claude/settings.json`, overwriting any sibling tool's configuration (notably GSD-authored `statusLine`, `SessionStart`, `PostToolUse`, and `permissions` keys) with no merge path and no reversibility.
+
+## Why P04 gates missed it
+
+Every P04 verification script — including `scripts/verify/m013-p04-post-verify-hook.sh` — ran against an empty `$HOME/.claude/` fixture. No gate seeded a pre-existing non-orchestrator `settings.json`, so the overwrite path was never exercised. The schema-validity failure was invisible because CC itself was not invoked against the emitted document in any P04 gate; the gates only asserted presence of the wrapper JSON's internal keys, not conformance to the CC `hooks` schema. The regression required a real user on a real multi-tool system to observe.
+
+## Lesson
+
+Every user-scope config write — `~/.claude/settings.json`, `~/.codex/*.toml`, `~/.cursor/*.json`, shell rc files, git hooks paths, and anything else jointly owned with sibling tools — requires a coexistence gate driven by a pre-seeded non-orchestrator fixture (pattern realized by M025 at `tests/fixtures/m025-p01/gsd-baseline/`). Empty-home fixtures are insufficient: they cannot surface overwrite damage or schema-shape issues that only manifest when the host tool actually parses the file. Pair the coexistence gate with (a) a round-trip reversibility gate (install → uninstall → sha256 byte-match) and (b) an idempotency gate (double-install → sha256 byte-match) to lock the invariant triad.
+
+---
+id: MEM027
+scope_tags: "[project], [milestone:M025]"
+category: patterns
+confidence: 0.90
+created_at: 2026-04-23
+last_verified: 2026-04-23
+hit_count: 260
+source_unit: "M025/P01"
+source_type: consolidation
+supersedes: ""
+superseded_by: ""
+relates_to: [MEM026]
+content_hash: ""
+---
+
+# MEM027: merge-not-overwrite user-scope config
+
+## Problem
+
+User-scope config files (`~/.claude/settings.json`, `~/.codex/*.toml`, `~/.cursor/*.json`, shell rc files, git `core.hooksPath`) are jointly owned by multiple tools — the host runtime itself, sibling workflow tools (GSD, spec-kit, orchestrator), user hand-edits, and corporate MDM policy. Any installer that writes these files with `printf > "$file"` or `cp` silently destroys sibling configurations and user edits. The regression surfaced at M013/P04/T04 (see MEM026) made this concrete: the orchestrator clobbered GSD's `statusLine`, `SessionStart`, and `PostToolUse` hooks with no warning and no rollback.
+
+## Pattern: merge-not-overwrite
+
+Every orchestrator user-scope config write obeys four rules:
+
+1. **Inline ownership tag.** Every orchestrator-inserted leaf object carries `"_orchestrator_managed": true`. No sidecar manifest — the tag travels with the data, so uninstall works even if the manifest is lost and copy-paste of config snippets between machines stays honest.
+2. **jq-optional merge with structural fallback.** Detect `jq` via `command -v jq`. Under jq, use `jq -S` for deterministic sorted-key output. Without jq, fall back to a `python3`-driven merge (or a bash-3.2-compatible awk script) that preserves every non-orchestrator key byte-identically at the structural level — semantic equivalence is the contract, not byte-identity across the jq/fallback boundary.
+3. **Temp-file-then-rename atomicity.** Write to `$target.tmp.$$`, fsync-equivalent via `mv -f`. Never write the target file in place; a half-written settings.json can lock a user out of their host runtime.
+4. **`--uninstall` strips only tagged entries, with cascade cleanup.** Remove only objects whose `_orchestrator_managed` is `true`; if that leaves a wrapper with an empty `hooks` array, remove the wrapper; if that leaves an event key with an empty array, remove the event key; if that leaves `hooks` empty, remove the `hooks` key. Every other key in the target is preserved byte-identically.
+
+## Gate shape
+
+The pattern is enforced by a three-gate triad — any user-scope config write without all three gates fails review:
+
+- **Coexistence fixture.** Pre-seed a representative non-orchestrator config shape (e.g. `tests/fixtures/m025-p01/gsd-baseline/settings.json`), run the installer, compare the result against a pinned `expected-post-install.json` via structural (not byte-identity) comparator.
+- **Round-trip reversibility.** Capture the pre-install sha256, run install then uninstall, capture the post-uninstall sha256, assert byte-identity against both the pre-install sum and a pinned `expected-post-uninstall.sha256`.
+- **Idempotency.** Run the installer twice in succession, assert the post-first-install and post-second-install sha256 match. No accretion of duplicate orchestrator entries.
+
+---
+id: MEM028
+scope_tags: "[project], [milestone:[M014](../../../../../milestones/M014/index.md)], [concern:bash-compat]"
+category: lessons
+confidence: 0.95
+created_at: 2026-04-23
+last_verified: 2026-04-23
+hit_count: 260
+source_unit: "M014/P01"
+source_type: dogfood
+supersedes: ""
+superseded_by: ""
+relates_to: []
+content_hash: ""
+---
+
+# MEM028: Bash arithmetic silently interprets zero-padded numerics as octal
+
+## What regressed
+
+`scripts/specify/specify.sh:336` computed the next spec number as `NEXT=$((HIGHEST + 1))` where `HIGHEST` was a zero-padded prefix parsed from existing directory names (`024-foo/` → `HIGHEST=024`). Bash arithmetic treats `024` as octal (= decimal 20), so `NEXT` became `21` and the next spec landed as `specs/021-<slug>/` rather than `025-<slug>/`. The bug is silent on octal-valid digits (0–7) and hard-errors (`value too great for base`) on `008`/`009`/`018`/`019`/etc.
+
+Historical damage: M025's spec landed at `specs/021-github-installer-coexistence/` instead of `specs/025-*` (bug pre-dated this fix; renaming deferred since all M025 artifacts reference the `021-` path consistently and the milestone is closed). A smoke-test fixture `specs/021-yn-test/` was also cleaned up as leaked state from a pre-hermetic verifier run.
+
+## Why the FR-18 shape test missed it
+
+`tests/test-specify-shape.sh` runs in a hermetic scratch whose `specs/` starts empty, so `HIGHEST=0` and `NEXT=1` — the zero-padded octal ambiguity never triggers. Shape tests asserted Section Contract conformance, not number-allocator correctness. The gap was: the allocator was exercised only in production where the bug finally surfaced on a real M014/P01 dogfood run.
+
+## Lesson
+
+In bash, never put a zero-padded external string directly into `$((...))`. Force base-10 with the `10#` prefix:
+
+```bash
+# Broken — octal interpretation
+NEXT=$((HIGHEST + 1))
+
+# Correct — explicit base-10
+NEXT=$((10#$HIGHEST + 1))
+```
+
+The `10#` prefix is portable across Bash 3.2+ and is the canonical idiom for parsing numerics that may carry leading zeros. Apply it to any arithmetic whose inputs come from (a) directory-name parsing, (b) `printf '%03d'` round-trips, (c) date-field components (`$(date +%H)` returns `08` at 8am), or (d) user-supplied strings.
+
+Regression coverage: `tests/test-specify-number-allocator.sh` pre-seeds a scratch `specs/` with `008/009/024` sentinels and asserts the expected `009/010/025` outputs. Any future allocator that consumes zero-padded input belongs in that test's fixture matrix.
+
+## Related
+
+- M014/P01 ships the allocator; the dogfood-first-use revealed the bug. The fix is a one-character change (the `10#` prefix) but the lesson generalizes to any bash script handling numeric directory names, ISO date fields, or versioned filenames.
+- This is a cousin of the Bash 3.2 discipline codified in CON-6 (anti-pattern lint) — both are "bash looks like it works, until input shape tripwires a latent feature."
+
+---
+id: MEM029
+scope_tags: "[project], [milestone:[M026](../../../../../milestones/M026/index.md)]"
+category: patterns
+confidence: 0.90
+created_at: 2026-04-24
+last_verified: 2026-04-24
+hit_count: 262
+source_unit: "M026/P02"
+source_type: consolidation
+supersedes: ""
+superseded_by: ""
+relates_to: [MEM018, MEM030]
+content_hash: ""
+---
+
+# MEM029: Edition-resolution two-tier detection (env-var primary, metadata-probe fallback)
+
+## Problem
+
+When an installed package has multiple distributable builds (OSS vs paid, dev vs prod, community vs enterprise) that share a single PyPI/npm/etc. package name and venv install path, path-based detection is infeasible — both editions install to the same canonical path under pip/pipx/npm. A consumer that needs to know which edition is currently active (for routing decisions, edition-aware diagnostics, or telemetry) cannot rely on the binary path alone.
+
+The M026 conversus migration surfaced this concretely: both `~/Sites/conversus-oss` (OSS) and `~/Sites/conversus` (paid) publish as the `conversus` PyPI package and install to `~/.local/pipx/venvs/conversus/`. A path-difference check at the `~/Sites/` level is fragile (operators may install via pipx-only with no source clone, or install via brew, or develop one tree and install the other) and fails entirely under the single-venv reality.
+
+## Pattern: two-tier detection
+
+1. **Primary signal — operator declaration via env var**. A `<TOOL>_EDITION=<value>` env var is the operator's declarative signal. The consumer trusts the declaration without further probing. This makes the active edition explicit, audit-trail-visible (env-var is logged with the dispatch), and portable across host-OS and install-method differences. Bad values (typos) emit a single-line stderr warning and fall through to tier 2 — never silently accept a bad declaration.
+
+2. **Fallback — runtime metadata probe**. When the env var is unset, query the package's installed metadata (`pip show <pkg>` for Python; `npm ls <pkg> --json` for Node; equivalent registry probes for other ecosystems). Parse a stable identifying field (`Home-page:` for Python pip; `repository.url` for Node) and key on a canonical substring (e.g., `*-oss` in the URL). The probe is read-only, side-effect-free, and runs under the consumer's existing subprocess discipline. On probe failure (subprocess fails, field absent, value unrecognized), emit `edition=unknown reason=metadata-probe-failed` rather than guessing.
+
+3. **Short-circuit cases**. Stub mode (test-only) is edition-agnostic by design — emit `edition=unknown reason=stub` without probing. Operator-supplied absolute overrides (e.g., `<TOOL>_HOME`) attempt the metadata probe at that location but fall through to `edition=unknown reason=home` if the probe fails — the operator already knows what they pointed at.
+
+## Output contract
+
+The consumer's edition resolver emits two structured stdout lines per resolution: `edition=<oss|paid|unknown>` and `reason=<env-override|metadata-probe|metadata-probe-failed|stub|home|command-v|fallback>`. Line ordering is the verifiable contract. Warnings (e.g., bad env-var value) go to stderr. The same stdout shape is consumed downstream by JSONL emitters (M026/P02/T02 pattern) and by edition-aware-diagnostic refusal blocks (M026/P03/T01 pattern).
+
+## Gate shape
+
+- **Edition-detection contract test** (e.g., `scripts/verify/m026-p02-edition-detection-contract.sh`): exercise every resolver branch (env-override, stub, metadata-probe, metadata-probe-failed) and assert the `edition=`/`reason=` line ordering and values.
+- **Stderr/stdout discipline** (cross-cuts MEM015 DOCTOR Structured Output Protocol): structured fields go to stdout in fixed line order; warnings go to stderr; never cross-contaminate.
+- **Bash 3.2 compatibility**: probe subprocess via plain `"$venv_py" -m pip show <pkg>` — no process substitution, no command-substitution-containing-pipes.
+
+## Reusable beyond M026
+
+- Distinguishing editions of any pip/pipx-installed Python tool that publishes under one package name across multiple build channels.
+- Distinguishing runtime modes of MCP servers where the binary is the same but the active configuration tier differs.
+- Distinguishing local development vs CI installations where path differs but the operator's declarative intent is the load-bearing signal.
+
+See: `scripts/dispatch/adapters/tool/conversus.sh` `_resolve_edition` for the canonical implementation; MEM030 for the paired env-var naming convention.
+
+---
+id: MEM030
+scope_tags: "[project], [milestone:M026]"
+category: conventions
+confidence: 0.90
+created_at: 2026-04-24
+last_verified: 2026-04-24
+hit_count: 262
+source_unit: "M026/P02"
+source_type: consolidation
+supersedes: ""
+superseded_by: ""
+relates_to: [MEM018, MEM029]
+content_hash: ""
+---
+
+# MEM030: `<TOOL>_EDITION=<value>` env-var convention for OSS-default escape hatches
+
+## Problem
+
+When an orchestrator integration flips its default from a paid build to an OSS build, the operator still needs a discoverable, undestructive way to reach the paid build for one-off invocations (debugging a paid-only feature, reproducing a paid-build regression, running a preset that depends on paid-only upstream plumbing). Three anti-patterns to avoid:
+
+1. **Path-only escape** — requiring the operator to set `<TOOL>_HOME=/explicit/path/to/paid/build` per invocation. Undiscoverable, easy to forget, and brittle across machines with different install paths.
+2. **Magic-value escape** — using a generic feature flag like `USE_PAID=1` or `LEGACY_MODE=1`. Doesn't express edition intent, doesn't compose with other build-channel distinctions, and is inconsistent across tools.
+3. **No escape** — routing all paid-only access through a separate command or wrapper. Forces the orchestrator to maintain two parallel invocation paths with the same surface, doubling test burden.
+
+## Convention: `<TOOL>_EDITION=<edition-name>`
+
+1. **Naming**: `<TOOL>_EDITION` (uppercase tool name + literal `_EDITION` suffix). Examples: `CONVERSUS_EDITION`, `<NEWTOOL>_EDITION`. Reads naturally in shell history, in JSONL telemetry, and in operator-facing error messages.
+
+2. **Values**: closed enum `oss|paid` (or analogous closed enum for non-OSS-vs-paid distinctions like `community|enterprise` or `free|pro`). Enforce the closed enum with a stderr warning on unrecognized values; fall through to the metadata probe (see MEM029) rather than silently accepting.
+
+3. **Precedence**: env-var declaration is **primary**. Metadata-probe fallback is secondary. Operator-supplied absolute overrides (`<TOOL>_HOME`) trump both — they're an explicit "use exactly this binary" instruction. Resolver order from highest to lowest precedence: STUB (test-only) → PATH (`command -v`) → `<TOOL>_HOME` → `<TOOL>_EDITION`-aware user-local probe.
+
+4. **Diagnostic surface**: the `check` subcommand of the integration's adapter MUST emit `edition=<value> reason=<resolution-tag>` on stdout so the resolved edition is visible to the operator and to telemetry without a separate probe call.
+
+5. **Telemetry shape**: every JSONL record emitted by the integration adapter MUST include an `edition` field alongside the existing identifying fields (e.g., `adapter_version`, `gate_id`). Place adjacent to the version field for readability and for adjacency-invariant tests (M026/P02/T02 pattern).
+
+6. **Refusal diagnostic**: when an upstream artifact (preset, config, manifest) declares `edition_required: <edition>` and the resolved edition does not match, the integration MUST refuse the invocation BEFORE any heavy work, with a stderr diagnostic naming both the requirement and the escape — `<TOOL>_EDITION=<required-edition>` (M026/P03 FR-11 pattern).
+
+## Why a convention
+
+The M026 migration is the first OSS-default escape-hatch landing in this repo. Future migrations (e.g., when M010 ships and the orchestrator starts integrating with multiple LLM-provider editions, or when M023 ships and design-renderer adapters need to distinguish freemium tier vs paid tier) will face the same shape. Naming it as a convention now means the next migration can copy the pattern verbatim instead of re-deliberating the env-var name in each milestone.
+
+## Gate shape
+
+- **Env-var-name lint** (advisory): a future `scripts/diagnostics/check-edition-conventions.sh` could grep adapter-tree env-var references and flag any non-`<TOOL>_EDITION`-shaped escape-hatch names.
+- **JSONL `edition` field presence**: every `*_invocation` record from an edition-aware adapter MUST contain an `edition` field. Verify with `scripts/verify/m026-p02-jsonl-edition-field.sh` (existing) — extend the pattern when adding a second edition-aware adapter.
+- **Refusal regex stability**: `paid-only.*<TOOL>_EDITION=paid` (case-insensitive) is the SC-7 contract for paid-only-on-OSS refusals; preserve verbatim across tools so operator runbooks transfer.
+
+See: `scripts/dispatch/adapters/tool/conversus.sh` for the canonical implementation; MEM029 for the paired two-tier-detection pattern.
+
+---
+id: MEM031
+scope_tags: "[project], [milestone:[M020](../../../../../milestones/M020/index.md)]"
+category: conventions
+confidence: 0.90
+created_at: 2026-04-25
+last_verified: 2026-04-25
+hit_count: 252
+source_unit: "M020/P01"
+source_type: schema-evolution
+supersedes: ""
+superseded_by: ""
+relates_to: [MEM013, MEM014]
+content_hash: ""
+---
+
+# MEM031: Knowledge entry `status:` field vocabulary (M020 schema evolution)
+
+## Convention
+
+Every `knowledge/**/MEM*.md` and `knowledge/spec/**` entry carries a
+`status:` frontmatter field with one of three values from a **closed enum**:
+
+| Value       | Meaning                                                                 |
+|-------------|-------------------------------------------------------------------------|
+| `candidate` | Tentative — written by a dispatch or operator, not yet reviewed.        |
+| `graduated` | Reviewed and accepted; visible to the default query surface (FR-2).     |
+| `archived`  | Reviewed and rejected, OR superseded by a graduated canonical entry.    |
+
+Closed-enum discipline: any value outside `candidate | graduated | archived`
+is a schema violation and MUST be rejected by the schema-lint gate landing
+in P02 (`scripts/verify/knowledge-schema-lint.sh`, FR-9 + SC-8). Adding a
+fourth state (e.g. `deprecated`) requires a follow-up M020 D-row that
+extends the enum and updates this note — see D024 reversibility clause (a).
+
+## Default semantics for pre-M020 entries
+
+Entries that exist on main without a `status:` field are treated as `graduated` on first read (most conservative — do not re-review what was
+already implicitly trusted). The field is written on next touch by
+`scripts/knowledge/lib/frontmatter.sh` per FR-10. **No bulk migration pass
+is performed in M020** (NG-3): the schema fills in lazily as entries are
+edited, archived, graduated, or otherwise mutated by knowledge tooling.
+
+## Companion fields
+
+Two paired fields land in the same schema evolution and are documented
+together for cohesion:
+
+- `decision_history:` — append-only YAML list of records. Each record is a
+  YAML map containing `rationale: <text>`, `timestamp: <ISO 8601 UTC>`,
+  `operator: <identifier>`, `cluster_id: <id-or-empty>`. Written by
+  `graduate.sh` (P03 cluster-aware path) and `archive` operations.
+  Append-only invariant: existing records are never edited or removed in
+  place. Compaction is deferred (NG-6); a future D-row will define
+  compaction rules if list length crosses the operability threshold (>50
+  records per entry per D024 reversibility clause (b)).
+- `archived_into: <entry-id>` — single canonical entry-ID back-reference
+  written when an entry is archived as a sibling of a graduated canonical
+  entry within a cluster. Empty / absent for outright-rejection archives
+  (the entry was not subsumed into another canonical record, just retired).
+
+## Authority
+
+M020 holds exclusive schema authority over these fields per FR-9. Consuming
+milestones ([M024](../../../../../milestones/M024/index.md) universal intake, [M019](../../../../../milestones/M019/index.md) Tier 2+3 observability) MAY READ
+the fields but MUST NOT introduce new fields without a follow-up M020 D-row.
+The handshake is: open an M020 D-row → M020 lands the schema change →
+consuming milestone uses the field. Never bypass this gate.
+
+## Authorising decision
+
+[`.orchestrator/DECISIONS.md`](../../../../../decisions.md) D024 (2026-04-25).
+
+## Verification
+
+- `scripts/verify/m020-p01-mem031-vocabulary.sh` checks the closed enum and
+  the pre-M020 default are documented verbatim.
+- `scripts/verify/m020-p01-d024-row.sh` checks the D024 row exists with the
+  load-bearing tokens.
+- `scripts/verify/knowledge-schema-lint.sh` (lands in P02 per FR-9 + SC-8)
+  enforces the schema-authority boundary at lint time.
+
+## Decisions
+
+No decision entries in scope.
+
+## Constraints
+
+- **Verification Criteria**: See phase plan must-haves
+- **Duration Budget**: 2h
+- **Dispatch Budget**: 3
+- **Budget Enforcement**: warn
+
+### Prohibited inline bash patterns
+
+The following patterns trigger Claude Code safety prompts and MUST NOT
+appear in Bash tool calls. See AP-004 in ANTIPATTERNS.md for details.
+
+- **Command substitution**: Do not use $(cmd) or backtick substitution.
+  Use --output-file flags or omit dynamic values (e.g., omit --completed_at).
+- **Brace expansion**: Do not use {a,b} patterns.
+  Pass explicit arguments instead.
+- **Compound chains**: Do not chain commands with && || ; or pipes.
+  Use wrapper scripts (e.g., bash scripts/verify/run-suite.sh).
+
+### Allowed invocation shapes
+
+When an inline bash shape would otherwise trigger a safety prompt, use one
+of these canonical wrappers instead:
+
+- `bash scripts/util/with-env.sh KEY=VALUE [KEY=VALUE ...] -- <command> [args ...]`
+  -- Replaces `KEY=VALUE bash cmd` inline-assignment prefixes.
+- `bash scripts/util/read-range.sh <file> <M> <N>`
+  -- Replaces `sed -n 'M,Np' <file>` line-range reads.
+- `bash scripts/util/run-probe.sh <path-to-staged-probe.sh>`
+  -- Replaces `cat > /tmp/x.sh <<EOF ... EOF ; bash /tmp/x.sh` heredoc-and-execute.
+
+A pre-Bash hook (`scripts/hooks/pre-bash-shape-guard.sh`) auto-rewrites six
+common deviations from these shapes and hard-rejects four others with a
+wrapper-pointing diagnostic. See ANTIPATTERNS.md AP-005..AP-009.
+
+### Branch Discipline
+
+You inherit the git branch the dispatcher is sitting on. Commit your work
+on that branch.
+
+- Do NOT `git checkout`, `git switch`, `git branch`, `git merge`, or
+  `git rebase` to a different branch unless your task plan explicitly
+  requires it.
+- Do NOT create a new branch as a side-effect of "isolating" your work
+  — git worktrees handle that at the dispatcher layer when configured.
+- If you genuinely believe a side-branch is required (e.g. the task plan
+  calls for a hotfix branch), STOP and report rather than acting
+  unilaterally. The dispatcher will tell you whether to proceed.
+
+This rule exists because branch switches inside a dispatched task are
+invisible to the dispatcher audit trail and have caused mid-loop
+confusion (commits landing on a branch the operator did not expect,
+then being merged opaquely).
+
+## Scope
+
+### Goal
+
+
+### Demo
+
+
+### Must-Haves
+## Must-Haves
+
+<!-- All Check commands use single-script-file shape per AD-19.
+     Project-owned per-phase verifiers live under tools/verify/ with
+     slug-bearing filenames (p07-*) so install-clobber risk is contained
+     ([M032](../../../../../milestones/M032/index.md) Finding A discipline).
+
+     P07 is the M030 milestone-close gate. Four tasks total:
+       T01 — acceptance-corpus synthesizer + 4 corpus fixtures (50/class
+             + zero + 2-class-only + block) + per-verdict gates.
+       T02 — run-acceptance-battery.sh end-to-end SC runner + 14 SC
+             delegators (mostly wrapping existing P0N verifiers) + the
+             new at-scale gates + cross-surface coherence gate.
+       T03 — M030-ACCEPTANCE-EVIDENCE.md ledger + evidence-ledger shape
+             gate + p07-phase-suite.sh aggregator.
+       T04 — milestone close ceremony (P07-SUMMARY.md + phase-grain
+             unit_close + mark-complete.sh + M030-SUMMARY.md +
+             milestone-grain unit_close + recent-changes dual-write +
+             close commit + final validate-milestone.sh clean pass).
+
+<dispatch-volatile>
+
+## Upstream Context
+
+
+### P02 Summary
+---
+schema_version: "1.0"
+type: phase-summary
+id: "P02"
+parent: "M030"
+milestone: "M030"
+provides:
+  - "tests/fixtures/m030-p02/pre-m030-dispatch-usage.jsonl,tests/fixtures/m030-p02/round-trip-stage/,tools/verify/p02-fixture-shape.sh,tools/verify/p02-additive-schema.sh,dispatch-interface.sh shadow hook (M030_SHADOW_MODE+CLAUDECODE gated classifier+routing-table emit),4 additive JSONL fields (model_routed,model_used,partial_flip_active,withheld_classes),tools/verify/p02-shadow-emit.sh,tools/verify/p02-con3-closure.sh,tools/verify/p02-append-only.sh,scripts/diagnostics/shadow-compare.sh (4-verdict aggregator),tools/verify/p02-shadow-compare-verdicts.sh,tools/verify/p02-partial-flip-enum.sh,tools/verify/p02-stability-metric-traceability.sh,tools/verify/p02-sc3a-roundtrip.sh,5 shadow-corpus JSONL fixtures,classifier_confidence additive field on dispatch-interface.sh shadow-on emit,tools/verify/p02-phase-suite.sh straight-line aggregator over 9 P02 sub-gates; CLAUDE.md+AGENTS.md recent-changes P02-close fragment"
+requires:
+  - "P01"
+affects:
+  - "P03,P04,P05,P06,P07"
+key_files:
+  - "tests/fixtures/m030-p02/pre-m030-dispatch-usage.jsonl,tests/fixtures/m030-p02/round-trip-stage/phases/P01/tasks/M001-T01-stage-PLAN.md,tests/fixtures/m030-p02/round-trip-stage/phases/P01/tasks/T01-stage-PAYLOAD.md,tests/fixtures/m030-p02/round-trip-stage/intensity-metadata.txt,tools/verify/p02-fixture-shape.sh,tools/verify/p02-additive-schema.sh,scripts/dispatch/dispatch-interface.sh,tools/verify/p02-shadow-emit.sh,tools/verify/p02-con3-closure.sh,tools/verify/p02-append-only.sh,scripts/diagnostics/shadow-compare.sh,tools/verify/p02-shadow-compare-verdicts.sh,tools/verify/p02-partial-flip-enum.sh,tools/verify/p02-stability-metric-traceability.sh,tools/verify/p02-sc3a-roundtrip.sh,tests/fixtures/m030-p02/shadow-corpus-ready.jsonl,tests/fixtures/m030-p02/shadow-corpus-partially-ready.jsonl,tests/fixtures/m030-p02/shadow-corpus-evidence-insufficient.jsonl,tests/fixtures/m030-p02/shadow-corpus-block.jsonl,tests/fixtures/m030-p02/sc3a-roundtrip-corpus.jsonl,tools/verify/p02-phase-suite.sh,CLAUDE.md,AGENTS.md,[.orchestrator/milestones/M030/phases/P02/P02-PLAN.md](../../../../../milestones/M030/phases/P02/P02-PLAN.md)"
+key_decisions:
+  - "SC-11 byte-equality verifier authored before T02 amends dispatch-interface.sh (graduation-verifier pattern reused from P01/T01); pricing-warning + adapter-failed shapes covered via fixture-presence grep only -- full round-trip would require stale-pricing-rate or crashing-adapter setup,both out-of-scope for byte-equality gate; payload sized to exactly 4096B so chars_to_tokens_quartile=1024 deterministically matches fixture record 1; round-trip plan basename includes M001 token so MILESTONE_ID regex extraction succeeds without restructuring tests/fixtures/ tree,dual-printf-branch-per-emit-side preserves SC-11 byte-equality mechanically;awk-section-walker (P01 pattern) extracts routing+resolution at dispatch time;CC-only short-circuit gated by CLAUDECODE=1 AND M030_SHADOW_MODE=1;partial_flip_active=false / withheld_classes=empty as P03/P04 schema reservation,D-A1-4-verdict-closed-enum;D-A3-partial-flip-safety-smart-default-only;D-A7-SC-3a-write-path-correctness;classifier_confidence-field-end-to-end-in-P02-not-deferred-to-P03,phase-suite-shape-mirrors-p01-straight-line-AD-19-no-loops; plan-side-grep-amendments-tier-symbols-not-character-labels-CON-3; plan-side-key-link-direction-corrections-dispatch-interface-references-upstreams"
+patterns_established:
+  - "round-trip-byte-equality fixture pattern: committed payload+plan+intensity-metadata stage with deterministic byte length; ORCHESTRATOR_ROOT carve-out routes log to staged dir; timestamp-normalization sed before diff yields full byte-equality minus the dynamic field; tools/verify/p02-* slug-bearing filenames per project-owned-verifier-paths discipline; AD-19 single-script-file shape preserved with parallel grep-q + rc captures (no compound chains),dual-format-string emit branches (shadow-on adds 4 trailing fields; shadow-off byte-identical to pre-amendment);CON-3 closure verifier compares HEAD-vs-working-tree per-pattern grep counts (no new provider model-ID literals);append-only verifier asserts inode + first-N-lines + line-count delta = +1,awk-section-walker-extended-to-tier-to-class-inverse-map;tmp-file-staging-for-routing-map-to-bypass-macos-awk-multiline-v-limit;SSOT-numeric-traceability-via-awk-line-content-predicate-not-grep-line-number-prefix;per-record-loop-unrolled-into-explicit-blocks-AD-19;classifier-confidence-end-to-end-from-classifier-emit-to-shadow-record-to-variance-aggregator,phase-suite-aggregator-extends-from-7-to-9-gates-without-shape-change; plan-amendment-pattern-when-must-haves-grep-fails-but-phase-suite-green"
+drill_down_paths:
+  - "[.orchestrator/milestones/M030/phases/P02/tasks/T01-SUMMARY.md](../../../../../milestones/M030/phases/P02/tasks/T01-SUMMARY.md), [.orchestrator/milestones/M030/phases/P02/tasks/T02-dispatch-shadow-hook-SUMMARY.md](../../../../../milestones/M030/phases/P02/tasks/T02-dispatch-shadow-hook-SUMMARY.md), [.orchestrator/milestones/M030/phases/P02/tasks/T03-shadow-compare-SUMMARY.md](../../../../../milestones/M030/phases/P02/tasks/T03-shadow-compare-SUMMARY.md), [.orchestrator/milestones/M030/phases/P02/tasks/T04-phase-suite-and-close-SUMMARY.md](../../../../../milestones/M030/phases/P02/tasks/T04-phase-suite-and-close-SUMMARY.md)"
+duration: "245m"
+verification_result: "pass"
+completed_at: "2026-04-30T14:35:53Z"
+observability_surfaces:
+  - "none"
+---
+
+## P02: Shadow-Mode Telemetry + Routing Verifier Suite
+
+P02 builds the shadow-mode emit path on top of P01's classifier and routing table, then closes with a 9-gate phase-suite verifier that locks every property into a single mechanical aggregator.
+
+### What was built
+
+**T01 — pre-M030 dispatch_usage fixture + additive-schema gate (preflight, shipped pre-P02 in commit `91a743e`).** Hand-authored 5-record JSONL at `tests/fixtures/m030-p02/pre-m030-dispatch-usage.jsonl` covering happy-path / pricing-warning / adapter-failed / cost-null / latest-baseline shapes. SC-11 byte-equality verifier `tools/verify/p02-additive-schema.sh` round-trips the fixture's first record through `dispatch-interface.sh` under `M030_SHADOW_MODE=0`, normalizes the dynamic timestamp, and asserts byte-identity. Round-trip stage at `tests/fixtures/m030-p02/round-trip-stage/` provides a deterministic 4096B payload + intensity-metadata fixture so `chars_to_tokens_quartile=1024` matches mechanically. Authoring the verifier *before* T02 amended the emitter is the graduation-verifier pattern reused from P01/T01.
+
+**T02 — dispatch-interface shadow hook + 4-field schema (commit `6d23af5`).** Amended `scripts/dispatch/dispatch-interface.sh` with a CC-only shadow path gated on `M030_SHADOW_MODE=1 && CLAUDECODE=1`. The hook calls `scripts/dispatch/classify-task.sh`, walks `templates/model-routing.yml`'s `routing:` + `resolution:` blocks via an awk section-walker (extending the P01 pattern), and emits four additive fields: `model_routed` (symbolic routing-table choice), `model_used` (runtime default in shadow mode), `partial_flip_active=false`, `withheld_classes=` (both reserved for P03/P04). Dual format-string branches preserve SC-11 byte-equality: shadow-off emits the pre-amendment line literal-for-literal; shadow-on appends the four fields. Zero new provider model-ID literals introduced — every concrete model identifier resolves through `templates/model-routing.yml`. Closes CON-3 mechanically.
+
+**T03 — shadow-compare 4-verdict aggregator + classifier-confidence end-to-end (commit `3936738`).** New `scripts/diagnostics/shadow-compare.sh` consumes shadow JSONL corpora and emits exactly one `flip_recommendation=` line drawn from the closed enum `{ready, partially_ready, block, evidence_insufficient}` (D-A1). Partial-flip safety: only classes whose routing-table default is `smart` may be enumerated in `withheld_classes` (D-A3). Pinned stability-metric numerics (variance ≤ 0.10, N=20, per-class coverage 50) traceable to `references/model-routing.md` SSOT via inline reference comments — verified by per-line content predicate (not `grep -n` line-number-prefix, which produces false-positive substring matches). T03 also amended `dispatch-interface.sh` to emit `classifier_confidence` end-to-end so the variance-stability check is genuinely usable in P02 rather than deferred to P03 (D-A7 / SC-3a write-path correctness).
+
+**T04 — phase-suite aggregator + close prep (commit `55ebeea`).** `tools/verify/p02-phase-suite.sh` invokes all nine sub-gates in literal sequence (`set -uo pipefail`, no loops, `$?` capture per sub-gate, single `SUMMARY:` line) — same straight-line shape as `p01-phase-suite.sh`. CLAUDE.md + AGENTS.md recent-changes fragment via `dual-write-runtime-md.sh --append-entry`. Plan-side amendments to `P02-PLAN.md` resolved 4 `check-must-haves.sh` gaps that were artifact-grep / key-link-direction errors, not task re-opens (per Step-7 plan rule).
+
+### Verification
+
+- `tools/verify/p02-phase-suite.sh` → pass=9 fail=0 (fixture-shape 23/0, additive-schema 6/0, shadow-emit 17/0, con3-closure 7/0, append-only 4/0, shadow-compare-verdicts 4/0, partial-flip-enum 6/0, stability-metric-traceability 3/0, sc3a-roundtrip 6/0)
+- `scripts/verify/check-must-haves.sh` → 10 truths + 49 artifacts + 9 key-links all PASS
+- `P02-VERIFICATION.md` → overall_result=pass (Tier 1 pass=69/69; Tier 2/3/4 skip)
+
+### Key decisions
+
+- **D-A1 closed-enum 4-verdict**: `flip_recommendation` ∈ `{ready, partially_ready, block, evidence_insufficient}` — no string-interpolation, no open enumeration.
+- **D-A3 partial-flip safety**: only `smart`-defaulted classes may be enumerated in `withheld_classes` — fast / balanced classes either flip wholesale or block.
+- **D-A7 / SC-3a**: re-classifying the plan path of any shadow record's `unitId` MUST agree with the recorded `model_routed` — verified end-to-end via `tools/verify/p02-sc3a-roundtrip.sh` over a 6-record fixture (2 fast / 2 balanced / 2 smart).
+- **Classifier-confidence in P02, not P03**: the variance-stability metric requires per-record confidence; emitting it end-to-end now means P03 can land its variance aggregator without re-amending the emitter.
+- **Phase-suite shape mirrors P01**: straight-line, no loops, AD-19-clean.
+
+### Patterns established
+
+- Dual-format-string emit branches preserve byte-equality across additive schema changes — the shadow-off branch is byte-identical to pre-amendment; shadow-on appends fields after the existing set.
+- CON-3 closure verifier compares HEAD vs working-tree per-pattern grep counts so the closure constraint can be re-checked on every commit cycle without snapshot drift.
+- Append-only JSONL verification via inode preservation + first-N-lines bit-identity + line-count delta = +1.
+- AD-19 single-script-file shape preserved through parallel `grep -q` + return-code captures rather than compound `&&`/`||` chains; per-record corpora unrolled into explicit blocks rather than `for` loops.
+- Plan-amendment-not-task-reopen pattern when phase-suite is green but `check-must-haves.sh` fails on artifact-grep or key-link-direction.
+
+### Provides downstream
+
+- `dispatch-interface.sh` shadow path + 5 emitted fields → P03 shadow-compare aggregator over real auto-loop telemetry corpus
+- `shadow-compare.sh` → P04 partial-flip activation gate
+- 9 P02 verifiers + classifier_confidence emit → P03/P04/P05/P06/P07 reuse without re-amendment
+
+### Phase metrics
+
+- 4 tasks (T01 preflight + T02 + T03 + T04)
+- Duration: ~245m total dispatch + verify + close
+- Phase verification: pass (Tier 1 69/69)
+- 0 task re-opens (T04 plan-side-amendment pattern resolved must-have gaps cleanly)
+
+
+### P03 Summary
+---
+schema_version: "1.0"
+type: phase-summary
+id: "P03"
+parent: "M030"
+milestone: "M030"
+provides:
+  - "tests/fixtures/m030-p03/plans/ (3 fixture plans),tests/fixtures/m030-p03/configs/ (4 fixture configs),tests/fixtures/m030-p03/round-trip-stage/ (intensity-metadata.txt + payload.txt),tools/verify/p03-additive-schema.sh (P02 SC-11 pass-through),tools/verify/p03-override-source-enum.sh (5-scenario closed-enum gate pre-amendment-tolerant),dispatch-interface.sh override-resolution path (kill-switch->plan-frontmatter->milestone-floor->none precedence chain),_di_tier_rank helper,2 shadow-on printf format-string extensions adding override_source field,4 new T02 verifiers (p03-sc7-kill-switch.sh p03-sc7a-compound.sh p03-min-tier-floor.sh p03-con3-closure.sh),tools/verify/p03-sc6-frontmatter-override.sh (SC-6 gate FR-11),tools/verify/p03-override-conflict.sh (FR-14 floor-wins gate),references/model-routing.md ## Operator Overrides section + 2 ## See Also bullets,tools/verify/p03-phase-suite.sh straight-line aggregator over 8 P03 sub-gates; CLAUDE.md+AGENTS.md recent-changes P03-close fragment; P03 close commit d70386d"
+requires:
+  - "P02"
+affects:
+  - "P04,P07"
+key_files:
+  - "tests/fixtures/m030-p03/plans/plan-with-frontmatter-override.md,tests/fixtures/m030-p03/plans/plan-mechanical-no-override.md,tests/fixtures/m030-p03/plans/plan-frontmatter-fast-vs-floor.md,tests/fixtures/m030-p03/configs/config-baseline.yml,tests/fixtures/m030-p03/configs/config-with-routing-disabled.yml,tests/fixtures/m030-p03/configs/config-with-min-tier-smart.yml,tests/fixtures/m030-p03/configs/config-with-killswitch-and-floor.yml,tests/fixtures/m030-p03/round-trip-stage/intensity-metadata.txt,tests/fixtures/m030-p03/round-trip-stage/payload.txt,tools/verify/p03-additive-schema.sh,tools/verify/p03-override-source-enum.sh,scripts/dispatch/dispatch-interface.sh,tools/verify/p03-sc7-kill-switch.sh,tools/verify/p03-sc7a-compound.sh,tools/verify/p03-min-tier-floor.sh,tools/verify/p03-con3-closure.sh,tools/verify/p03-sc6-frontmatter-override.sh,tools/verify/p03-override-conflict.sh,references/model-routing.md,tools/verify/p03-phase-suite.sh,CLAUDE.md,AGENTS.md,[.orchestrator/milestones/M030/phases/P03/P03-PLAN.md](../../../../../milestones/M030/phases/P03/P03-PLAN.md),[.orchestrator/milestones/M030/phases/P03/tasks/T01-fixtures-and-enum-gate-PLAN.md](../../../../../milestones/M030/phases/P03/tasks/T01-fixtures-and-enum-gate-PLAN.md),[.orchestrator/milestones/M030/phases/P03/tasks/T02-override-resolution-PLAN.md](../../../../../milestones/M030/phases/P03/tasks/T02-override-resolution-PLAN.md),[.orchestrator/milestones/M030/phases/P03/tasks/T03-sc6-and-conflict-PLAN.md](../../../../../milestones/M030/phases/P03/tasks/T03-sc6-and-conflict-PLAN.md),[.orchestrator/milestones/M030/phases/P03/tasks/T04-phase-suite-and-close-PLAN.md](../../../../../milestones/M030/phases/P03/tasks/T04-phase-suite-and-close-PLAN.md)"
+key_decisions:
+  - "pre-amendment-tolerant enum check (zero tokens PASS pre-T02; exactly one with enum-valid value PASS post-T02; non-enum or count!=1 FAIL) reuses graduation-verifier pattern from P02/T01; tmp_root staging strategy uses ORCH_ROOT/phases/ carve-out so log routes to <tmp_root>/execution-log.jsonl regardless of fixture-plan path lacking uppercase M### tokens; kill switch placed at config top-level (model_routing_enabled: false) per FR-13 framing; min_tier nested under model_routing per FR-12 (one knob among several); compound config (kill-switch+floor) ships as SC-7a fixture; per-scenario tmp_root + cleanup avoids collisions across parallel runs; tmp-file intermediates throughout (no cmd-pipe-grep-pipe-head chains) per AP-009; expected-value parameter in _check_enum_tolerant tightens post-T02 assertion without breaking pre-amendment-tolerance,config-resolution-three-candidate-paths-ORCH_ROOT-config-yml-then-ORCH_ROOT-dot-orchestrator-config-yml-then-ORCH_ROOT-parent-config-yml,shadow_used-equals-model-runtime-default-channel-under-disabled-recommended-populate-explicitly-shape,floor-wins-conflict-uses-numeric-tier-rank-comparison-with-minus-one-unknown-guard,override-resolution-block-runs-before-routing-extraction-three-mutually-exclusive-post-block-awk-paths,references-doc-Operator-Overrides-section-lands-in-P03-not-P05-to-close-operator-visibility-loop-the-moment-T02-emitter-ships,CON-3-enforced-via-runtime-awk-extraction-of-resolution-smart-claude-code-from-templates-model-routing-yml-not-hardcoded-literal,no-dispatch-interface-change-FR-14-warning-already-authored-in-T02-T03-only-ships-the-gate-verifier-and-the-references-doc-edit,references-doc-is-SSOT-for-warning-string-shape-future-amendments-must-re-align-dispatch-interface,phase-suite-shape-mirrors-p02-straight-line-AD-19-no-loops; sub-gate-ordering-fundamental-contract-first-then-enum-then-con3-then-scenarios-then-fr14-conflict-last; no-plan-side-amendments-needed-check-must-haves-clean-first-try; dual-write-helper-requires-marker-flag-payload-example-was-shorthand"
+patterns_established:
+  - "pre-amendment-tolerant verifier pattern: zero-tokens-PASS branch + exactly-one-with-enum-valid-value-PASS branch; SAME verifier file flips from tolerant to strict as the deliverable that satisfies it lands; ORCH_ROOT/phases carve-out exploited for fixture log-routing without restructuring tests/fixtures/ to encode uppercase M###; per-scenario tmp_root+cleanup with mktemp -d fallback; 5-scenario closed-enum coverage shape (4 shadow-on overlay-product + 1 shadow-off most-overlay-rich strict-zero); pass-through wrapper pattern (p03-additive-schema.sh delegates to p02-additive-schema.sh) for phase-suite friendliness without duplicating round-trip logic,override-resolution-before-routing-extraction-shape,stderr-warning-emission-inside-emitter-body-with-two-distinct-warning-shapes,per-pattern-HEAD-vs-WT-grep-count-comparison-mirrors-P02-CON3-closure-shape,round-trip-verifier-shape-reused-from-T01-tmp_root-with-dot-orchestrator-config-yml-and-phases-subdir,runtime-extraction-of-expected-literal-from-SSOT-via-awk-section-walker-mirrors-P02-T03-stability-metric-pattern,stderr-capture-via-2-redirect-then-per-pattern-grep-line-count-assertions-AP-009-compliant,operator-facing-precedence-chain-documentation-co-locates-with-gate-verifier-ship-date,phase-suite-aggregator-extends-from-9-gates-P02-to-8-gates-P03-without-shape-change; plan-prediction-quality-improved-after-P02-T04-amendment-cycle-no-amendments-needed-in-P03; payload-quoted-helper-invocations-may-be-shorthand-verify-against-helper-help-text"
+drill_down_paths:
+  - "[.orchestrator/milestones/M030/phases/P03/tasks/T01-fixtures-and-enum-gate-SUMMARY.md](../../../../../milestones/M030/phases/P03/tasks/T01-fixtures-and-enum-gate-SUMMARY.md), [.orchestrator/milestones/M030/phases/P03/tasks/T02-override-resolution-SUMMARY.md](../../../../../milestones/M030/phases/P03/tasks/T02-override-resolution-SUMMARY.md), [.orchestrator/milestones/M030/phases/P03/tasks/T03-sc6-and-conflict-SUMMARY.md](../../../../../milestones/M030/phases/P03/tasks/T03-sc6-and-conflict-SUMMARY.md), [.orchestrator/milestones/M030/phases/P03/tasks/T04-phase-suite-and-close-SUMMARY.md](../../../../../milestones/M030/phases/P03/tasks/T04-phase-suite-and-close-SUMMARY.md)"
+duration: "238m"
+verification_result: "pass"
+completed_at: "2026-04-30T15:24:30Z"
+observability_surfaces:
+  - "none"
+---
+
+## P03: Operator Overrides — Kill-Switch + Frontmatter + Floor
+
+P03 lands the operator-override surface on top of P02's shadow-mode telemetry: a CC-only override-resolution path inside `dispatch-interface.sh`, an extended `override_source` enum emitted in shadow records, and an `## Operator Overrides` section in `references/model-routing.md` that documents the precedence chain end-to-end.
+
+### What was built
+
+**T01 — fixture plans + overlay configs + override-source-enum gate (commit `7b285a2`).** Three fixture task plans (`plan-with-frontmatter-override.md`, `plan-mechanical-no-override.md`, `plan-frontmatter-fast-vs-floor.md`) drive the SC-6/SC-7/FR-14 scenarios. Four overlay configs (baseline / routing-disabled / min-tier-smart / killswitch-and-floor) provide overlay products. `tools/verify/p03-override-source-enum.sh` is the pre-amendment-tolerant gate (zero-tokens-PASS pre-T02, exactly-one-with-enum-valid-value-PASS post-T02). Round-trip stage (`tests/fixtures/m030-p03/round-trip-stage/`) provides a 466B payload + intensity-metadata. ORCH_ROOT-with-phases carve-out exploited so log routes to `<tmp_root>/execution-log.jsonl` regardless of fixture-plan path lacking uppercase `M###` tokens — established the tmp-root staging pattern reused by all T02/T03 verifiers.
+
+**T02 — override-resolution path + 4 verifiers (commit `4e3d678`).** Amended `scripts/dispatch/dispatch-interface.sh` with the `_di_tier_rank` helper and an override-resolution block (kill-switch → plan-frontmatter → milestone-floor → none) that runs *before* routing-extraction. Two shadow-on printf format-string extensions added the `override_source` field. Four verifiers shipped: `p03-sc7-kill-switch.sh` (config kill-switch wins), `p03-sc7a-compound.sh` (kill-switch + frontmatter compound: kill-switch wins), `p03-min-tier-floor.sh` (`min_tier=smart` floors lower-tier classes), `p03-con3-closure.sh` (zero new provider model-ID literals introduced — closure preserved at runtime via `templates/model-routing.yml` resolution). Config-resolution chain extended to three candidate paths (`$ORCH_ROOT/config.yml` → `$ORCH_ROOT/.orchestrator/config.yml` → `$ORCH_ROOT/../config.yml`).
+
+**T03 — SC-6 + FR-14 + operator-overrides docs (commit `d4646e7`).** `tools/verify/p03-sc6-frontmatter-override.sh` exercises the SC-6 happy-path (frontmatter `model_override` resolves to `templates/model-routing.yml resolution.smart.claude-code` via runtime awk extraction — no hardcoded literals, CON-3-clean). `tools/verify/p03-override-conflict.sh` exercises FR-14 (frontmatter+floor conflict → floor wins, stderr warning shape pinned to "floor wins"). `references/model-routing.md` gains the `## Operator Overrides` section between Stability Metric and See Also: precedence chain table, compound-warning cases, full 5-value `override_source` closed enum (`none` / `disabled` / `plan_frontmatter` / `milestone_floor` / `shadow_gate_blocked`, with `shadow_gate_blocked` reserved for FR-9 / P05). Zero changes to `dispatch-interface.sh` — the FR-14 warning was already authored in T02; T03 ships the gate verifier and the doc.
+
+**T04 — phase-suite aggregator + close (commit `d70386d`).** `tools/verify/p03-phase-suite.sh` invokes all 8 sub-gates in literal sequence (same straight-line shape as `p02-phase-suite.sh`, AD-19-clean, bash 3.2 compatible). CLAUDE.md + AGENTS.md recent-changes fragment via `dual-write-runtime-md.sh --marker recent-changes --append-entry "..."`. `check-must-haves.sh` returned 67 PASS / 0 FAIL on first try — zero plan-side amendments needed (P03 plan predicates were authored cleaner than P02's).
+
+### Verification
+
+- `tools/verify/p03-phase-suite.sh` → pass=8 fail=0 (additive-schema 1/0, override-source-enum 6/0, con3-closure 7/0, sc6-frontmatter-override 4/0, sc7-kill-switch 2/0, sc7a-compound 3/0, min-tier-floor 3/0, override-conflict 5/0)
+- `scripts/verify/check-must-haves.sh` → 67 PASS / 0 FAIL (truths + artifacts + key-links)
+- `P03-VERIFICATION.md` → overall_result=pass (Tier 1 67/67; Tier 2/3/4 skip)
+
+### Key decisions
+
+- **Pre-amendment-tolerant verifier pattern** carried forward from P02/T01: same verifier file flips from tolerant to strict as the deliverable that satisfies it lands.
+- **Override-resolution runs *before* routing-extraction**, with three mutually-exclusive post-block awk paths (frontmatter / floor / none).
+- **Floor-wins conflict resolution** uses numeric tier-rank comparison via `_di_tier_rank` with a `-1` unknown-guard.
+- **5-value `override_source` enum** closed at P03 close: `none` / `disabled` / `plan_frontmatter` / `milestone_floor` / `shadow_gate_blocked`. The fifth (`shadow_gate_blocked`) is reserved for FR-9 in P05; documenting it now locks the schema so P05 lands without surprise.
+- **CON-3 enforced via runtime awk extraction** of `resolution.smart.claude-code` from `templates/model-routing.yml` — no hardcoded literals in either dispatch-interface.sh or the verifiers.
+- **References doc is SSOT** for the FR-14 warning string shape; future amendments to `dispatch-interface.sh` must re-align with the doc.
+- **Phase-suite shape mirrors P02** straight-line AD-19 (no loops); sub-gate ordering: fundamental contract first, then enum, then CON-3, then scenarios, then FR-14 conflict last.
+- **No plan-side amendments needed** — first-try `check-must-haves.sh` clean. The P02/T04 plan-amendment-not-task-reopen pattern was not exercised; planner-template improvements after P02 paid off.
+
+### Patterns established
+
+- Override-resolution before routing-extraction with three mutually-exclusive awk post-block paths.
+- Stderr-warning emission inside the emitter body with two distinct warning shapes (kill-switch active / floor wins).
+- Per-pattern HEAD-vs-working-tree grep count comparison mirrors P02 CON-3 closure shape.
+- Round-trip verifier shape reused from T01 (tmp_root + `.orchestrator/config.yml` + `phases/` carve-out).
+- Runtime extraction of expected literals from SSOT via awk section-walker mirrors P02/T03 stability-metric pattern.
+- Stderr-capture via `2>` redirect + per-pattern grep line-count assertions, AP-009-compliant.
+- Pass-through wrapper pattern (`p03-additive-schema.sh` delegates to `p02-additive-schema.sh`) keeps the phase-suite friendly without duplicating round-trip logic.
+- Operator-facing precedence-chain docs co-locate with gate-verifier ship date, closing the operator-visibility loop the moment the emitter ships.
+
+### Provides downstream
+
+- `dispatch-interface.sh` override-resolution path → P04 partial-flip activation (consumes `override_source` enum)
+- `references/model-routing.md ## Operator Overrides` section → P07 distribution (operator-readable doc surface)
+- 9 P03 verifiers + extended schema → P04 reuse without re-amendment
+
+### Phase metrics
+
+- 4 tasks (T01 → T02 → T03 → T04, strict linear chain)
+- Duration: ~238m total dispatch + verify + close
+- Phase verification: pass (Tier 1 67/67)
+- 0 task re-opens, 0 plan-side amendments
+- 4 atomic commits: 7b285a2 (T01) → 4e3d678 (T02) → d4646e7 (T03) → d70386d (T04)
+
+
+### P04 Summary
+---
+schema_version: "1.0"
+type: phase-summary
+id: "P04"
+parent: "M030"
+milestone: "M030"
+provides:
+  - "tests/fixtures/m030-p04/plans/ (5 fixture plans),tests/fixtures/m030-p04/configs/ (3 fixture configs),tests/fixtures/m030-p04/round-trip-stage/ (intensity-metadata.txt + payload.txt),tests/fixtures/m030-p04/shadow-corpus-ready.jsonl,tests/fixtures/m030-p04/shadow-corpus-partially-ready.jsonl,tests/fixtures/m030-p04/shadow-corpus-empty.jsonl,tests/fixtures/m030-p04/synthesize-corpora.sh,scripts/dispatch/adapters/backend/stub-fail-n.sh (programmable fail-counter adapter),scripts/dispatch/adapters/backend/stub-record-model.sh (model-flag-recorder adapter),tools/verify/p04-additive-schema.sh (P02 SC-11 pass-through),tools/verify/p04-override-source-enum-extended.sh (6-scenario closed-enum gate pre-amendment-tolerant),scripts/dispatch/dispatch-interface.sh _di_resolve_live_routing helper extracted top-level (idempotent via _DI_RESOLVED),live-routing branch with shadow-compare programmatic flip-gate (FR-9 / D-A2),per-class partial-flip authorization branching (D-A3),conditional --model <id> adapter passing via dual-invocation if/else,kill-switch live: true is inactive stderr warning (CON-4 compound),top-level shadow-gate-blocked dispatcher branch + exit code 7,tools/verify/p04-sc2a-shadow-gate-block.sh,tools/verify/p04-sc3-live-mechanical.sh,tools/verify/p04-partial-flip-routing.sh,tools/verify/p04-con3-live-closure.sh,tools/verify/p04-con4-live-killswitch.sh,override_source enum sixth value shadow_gate_blocked emitted on shadow-on dispatch_usage records (graduates p04-override-source-enum-extended.sh Scenario F to strict),dispatch-interface escalation loop fast-balanced-smart cap=2,_di_tier_at_rank helper,_di_emit_escalation_cap_hit helper,2 additive shadow-on JSONL fields (escalation_count integer 0..2 + escalation_reason verifier_fail-or-empty),escalation_cap_hit record (record_type+unitId+final_count=2+timestamp),5 new T03 verifiers (p04-sc4-escalation-sequence p04-sc5-escalation-cap p04-con5-no-fourth-record p04-con6-prior-records-bit-identical p04-escalation-fields-enum),references/model-routing.md Live Routing section + 2 new See Also bullets,tools/verify/p04-phase-suite.sh straight-line aggregator over 12 P04 sub-gates; CLAUDE.md+AGENTS.md recent-changes P04-close entry; P04 close commit"
+requires:
+  - "P02,P03"
+affects:
+  - "P06,P07"
+key_files:
+  - "tests/fixtures/m030-p04/plans/plan-mechanical-no-override.md,tests/fixtures/m030-p04/plans/plan-fail-twice-then-pass.md,tests/fixtures/m030-p04/plans/plan-fail-three-times.md,tests/fixtures/m030-p04/plans/plan-fail-four-times.md,tests/fixtures/m030-p04/plans/plan-novel-class.md,tests/fixtures/m030-p04/configs/config-with-live-true.yml,tests/fixtures/m030-p04/configs/config-with-live-and-killswitch.yml,tests/fixtures/m030-p04/configs/config-with-live-false.yml,tests/fixtures/m030-p04/round-trip-stage/intensity-metadata.txt,tests/fixtures/m030-p04/round-trip-stage/payload.txt,tests/fixtures/m030-p04/shadow-corpus-ready.jsonl,tests/fixtures/m030-p04/shadow-corpus-partially-ready.jsonl,tests/fixtures/m030-p04/shadow-corpus-empty.jsonl,tests/fixtures/m030-p04/synthesize-corpora.sh,scripts/dispatch/adapters/backend/stub-fail-n.sh,scripts/dispatch/adapters/backend/stub-record-model.sh,tools/verify/p04-additive-schema.sh,tools/verify/p04-override-source-enum-extended.sh,scripts/dispatch/dispatch-interface.sh,tools/verify/p04-sc2a-shadow-gate-block.sh,tools/verify/p04-sc3-live-mechanical.sh,tools/verify/p04-partial-flip-routing.sh,tools/verify/p04-con3-live-closure.sh,tools/verify/p04-con4-live-killswitch.sh,references/model-routing.md,tools/verify/p04-sc4-escalation-sequence.sh,tools/verify/p04-sc5-escalation-cap.sh,tools/verify/p04-con5-no-fourth-record.sh,tools/verify/p04-con6-prior-records-bit-identical.sh,tools/verify/p04-escalation-fields-enum.sh,tools/verify/p04-phase-suite.sh,CLAUDE.md,AGENTS.md,[.orchestrator/milestones/M030/phases/P04/P04-PLAN.md](../../../../../milestones/M030/phases/P04/P04-PLAN.md)"
+key_decisions:
+  - "six-deliverable single-commit graduation-pattern ships before T02 emitter amendment so the new shadow_gate_blocked enum + SC-11 byte-equality contract are mechanically gated from the moment the diff lands; pre-amendment-tolerant predicate for Scenario F (PASS if shadow_gate_blocked OR any P03 enum value) graduates to strict the moment T02 starts emitting shadow_gate_blocked; Scenarios A-E reuse P03 fixtures verbatim (no duplication); Scenario F uses P04-specific plan + config; tmp_root staging via mktemp -d with /tmp fallback + ORCH_ROOT/phases carve-out (mirrors P03/T01); per-scenario tmp-file intermediates throughout (no cmd-pipe-grep-pipe-head chains per AP-009); shadow-corpus synthesizer committed to disk for reproducibility (idempotent; deterministic ascending timestamps); stub-fail-n read-decrement contract: counter=N -> N exit-1 invocations followed by exit-0 (counter=2 -> rc=1,rc=1,rc=0; CON-5 stops at 3 invocations regardless of counter starting >=3); stub-record-model writes --model flag value to env-configurable file path (CON-3 closure preserved -- adapter does NOT interpret model IDs); STUB_INVOCATION_SENTINEL_DIR documented in stub-fail-n now (rather than retrofit in T03) keeps adapter shape stable across phases; partially_ready corpus sets novel under-threshold (not mechanical/standard) per D-A3 safety because novel routing-default is smart (the conservative tier),extract _di_resolve_live_routing as top-level helper (Option 1 from plan) so dispatcher can run gate-block before adapter invocation; idempotent helper via _DI_RESOLVED sentinel ensures emitter+dispatcher both call cheaply; M030_SHADOW_COMPARE_CORPUS env var as verifier seam (mirrors STUB_FAIL_COUNTER_FILE T01 pattern); dual adapter-invocation if/else preserves word-splitting safety per AD-19 (vs splicing dynamic flags); exit code 7 chosen for shadow_gate_blocked to disambiguate from adapter-failed=5 + adapter-malformed=6; live: true is inactive stderr warning placed inside the kill-switch branch alongside the existing min_tier inactive warning (CON-4 compound symmetry); shadow_gate_blocked verdict short-circuits BEFORE the routing-table awk extraction so no _DI_SHADOW_ROUTED is set (prevents leaking a tier into the shadow_routed JSONL field on gate-block); per-class authorization read-only of withheld_classes from shadow-compare verdict (D-A3 trust boundary; T02 does not re-validate),emit-then-increment ordering: success record on iteration N reads escalation_count=N (number of preceding failures); escalation_reason empty on success and verifier_fail on every failed attempt including cap-hit; CON-5 hard-cap enforced at adapter-invocation site (3rd failure stops loop before 4th adapter call); CON-6 verified via inode-preservation + first-2-lines hash equality after synthetic append (synchronous-dispatch proxy for mid-escalation byte-stability); shadow-off printfs UNTOUCHED (additive-only schema preserves SC-11 byte-equality); _DI_SHADOW_ROUTED + _DI_LIVE_MODEL_FLAG mutated in-place between iterations so _di_emit_dispatch_usage reads new tier values via parent-shell scope; happy-path emit at line 960 gated on escalation_active=0 to prevent duplicate dispatch_usage record on success path; escalation_count + escalation_reason declared at top-level (after ORCH_ROOT) so gate-block path inherits defaults (count=0 reason=empty); references/model-routing.md Live Routing co-locates with gate-verifier ship date mirroring P03/T03 Operator Overrides pattern,phase-suite-shape-mirrors-p03-straight-line-AD-19-no-loops-12-gates; sub-gate-ordering-additive-schema-then-enum-then-con3-then-T02-scenarios-then-T03-escalation-gates; plan-amendment-not-task-reopen-applied-for-2-fixture-plan-T-codes-and-2-shadow-corpus-token-predicates; dual-write-helper-marker-recent-changes-prepends-newest-first"
+patterns_established:
+  - "six-deliverable graduation-pattern (P02/T01 + P03/T01 lineage extended): fixtures + configs + corpora + stage + stub adapters + tolerant gates ship as one commit BEFORE the emitter amendment; pre-amendment-tolerant Scenario F predicate (case statement accepts strict-token OR pre-amendment-fallback enum values) is a per-scenario shape (older P03 verifier was per-verifier-tolerant); shadow-corpus synthesizer-committed-to-disk for reproducibility (synthesis script + outputs both checked in); stub adapter --model flag accepted in T01 even though dispatch-interface.sh starts passing it only in T02 (forward-compatible adapter shape); ORCH_ROOT/phases carve-out exploited for fixture log-routing without restructuring tests/fixtures/ to encode uppercase M### tokens; per-scenario tmp_root + cleanup with mktemp -d fallback; AD-19 single-script-file shape preserved in all verifiers; MEM004 emitter-internal carve-out applied to stub adapters (pipes/awk permitted in adapter bodies),top-level resolution helper extracted alongside _di_tier_rank consumed by both dispatcher and emitter via top-level _DI_SHADOW_* / _DI_LIVE_* outputs; idempotency-via-sentinel pattern (_DI_RESOLVED=1 short-circuits second call); dual-invocation explicit if/else for conditional CLI flag passing (AD-19 word-split safe); env-var verifier seam (M030_SHADOW_COMPARE_CORPUS) for deterministic corpus injection without polluting CLI; per-stage tmp_root staging for multi-dispatch verifiers (partial-flip routing exercises 2 dispatches in one verifier); runtime-resolution-from-SSOT pattern carried forward (verifiers awk-extract resolution.fast.claude-code from templates/model-routing.yml rather than hardcode literals); HEAD-vs-working-tree per-pattern grep count CON-3 closure pattern reused from P03/T02; tolerant-to-strict graduation pattern (Scenario F flips from any-P03-enum to shadow_gate_blocked-only via observed-token semantics); shadow-gate-blocked exit code 7 for retry/operator escalation distinct from adapter failure modes,MEM004 carve-out extends to dispatch-internal escalation loop body; awk section-walker re-resolves resolution.<tier>.claude-code in-loop without hardcoded literals (CON-3-clean); programmable fail-counter fixture adapter (stub-fail-n.sh) gates SC-4/SC-5/CON-5 via STUB_FAIL_COUNTER_FILE read-decrement + STUB_FAIL_COUNTER_INVOCATIONS_FILE side-channel for invocation-count assertions; tmp-file-staged head-shasum-cut chain unrolling (AP-009 compliant); inode-preservation check via stat -f %i (macOS) with stat -c %i fallback (Linux portability); per-scenario tmp_root + cleanup pattern reused from P03 verifiers,phase-suite-aggregator-extends-from-8-gates-P03-to-12-gates-P04-without-shape-change; plan-amendment-not-task-reopen-precedent-from-P02-T04-and-P03-T04-applied-cleanly-when-fixture-tokens-diverge-from-plan-predicates; corpus-fixture-discriminator-tokens-must-match-actual-content-not-aspirational-class-labels"
+drill_down_paths:
+  - "[.orchestrator/milestones/M030/phases/P04/tasks/T01-fixtures-and-stubs-SUMMARY.md](../../../../../milestones/M030/phases/P04/tasks/T01-fixtures-and-stubs-SUMMARY.md), [.orchestrator/milestones/M030/phases/P04/tasks/T02-live-routing-flip-gate-SUMMARY.md](../../../../../milestones/M030/phases/P04/tasks/T02-live-routing-flip-gate-SUMMARY.md), [.orchestrator/milestones/M030/phases/P04/tasks/T03-escalation-loop-SUMMARY.md](../../../../../milestones/M030/phases/P04/tasks/T03-escalation-loop-SUMMARY.md), [.orchestrator/milestones/M030/phases/P04/tasks/T04-phase-suite-and-close-SUMMARY.md](../../../../../milestones/M030/phases/P04/tasks/T04-phase-suite-and-close-SUMMARY.md)"
+duration: "257m"
+verification_result: "pass"
+completed_at: "2026-04-30T18:14:22Z"
+observability_surfaces:
+  - "none"
+---
+
+P04 closes the live-routing surface for M030: the dispatch-interface now reads `model_routing.live`, programmatically gates flips through `shadow-compare.sh` (D-A2), enforces per-class partial-flip authorization (D-A3), passes `--model <id>` to backend adapters using runtime-resolution from the `templates/model-routing.yml` SSOT (CON-3), and short-circuits at the kill switch (CON-4 amended / SC-7a-style compound). When `live: true` is set against an empty/blocked corpus the dispatcher refuses to call any adapter and emits `override_source=shadow_gate_blocked` with new exit code 7. Verifier-fail escalation (FR-10) wraps adapter invocation in a fast→balanced→smart loop, capped at 2 escalations (CON-5) — the third failure emits a single `escalation_cap_hit` JSONL record and stops. Each retry produces a NEW `dispatch_usage` record with new timestamp and additive fields `escalation_count` (integer 0..2) + `escalation_reason` (`verifier_fail` or empty); prior records remain bit-identical (CON-6).
+
+T01 (`ddf2a77`) shipped the preflight scaffolding — 5 fixture plans (mechanical / fail-twice-then-pass / fail-three-times / fail-four-times / novel-class), 3 overlay configs (live-true / live-and-killswitch / live-false), 3 shadow corpora (ready / partially-ready / empty) plus an idempotent corpus synthesizer, a round-trip stage, 2 new stub adapters (`stub-fail-n.sh` programmable fail-counter + `stub-record-model.sh` model-flag recorder), and 2 pre-amendment-tolerant gates (`p04-additive-schema.sh` + `p04-override-source-enum-extended.sh` with Scenario F tolerant-then-strict graduation pattern).
+
+T02 (`f77c95d`) extracted `_di_resolve_live_routing` as a top-level dispatch-interface helper (idempotent via `_DI_RESOLVED` sentinel), wired the live-routing branch with programmatic shadow-compare invocation + partial-flip authorization, added dual-invocation if/else for `--model` flag passing (AD-19 word-split safety), placed the `live: true is inactive` stderr warning inside the kill-switch branch (CON-4 compound symmetry), and chose exit code 7 for `shadow_gate_blocked` (disambiguates from adapter-failed=5 / adapter-malformed=6). Co-authored 5 verifiers: SC-2a, SC-3, partial-flip routing, CON-3 (live closure), CON-4 (live + kill-switch compound).
+
+T03 (`02bd29f`) wrapped adapter invocation in the escalation loop with `_di_tier_at_rank` helper and `_di_emit_escalation_cap_hit`, used emit-then-increment ordering so success records carry `escalation_count=N` (preceding failures), and verified CON-6 bit-stability via inode preservation + first-2-lines hash equality. Co-authored 5 verifiers: SC-4 (sequence + escalation_count=2 on third), SC-5 (cap: 3 dispatch records + 1 cap_hit), CON-5 (no fourth on fail-four-times), CON-6 (prior records bit-identical), escalation-fields-enum gate. `references/model-routing.md` gained a `## Live Routing` section co-located with the gate-verifier ship date.
+
+T04 (`c7fbec0`) authored the 12-sub-gate straight-line phase-suite aggregator mirroring P02/P03 shape, dual-wrote the recent-changes block to CLAUDE.md + AGENTS.md via `scripts/util/dual-write-runtime-md.sh`, and committed the close. The plan-amendment-not-task-reopen precedent from P02/T04 + P03/T04 was applied for 4 fixture token-predicate divergences (corpus discriminator tokens must match actual content, not aspirational class labels).
+
+Verification result: phase-suite green pass=12 fail=0 across all sub-gates (SC-3 / SC-4 / SC-5 / SC-2a / partial-flip / CON-3 / CON-4 / CON-5 / CON-6 / SC-11 byte-equality / override-source enum / escalation-fields enum). Upstream P02 + P03 phase-suites remain green (pass=9/0 and pass=8/0). FR-9 / FR-10 / FR-12 / FR-19 mechanically gated. CC-only launch posture preserved (live branch wrapped in `M030_SHADOW_MODE=1 && CLAUDECODE=1` precondition unchanged from P02). Symbolic-tier closure (CON-3) maintained — zero new hardcoded model IDs in dispatch-interface diff (HEAD-vs-WT per-pattern grep).
+
+Patterns established/extended: top-level resolution helper extracted alongside `_di_tier_rank` consumed by both dispatcher + emitter via top-level `_DI_SHADOW_*` / `_DI_LIVE_*` outputs; idempotency-via-sentinel; dual-invocation if/else for conditional CLI flag passing (word-split safe); env-var verifier seam (`M030_SHADOW_COMPARE_CORPUS`, `STUB_FAIL_COUNTER_FILE`, `STUB_FAIL_COUNTER_INVOCATIONS_FILE`) for deterministic fixture injection without polluting CLI; runtime-resolution-from-SSOT in verifiers (awk-extract `resolution.fast.claude-code` from `templates/model-routing.yml` rather than hardcode literals); HEAD-vs-WT per-pattern grep CON-3 closure; tolerant-to-strict graduation per-scenario predicate; six-deliverable preflight-then-amendment graduation pattern (P02/T01 + P03/T01 lineage); MEM004 emitter-internal carve-out extended to dispatch-internal escalation loop body; phase-suite-aggregator-extends-from-8-gates-P03-to-12-gates-P04 without shape change.
+
+Roadmap impact: P04 produces the dispatch-interface live-routing branch + escalation logic + 5 new JSONL fields/records consumed by P05 ([M027](../../../../../milestones/M027/index.md) surface integration: `metrics-rollup.sh --by-model` + efficiency-footer `model_mix:` + doctor `--config-check`) and P06 (anomaly-driven regression detection: rolling-window per-class verifier-fail check). The `escalation_count`/`escalation_reason`/`escalation_cap_hit` records are the signal P06 needs to detect regression at scale. No deviations from the original phase boundary; no upstream replanning required.
+
+
+### P05 Summary
+---
+schema_version: "1.0"
+type: phase-summary
+id: "P05"
+parent: "M030"
+milestone: "M030"
+provides:
+  - "tests/fixtures/m030-p05/synthesize-corpus.sh (idempotent),tests/fixtures/m030-p05/live-routed-corpus.jsonl (23 records: 14 fast / 7 balanced / 2 smart),tests/fixtures/m030-p05/no-cost-rates-routing.yml (FR-15 fallback fixture),tests/fixtures/m030-p05/rollup-pre-m030-baseline.txt (golden),tests/fixtures/m030-p05/footer-pre-m030-baseline.txt (golden),tools/verify/p05-sc11-rollup-byte-equality.sh (SC-11 byte-strict gate),tools/verify/p05-sc11-footer-byte-equality.sh (SC-11 byte-strict gate via ORCHESTRATOR_ROOT carve-out),tools/verify/p05-doctor-config-check.sh (SC-9 pass-through wrapper),scripts/diagnostics/metrics-rollup.sh --by-model flag (additive; per-tier dispatch counts + cost_rates-present aggregated_cost_usd + counterfactual_all_smart_cost_usd; cost_rates-absent warning + zero-savings fallback),scripts/diagnostics/efficiency-footer.sh model_mix: line (additive; suppressed on zero shadow-on records — SC-11 mechanism),tools/verify/p05-by-model-dispatch-counts.sh,tools/verify/p05-by-model-cost-rates-present.sh,tools/verify/p05-by-model-cost-rates-absent.sh,tools/verify/p05-model-mix-footer-line.sh,references/model-routing.md ## Cost Rollup Surfaces section,tools/verify/p05-phase-suite.sh straight-line aggregator over 7 P05 sub-gates; CLAUDE.md+AGENTS.md recent-changes P05-close fragment; key-link plan amendment (run-doctor.sh -> doctor.sh); P05 close commit"
+requires:
+  - "P02"
+affects:
+  - "P07"
+key_files:
+  - "tests/fixtures/m030-p05/synthesize-corpus.sh,tests/fixtures/m030-p05/live-routed-corpus.jsonl,tests/fixtures/m030-p05/no-cost-rates-routing.yml,tests/fixtures/m030-p05/rollup-pre-m030-baseline.txt,tests/fixtures/m030-p05/footer-pre-m030-baseline.txt,tools/verify/p05-sc11-rollup-byte-equality.sh,tools/verify/p05-sc11-footer-byte-equality.sh,tools/verify/p05-doctor-config-check.sh,tools/verify/p01-routing-table-shape.sh,scripts/diagnostics/metrics-rollup.sh,scripts/diagnostics/efficiency-footer.sh,references/model-routing.md,tools/verify/p05-by-model-dispatch-counts.sh,tools/verify/p05-by-model-cost-rates-present.sh,tools/verify/p05-by-model-cost-rates-absent.sh,tools/verify/p05-model-mix-footer-line.sh,tools/verify/p05-phase-suite.sh,CLAUDE.md,AGENTS.md,[.orchestrator/milestones/M030/phases/P05/P05-PLAN.md](../../../../../milestones/M030/phases/P05/P05-PLAN.md),[.orchestrator/milestones/M030/phases/P05/tasks/T01-fixtures-and-baselines-PLAN.md](../../../../../milestones/M030/phases/P05/tasks/T01-fixtures-and-baselines-PLAN.md),[.orchestrator/milestones/M030/phases/P05/tasks/T02-rollup-and-footer-amendments-PLAN.md](../../../../../milestones/M030/phases/P05/tasks/T02-rollup-and-footer-amendments-PLAN.md),[.orchestrator/milestones/M030/phases/P05/tasks/T03-phase-suite-and-close-PLAN.md](../../../../../milestones/M030/phases/P05/tasks/T03-phase-suite-and-close-PLAN.md)"
+key_decisions:
+  - "contingent amendment applied: tools/verify/p01-routing-table-shape.sh check #3 relaxed to require only routing: + resolution: as top-level sections; cost_rates: is now OPTIONAL (FR-15 fallback path requires the rollup to handle absence at runtime; the malformed-fixture path in p01-doctor-config-check.sh keeps cost_rates: present so Scenario B coverage is unchanged); golden baselines captured via Strategy A (ORCHESTRATOR_ROOT carve-out for footer; --log flag direct for rollup); SC-11 gates ship byte-strict from the start (inverts P04/T01 pre-amendment-tolerant pattern -- the goldens themselves carry the contract); doctor-config-check wrapper uses delegate-and-pass-through shape per p04-additive-schema.sh precedent; idempotent synthesizer with deterministic timestamps (loop-index-derived),snapshot-shared dual-emission (rollup branches AFTER snapshot before normalize/aggregate/render — same snapshot reused so FR-19/AD-3 atomicity preserved + SC-11 byte-equality of unflagged path mechanically guaranteed); awk section-walker for cost_rates parsing (2-pass; indent-depth-aware; emits RATES tuple or NO_RATES sentinel); explicit 8-decimal expected values in the cost-rates-present verifier (asserts exact 0.23296000 / 1.23648000 not regex — future drift trips the gate immediately); routing-table path-resolution priority --routing-table flag > M030_ROUTING_TABLE_PATH env > templates/model-routing.yml default; cost_rates-absent is warning-class (exit 0) not hard failure — rollup remains useful as dispatch-count surface; ORCHESTRATOR_ROOT carve-out reuse for model-mix footer gate (mktemp -d + cp + trap-cleanup mirrors T01 SC-11 footer baseline-capture),phase-suite-shape-mirrors-p02-p03-p04-straight-line-AD-19-no-loops; sub-gate-ordering-fundamental-SC11-contracts-first-then-SC9-doctor-then-T02-SC8-and-FR16-scenarios; key-link-amendment-runs-doctor-vs-doctor-conceptual-surface-name; plan-amendment-not-task-reopen-P02-P03-P04-precedent"
+patterns_established:
+  - "pre-amendment golden-baseline pattern: capture HEAD's unflagged output BEFORE amendment lands; verifier diffs post-amendment output against committed snapshot; ORCHESTRATOR_ROOT carve-out (mktemp -d + cp + trap-cleanup) for footer fixture-routing without modifying the footer's resolver; optional-section discipline for cost_rates: in routing-table-shape verifier (required vs optional split); cross-phase delegate-and-pass-through wrapper (P05/T01 doctor wrapper -> P01/T04 verifier; mirrors P04/T04 -> P02/T04),snapshot-shared dual-emission branch (shared snapshot + by_model_mode=0/1 fork before normalize/aggregate/render),awk-section-walker-for-cost_rates (indent-depth-aware top/2-space-tier/4-space-key parse + RATES tuple or NO_RATES sentinel),footer-side-rollup-internal-invocation (footer invokes metrics-rollup.sh --by-model as subshell + parses dispatch-count line + emits derived footer line),hand-computed-cost-expectations-in-verifier (verifier asserts exact 8-decimal values not regex; verifier header names the formula),ORCHESTRATOR_ROOT-carve-out-reuse-across-T01-and-T02-footer-gates,phase-suite-aggregator-shape-stable-across-P02-P03-P04-P05-no-shape-drift; key-link-checker-greps-basename-target-existence-not-required-only-source-grep-match; on-disk-filename-vs-spec-conceptual-name-divergence-resolved-via-plan-side-key-link-amendment"
+drill_down_paths:
+  - "[.orchestrator/milestones/M030/phases/P05/tasks/T01-fixtures-and-baselines-SUMMARY.md](../../../../../milestones/M030/phases/P05/tasks/T01-fixtures-and-baselines-SUMMARY.md), [.orchestrator/milestones/M030/phases/P05/tasks/T02-rollup-and-footer-amendments-SUMMARY.md](../../../../../milestones/M030/phases/P05/tasks/T02-rollup-and-footer-amendments-SUMMARY.md), [.orchestrator/milestones/M030/phases/P05/tasks/T03-phase-suite-and-close-SUMMARY.md](../../../../../milestones/M030/phases/P05/tasks/T03-phase-suite-and-close-SUMMARY.md)"
+duration: "147m"
+verification_result: "pass"
+completed_at: "2026-04-30T20:18:52Z"
+observability_surfaces:
+  - "metrics-rollup-by-model+efficiency-footer-model_mix"
+---
+
+P05 closes the M027 surface integration for M030: `metrics-rollup.sh` gains a `--by-model` flag that emits per-tier dispatch counts (fast/balanced/smart from `model_used`) plus an aggregated `cost_usd` line + an all-`smart` `counterfactual_all_smart_cost_usd` savings line when `cost_rates:` is defined in `templates/model-routing.yml`, or a "cost rates not configured" warning + zero-savings fallback line (exit 0) when absent (FR-15 / SC-8). `efficiency-footer.sh` renders a `model_mix:` line at the close of an `orchestrator:auto` run (FR-16). `doctor.sh --config-check` validates routing-table syntax with file+line diagnostics on malformed fixtures (FR-17 / SC-9; the surface itself shipped in P01/T04, P05 adds a delegate-and-pass-through wrapper as `tools/verify/p05-doctor-config-check.sh`). SC-11 byte-equality is preserved through both unflagged surfaces — pre-M030 fixtures produce byte-identical output through `metrics-rollup.sh` (no flag) and `efficiency-footer.sh` (zero shadow-on records suppresses the model_mix block).
+
+T01 (`423498f`) shipped the preflight scaffolding — an idempotent corpus synthesizer + 23 fixture records (14/7/2 over fast/balanced/smart), a no-cost-rates routing-yml fixture, two pre-M030 byte-equality goldens (`rollup-pre-m030-baseline.txt` + `footer-pre-m030-baseline.txt`), three SC-11/SC-9 gates (rollup byte-equality, footer byte-equality, doctor-config-check pass-through wrapper), and a contingent amendment to `tools/verify/p01-routing-table-shape.sh` Check #3 relaxing it from required-`cost_rates:` to optional-`cost_rates:` so the FR-15 fallback path's no-cost-rates fixture is shape-valid. Backward compatibility verified two ways: shipped `templates/model-routing.yml` (cost_rates: present) still passes the shape verifier (pass=8 fail=0); P01 doctor-config-check Scenario B's malformed fixture coverage is unchanged.
+
+T02 (`7ed3081`) amended the surfaces. `metrics-rollup.sh` got a snapshot-shared dual-emission branch — the `--by-model` path forks AFTER the snapshot is captured but BEFORE normalize/aggregate/render, so the same snapshot is reused and FR-19/AD-3 atomicity is preserved while SC-11 byte-equality of the unflagged path is mechanically guaranteed. The branch uses an awk section-walker (2-pass, indent-depth-aware: top-level / 2-space tier / 4-space key) to parse `cost_rates:` and emits either a RATES tuple or a NO_RATES sentinel for downstream branching. A `--routing-table` flag plumbs through with priority `--routing-table > M030_ROUTING_TABLE_PATH env > templates/model-routing.yml default`. Hand-computed expected costs in the present-rates verifier (0.23296000 / 1.23648000 USD) assert exact 8-decimal values rather than regex — any future drift trips the gate immediately. `efficiency-footer.sh` got a `model_mix:` block placed after the compression-line block, suppressed when total dispatches == 0 (load-bearing SC-11 mechanism). The footer invokes `metrics-rollup.sh --by-model` in a subshell and parses the dispatch-count line to emit its derived footer line. Co-authored 4 verifiers (FR-15 sentence 1 / FR-15 sentence 2 + counterfactual / FR-15 sentence 3 fallback / FR-16 footer line) plus a `## Cost Rollup Surfaces` section in `references/model-routing.md`.
+
+T03 (`95fce75`) authored the 7-sub-gate straight-line phase-suite aggregator mirroring P02/P03/P04 shape, dual-wrote the recent-changes block to CLAUDE.md + AGENTS.md via `scripts/util/dual-write-runtime-md.sh`, and committed the close. The plan-amendment-not-task-reopen precedent was applied for one key-link divergence — the phase plan declared `specs/032-adaptive-model-selection/spec.md → scripts/diagnostics/run-doctor.sh` but the spec uses the conceptual name `doctor.sh`; the key-link was amended to `scripts/diagnostics/doctor.sh` with a parenthetical noting the on-disk filename divergence. After amendment the must-haves grep is clean (8 truths + 41 artifacts + 13 key-links all PASS).
+
+Verification result: phase-suite green pass=7 fail=0 across all sub-gates (SC-11 rollup + SC-11 footer + SC-9 doctor-config-check + FR-15 dispatch-counts + FR-15 cost-rates-present + FR-15 cost-rates-absent + FR-16 model_mix). Upstream P01–P04 phase-suites remain green. SC-11 byte-equality of unflagged paths preserved through both `metrics-rollup.sh` and `efficiency-footer.sh`. CON-3 closure preserved (zero new hardcoded model IDs introduced; cost arithmetic indexes exclusively by symbolic tier).
+
+Patterns established/extended: pre-amendment golden-baseline pattern (capture HEAD's unflagged output BEFORE amendment lands; verifier diffs post-amendment against committed snapshot — inverts the P04/T01 pre-amendment-tolerant Scenario F pattern, where the goldens themselves carry the contract); ORCHESTRATOR_ROOT carve-out (mktemp -d + cp + trap-cleanup) for footer fixture-routing without modifying the footer's resolver, reused across T01 SC-11 footer baseline-capture and T02 model-mix footer gate; snapshot-shared dual-emission branch in `metrics-rollup.sh` (shared snapshot + by_model_mode=0/1 fork before normalize/aggregate/render); awk-section-walker-for-cost_rates (indent-depth-aware top/2-space-tier/4-space-key parse + RATES tuple or NO_RATES sentinel); footer-side-rollup-internal-invocation (footer invokes metrics-rollup.sh --by-model as subshell + parses dispatch-count line + emits derived footer line); hand-computed-cost-expectations-in-verifier (8-decimal exact values, not regex; verifier header names the formula); cross-phase delegate-and-pass-through wrapper (P05/T01 doctor wrapper → P01/T04 verifier, mirrors P04/T04 → P02/T04 phase-suite shape); optional-section discipline for cost_rates: in routing-table-shape verifier (required vs optional split); on-disk-filename-vs-spec-conceptual-name divergence resolved via plan-side key-link amendment (rather than renaming the on-disk surface).
+
+Roadmap impact: P05 produces the `metrics-rollup --by-model` + `efficiency-footer model_mix:` + `doctor --config-check` surfaces consumed by P07 (end-to-end shadow-corpus + flip-gate validation) for the M030 acceptance battery. P06 (anomaly-driven regression detection) was already independent of P05 surfaces — it consumes P02 JSONL schema + P04 escalation records, not the rollup/footer flags. No deviations from the original phase boundary; no upstream replanning required.
+
+Performance note (flagged for follow-up, not gating): `p05-doctor-config-check.sh` delegates to `p01-doctor-config-check.sh` which invokes `run-doctor.sh --config-check` twice (Scenario A well-formed + Scenario B malformed). Each invocation runs the full doctor pipeline including `check-plans.sh`, which walks every milestone in `.orchestrator/milestones/`. End-to-end the P05 phase-suite runs in the 8–12-minute range. Shape is correct and gates green; the slow cycle is inherited from M027's doctor surface walking the now-substantial milestone tree. Candidate for an `--isolated` doctor mode in a later milestone (out of scope for M030).
+
+
+### P06 Summary
+---
+schema_version: "1.0"
+type: phase-summary
+id: "P06"
+parent: "M030"
+milestone: "M030"
+provides:
+  - "tests/fixtures/m030-p06/synthesize-corpus.sh (idempotent),tests/fixtures/m030-p06/regression-mechanical.jsonl (20 records class=mechanical class_pass_rate=0.40),tests/fixtures/m030-p06/regression-standard.jsonl (20 records class=standard class_pass_rate=0.40),tests/fixtures/m030-p06/regression-novel.jsonl (20 records class=novel class_pass_rate=0.40),tests/fixtures/m030-p06/no-regression.jsonl (60 records 20-per-class all class_pass_rate>=0.80),tests/fixtures/m030-p06/below-min-sample.jsonl (5 mechanical records — sample-floor guard fixture),tests/fixtures/m030-p06/check-anomalies-pre-m030-baseline.txt (golden),scripts/dispatch/dispatch-interface.sh shadow-on character field (additive — SC-11 preserving),scripts/diagnostics/check-anomalies.sh _ca_model_routing_regression_check function + CLI integration + JSONL emit,references/model-routing.md ## Anomaly Records section,tools/verify/p06-sc11-byte-equality.sh,tools/verify/p06-shadow-off-byte-equality.sh,tools/verify/p06-mechanical-regression.sh,tools/verify/p06-standard-regression.sh,tools/verify/p06-novel-regression.sh,tools/verify/p06-no-regression.sh,tools/verify/p06-below-min-sample.sh,tools/verify/p06-doctor-surfaces-anomaly.sh,tools/verify/p06-phase-suite.sh straight-line aggregator over 8 P06 sub-gates,CLAUDE.md+AGENTS.md recent-changes P06-close fragment,plan-amendment relaxing three artifact line-count predicates (standard-regression min 60->50; novel-regression min 60->50; shadow-off-byte-equality min 30->25),P06 close commit"
+requires:
+  - "P02,P04"
+affects:
+  - "P07"
+key_files:
+  - "tests/fixtures/m030-p06/synthesize-corpus.sh,tests/fixtures/m030-p06/regression-mechanical.jsonl,tests/fixtures/m030-p06/regression-standard.jsonl,tests/fixtures/m030-p06/regression-novel.jsonl,tests/fixtures/m030-p06/no-regression.jsonl,tests/fixtures/m030-p06/below-min-sample.jsonl,tests/fixtures/m030-p06/check-anomalies-pre-m030-baseline.txt,scripts/dispatch/dispatch-interface.sh,scripts/diagnostics/check-anomalies.sh,references/model-routing.md,tools/verify/p06-sc11-byte-equality.sh,tools/verify/p06-shadow-off-byte-equality.sh,tools/verify/p06-mechanical-regression.sh,tools/verify/p06-standard-regression.sh,tools/verify/p06-novel-regression.sh,tools/verify/p06-no-regression.sh,tools/verify/p06-below-min-sample.sh,tools/verify/p06-doctor-surfaces-anomaly.sh,tools/verify/p06-phase-suite.sh,CLAUDE.md,AGENTS.md,[.orchestrator/milestones/M030/phases/P06/P06-PLAN.md](../../../../../milestones/M030/phases/P06/P06-PLAN.md),[.orchestrator/milestones/M030/phases/P06/tasks/T01-fixtures-and-baseline-PLAN.md](../../../../../milestones/M030/phases/P06/tasks/T01-fixtures-and-baseline-PLAN.md),[.orchestrator/milestones/M030/phases/P06/tasks/T02-anomaly-check-and-emit-PLAN.md](../../../../../milestones/M030/phases/P06/tasks/T02-anomaly-check-and-emit-PLAN.md),[.orchestrator/milestones/M030/phases/P06/tasks/T03-phase-suite-and-close-PLAN.md](../../../../../milestones/M030/phases/P06/tasks/T03-phase-suite-and-close-PLAN.md)"
+key_decisions:
+  - "#Q-4 plan-phase decision: fixed pass-rate threshold (default 0.50) + min_class_sample floor (default 10) overridable via .orchestrator/config.yml model_routing_regression.{pass_rate_threshold,min_class_sample}; env-only JSONL emit path (M030_ANOMALIES_JSONL_PATH default .orchestrator/anomalies.jsonl) instead of CLI flag to keep surface narrow,additive character field on shadow-on dispatch_usage records (additive — SC-11-preserving) chosen over fragile tier-to-class inverse routing-table lookup; D-A9 anomaly JSONL snapshot convention satisfied via append-only invariant on .orchestrator/anomalies.jsonl (separate file from execution-log.jsonl preserves CON-6 dispatch-stream invariant),phase-suite-shape-mirrors-p02-p03-p04-p05-straight-line-AD-19-no-loops; sub-gate-ordering-fundamental-SC11-contracts-first-then-FR18-positive-then-FR18-negative-and-sample-floor-then-doctor-surface-integration; plan-amendment-not-task-reopen-applied-for-two-artifact-line-count-predicates"
+patterns_established:
+  - "additive-field-on-shadow-on-emit pattern (P02/T02 + P04/T03 lineage extended): single field appended to printf format string + arg list on shadow-on branch only; shadow-off branch byte-untouched; SC-11 contract via P02 p02-additive-schema.sh delegate-and-pass-through wrapper,env-var-seam-for-anomaly-jsonl-redirection (M030_ANOMALIES_JSONL_PATH; mirrors M030_SHADOW_MODE / M030_SHADOW_COMPARE_CORPUS / M030_ROUTING_TABLE_PATH precedents),append-only anomalies.jsonl emit via >> redirect with mkdir -p guard; CON-6 invariant extended from execution-log.jsonl to anomalies.jsonl with separate-file boundary,phase-suite-aggregator-extends-from-7-gates-P05-to-8-gates-P06-without-shape-change,rolling-window-per-class-verifier-fail-rate-check shape: awk-grouped pass on shadow-on records grouped by character field; emits FLAGGED text + JSONL only when class_sample >= min_class_sample AND class_pass_rate < threshold; pre-P06 records (no character field) silently skipped"
+drill_down_paths:
+  - "[.orchestrator/milestones/M030/phases/P06/tasks/T01-fixtures-and-baseline-PLAN.md](../../../../../milestones/M030/phases/P06/tasks/T01-fixtures-and-baseline-PLAN.md), [.orchestrator/milestones/M030/phases/P06/tasks/T02-anomaly-check-and-emit-PLAN.md](../../../../../milestones/M030/phases/P06/tasks/T02-anomaly-check-and-emit-PLAN.md), [.orchestrator/milestones/M030/phases/P06/tasks/T03-phase-suite-and-close-PLAN.md](../../../../../milestones/M030/phases/P06/tasks/T03-phase-suite-and-close-PLAN.md)"
+duration: "49m"
+verification_result: "pass"
+completed_at: "2026-05-01T01:33:04Z"
+observability_surfaces:
+  - "check-anomalies-model-routing-regression+anomalies.jsonl"
+---
+
+P06 closes the FR-18 anomaly-driven regression detection surface for M030: `scripts/diagnostics/check-anomalies.sh` gains a per-class rolling-window verifier-fail-rate check that emits a `model_routing_regression` anomaly record (text + JSONL) when a class crosses the configured threshold (default pass_rate 0.50, min_class_sample 10; both overridable via `.orchestrator/config.yml model_routing_regression.{pass_rate_threshold,min_class_sample}`). The text line surfaces through `orchestrator:doctor` via the existing M027 "Anomaly Detection" advisory invocation — `run-doctor.sh` already calls `check-anomalies.sh` and renders its stdout, so no doctor-side amendment was required. The JSONL emit lands in `.orchestrator/anomalies.jsonl` by default (or the path passed via `M030_ANOMALIES_JSONL_PATH` env), kept separate from `execution-log.jsonl` to preserve the CON-6 dispatch-stream invariant. `scripts/dispatch/dispatch-interface.sh` shadow-on emit branch gains a single additive `character` field that the new check consumes for per-class grouping; the shadow-off branch is byte-untouched, preserving SC-11.
+
+T01 (`dcbcb69`) shipped the preflight scaffolding: an idempotent corpus synthesizer, five fixture corpora (regression-mechanical / regression-standard / regression-novel / no-regression / below-min-sample), a pre-amendment golden baseline at `tests/fixtures/m030-p06/check-anomalies-pre-m030-baseline.txt` capturing HEAD's `check-anomalies.sh` stdout against the P02 graduation fixture, and the SC-11 byte-equality gate `tools/verify/p06-sc11-byte-equality.sh` that diffs post-amendment output against the committed snapshot.
+
+T02 (`43b3882`) amended the surfaces. `scripts/dispatch/dispatch-interface.sh` got a single additive `character=<class>` field appended to the shadow-on `dispatch_usage` printf format + arg list — extending the P02/T02 + P04/T03 additive-field-on-shadow-on-emit lineage. The shadow-off branch is byte-untouched; `tools/verify/p06-shadow-off-byte-equality.sh` is a thin delegate-and-pass-through wrapper around `tools/verify/p02-additive-schema.sh` that re-confirms the SC-11 byte-equality contract post-amendment. `scripts/diagnostics/check-anomalies.sh` got a `_ca_model_routing_regression_check` function integrated into the CLI dispatch path: an awk-grouped pass over shadow-on records grouped by `character`, emitting a `FLAGGED model_routing_regression class=<X> class_pass_rate=<R> sample=<N> threshold=<T>` line + a `{"record_type":"anomaly","kind":"model_routing_regression",...}` JSONL record only when `class_sample >= min_class_sample` AND `class_pass_rate < pass_rate_threshold`. Pre-P06 records (no `character` field) are silently skipped — preserving SC-11 byte-equality on every existing pre-amendment fixture. Co-authored 6 verifiers (mechanical / standard / novel positive cases + no-regression negative + below-min-sample sample-floor guard + doctor-surfaces-anomaly integration) plus a `## Anomaly Records` section in `references/model-routing.md` documenting the record shape, threshold defaults, JSONL emit path, and operator threshold-tuning obligation.
+
+T03 (this commit) authored the 8-sub-gate straight-line phase-suite aggregator at `tools/verify/p06-phase-suite.sh` mirroring the P02/P03/P04/P05 shape (no loops, no eval, AD-19 single-script-file discipline preserved per sub-gate), dual-wrote the P06-close fragment to `CLAUDE.md` + `AGENTS.md` recent-changes regions via `scripts/util/dual-write-runtime-md.sh --append-entry`, appended the phase-grain `unit_close` record to `execution-log.jsonl`, and committed the close. The plan-amendment-not-task-reopen precedent was applied for three artifact-line-count predicate divergences — `p06-standard-regression.sh` and `p06-novel-regression.sh` predicates relaxed from min 60 → min 50 (each: 57 lines, body shape identical to `p06-mechanical-regression.sh` modulo class-name substitutions) and `p06-shadow-off-byte-equality.sh` predicate relaxed from min 30 → min 25 (actual: 28 lines, thin delegate-and-pass-through wrapper around `p02-additive-schema.sh`). All three deliverables ship green; the predicates were authored aspirationally and didn't match the natural body shape. After amendment the must-haves grep is clean (8 truths + 21 artifacts + 6 key-links all PASS).
+
+Verification result: phase-suite green pass=8 fail=0 across all sub-gates (sc11-byte-equality + shadow-off-byte-equality + mechanical-regression + standard-regression + novel-regression + no-regression + below-min-sample + doctor-surfaces-anomaly). Upstream P02 + P04 phase-suites remain green (the additive `character` field doesn't perturb their byte-equality contracts). SC-11 byte-equality preserved through both amended surfaces — `check-anomalies.sh` emits zero additional stdout and appends zero JSONL records when no class crosses threshold; `dispatch-interface.sh` shadow-off branch is byte-untouched. CON-3 closure preserved (zero new hardcoded model IDs introduced).
+
+Patterns established/extended: additive-field-on-shadow-on-emit (single field appended to printf format string + arg list on shadow-on branch only; SC-11 contract via P02 delegate-and-pass-through wrapper); env-var-seam-for-anomaly-jsonl-redirection (M030_ANOMALIES_JSONL_PATH; mirrors M030_SHADOW_MODE / M030_SHADOW_COMPARE_CORPUS / M030_ROUTING_TABLE_PATH precedents); append-only anomalies.jsonl emit via `>>` redirect with `mkdir -p` guard, with CON-6 dispatch-stream invariant extended from execution-log.jsonl to anomalies.jsonl via separate-file boundary; phase-suite-aggregator extending from 7-gates (P05) to 8-gates (P06) without shape change; rolling-window-per-class-verifier-fail-rate-check shape (awk-grouped pass on shadow-on records grouped by character; FLAGGED text + JSONL gated on class_sample floor AND pass_rate threshold; pre-P06 records silently skipped).
+
+Provides downstream: P07 (end-to-end shadow-corpus + flip-gate validation, the spec'd milestone-close gate) consumes P06's `model_routing_regression` anomaly record as part of the M030 acceptance battery — the flip-gate watches for absence of `model_routing_regression` lines across the shadow-corpus run as one of its release-readiness signals.
+
+Roadmap impact: P06 produces the anomaly-detection surface declared by M030-ROADMAP.md acceptance line 57. No deviations from the original phase boundary; no upstream replanning required. P07 remains the only outstanding M030 phase before milestone-close ceremony (M030-VALIDATED marker + M030-SUMMARY.md + milestone-grain unit_close + final validate-milestone.sh pass).
+
+## Task Plan
+
+---
+schema_version: "1.0"
+type: task-plan
+task: "T04"
+phase: "P07"
+milestone: "M030"
+name: "M030 milestone close ceremony — P07-SUMMARY + phase-grain unit_close + M030-VALIDATED + M030-SUMMARY + milestone-grain unit_close + close commit"
+depends_on: ["T03"]
+---
+
+## Prerequisites
+
+- T01 + T02 + T03 deliverables on disk and green:
+  - All four corpora at `tests/m030-acceptance/` (T01).
+  - `tests/m030-acceptance/shadow-corpus-fixtures.sh` (T01).
+  - `tests/m030-acceptance/run-acceptance-battery.sh` (T02).
+  - All nine P07 verifiers at `tools/verify/p07-*.sh` (T01 ships 5; T02 ships 3; T03 ships the ledger gate + the phase-suite aggregator).
+  - [`.orchestrator/milestones/M030/M030-ACCEPTANCE-EVIDENCE.md`](../../../../../milestones/M030/M030-ACCEPTANCE-EVIDENCE.md) (T03).
+- `bash tools/verify/p07-phase-suite.sh` exits 0 with `SUMMARY: p07-phase-suite.sh pass=9 fail=0`.
+- `bash tests/m030-acceptance/run-acceptance-battery.sh` exits 0 with `BATTERY: pass=N fail=0`.
+- All seven prior phase summaries exist at `.orchestrator/milestones/M030/phases/P0[0-6]/P0[0-6]-SUMMARY.md`.
+- No `M030-VALIDATED` marker file yet at `.orchestrator/milestones/M030/M030-VALIDATED` (T04 creates it).
+- No `M030-SUMMARY.md` yet at [`.orchestrator/milestones/M030/M030-SUMMARY.md`](../../../../../milestones/M030/M030-SUMMARY.md) (T04 creates it).
+- `scripts/lifecycle/mark-complete.sh` exists and creates the `M###-VALIDATED` marker.
+- `scripts/util/dual-write-runtime-md.sh` exists with `--append-entry` flag.
+- `scripts/verify/validate-milestone.sh` exists and reports VALIDATE: lines.
+
+Plan-time prerequisite-existence verification: every script + state path above is asserted via `[ -f <path> ]` at plan-authoring time. Confirmed during P07 plan authoring.
+
+## Description
+
+T04 is the milestone close ceremony. Structurally distinct from T01-T03 (which are phase-grain) — T04 ships the milestone-grain artifacts that make `M030` a closed milestone. Five deliverable groups:
+
+1. **P07-SUMMARY.md** — phase-summary file for P07 itself, mirrors P02-P06 schema.
+2. **Phase-grain `unit_close` for M030/P07** — appended to `.orchestrator/milestones/M030/execution-log.jsonl`.
+3. **M030-VALIDATED marker** — created by `bash scripts/lifecycle/mark-complete.sh .orchestrator M030` after every P0[0-7]-SUMMARY.md exists. Per `scripts/lifecycle/mark-complete.sh` body, the marker carries the milestone ID + validation timestamp + phase_count=8 + per-phase complete/incomplete listing.
+4. **M030-SUMMARY.md** — milestone-summary file authored by T04 mirroring [`.orchestrator/milestones/M028/M028-SUMMARY.md`](../../../../../milestones/M028/M028-SUMMARY.md) schema (frontmatter `type: milestone-summary` + body sections: brief intro, per-phase what-was-built, verification, key decisions, patterns established, roadmap impact, what's next).
+5. **Milestone-grain `unit_close` for M030** — appended to `.orchestrator/milestones/M030/execution-log.jsonl` (the milestone's own log) AND optionally to `.orchestrator/execution-log.jsonl` if the orchestrator-grain log exists.
+6. **Recent-changes dual-write** — TWO entries via `scripts/util/dual-write-runtime-md.sh --append-entry`: one for P07 close + one for M030 close (or one combined entry covering both).
+7. **CLAUDE.md project-status update** — flips M030 from "in progress" to "Closed" in the forward-roadmap section; updates the recent-changes block via the dual-write helper.
+8. **Close commit** — single atomic commit titled `M030: adaptive model selection (closed)`. Multi-line body authored via `git commit -F <message-file>`.
+9. **Final validate-milestone.sh clean pass** — `bash scripts/verify/validate-milestone.sh .orchestrator/milestones/M030` exits 0 with `VALIDATE: PASS — N/N checks passed`.
+
+### Why T04 is structurally distinct from P02-P06 closes
+
+P02-P06 closes shipped a single phase-close ceremony (P##-SUMMARY.md + phase-grain unit_close + dual-write + commit). M030's last phase is structurally different: P07 is BOTH the last phase AND the milestone. T04 fuses the two ceremonies into one atomic commit because:
+
+- Splitting them creates a fragile two-commit close where the first commit (phase close) leaves the milestone in a half-closed state.
+- The milestone-validate gate (`validate-milestone.sh`) wants every phase summary AND the M030-VALIDATED marker present simultaneously. The M030-VALIDATED marker can only be created AFTER P07-SUMMARY.md exists; the marker itself is the contract that flips the milestone from `validating` to `completed`.
+- The recent-changes dual-write covers both the phase close and the milestone close in a single block (`M030/P07: <phase-close-text>` + `M030: closed` separate entries).
+
+### M030-SUMMARY.md authoring
+
+Schema mirrors [`.orchestrator/milestones/M028/M028-SUMMARY.md`](../../../../../milestones/M028/M028-SUMMARY.md). Frontmatter:
+
+```yaml
+---
+schema_version: "1.0"
+type: milestone-summary
+id: "M030"
+parent: "032-adaptive-model-selection"
+milestone: "M030"
+provides:
+  - "<comma-separated list of every M030 deliverable, organized by phase: P00 fixture corpus + labels.yml; P01 classify-task.sh + model-routing.yml + cost_rates SSOT; P02 dispatch-interface shadow-mode + shadow-compare.sh 4-verdict; P03 overrides + kill switch + override_source enum; P04 live routing + escalation + flip-gate enforcement + escalation_cap; P05 metrics-rollup --by-model + efficiency-footer model_mix + doctor --config-check; P06 check-anomalies model_routing_regression + dispatch-interface character emit + anomalies.jsonl; P07 acceptance corpus + run-acceptance-battery.sh + M030-ACCEPTANCE-EVIDENCE.md ledger>"
+requires:
+  - "M027 cost-rollup JSONL stream (dispatch_usage, unit_close); M027 anomaly detection (check-anomalies.sh); M025 installer coexistence (.orchestrator/config.yml overlay convention); M028 autonomous-hardening v3 (hook portability for clean shadow-corpus signal in autonomous runs); A-1..A-6 spec assumptions"
+affects:
+  - "M031 (right-sized entry — Quick intensity now bypasses dispatch-interface model-routing layer; M031 must restore the routing layer access for Quick intensity); M027 cost-observability surfaces (M030 extends additively via FR-15/FR-16/FR-17/FR-18); every future M030+ milestone (default flip is shadow-mode; live routing is operator-opt-in via .orchestrator/config.yml model_routing.live: true); operator-facing cost reporting (model_mix: footer + by-model rollup are the canonical surfaces)"
+key_files:
+  - "scripts/dispatch/classify-task.sh,scripts/dispatch/dispatch-interface.sh,scripts/diagnostics/shadow-compare.sh,scripts/diagnostics/metrics-rollup.sh,scripts/diagnostics/efficiency-footer.sh,scripts/diagnostics/check-anomalies.sh,scripts/diagnostics/doctor.sh,templates/model-routing.yml,references/model-routing.md,references/observability.md,tests/fixtures/m030-classifier-corpus/labels.yml,tests/fixtures/m030-classifier-corpus/README.md,tests/fixtures/m030-p02/sc3a-roundtrip-corpus.jsonl,tests/fixtures/m030-p02/shadow-corpus-ready.jsonl,tests/fixtures/m030-p02/shadow-corpus-partially-ready.jsonl,tests/fixtures/m030-p02/shadow-corpus-block.jsonl,tests/fixtures/m030-p02/shadow-corpus-evidence-insufficient.jsonl,tests/fixtures/m030-p06/regression-mechanical.jsonl,tests/fixtures/m030-p06/regression-standard.jsonl,tests/fixtures/m030-p06/regression-novel.jsonl,tests/m030-acceptance/shadow-corpus-fixtures.sh,tests/m030-acceptance/corpus-50-per-class.jsonl,tests/m030-acceptance/corpus-2-class-only.jsonl,tests/m030-acceptance/run-acceptance-battery.sh,tools/verify/p07-phase-suite.sh,.orchestrator/milestones/M030/M030-ACCEPTANCE-EVIDENCE.md,.orchestrator/milestones/M030/phases/P00/P00-SUMMARY.md,.orchestrator/milestones/M030/phases/P01/P01-SUMMARY.md,.orchestrator/milestones/M030/phases/P02/P02-SUMMARY.md,.orchestrator/milestones/M030/phases/P03/P03-SUMMARY.md,.orchestrator/milestones/M030/phases/P04/P04-SUMMARY.md,.orchestrator/milestones/M030/phases/P05/P05-SUMMARY.md,.orchestrator/milestones/M030/phases/P06/P06-SUMMARY.md,.orchestrator/milestones/M030/phases/P07/P07-SUMMARY.md"
+key_decisions:
+  - "<comma-separated synthesis of D-A1 through D-A9 (M030-CONTEXT.md), plus per-phase plan-time decisions: P01 classifier-confidence stability metric definition; P02 shadow-corpus path-resolution priority + 4-verdict closed-enum; P03 override-source enum closure + kill-switch precedence over min_tier; P04 escalation-cap + flip-gate programmatic enforcement; P05 cost_rates-absent fallback (warning + zero-savings) + ORCHESTRATOR_ROOT carve-out for footer fixtures; P06 #Q-4 threshold default (pass_rate 0.50 + min_class_sample 10) + env-only JSONL emit path; P07 4-task split (corpus + battery + ledger + close-ceremony) + structurally-distinct T04 ceremony fusing phase + milestone close>"
+patterns_established:
+  - "<comma-separated synthesis of patterns established across P00-P07: pre-implementation fixture corpus + version-controlled labels (P00); classifier-as-pure-bash + heuristic-table-as-SSOT (P01); 4-verdict closed-enum shadow-compare (P02); additive-jsonl-schema CON-2/FR-19 preserved across 6 schema extensions (P02-P06); pre-amendment golden-baseline + delegate-and-pass-through cross-phase wrappers (P05/T01 inverted P04/T01 pattern); ORCHESTRATOR_ROOT carve-out for fixture-routing without modifying the surface's resolver (P05/T01); additive-field-on-shadow-on-emit (P02/T02 + P04/T03 + P06/T02 lineage); env-var-seam-for-{shadow-mode,corpus-path,routing-table-path,anomaly-jsonl-path} convention; phase-suite straight-line aggregator (P02-P07 all share the no-loops-no-eval shape); plan-amendment-not-task-reopen pattern applied at every phase close for artifact-grep predicate divergences; structurally-distinct T04 ceremony fusing phase + milestone close (P07 only); idempotent corpus synthesizer + sha256-equality verifier (P05/T01 + P06/T01 + P07/T01); acceptance-battery as straight-line SC delegator (P07/T02); one-shot evidence ledger pattern at milestone close (P07/T03)>"
+drill_down_paths:
+  - ".orchestrator/milestones/M030/phases/P00/P00-SUMMARY.md, .orchestrator/milestones/M030/phases/P01/P01-SUMMARY.md, .orchestrator/milestones/M030/phases/P02/P02-SUMMARY.md, .orchestrator/milestones/M030/phases/P03/P03-SUMMARY.md, .orchestrator/milestones/M030/phases/P04/P04-SUMMARY.md, .orchestrator/milestones/M030/phases/P05/P05-SUMMARY.md, .orchestrator/milestones/M030/phases/P06/P06-SUMMARY.md, .orchestrator/milestones/M030/phases/P07/P07-SUMMARY.md, .orchestrator/milestones/M030/M030-ACCEPTANCE-EVIDENCE.md"
+duration: "<sum of P00-P07 durations from per-phase summaries; report in minutes>"
+verification_result: "pass"
+completed_at: "<ISO8601-timestamp>"
+observability_surfaces:
+  - "metrics-rollup --by-model; efficiency-footer model_mix:; doctor --config-check; check-anomalies model_routing_regression; shadow-compare 4-verdict; M030-ACCEPTANCE-EVIDENCE.md ledger; classifier-confidence stability metric in shadow-compare per-class evidence lines"
+---
+```
+
+Body sections (brief intro + 8 per-phase what-was-built paragraphs + verification + key decisions + patterns + roadmap impact + what's next):
+
+```markdown
+M030 (adaptive model selection) closed: a task-character classifier routes each dispatch to the cheapest single model that can do the job correctly, with a two-layer safety story — pre-flip classifier-calibration evidence (FR-7/FR-8 shadow corpus + 4-verdict shadow-compare) and post-flip regression-detection mesh (FR-10 verifier-fail escalation + FR-18 per-class anomaly detection + CON-4 operator kill switch). Eight phases (P00-P07) closed end-to-end across <duration> minutes; 14 success criteria (SC-1 through SC-11 inclusive of SC-2a/SC-3a/SC-7a) verified via the M030 acceptance battery (`tests/m030-acceptance/run-acceptance-battery.sh`); evidence captured at `.orchestrator/milestones/M030/M030-ACCEPTANCE-EVIDENCE.md`.
+
+P00 (Fixture corpus + ground-truth labels, <duration>m) shipped <P00-summary>...
+
+P01 (Classifier + routing table + cost_rates, <duration>m) shipped <P01-summary>...
+
+[... per-phase paragraphs for P00-P07 mirroring M028-SUMMARY.md body shape ...]
+
+Verification result: 14/14 SCs pass via the M030 acceptance battery. Phase-suite green at every phase (P00-P07). validate-milestone.sh reports N/N checks passed.
+
+Key decisions: <synthesis from frontmatter>.
+
+Patterns established: <synthesis from frontmatter>.
+
+Roadmap impact: M030 ships shadow-mode by default. Operators activate live routing via `.orchestrator/config.yml model_routing.live: true`; the FR-9 programmatic flip-gate refuses live routing if the shadow corpus is below threshold. The flip is per-project + reversible. Pre-launch CC-only posture preserved — Codex CLI + Cursor adapters resolve any symbolic tier to `inherit` per FR-6.
+
+Real-app smoke test pending: M030 ships against synthetic acceptance corpora (`tests/m030-acceptance/corpus-50-per-class.jsonl` is hand-crafted with 50 records/class). Real shadow-mode dispatches against pre-launch milestones (M031-M035) are the n=1 in-the-wild validator. Operators activating live routing should run >=50 shadow-mode dispatches per class against their own milestone history before flipping `model_routing.live: true`. The FR-9 programmatic flip-gate enforces this: insufficient corpus = `shadow_gate_blocked` JSONL record, no adapter call.
+
+What's next: M031 (right-sized entry) restores knowledge-graph + compression access for Quick intensity (today `commands/dispatch.md:21` skips `build-context.sh` — load-bearing leak that bypasses the M030 routing layer for Quick-intensity tasks). M031 + M030 compose as the thrift-and-ergonomics pair. M032 (wiki distribution + init integration) and M033 (project onboarding) follow.
+```
+
+### Phase-grain unit_close shape
+
+Field set per the existing M030 P00-P06 records in `.orchestrator/milestones/M030/execution-log.jsonl`. Read the last few lines BEFORE authoring the append to confirm the exact field set; M030's shape may differ slightly from the canonical (the P06 SUMMARY notes "the exact field set follows the existing M030 pattern"). Probable shape:
+
+```json
+{"record_type":"unit_close","granularity":"phase","unitId":"M030/P07","milestone":"M030","phase":"P07","outcome":"pass","verification_pass_rate":1.00,"completed_at":"<ISO8601>","duration_s":<duration>}
+```
+
+### Milestone-grain unit_close shape
+
+```json
+{"record_type":"unit_close","granularity":"milestone","unitId":"M030","milestone":"M030","outcome":"pass","verification_pass_rate":1.00,"completed_at":"<ISO8601>","duration_s":<sum-of-phase-durations>,"phase_count":8}
+```
+
+The exact field set should mirror [M028](../../../../../milestones/M028/index.md)'s milestone-grain unit_close if one exists; check `.orchestrator/milestones/M028/execution-log.jsonl` for the precedent. If no precedent exists, use the shape above and document the new convention in the T04 SUMMARY.
+
+### Close commit message
+
+File at `.orchestrator/milestones/M030/phases/P07/COMMIT-MSG.txt` (temporary, deleted post-commit). Body:
+
+```
+M030: adaptive model selection (closed)
+
+Closes M030 (adaptive model selection). Eight phases (P00-P07) shipped
+end-to-end; 14 success criteria verified via the M030 acceptance battery
+at tests/m030-acceptance/run-acceptance-battery.sh. Evidence ledger at
+.orchestrator/milestones/M030/M030-ACCEPTANCE-EVIDENCE.md.
+
+P07 deliverables (the milestone-close gate):
+- tests/m030-acceptance/shadow-corpus-fixtures.sh — idempotent
+  acceptance-corpus synthesizer (4 corpora: 50-per-class for ready;
+  zero for evidence_insufficient; 2-class-only for partially_ready;
+  block for the fourth verdict).
+- tests/m030-acceptance/run-acceptance-battery.sh — straight-line
+  end-to-end SC runner over 22 verifier invocations covering all 14
+  M030 SCs (SC-1 through SC-11 inclusive of SC-2a/SC-3a/SC-7a).
+- .orchestrator/milestones/M030/M030-ACCEPTANCE-EVIDENCE.md —
+  one-shot evidence ledger of the green-run state.
+- 9 P07 verifiers under tools/verify/p07-* (5 corpus gates + 3
+  cross-surface gates + 1 phase-suite aggregator).
+- M030-VALIDATED marker via scripts/lifecycle/mark-complete.sh.
+- M030-SUMMARY.md milestone-summary.
+
+Acceptance battery green: BATTERY: pass=N fail=0.
+Phase-suite green: SUMMARY: p07-phase-suite.sh pass=9 fail=0.
+validate-milestone.sh clean: VALIDATE: PASS — N/N checks passed.
+
+Real-app smoke test discipline (Plan-Time Discipline rule 5): M030
+ships shadow-mode by default. Live routing requires operator-set
+model_routing.live: true PLUS a real shadow corpus passing the FR-9
+flip-gate. The acceptance battery verifies the gate logic at
+acceptance scale; live activation is downstream operator decision.
+
+Closes M030 per .orchestrator/milestones/M030/M030-ROADMAP.md
+acceptance line 64 (P07 boundary-map produce: end-to-end shadow-corpus
++ flip-gate validation).
+```
+
+## Steps
+
+1. **Confirm T01+T02+T03 deliverables green** by running each verifier in turn:
+
+   ```bash
+   bash tools/verify/p07-phase-suite.sh
+   ```
+
+   Expected: `SUMMARY: p07-phase-suite.sh pass=9 fail=0`, exit 0. If FAIL, halt T04 and re-open the failing T0N task.
+
+2. **Run the full acceptance battery one final time** to capture the green-run timestamp + duration:
+
+   ```bash
+   start_ts="$(date +%s)"
+   bash tests/m030-acceptance/run-acceptance-battery.sh
+   end_ts="$(date +%s)"
+   battery_duration=$((end_ts - start_ts))
+   ```
+
+   Expected: `BATTERY: pass=N fail=0` on the last line. Capture N for the SUMMARY.
+
+3. **Author [`.orchestrator/milestones/M030/phases/P07/P07-SUMMARY.md`](../../../../../milestones/M030/phases/P07/P07-SUMMARY.md)** per the P02-P06 schema. Body covers T01-T04 deliverables + verification + patterns + roadmap impact (P07 closes M030).
+
+4. **Append phase-grain unit_close to execution-log.jsonl**. First read the last few existing lines to confirm the field set:
+
+   ```bash
+   tail -5 .orchestrator/milestones/M030/execution-log.jsonl
+   ```
+
+   Then append:
+
+   ```bash
+   ts="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+   duration_s="<phase-duration-in-seconds>"
+   printf '{"record_type":"unit_close","granularity":"phase","unitId":"M030/P07","milestone":"M030","phase":"P07","outcome":"pass","verification_pass_rate":1.00,"completed_at":"%s","duration_s":%s}\n' "$ts" "$duration_s" >> .orchestrator/milestones/M030/execution-log.jsonl
+   ```
+
+5. **Run `scripts/lifecycle/mark-complete.sh` to create the M030-VALIDATED marker**:
+
+   ```bash
+   bash scripts/lifecycle/mark-complete.sh .orchestrator M030
+   ```
+
+   Expected: prints VALIDATE: lines for each phase + writes `.orchestrator/milestones/M030/M030-VALIDATED` with phase_count=8 + per-phase complete listing.
+
+   The script's preflight-clean-root.sh check rejects a dirty working tree. T04 has uncommitted P07-SUMMARY.md + execution-log.jsonl changes at this point; the preflight may flag them. Two options:
+   - Stage the P07-SUMMARY.md + execution-log.jsonl FIRST via `git add`, then run mark-complete.sh — the preflight allowlists staged scratch/result-file paths but not staged spec-tree edits. If the preflight rejects, set `ORCHESTRATOR_ALLOW_DIRTY_MARK=1` per the script body's documented escape hatch.
+   - Run mark-complete.sh BEFORE staging, so the dirty paths are still untracked and the preflight allowlists them. Order is captured in step sequencing — mark-complete.sh runs at this step (5) BEFORE the close commit at step 12.
+
+   The script writes `M030-VALIDATED` directly; the file is then staged at step 11.
+
+6. **Author [`.orchestrator/milestones/M030/M030-SUMMARY.md`](../../../../../milestones/M030/M030-SUMMARY.md)** per the M028-SUMMARY.md schema. Use the Write tool. Body sections per the Description's milestone-summary skeleton. Read each P00-P07 SUMMARY.md to populate the per-phase paragraphs.
+
+7. **Append milestone-grain unit_close to execution-log.jsonl**. Confirm the granularity field shape first by reading the last lines (M030's log may already have phase-grain records but no milestone-grain — T04's append is the first):
+
+   ```bash
+   total_duration_s="<sum-of-P00-through-P07-duration-fields>"
+   ts="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+   printf '{"record_type":"unit_close","granularity":"milestone","unitId":"M030","milestone":"M030","outcome":"pass","verification_pass_rate":1.00,"completed_at":"%s","duration_s":%s,"phase_count":8}\n' "$ts" "$total_duration_s" >> .orchestrator/milestones/M030/execution-log.jsonl
+   ```
+
+8. **Update CLAUDE.md project-status section** via the Edit tool. The current text in CLAUDE.md says:
+
+   ```
+   **In progress**: **M030 (adaptive model selection)** — phases P00–P05 complete...
+   ```
+
+   Edit to:
+
+   ```
+   **Closed**: ...M028 (autonomous hardening v3), **M030 (adaptive model selection, 2026-04-30)**.
+   ```
+
+   And remove the multi-paragraph "in progress" + "operator decision pending" stanza around M030 in both the Project Status section AND the Forward Roadmap section. The Forward Roadmap stanza ("M030-close → [M031](../../../../../milestones/M031/index.md) → M032 → ...") becomes "M031 → M032 → ..." with the M030 reference removed from the active queue and folded into the Closed section.
+
+9. **Dual-write the recent-changes fragment** for M030 close. Two entries via dual-write helper:
+
+   ```bash
+   bash scripts/util/dual-write-runtime-md.sh --append-entry "M030: closed — adaptive model selection (8 phases, 14 SCs, acceptance battery green). M031 (right-sized entry) is next."
+   ```
+
+   If the helper trims to a 1-entry bound, manually edit both `CLAUDE.md` and `AGENTS.md` recent-changes blocks to insert the new line at the top while preserving the prior P06 entry.
+
+10. **Author the close commit message file** at `.orchestrator/milestones/M030/phases/P07/COMMIT-MSG.txt` using the Write tool. Body per the Description's close commit message.
+
+11. **Stage all P07 + M030-close deliverables**:
+
+    ```bash
+    git add tests/m030-acceptance/ tools/verify/p07-corpus-synthesizer-idempotent.sh tools/verify/p07-corpus-50-per-class-ready.sh tools/verify/p07-corpus-zero-evidence-insufficient.sh tools/verify/p07-corpus-2-class-partially-ready.sh tools/verify/p07-corpus-block.sh tools/verify/p07-partial-flip-jsonl-fields.sh tools/verify/p07-cross-surface-coherence.sh tools/verify/p07-acceptance-battery-pass.sh tools/verify/p07-acceptance-evidence-ledger.sh tools/verify/p07-phase-suite.sh .orchestrator/milestones/M030/phases/P07/ [.orchestrator/milestones/M030/M030-ACCEPTANCE-EVIDENCE.md](../../../../../milestones/M030/M030-ACCEPTANCE-EVIDENCE.md) [.orchestrator/milestones/M030/M030-SUMMARY.md](../../../../../milestones/M030/M030-SUMMARY.md) .orchestrator/milestones/M030/M030-VALIDATED .orchestrator/milestones/M030/execution-log.jsonl CLAUDE.md AGENTS.md
+    ```
+
+    Single `git add` invocation with all paths as positional args.
+
+12. **Confirm staged diff**:
+
+    ```bash
+    git diff --cached --stat
+    ```
+
+    Expected: ~25-30 files staged. No `COMMIT-MSG.txt` in the staged diff (it's deleted post-commit).
+
+13. **Author the close commit**:
+
+    ```bash
+    git commit -F .orchestrator/milestones/M030/phases/P07/COMMIT-MSG.txt
+    ```
+
+    Expected: clean commit, no pre-commit hook failure. Capture the commit SHA.
+
+14. **Delete the temporary commit-message file**:
+
+    ```bash
+    rm .orchestrator/milestones/M030/phases/P07/COMMIT-MSG.txt
+    ```
+
+15. **Run the milestone validator one final time**:
+
+    ```bash
+    bash scripts/verify/validate-milestone.sh .orchestrator/milestones/M030
+    ```
+
+    Expected: `VALIDATE: PASS — N/N checks passed`, exit 0. ALL phase summaries (P00-P07) present; ALL boundary-map produces resolve. If FAIL, the failure is one of:
+    - **A phase summary boundary-map predicate** — apply the plan-amendment-not-task-reopen pattern from P02-P06 precedent.
+    - **A missing key_files path in M030-SUMMARY.md** — Edit the M030-SUMMARY.md frontmatter `key_files` to remove the missing path (or add the path if the file should exist).
+    - **A genuine missing deliverable** — halt and address before continuing.
+
+16. **Run the full P07 phase-suite + acceptance battery one last time post-commit** to confirm everything is green:
+
+    ```bash
+    bash tools/verify/p07-phase-suite.sh
+    bash tests/m030-acceptance/run-acceptance-battery.sh
+    ```
+
+    Expected: phase-suite `pass=9 fail=0`, battery `pass=N fail=0`, both exit 0.
+
+## Must-Haves
+
+T04 satisfies the milestone-close ceremony — outputs gate the milestone close, not just the phase close:
+
+- `.orchestrator/milestones/M030/M030-VALIDATED` exists with phase_count=8 and per-phase complete listing.
+- [`.orchestrator/milestones/M030/M030-SUMMARY.md`](../../../../../milestones/M030/M030-SUMMARY.md) exists with `type: milestone-summary` frontmatter.
+- [`.orchestrator/milestones/M030/phases/P07/P07-SUMMARY.md`](../../../../../milestones/M030/phases/P07/P07-SUMMARY.md) exists with `type: phase-summary` frontmatter.
+- Phase-grain `unit_close` for `M030/P07` and milestone-grain `unit_close` for `M030` both appended to `.orchestrator/milestones/M030/execution-log.jsonl`.
+- `bash scripts/verify/validate-milestone.sh .orchestrator/milestones/M030` reports `VALIDATE: PASS — N/N checks passed` and exits 0.
+- CLAUDE.md project-status section flips M030 from "in progress" to "Closed".
+- Single atomic close commit titled `M030: adaptive model selection (closed)`.
+
+These are NOT phase-truths gated by `check-must-haves.sh` — they are milestone-close ceremony deliverables verified by `validate-milestone.sh` + the artifact predicates declared in P07-PLAN.md.
+
+## Verification
+
+```bash
+bash tools/verify/p07-phase-suite.sh
+bash scripts/verify/check-must-haves.sh .orchestrator/milestones/M030/phases/P07
+bash scripts/verify/validate-milestone.sh .orchestrator/milestones/M030
+```
+
+All three must exit 0 before T04 closes.
+
+## Inputs
+
+### From Previous Tasks (T01 + T02 + T03)
+
+- All P07 deliverables under `tests/m030-acceptance/`, `tools/verify/p07-*`, and [`.orchestrator/milestones/M030/M030-ACCEPTANCE-EVIDENCE.md`](../../../../../milestones/M030/M030-ACCEPTANCE-EVIDENCE.md).
+
+### From Disk (Pre-existing)
+
+- `scripts/lifecycle/mark-complete.sh` — Key API: `bash <path> <orchestrator-root> <milestone-id>`. Verifies all phases have summaries, then writes `M###-VALIDATED` marker with milestone ID + timestamp + phase listing. Idempotent. Honors `ORCHESTRATOR_ALLOW_DIRTY_MARK=1` for emergency unblock.
+- `scripts/util/dual-write-runtime-md.sh` — Key API: `bash <path> --append-entry "<one-line-text>"`. Locates `>>> orchestrator:recent-changes >>>` sentinel block in both CLAUDE.md and AGENTS.md, prepends entry, optionally trims.
+- `scripts/verify/validate-milestone.sh` — Key API: `bash <path> <milestone-dir>`. Reads each phase's P##-SUMMARY.md frontmatter + checks key_files existence + boundary-map produces vs consumes graph closure. Reports `VALIDATE: <pass>/<total>`.
+- `scripts/verify/check-must-haves.sh` — Key API: `bash <path> <phase-dir>`. Reads phase plan Must-Haves + checks each truth/artifact/key-link.
+- `git` — for staging + committing. T04 uses `git commit -F <file>`.
+- `.orchestrator/milestones/M030/execution-log.jsonl` — append-only JSONL. T04 appends two records (phase-grain + milestone-grain unit_close).
+- [`.orchestrator/milestones/M028/M028-SUMMARY.md`](../../../../../milestones/M028/M028-SUMMARY.md) — schema reference for the M030-SUMMARY.md authoring.
+- `.orchestrator/milestones/M028/M028-VALIDATED` — schema reference for the marker file shape (mark-complete.sh creates it; T04 doesn't author it directly).
+- `CLAUDE.md` — project-status + forward-roadmap sections; T04 edits both to flip M030 from in-progress to Closed.
+- `AGENTS.md` — recent-changes block; dual-written by the helper.
+
+## Constraints
+
+- **Atomic commit discipline**: T04 ships ONE commit covering the phase close + milestone close. No interim commits. Reason: milestone close is a single state transition; splitting creates a fragile half-closed state.
+- **AP-008 heredoc-with-expansion**: T04 uses `git commit -F <file>` — never inline `git commit -m "$(cat <<'EOF'...)"`.
+- **AP-009 compound-chain-gt2**: every step uses straight-line shape. The `git add` invocation in step 11 is a single command with multiple positional args.
+- **Bash 3.2 compatibility**: parallel scalars + `if`-statements throughout.
+- **MEM004 emitter-internal carve-out**: does NOT apply to T04.
+- **Plan-Time Discipline rule 1 (prerequisite-existence verification)**: T04's prerequisites name several scripts (`mark-complete.sh`, `dual-write-runtime-md.sh`, `validate-milestone.sh`, `check-must-haves.sh`) — verified at plan-authoring time.
+- **Plan-Time Discipline rule 2 (verifier-availability cross-check)**: T04's `## Verification` section names `p07-phase-suite.sh` (T03 deliverable) + `check-must-haves.sh` + `validate-milestone.sh` (pre-existing). All resolve at T04 entry post-T03 close.
+- **Plan-Time Discipline rule 4 (run-probe.sh scope)**: T04 invokes scripts directly. No `run-probe.sh` wrapping.
+- **Project-owned-verifier-paths discipline (M032 Finding A)**: phase-suite aggregator at `tools/verify/p07-phase-suite.sh` (slug-bearing).
+- **Real-app smoke test discipline (Plan-Time Discipline rule 5)**: M030 ships against synthetic acceptance corpora; the M030-SUMMARY.md body explicitly documents this in its "Real-app smoke test pending" callout AND the close commit body names the FR-9 programmatic flip-gate as the in-the-wild safety mechanism for operator-driven live activation. Live routing remains shadow-mode-default; the milestone close does NOT activate live routing in any operator's project.
+- **Constitution Principle II (Evidence Before Claims)**: M030-SUMMARY.md provenance points to M030-ACCEPTANCE-EVIDENCE.md + the green-run BATTERY line as the empirical basis for the closure claim. The shadow-mode-default + FR-9 flip-gate posture honors Principle II's "no claims that cannot be mechanically verified" requirement — M030 doesn't claim cross-model equivalence pre-flip; it claims classifier-confidence calibration pre-flip + post-flip regression detection (FR-10/FR-18/CON-4).
+
+## Expected Output
+
+- [`.orchestrator/milestones/M030/phases/P07/P07-SUMMARY.md`](../../../../../milestones/M030/phases/P07/P07-SUMMARY.md) — phase-summary file.
+- [`.orchestrator/milestones/M030/M030-SUMMARY.md`](../../../../../milestones/M030/M030-SUMMARY.md) — milestone-summary file.
+- `.orchestrator/milestones/M030/M030-VALIDATED` — marker file authored by mark-complete.sh.
+- `.orchestrator/milestones/M030/execution-log.jsonl` — appended with phase-grain + milestone-grain unit_close.
+- `CLAUDE.md` — project-status section updated; M030 flipped from in-progress to Closed; recent-changes block updated.
+- `AGENTS.md` — recent-changes block updated.
+- One git commit: `M030: adaptive model selection (closed)` with multi-line body authored via `-F <file>`.
+- `validate-milestone.sh` reports `VALIDATE: PASS — N/N checks passed`, exit 0.
+
+## Notes
+
+Expected output examples (kept under `## Notes` so `auto-loop --step=V` does not eval them):
+
+- `bash tools/verify/p07-phase-suite.sh` (post-commit) → `SUMMARY: p07-phase-suite.sh pass=9 fail=0`, exit 0.
+- `bash scripts/verify/validate-milestone.sh .orchestrator/milestones/M030` (post-commit) → `VALIDATE: PASS — N/N checks passed`, exit 0.
+- `bash scripts/lifecycle/mark-complete.sh .orchestrator M030` → emits `VALIDATE:` lines for each phase + creates `M030-VALIDATED` marker.
+- `git log --oneline -1` (post-T04) → `<SHA> M030: adaptive model selection (closed)`.
+- `bash tests/m030-acceptance/run-acceptance-battery.sh` (post-commit) → `BATTERY: pass=N fail=0` on the last line, exit 0.
+- `cat .orchestrator/milestones/M030/M030-VALIDATED` →
+  ```
+  # Milestone Validation Marker
+
+  milestone: M030
+  validated_at: <ISO8601>
+  phase_count: 8
+
+  ## Phase Results
+
+  P00: complete
+  P01: complete
+  P02: complete
+  P03: complete
+  P04: complete
+  P05: complete
+  P06: complete
+  P07: complete
+  ```
+
+The plan-amendment-not-task-reopen pattern (P02-P06 precedent) applies most strongly at T04. The M030-SUMMARY.md key_files list is authored at step 6 against an aspirational shape; the `validate-milestone.sh` boundary-map check at step 15 may flag drift between the declared shape and what's on disk. AMEND M030-SUMMARY.md key_files directly when this happens — most failures are stale-frontmatter-vs-disk drift, not genuine missing deliverables. Do NOT re-open T01-T03 for predicate divergences.
+
+If `mark-complete.sh` rejects the working tree as dirty at step 5, two acceptable paths:
+1. Stage P07-SUMMARY.md + execution-log.jsonl FIRST via `git add` (so the working tree is clean modulo staged paths), then run mark-complete.sh.
+2. Set `ORCHESTRATOR_ALLOW_DIRTY_MARK=1` per the script's documented escape hatch.
+
+The first path is preferred (preserves the script's safety contract). If the staged paths still trip the preflight (because preflight checks the staging area too), the second path is the documented safety override.
+
+If the milestone-grain unit_close field set diverges from any prior milestone's pattern (M028 may not have a milestone-grain unit_close — T04's append may be the first such record), document the new convention in T04's SUMMARY and add a one-line entry to `references/observability.md` describing the milestone-grain shape. This is a one-line documentation extension, NOT a new milestone-grain emitter contract.
+
+The CLAUDE.md project-status edit at step 8 is the most error-prone manual step. Read the current CLAUDE.md "Project Status" section + "Forward Roadmap" section in full BEFORE authoring the edit. The Project Status section has a multi-paragraph "in progress" + "operator decision pending" stanza around M030 — the entire stanza must be removed AND M030 must be moved into the "Closed" list AND the Forward Roadmap "M030-close → M031" sequence must be amended to drop M030. Each is a separate Edit invocation. If the edits land wrong, revert via `git checkout HEAD -- CLAUDE.md` and re-author.
+
+Real-app smoke test pending callout (Plan-Time Discipline rule 5): the M030-SUMMARY.md body MUST contain a "Real-app smoke test pending" paragraph. It documents that the synthetic acceptance corpora are not the same as in-the-wild dispatch evidence, and that operators must run >=50 shadow-mode dispatches per class against their own milestone history before activating live routing. The FR-9 programmatic flip-gate enforces this mechanically; the SUMMARY's prose makes the discipline explicit for human readers.
+
+## State Context
+
+- **Current State**: executing
+- **Milestone**: M030
+- **Phase**: P07
+- **Task**: T04-milestone-close-ceremony
+- **Tier**: C
+
+## First-Turn Completeness
+
+### Intent
+
+
+### Constraints
+
+- **Atomic commit discipline**: T04 ships ONE commit covering the phase close + milestone close. No interim commits. Reason: milestone close is a single state transition; splitting creates a fragile half-closed state.
+- **AP-008 heredoc-with-expansion**: T04 uses `git commit -F <file>` — never inline `git commit -m "$(cat <<'EOF'...)"`.
+- **AP-009 compound-chain-gt2**: every step uses straight-line shape. The `git add` invocation in step 11 is a single command with multiple positional args.
+- **Bash 3.2 compatibility**: parallel scalars + `if`-statements throughout.
+- **MEM004 emitter-internal carve-out**: does NOT apply to T04.
+- **Plan-Time Discipline rule 1 (prerequisite-existence verification)**: T04's prerequisites name several scripts (`mark-complete.sh`, `dual-write-runtime-md.sh`, `validate-milestone.sh`, `check-must-haves.sh`) — verified at plan-authoring time.
+- **Plan-Time Discipline rule 2 (verifier-availability cross-check)**: T04's `## Verification` section names `p07-phase-suite.sh` (T03 deliverable) + `check-must-haves.sh` + `validate-milestone.sh` (pre-existing). All resolve at T04 entry post-T03 close.
+- **Plan-Time Discipline rule 4 (run-probe.sh scope)**: T04 invokes scripts directly. No `run-probe.sh` wrapping.
+- **Project-owned-verifier-paths discipline (M032 Finding A)**: phase-suite aggregator at `tools/verify/p07-phase-suite.sh` (slug-bearing).
+- **Real-app smoke test discipline (Plan-Time Discipline rule 5)**: M030 ships against synthetic acceptance corpora; the M030-SUMMARY.md body explicitly documents this in its "Real-app smoke test pending" callout AND the close commit body names the FR-9 programmatic flip-gate as the in-the-wild safety mechanism for operator-driven live activation. Live routing remains shadow-mode-default; the milestone close does NOT activate live routing in any operator's project.
+- **Constitution Principle II (Evidence Before Claims)**: M030-SUMMARY.md provenance points to M030-ACCEPTANCE-EVIDENCE.md + the green-run BATTERY line as the empirical basis for the closure claim. The shadow-mode-default + FR-9 flip-gate posture honors Principle II's "no claims that cannot be mechanically verified" requirement — M030 doesn't claim cross-model equivalence pre-flip; it claims classifier-confidence calibration pre-flip + post-flip regression detection (FR-10/FR-18/CON-4).
+
+### Acceptance Criteria
+
+T04 satisfies the milestone-close ceremony — outputs gate the milestone close, not just the phase close:
+
+- `.orchestrator/milestones/M030/M030-VALIDATED` exists with phase_count=8 and per-phase complete listing.
+- [`.orchestrator/milestones/M030/M030-SUMMARY.md`](../../../../../milestones/M030/M030-SUMMARY.md) exists with `type: milestone-summary` frontmatter.
+- [`.orchestrator/milestones/M030/phases/P07/P07-SUMMARY.md`](../../../../../milestones/M030/phases/P07/P07-SUMMARY.md) exists with `type: phase-summary` frontmatter.
+- Phase-grain `unit_close` for `M030/P07` and milestone-grain `unit_close` for `M030` both appended to `.orchestrator/milestones/M030/execution-log.jsonl`.
+- `bash scripts/verify/validate-milestone.sh .orchestrator/milestones/M030` reports `VALIDATE: PASS — N/N checks passed` and exits 0.
+- CLAUDE.md project-status section flips M030 from "in progress" to "Closed".
+- Single atomic close commit titled `M030: adaptive model selection (closed)`.
+
+These are NOT phase-truths gated by `check-must-haves.sh` — they are milestone-close ceremony deliverables verified by `validate-milestone.sh` + the artifact predicates declared in P07-PLAN.md.
+
+### Files To Touch
+
+- tests/m030-acceptance/shadow-corpus-fixtures.sh (create)
+- tests/m030-acceptance/corpus-50-per-class.jsonl (create)
+- tests/m030-acceptance/corpus-zero.jsonl (create)
+- tests/m030-acceptance/corpus-2-class-only.jsonl (create)
+- tests/m030-acceptance/corpus-block.jsonl (create)
+- tests/m030-acceptance/run-acceptance-battery.sh (create)
+- tools/verify/p07-corpus-synthesizer-idempotent.sh (create)
+- tools/verify/p07-corpus-50-per-class-ready.sh (create)
+- tools/verify/p07-corpus-zero-evidence-insufficient.sh (create)
+- tools/verify/p07-corpus-2-class-partially-ready.sh (create)
+- tools/verify/p07-corpus-block.sh (create)
+- tools/verify/p07-partial-flip-jsonl-fields.sh (create)
+- tools/verify/p07-cross-surface-coherence.sh (create)
+- tools/verify/p07-acceptance-battery-pass.sh (create)
+- tools/verify/p07-acceptance-evidence-ledger.sh (create)
+- tools/verify/p07-phase-suite.sh (create)
+- [.orchestrator/milestones/M030/M030-ACCEPTANCE-EVIDENCE.md](../../../../../milestones/M030/M030-ACCEPTANCE-EVIDENCE.md) (create)
+- [.orchestrator/milestones/M030/M030-SUMMARY.md](../../../../../milestones/M030/M030-SUMMARY.md) (create)
+- .orchestrator/milestones/M030/M030-VALIDATED (create — written by mark-complete.sh)
+- [.orchestrator/milestones/M030/phases/P07/P07-SUMMARY.md](../../../../../milestones/M030/phases/P07/P07-SUMMARY.md) (create)
+- [.orchestrator/milestones/M030/phases/P07/P07-PLAN.md](../../../../../milestones/M030/phases/P07/P07-PLAN.md) (create — this file)
+- [.orchestrator/milestones/M030/phases/P07/tasks/T01-corpus-and-verdict-gates-PLAN.md](../../../../../milestones/M030/phases/P07/tasks/T01-corpus-and-verdict-gates-PLAN.md) (create)
+- [.orchestrator/milestones/M030/phases/P07/tasks/T02-acceptance-battery-PLAN.md](../../../../../milestones/M030/phases/P07/tasks/T02-acceptance-battery-PLAN.md) (create)
+- [.orchestrator/milestones/M030/phases/P07/tasks/T03-evidence-ledger-and-phase-suite-PLAN.md](../../../../../milestones/M030/phases/P07/tasks/T03-evidence-ledger-and-phase-suite-PLAN.md) (create)
+- [.orchestrator/milestones/M030/phases/P07/tasks/T04-milestone-close-ceremony-PLAN.md](../../../../../milestones/M030/phases/P07/tasks/T04-milestone-close-ceremony-PLAN.md) (create)
+- .orchestrator/milestones/M030/execution-log.jsonl (modify — phase-grain unit_close append at T04 + milestone-grain unit_close append at T04)
+- CLAUDE.md (modify — recent-changes region + project-status update from "in progress" to "Closed M030")
+- AGENTS.md (modify — recent-changes region)
+
+</dispatch-volatile>
+
+UPDATED: MEM001 (hit_count)
+UPDATED: MEM002 (hit_count)
+UPDATED: MEM003 (hit_count)
+UPDATED: MEM004 (hit_count)
+UPDATED: MEM005 (hit_count)
+UPDATED: MEM006 (hit_count)
+UPDATED: MEM007 (hit_count)
+UPDATED: MEM008 (hit_count)
+UPDATED: MEM009 (hit_count)
+UPDATED: MEM010 (hit_count)
+UPDATED: MEM011 (hit_count)
+UPDATED: MEM012 (hit_count)
+UPDATED: MEM013 (hit_count)
+UPDATED: MEM014 (hit_count)
+UPDATED: MEM015 (hit_count)
+UPDATED: MEM016 (hit_count)
+UPDATED: MEM017 (hit_count)
+UPDATED: MEM018 (hit_count)
+UPDATED: MEM019 (hit_count)
+UPDATED: MEM020 (hit_count)
+UPDATED: MEM021 (hit_count)
+UPDATED: MEM022 (hit_count)
+UPDATED: MEM023 (hit_count)
+UPDATED: MEM024 (hit_count)
+UPDATED: MEM025 (hit_count)
+UPDATED: MEM026 (hit_count)
+UPDATED: MEM027 (hit_count)
+UPDATED: MEM028 (hit_count)
+UPDATED: MEM029 (hit_count)
+UPDATED: MEM030 (hit_count)
+UPDATED: MEM031 (hit_count)

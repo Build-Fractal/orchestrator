@@ -6,8 +6,8 @@ title: "Dispatch Context -- T02-override-resolution (Phase P03, Milestone M030)"
      Source of truth: ../../../../../../../.orchestrator/milestones/M030/phases/P03/tasks/T02-override-resolution-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M030/phases/P03/tasks/T02-override-resolution-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M030/phases/P03/tasks/T02-override-resolution-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

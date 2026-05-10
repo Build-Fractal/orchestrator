@@ -6,8 +6,8 @@ title: "Dispatch Context -- T02-init-with-wiki-passthrough (Phase P02, Milestone
      Source of truth: ../../../../../../../.orchestrator/milestones/M032/phases/P02/tasks/T02-init-with-wiki-passthrough-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M032/phases/P02/tasks/T02-init-with-wiki-passthrough-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M032/phases/P02/tasks/T02-init-with-wiki-passthrough-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

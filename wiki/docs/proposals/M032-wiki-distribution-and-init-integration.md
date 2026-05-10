@@ -6,7 +6,7 @@ title: "Proposal: M032 — Wiki Distribution + Init Integration"
      Source of truth: ../../../.orchestrator/proposals/M032-wiki-distribution-and-init-integration.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/M032-wiki-distribution-and-init-integration.md"
+  include-markdown "../../.staged/proposals/M032-wiki-distribution-and-init-integration.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

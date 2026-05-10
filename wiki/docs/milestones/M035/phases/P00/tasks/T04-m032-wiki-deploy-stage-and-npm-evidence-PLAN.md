@@ -6,8 +6,8 @@ title: "T04-m032-wiki-deploy-stage-and-npm-evidence-PLAN"
      Source of truth: ../../../../../../../.orchestrator/milestones/M035/phases/P00/tasks/T04-m032-wiki-deploy-stage-and-npm-evidence-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M035/phases/P00/tasks/T04-m032-wiki-deploy-stage-and-npm-evidence-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M035/phases/P00/tasks/T04-m032-wiki-deploy-stage-and-npm-evidence-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

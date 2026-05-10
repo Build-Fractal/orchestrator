@@ -6,8 +6,8 @@ title: "Dispatch Context -- T03-phase-suite-and-close (Phase P05, Milestone M030
      Source of truth: ../../../../../../../.orchestrator/milestones/M030/phases/P05/tasks/T03-phase-suite-and-close-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M030/phases/P05/tasks/T03-phase-suite-and-close-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M030/phases/P05/tasks/T03-phase-suite-and-close-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

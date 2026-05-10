@@ -6,8 +6,8 @@ title: "scripts/diagnostics/check-plans.sh — AD-19 task plan shape lint."
      Source of truth: ../../../../../../../.orchestrator/milestones/M005/phases/P06/tasks/T03-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M005/phases/P06/tasks/T03-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M005/phases/P06/tasks/T03-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

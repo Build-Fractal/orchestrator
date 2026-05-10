@@ -6,8 +6,8 @@ title: "Dispatch Context -- T02-ingest-review-advisory (Phase P06, Milestone M03
      Source of truth: ../../../../../../../.orchestrator/milestones/M036/phases/P06/tasks/T02-ingest-review-advisory-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M036/phases/P06/tasks/T02-ingest-review-advisory-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M036/phases/P06/tasks/T02-ingest-review-advisory-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

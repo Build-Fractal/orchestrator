@@ -6,8 +6,8 @@ title: "Dispatch Context -- T03-custom-nav-region (Phase P03, Milestone M032)"
      Source of truth: ../../../../../../../.orchestrator/milestones/M032/phases/P03/tasks/T03-custom-nav-region-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M032/phases/P03/tasks/T03-custom-nav-region-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M032/phases/P03/tasks/T03-custom-nav-region-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

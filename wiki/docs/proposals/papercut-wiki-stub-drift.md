@@ -6,7 +6,7 @@ title: "Paper-Cut: wiki-stub freshness gap allows mkdocs silent failure when pla
      Source of truth: ../../../.orchestrator/proposals/papercut-wiki-stub-drift.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/papercut-wiki-stub-drift.md"
+  include-markdown "../../.staged/proposals/papercut-wiki-stub-drift.md"
   start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=false

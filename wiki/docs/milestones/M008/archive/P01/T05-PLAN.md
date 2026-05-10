@@ -6,8 +6,8 @@ title: "Verifies all P01 scripts are Bash 3.2 compatible."
      Source of truth: ../../../../../../.orchestrator/milestones/M008/archive/P01/T05-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../.orchestrator/milestones/M008/archive/P01/T05-PLAN.md"
+  include-markdown "../../../../../.staged/milestones/M008/archive/P01/T05-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

@@ -6,8 +6,8 @@ title: "Dispatch Context -- T04-phase-suite-and-demo (Phase P00, Milestone M027)
      Source of truth: ../../../../../../.orchestrator/milestones/M027/archive/P00/T04-phase-suite-and-demo-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../.orchestrator/milestones/M027/archive/P00/T04-phase-suite-and-demo-PAYLOAD.md"
+  include-markdown "../../../../../.staged/milestones/M027/archive/P00/T04-phase-suite-and-demo-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

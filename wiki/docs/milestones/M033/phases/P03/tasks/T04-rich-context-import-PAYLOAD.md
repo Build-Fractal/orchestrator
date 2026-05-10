@@ -6,8 +6,8 @@ title: "Dispatch Context -- T04-rich-context-import (Phase P03, Milestone M033)"
      Source of truth: ../../../../../../../.orchestrator/milestones/M033/phases/P03/tasks/T04-rich-context-import-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M033/phases/P03/tasks/T04-rich-context-import-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M033/phases/P03/tasks/T04-rich-context-import-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

@@ -6,7 +6,7 @@ title: "Paper-Cut: `orchestrator:specify` emits a Pass-1 `unit_close` only — P
      Source of truth: ../../../.orchestrator/proposals/papercut-specify-pass23-unit-close.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/papercut-specify-pass23-unit-close.md"
+  include-markdown "../../.staged/proposals/papercut-specify-pass23-unit-close.md"
   start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=false

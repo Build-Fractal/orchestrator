@@ -6,7 +6,7 @@ title: "Paper-Cut Handoff — wiki publishing pipeline robustness (2026-05-07)"
      Source of truth: ../../../.orchestrator/proposals/papercut-handoff-wiki-publishing-robustness-2026-05-07.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/papercut-handoff-wiki-publishing-robustness-2026-05-07.md"
+  include-markdown "../../.staged/proposals/papercut-handoff-wiki-publishing-robustness-2026-05-07.md"
   start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=false

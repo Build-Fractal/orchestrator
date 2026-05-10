@@ -6,8 +6,8 @@ title: "T02-ad14-capture-and-fr4-PLAN"
      Source of truth: ../../../../../../../.orchestrator/milestones/M031/phases/P01/tasks/T02-ad14-capture-and-fr4-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M031/phases/P01/tasks/T02-ad14-capture-and-fr4-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M031/phases/P01/tasks/T02-ad14-capture-and-fr4-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

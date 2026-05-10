@@ -6,8 +6,8 @@ title: "T03-wiki-stubs-fresh-diagnostic-and-gate-PLAN"
      Source of truth: ../../../../../../../.orchestrator/milestones/M035/phases/P00/tasks/T03-wiki-stubs-fresh-diagnostic-and-gate-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M035/phases/P00/tasks/T03-wiki-stubs-fresh-diagnostic-and-gate-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M035/phases/P00/tasks/T03-wiki-stubs-fresh-diagnostic-and-gate-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

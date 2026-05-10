@@ -6,8 +6,8 @@ title: "T02-markdown-and-pdf-adapters-PLAN"
      Source of truth: ../../../../../../../.orchestrator/milestones/M036/phases/P01/tasks/T02-markdown-and-pdf-adapters-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M036/phases/P01/tasks/T02-markdown-and-pdf-adapters-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M036/phases/P01/tasks/T02-markdown-and-pdf-adapters-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

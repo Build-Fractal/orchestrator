@@ -6,8 +6,8 @@ title: "Phase rollup — runs every must-have Check: command above."
      Source of truth: ../../../../../../.orchestrator/milestones/M020/phases/P06/P06-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../.orchestrator/milestones/M020/phases/P06/P06-PLAN.md"
+  include-markdown "../../../../../.staged/milestones/M020/phases/P06/P06-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

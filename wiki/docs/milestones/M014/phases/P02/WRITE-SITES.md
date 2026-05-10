@@ -6,7 +6,7 @@ title: "M014/P02 Write-Site Manifest"
      Source of truth: ../../../../../../.orchestrator/milestones/M014/phases/P02/WRITE-SITES.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../.orchestrator/milestones/M014/phases/P02/WRITE-SITES.md"
+  include-markdown "../../../../../.staged/milestones/M014/phases/P02/WRITE-SITES.md"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

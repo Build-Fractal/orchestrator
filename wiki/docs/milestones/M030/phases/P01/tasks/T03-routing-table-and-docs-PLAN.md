@@ -6,8 +6,8 @@ title: "Symbolic interface — characters map to symbolic tiers (per CON-3)."
      Source of truth: ../../../../../../../.orchestrator/milestones/M030/phases/P01/tasks/T03-routing-table-and-docs-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M030/phases/P01/tasks/T03-routing-table-and-docs-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M030/phases/P01/tasks/T03-routing-table-and-docs-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

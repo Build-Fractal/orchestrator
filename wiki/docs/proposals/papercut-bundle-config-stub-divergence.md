@@ -6,7 +6,7 @@ title: "Paper-Cut: `packaging/bundle/config/orchestrator.default.yml` is a hand-
      Source of truth: ../../../.orchestrator/proposals/papercut-bundle-config-stub-divergence.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/papercut-bundle-config-stub-divergence.md"
+  include-markdown "../../.staged/proposals/papercut-bundle-config-stub-divergence.md"
   start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=false

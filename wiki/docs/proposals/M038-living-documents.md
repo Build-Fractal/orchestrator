@@ -6,7 +6,7 @@ title: "Proposal: M038 — Living Documents (framework-owned primitive)"
      Source of truth: ../../../.orchestrator/proposals/M038-living-documents.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/M038-living-documents.md"
+  include-markdown "../../.staged/proposals/M038-living-documents.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

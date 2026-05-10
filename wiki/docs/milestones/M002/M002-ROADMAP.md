@@ -6,8 +6,8 @@ title: "M002-ROADMAP"
      Source of truth: ../../../../.orchestrator/milestones/M002/M002-ROADMAP.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../.orchestrator/milestones/M002/M002-ROADMAP.md"
+  include-markdown "../../../.staged/milestones/M002/M002-ROADMAP.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

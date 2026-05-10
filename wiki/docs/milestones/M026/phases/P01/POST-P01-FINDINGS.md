@@ -6,8 +6,8 @@ title: "Post-P01 Findings — Hand-off to M026/P02 and adapter maintainers"
      Source of truth: ../../../../../../.orchestrator/milestones/M026/phases/P01/POST-P01-FINDINGS.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../.orchestrator/milestones/M026/phases/P01/POST-P01-FINDINGS.md"
+  include-markdown "../../../../../.staged/milestones/M026/phases/P01/POST-P01-FINDINGS.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

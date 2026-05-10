@@ -6,8 +6,8 @@ title: "Dispatch Context -- T03-readme-and-gate (Phase P00, Milestone M030)"
      Source of truth: ../../../../../../../.orchestrator/milestones/M030/phases/P00/tasks/T03-readme-and-gate-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M030/phases/P00/tasks/T03-readme-and-gate-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M030/phases/P00/tasks/T03-readme-and-gate-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

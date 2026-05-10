@@ -6,8 +6,8 @@ title: "tests/test-status-review-queue.sh — SC-3 end-to-end integration test f
      Source of truth: ../../../../../../../.orchestrator/milestones/M020/phases/P04/tasks/T04-integration-test-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M020/phases/P04/tasks/T04-integration-test-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M020/phases/P04/tasks/T04-integration-test-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

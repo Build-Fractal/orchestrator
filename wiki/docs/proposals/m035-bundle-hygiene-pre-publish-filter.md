@@ -6,7 +6,7 @@ title: "Proposal — Bundle Hygiene: Pre-Publish Filter for project_assets"
      Source of truth: ../../../.orchestrator/proposals/m035-bundle-hygiene-pre-publish-filter.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/m035-bundle-hygiene-pre-publish-filter.md"
+  include-markdown "../../.staged/proposals/m035-bundle-hygiene-pre-publish-filter.md"
   heading-offset=0
   rewrite-relative-urls=false
 %}

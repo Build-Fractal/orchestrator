@@ -6,8 +6,8 @@ title: "scripts/knowledge/lib/frontmatter.sh — atomic frontmatter read/write"
      Source of truth: ../../../../../../../.orchestrator/milestones/M020/phases/P01/tasks/T02-frontmatter-helper-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M020/phases/P01/tasks/T02-frontmatter-helper-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M020/phases/P01/tasks/T02-frontmatter-helper-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

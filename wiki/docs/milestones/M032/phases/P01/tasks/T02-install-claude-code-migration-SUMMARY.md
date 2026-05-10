@@ -6,8 +6,8 @@ title: "T02-install-claude-code-migration-SUMMARY"
      Source of truth: ../../../../../../../.orchestrator/milestones/M032/phases/P01/tasks/T02-install-claude-code-migration-SUMMARY.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M032/phases/P01/tasks/T02-install-claude-code-migration-SUMMARY.md"
+  include-markdown "../../../../../../.staged/milestones/M032/phases/P01/tasks/T02-install-claude-code-migration-SUMMARY.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

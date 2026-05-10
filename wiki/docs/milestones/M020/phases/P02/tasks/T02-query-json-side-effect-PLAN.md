@@ -6,8 +6,8 @@ title: "T01 emits only ids format. T02 will replace this block with format-aware
      Source of truth: ../../../../../../../.orchestrator/milestones/M020/phases/P02/tasks/T02-query-json-side-effect-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M020/phases/P02/tasks/T02-query-json-side-effect-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M020/phases/P02/tasks/T02-query-json-side-effect-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

@@ -6,7 +6,7 @@ title: "Paper-Cut: orchestrator commands wrote M030 artifacts to `specs/NNN-slug
      Source of truth: ../../../.orchestrator/proposals/papercut-milestone-dir-routing.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../.orchestrator/proposals/papercut-milestone-dir-routing.md"
+  include-markdown "../../.staged/proposals/papercut-milestone-dir-routing.md"
   start="\n---\n"
   heading-offset=0
   rewrite-relative-urls=false

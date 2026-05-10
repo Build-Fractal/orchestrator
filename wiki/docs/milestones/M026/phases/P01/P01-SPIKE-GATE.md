@@ -6,8 +6,8 @@ title: "P01-SPIKE-GATE"
      Source of truth: ../../../../../../.orchestrator/milestones/M026/phases/P01/P01-SPIKE-GATE.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../.orchestrator/milestones/M026/phases/P01/P01-SPIKE-GATE.md"
+  include-markdown "../../../../../.staged/milestones/M026/phases/P01/P01-SPIKE-GATE.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

@@ -6,8 +6,8 @@ title: "T04 Follow-Up: SC-11 verdict-frame inversion"
      Source of truth: ../../../../../../../.orchestrator/milestones/M031/phases/P04/tasks/T04-FOLLOWUP-SUMMARY.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M031/phases/P04/tasks/T04-FOLLOWUP-SUMMARY.md"
+  include-markdown "../../../../../../.staged/milestones/M031/phases/P04/tasks/T04-FOLLOWUP-SUMMARY.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

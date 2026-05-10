@@ -6,8 +6,8 @@ title: "Dispatch Context -- T04-sc4-test-and-verifiers (Phase P05, Milestone M03
      Source of truth: ../../../../../../../.orchestrator/milestones/M036/phases/P05/tasks/T04-sc4-test-and-verifiers-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M036/phases/P05/tasks/T04-sc4-test-and-verifiers-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M036/phases/P05/tasks/T04-sc4-test-and-verifiers-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

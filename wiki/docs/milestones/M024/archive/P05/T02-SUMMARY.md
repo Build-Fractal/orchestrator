@@ -6,8 +6,8 @@ title: "T02 Summary — qa-loop.sh bounded line-mode loop"
      Source of truth: ../../../../../../.orchestrator/milestones/M024/archive/P05/T02-SUMMARY.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../.orchestrator/milestones/M024/archive/P05/T02-SUMMARY.md"
+  include-markdown "../../../../../.staged/milestones/M024/archive/P05/T02-SUMMARY.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

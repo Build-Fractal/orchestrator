@@ -6,8 +6,8 @@ title: "T04-repair-flag-SUMMARY"
      Source of truth: ../../../../../../../.orchestrator/milestones/M028/phases/P02/tasks/T04-repair-flag-SUMMARY.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M028/phases/P02/tasks/T04-repair-flag-SUMMARY.md"
+  include-markdown "../../../../../../.staged/milestones/M028/phases/P02/tasks/T04-repair-flag-SUMMARY.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

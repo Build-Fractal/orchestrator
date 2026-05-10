@@ -1,0 +1,243 @@
+## Forward Milestone Sequence (revised 2026-04-30 — post-[M028](../milestones/M028/index.md) close, [M030](../milestones/M030/index.md) mid-flight)
+
+**Status snapshot (2026-04-30)**: M028 closed 2026-04-29 (5 phases, M028-VALIDATED marker, all phases complete). M030 *in progress* — phases P00–P05 artifacts on disk and all phase-grain `unit_close` records green, but the spec'd P06 (anomaly-driven regression detection) and P07 (E2E shadow-corpus + flip-gate validation; the spec'd milestone-close gate) are unexecuted; `M030-VALIDATED` / `M030-SUMMARY.md` / milestone-grain `unit_close` not yet authored; `validate-milestone.sh` 144/147 (3 fails); P00 key file `tests/fixtures/m030-classifier-corpus/SELECTION-NOTES.md` missing. Operator decision pending — execute P06+P07 or formalize a 6-phase scope cut. [M036](../milestones/M036/index.md) (reference-corpus ingest) was specced 2026-04-30 from PBJ Analyzer downstream needs and queued post-launch (demand-driven, with insert-ahead pressure if launch slips past the 2026-05-15 PBJ validator pilot). The authoritative pre-launch queue is now in `.orchestrator/proposals/README.md`: **M030-close → [M031](../milestones/M031/index.md) → [M032](../milestones/M032/index.md) → [M033](../milestones/M033/index.md) → [M029](../milestones/M029/index.md) → [M035](../milestones/M035/index.md) → launch**, with M009 / M023 / M010 / M034 / M036 deferred post-launch (demand-driven). The original D016 sequence ([M013](../milestones/M013/index.md)→[M014](../milestones/M014/index.md)→[M020](../milestones/M020/index.md)→[M024](../milestones/M024/index.md)→[M019](../milestones/M019/index.md) T2/3→[M018](../milestones/M018/index.md)→M023→M009→M010) is preserved below for audit. The 2026-04-22 and 2026-04-28 revisions are preserved verbatim further down.
+
+Remaining milestones, in execution order:
+
+1. **M031 — Right-Sized Entry** *(brief: [`.orchestrator/proposals/M031-right-sized-entry.md`](../proposals/M031-right-sized-entry.md))* — restores knowledge graph + compression access for Quick intensity (today `commands/dispatch.md:21` skips `build-context.sh` — load-bearing leak); adds Tier A+ middle flow (research → plan → build, no auto/roadmap/consolidate); universal `orchestrator <task>` entry. Composes with M030 as the thrift-and-ergonomics pair. Four phases + optional P00 baseline. **No planning artifacts on disk yet** — kickoff begins with `orchestrator:specify` consuming the brief.
+2. **M032 — Wiki Distribution + Init Integration** *(brief: [`.orchestrator/proposals/M032-wiki-distribution-and-init-integration.md`](../proposals/M032-wiki-distribution-and-init-integration.md))* — wiki tooling + mkdocs/Giscus templating ship in the install bundle; `orchestrator:wiki-init` + `init --with-wiki [--with-giscus] [--deploy]` produces working wiki for any new project. Promoted to pre-launch because M033 P05 invokes its `--with-wiki` gate.
+3. **M033 — Project Onboarding Experience** *(brief: [`.orchestrator/proposals/M033-onboarding-experience.md`](../proposals/M033-onboarding-experience.md))* — `orchestrator:start` warm conversational front door. Branches: greenfield-empty / greenfield-with-materials / existing-codebase / migrating. Authors orchestrator-native constitution, seeds knowledge graph from materials or codebase, populates CLAUDE.md custom block, integrates M032 + M013 as opt-in gates. The launch first-impression milestone.
+4. **M029 — Roadmap Visibility & CLI UX** *(brief: [`.orchestrator/proposals/M029-roadmap-visibility-and-cli-ux.md`](../proposals/M029-roadmap-visibility-and-cli-ux.md))* — `orchestrator:where` tree renderer + invocation-context resolver + headline status (embeds existing [M027](../milestones/M027/index.md) surfaces — efficiency-footer / metrics-rollup / predictive-surface). M013 GitHub sidecar fold-in (no API calls). Three phases.
+5. **M035 — Packaging & Distribution** *(brief: [`.orchestrator/proposals/M035-packaging-distribution.md`](../proposals/M035-packaging-distribution.md))* — last pre-launch milestone, two-layer scope: P00 + P01 ship pre-launch (`--mode=symlink` install for dogfooding velocity + `orchestrator:status` version-drift warning); P02–P06 ARE the launch event (npm + homebrew + curl-pipe-bash publishing + `orchestrator:update` first-class command).
+
+**Standalone constitution amendment** (any time, single PR, no dependencies, brief at [`.orchestrator/proposals/constitution-amendment-inclusion-criteria.md`](../proposals/constitution-amendment-inclusion-criteria.md)): inclusion-criteria gate for new principles + `CONSTITUTION-LOG.md` governance log + Principle XVI (Distribution Surface Integrity) + Principle I clarification ("minimize total task tokens via efficient context delivery", not payload bytes). Cheapest, earliest land.
+
+### Post-launch fast-follows (deferred 2026-04-28, demand-driven)
+
+5. **M009 — Launch & Ecosystem (multi-runtime parity audit, deferred post-launch)** *(originally a launch gate per 2026-04-22 D016)* — runtime-parity audit consuming `references/RUNTIME-ASSUMPTIONS.md` (foundation seeded by M018/P07's compression-tier parity work — RA-M018-01 byte-equality + RA-M018-02 T3 routing-parity already proven). Ships when first users arrive with Codex CLI or Cursor projects. Pre-launch dogfooding stays CC-only.
+6. **M023 — Design Layer (deferred post-launch)** — `orchestrator:design` design-personality agent dispatch via conversus + DESIGN.md drafts + side-by-side prototype comparison. High-value but better as a fast-follow once real users arrive with real UI projects; pre-launch this repo has no UI to dogfood against (synthetic fixtures only).
+7. **M036 — Reference-Corpus Ingest (deferred post-launch, demand-driven)** *(captured 2026-04-30 from PBJ Analyzer downstream consumer corpus needs)* — new `reference/` chunk family parallel to `spec/`; provenance frontmatter (`source` / `published` / `version` / `cite_id` / `topic_tags` / `applies_to_field`); three new edge types (`cites` / `derived_from` / `applies_to_field`) additive to existing `relates_to` / `supersedes`; `[source:...]` tag namespace; dispatch context-injection under a token-budget governor. Markdown-floor is the ingest contract (PDF/XLS direct adapters ship as registered stubs per Principle XIV). Tier C; 7 phases (P00 foundation; P01/P02/P06 concurrent; P03/P04/P05 third wave); critical path P00→P01→P02→P04 defends the 2026-05-15 PBJ validator pilot window. Spec / evaluation / context / roadmap all authored 2026-04-30; planning artifacts at `.orchestrator/milestones/M036/`. **No hard M013/M014 dependency** — those gates fire on spec-shape conformity, not reference content. Soft dep on M032 closure (P05 wiki projection only). **Insert-ahead pressure** if launch event slips past the pilot window. Brief at [`.orchestrator/proposals/M036-reference-corpus-ingest.md`](../proposals/M036-reference-corpus-ingest.md).
+8. **M034 — Interactive Review Gates (deferred post-launch, demand-driven)** *(captured 2026-04-28 from lakeledger M066/P01 dogfooding)* — first-class interactive-review stage between artifact authoring and SIGNOFF.md population. Decision-packet schema (P01) + walkthrough consuming it (P02). Demand-signal-driven — ships when a second downstream consumer hits the friction lakeledger M066/P01 surfaced. Brief at [`.orchestrator/proposals/M034-interactive-review-gates.md`](../proposals/M034-interactive-review-gates.md).
+9. **M010 — Cloud Dispatch (deferred post-launch)** — Managed Agents primary adapter + Codex Cloud stubbed adapter. Net-new capability, not launch readiness. Demand-driven: ships when a customer-facing reason to ship it appears.
+
+### Currently in progress
+
+- **M030 — Adaptive Model Selection** — phases P00–P05 complete (artifacts on disk, all phase-grain `unit_close` records green): P00 classifier ground-truth corpus (40 hand-labeled task plans, D-A4 independence), P01 classifier (36/40 GT agreement) + routing table (cost_rates SSOT) + stability metric (variance<=0.10 N=20) + doctor --config-check, P02 dispatch-interface shadow hook + 5 additive JSONL fields + shadow-compare.sh 4-verdict (ready|partially_ready|block|evidence_insufficient) + SC-3a roundtrip + CON-3 closure, P03 override-resolution chain (kill-switch + plan_frontmatter + milestone_floor + disabled + shadow_gate_blocked + none) + 5 override_source values, P04 live-routing branch + verifier-fail escalation loop (CON-5 hard-cap=2, fast→balanced→smart) + escalation_cap_hit record_type, P05 M027 surface integration (metrics-rollup --by-model + efficiency-footer model_mix: line + doctor --config-check inheritor wrapper) + references/model-routing.md ## Cost Rollup Surfaces. CON-2/FR-19/SC-11 byte-equality preserved end-to-end; CON-6 append-only preserved. **Pending**: roadmap-declared P06 (anomaly-driven regression detection) + P07 (E2E shadow-corpus + flip-gate validation, the spec'd milestone-close gate) unexecuted; `M030-VALIDATED` marker / `M030-SUMMARY.md` / milestone-grain `unit_close` not yet authored; `validate-milestone.sh` 144/147 (3 fails); P00 key file `tests/fixtures/m030-classifier-corpus/SELECTION-NOTES.md` missing. Operator decision pending — execute P06+P07, or amend roadmap to formalize a 6-phase scope cut, then close. Planning artifacts at `.orchestrator/milestones/M030/`.
+
+### Recently shipped (this revision)
+
+- **M028 — Autonomous Hardening v3** closed 2026-04-29. Five phases: P01 empirical baseline + collapse-decision evidence (7 verbatim screenshot commands + Stop-hook failure traced to Findings A/B/D/E/F/G), P02 hook portability (PreToolUse self-locating via `BASH_SOURCE[0]`) + adapter+installer dedup (`bash <abs-path>` emission, install-side tuple dedup, `--repair` for flag-less orphans, byte-idempotent installer + `--uninstall`), P03 classifier extension (AP-010..AP-014, including `xargs-sh-c-compound-body`) + 28-entry replay corpus + [M021](../milestones/M021/index.md) strict-superset gate (zero regressions), P04 investigation-pattern wrappers (`grep-files.sh`, `cleanup-stale-results.sh`, `node-eval.sh`, `peek-files.sh`) + dispatch.md "Investigation Patterns" section + anti-pattern-lint.sh, P05 cross-project verifier suite + downstream fixture replay (autonomous-loop completes uninterrupted with zero `would_prompt:true` events). See `milestones/M028/M028-SUMMARY.md`.
+- **M018 — Context Compression Layer** closed 2026-04-28. Eight phases: P00 emitter parity + section-distribution probe + SC-9 calibration to 34.7% floor, P01 compression-grammar contract v1.0.1 (Reviewed) + conversus PASS, P02 knowledge-aware filter + preservation-check library + underperformance emitter, P03 Tier 1 microcompact + cache-prune utility, P04 Tier 2 snip + 4+-backtick fence boundary-refusal walker, P05 surfaces (efficiency-footer 'compression:' tail + doctor compression-regression flag + cost-rollup column extension) + eval harness + 7 verifiers, P06 Tier 3 auto-compact + LLM routing shim + 5 verifiers, P07 multi-runtime parity (zero-LLM byte-equality across CC/Codex/Cursor + T3 routing parity) + RUNTIME-ASSUMPTIONS.md `# Compression (M018)` block + 3 verifiers (41 assertions PASS combined). validate-milestone.sh PASS 75/75. 5 milestone-scoped knowledge entries appended. See `milestones/M018/M018-SUMMARY.md`.
+- **M027 — Cost+Quality Observability Surfaces** closed 2026-04-27. Four phases: P00 rollup engine + fixture suite, P01 `orchestrator:cost` retrospective + predictive, P02 efficiency footer + dispatch-time predictive surface, P03 anomaly detection + `doctor --config-check`. Consolidated 2026-04-27 (80% reduction). See `milestones/M027/M027-SUMMARY.md`.
+- **[M026](../milestones/M026/index.md) — Conversus-OSS Migration** closed 2026-04-25. Three phases: P01 audit + DC-6 spike-gate, P02 resolver flip + `CONVERSUS_EDITION` env var + JSONL edition field, P03 `edition_required: paid` preset frontmatter contract + six doc-surface revisions + MEM029/MEM030 + DECISIONS D022. See `milestones/M026/M026-SUMMARY.md`.
+- **M020 — Knowledge Layer Maturation** closed 2026-04-25. Six phases. MEM031 graduated (`status:` field vocabulary). See `milestones/M020/M020-SUMMARY.md`.
+- **M024 — Universal Intake & Routing** closed. `orchestrator:evaluate` extended to input-agnostic with proposal artifact. See `milestones/M024/M024-SUMMARY.md`.
+- **M019 Tier 2/3** closed. Rollup CLI + `orchestrator:cost` user-facing command. See `milestones/M019/M019-SUMMARY.md`.
+- **M014 — Spec Management + Comment→Workflow Automation (extended)** closed 2026-04-25. Four phases: P01 native `orchestrator:specify` create-path + Section Contract SSOT + dual-write helper, P02 dual-write extension to every CLAUDE.md write-site + FR-13 drift detector + AGENTS.md migration, P03 comment classifier four-class + auto-apply for trivial classes + queue for spec-amendments + adapter-missing graceful degradation, P04 FR-5 complexity probe + FR-7 split + FR-14 three-case `--amend` + spec-pressure-test preset. D019 (three-pass scaffold→author→gate), D020 (chunks-first scoping bug + scaffold-placeholder false-positive), D023 (P03 unblock via Preflight note + SC-16 best-available signal). See `milestones/M014/M014-SUMMARY.md`.
+- **M013 — GitHub Native Integration** closed 2026-04-22. Four phases: P01 minimal slice + UAT bug ingestion, P02 US-1 projection create path + 538-line `github-init.sh`, P03 `--re-init` adoption + FR-5 GraphQL whitelist lint + mapping completion, P04 sync cycle + post-verify hook + opt-in conversus UAT PR gate + FR-16 rate-limit + FR-17/18 emitters. D014 Knowledge-Layer Boundary, D015 P02/P03 scope split. See `milestones/M013/M013-SUMMARY.md`.
+
+**Stance — ultraplan / ultrareview**: parked, not integrated per D016. Claude-Code-only surfaces (require CC on web + GitHub repo + Anthropic cloud), fork multi-runtime UX. M013 GitHub integration delivers the equivalent plan/review surface universally via PR comments. Revisit only if concrete CC-only user demand emerges.
+
+**Discipline — `RUNTIME-ASSUMPTIONS.md`** (no milestone cost): a registry file tracking CC-specific shape assumptions as written (`settings.json` hook formats, CLAUDE.md-only writes, `claude` CLI invocation patterns). M009's parity audit consumes it as a punch-list rather than an open-ended investigation. Keeps "CC-first dogfooding" from silently becoming "CC-only."
+
+**[M012](../milestones/M012/index.md) — Spec Wiki** closed 2026-04-21. All 4 phases green (P01 scaffold + SSOT pipeline, P02 cross-link + knowledge subtree + link-check, P03 Giscus overlay + diagnostics, P04 deploy wrapper + home page + first-deploy record). 37 verification gates total. D011 evaluation shipped 1 of 3 criteria → M020 promoted (D013). Milestone validator: 87/87. See `milestones/M012/M012-SUMMARY.md`. **Carry-over for human operator**: live first deploy to `gh-pages` via `scripts/wiki/wiki-deploy.sh`, fill `DEPLOY-RECORD.md` pending sentinels, author P04-SUMMARY US1..US5 + SC-1..SC-11 walkthrough.
+
+**M019 Tier 1 emitter** closed 2026-04-18. P00 Opus 4.7 baseline adaptation + P01 Tier 1 emitter shipped. `payload_breakdown` / `dispatch_usage` / `unit_close` JSONL records in `execution-log.jsonl` with Goodhart-paired cost+quality blocks. See `milestones/M019/M019-SUMMARY.md`.
+
+**M021 — Autonomous Hardening v2** closed 2026-04-17. Three-wrapper catalog under `scripts/util/`, linter v2 (AP-005..AP-009), and PreToolUse shape-guard hook enforcing a closed 10-pattern rewrite/reject matrix. See `milestones/M021/M021-SUMMARY.md`.
+
+**[M011](../milestones/M011/index.md) — Spec Management** closed 2026-04-17. All 7 phases green (P07 delivered the reusable `scripts/dispatch/adapters/tool/conversus.sh` adapter and format-agnostic intake). Milestone validator: 121/121. See `milestones/M011/M011-SUMMARY.md`.
+
+**[M016](../milestones/M016/index.md) — Autonomous Hardening** closed prior to M011 kickoff (commit `696fa34`). Zero-prompt auto runs validated; anti-pattern linter and run-suite wrapper in place.
+
+**M017 — Conversus Deliberation Gate** dropped as a standalone milestone (see `DECISIONS.md` D007). `/conversus gate` already provides the CI-shaped primitive orchestrator needs, so integration collapsed to M011/P07. Later milestones (M013, M014, roadmap decomposition at Full intensity) invoke the adapter from their own scope. Intensity engine owns when-to-gate defaults; users own opt-in/opt-out.
+
+**Why dogfooding (M011–M014) before launch (M009):** The team needs end-to-end spec→wiki→GitHub usability before producing external-facing launch artifacts. Dogfooding will surface the rough edges M009's docs need to address. See `DECISIONS.md` D006.
+
+**Why M010 at the tail:** Anthropic Managed Agents is not yet broadly available. See `DECISIONS.md` D004.
+
+---
+
+## [M015](../milestones/M015/index.md) Standalone Cutover Complete (2026-04-15)
+
+v0.9.0. Four phases closed, all 19 FRs PASS in `milestones/M015/M015-VERIFICATION.md`.
+
+- **P01** — Spec-kit host removed: `extension.yml`, 9 `.claude/commands/speckit.*.md`, `.specify/scripts/bash/`, `.specify/templates/`, plus 3 extension-shape test artifacts hard-deleted (`git rm`, no compat shim). Fixed a latent `evaluate-preflight.sh` argument bug opportunistically.
+- **P02** — State tree migrated from `.specify/orchestrator/` to `.orchestrator/` via `scripts/migrate/migrate-state.sh` (atomic `mv`). Constitution moved to `.orchestrator/memory/constitution.md`. `scripts/state/resolve-root.sh` dropped from 5 rules to 4 — bridge rule deleted outright. Decision D003 removed a redundant `state_root:` line from `.orchestrator/config.yml`.
+- **P03** — Five primary docs reframed as standalone (`README.md`, `CLAUDE.md`, `references/architecture.md`, `references/installation.md`, `docs/getting-started.md`) + thirteen wider docs swept. New `docs/migrating-from-speckit.md` covers the spec-kit→orchestrator journey. CHANGELOG `[0.9.0]` entry prepended; historical tail byte-identical.
+- **P04** — Four evidence streams captured under `milestones/M015/phases/P04/evidence/`: all 8 `tests/test-s*.sh` suites pass, `orchestrator-doctor` clean, spec-kit migration adapter produces a valid `.orchestrator/` from a fixture, clean-clone shape probe finds zero extension-host artifacts.
+
+Migration adapters preserved verbatim per FR-013: `scripts/migrate/adapters/speckit.sh`, `scripts/state/detect-speckit.sh`, `scripts/dispatch/adapters/format/speckit.sh`, `commands/migrate.md`. Spec-kit is removed as a runtime host, retained as a migration source.
+
+---
+
+## [M003](../milestones/M003/index.md) Refit Complete (2026-04-14)
+
+P07/P08 closed post-M007/[M008](../milestones/M008/index.md) drift:
+- P07: `migrate.sh` now consumes `scripts/state/resolve-root.sh --absolute`; idempotency probes
+  both orchestrator-root and project-root layouts; `rebuild-index.sh` wired as P04 stage.
+- P08: `tests/integration/test-m003-e2e-migration.sh` validates the refitted pipeline
+  end-to-end against a synthetic GSD2 fixture (`tests/fixtures/m003-p08-gsd-minimal/`)
+  and the live lakeledger fixture when present.
+- Artifact added: `scripts/orchestrator/status.sh` — thin wrapper on `resolve-root.sh`
+  + `derive-phase.sh` that the roadmap demo sentence now points to literally.
+
+Validation (T04): integration test `passed=8 failed=0 skipped=0 warned=2` (warns are the live
+lakeledger fixture's concurrent mtime activity — expected, not a harness bug). All 8
+`scripts/verify/m003-p08-*.sh` PASS; all 7 `scripts/verify/m003-p07-*.sh` still PASS.
+Lakeledger full-scale validation deferred beyond the end-to-end pipeline pass.
+
+---
+
+# M001: orchestrator v0.1.0
+
+Completed: 2026-03-20 | 7 slices, 307 test assertions, zero failures
+
+## What Was Built
+
+A spec-kit extension providing autonomous multi-phase orchestration via 10 commands, 23 helper scripts, 13 templates, and 4 reference documents. All state is file-based under `.specify/orchestrator/`. The extension works with any spec-kit-supported agent (Claude Code, Copilot, Cursor, Gemini CLI).
+
+### Capabilities Delivered
+- **Scope triage**: Classify projects as Tier A/B/C based on complexity
+- **Phase decomposition**: Roadmap → phases → tasks with dependency graphs and boundary maps
+- **State machine**: 9-state lifecycle derived from disk file presence
+- **Autonomous dispatch**: Derive state → budget check → stuck detection → context assembly → dispatch → verify → record → advance
+- **Mechanical verification**: 4-tier ladder (static → command → behavioral → human)
+- **Crash recovery**: Lock-based detection, recovery briefing from surviving artifacts, graceful pause/resume
+- **Knowledge generation**: Structured summaries, append-only decisions/knowledge registers, scope-filtered context injection
+- **Consolidation**: Artifact compression (87% reduction achieved in tests) + archival
+
+### Not in M001 Scope
+- GitHub Agentic Workflows runtime (User Story 7 / P7)
+- APM packaging and distribution (User Story 8 / P8)
+- `docs/getting-started.md` and `docs/configuration.md`
+- `apm.yml`, `SKILL.md`, `.extensionignore`
+
+## Architecture Overview
+
+```
+extension.yml          ← manifest: 10 commands, 5 hooks, 23 scripts, 7 config properties
+│
+├── commands/*.md      ← agent instruction documents (what to do)
+│   └── references scripts/ and templates/ by path
+│
+├── scripts/           ← executable helpers (how to do it)
+│   ├── state/         ← derive-phase, read-config, read-roadmap
+│   ├── dispatch/      ← build-context, scope-filter, detect-capabilities
+│   ├── verify/        ← check-must-haves, check-boundary-map, check-scope, run-commands
+│   ├── knowledge/     ← write-summary, append-decision, append-knowledge, consolidate-artifacts
+│   └── lifecycle/     ← scaffold, lock-manager, stuck-detector, recovery-briefing, budget-checker,
+│                        rollback-phase, mark-complete
+│
+├── templates/*.md     ← 13 output templates with {{placeholder}} syntax
+│
+├── references/*.md    ← 4 progressive disclosure docs (state-machine, verification-ladder,
+│                        tier-definitions, file-formats)
+│
+└── tests/             ← 7 test suites, 307 assertions
+    ├── test-s01-structure.sh       (20 assertions)
+    ├── test-s02-state-machine.sh   (26 assertions)
+    ├── test-s03-design-artifacts.sh (60 assertions)
+    ├── test-s04-core-commands.sh   (57 assertions)
+    ├── test-s05-autonomous-mode.sh (65 assertions)
+    ├── test-s06-knowledge-lifecycle.sh (57 assertions)
+    ├── test-s07-integration.sh     (22 assertions)
+    └── fixtures/                   (~20 fixture directories)
+```
+
+### State Flow
+```
+pre-planning → discussing → planning → executing → summarizing → validating → completing → complete
+                                          ↓ (failure)
+                                      replanning
+```
+
+### Config Resolution (4-layer)
+```
+Environment vars > .local config > project config > extension defaults
+```
+
+## Component Inventory
+
+### Commands (commands/)
+| File | Command | Purpose |
+|------|---------|---------|
+| evaluate.md | speckit.orchestrator.evaluate | Scope triage → Tier A/B/C |
+| discuss.md | speckit.orchestrator.discuss | Pre-planning context capture |
+| roadmap.md | speckit.orchestrator.roadmap | Spec → phases with boundary maps |
+| plan-phase.md | speckit.orchestrator.plan-phase | Phase → tasks with must-haves |
+| dispatch.md | speckit.orchestrator.dispatch | Execute one task in fresh context |
+| auto.md | speckit.orchestrator.auto | Autonomous dispatch loop |
+| verify.md | speckit.orchestrator.verify | Must-haves verification |
+| status.md | speckit.orchestrator.status | Progress dashboard |
+| resume.md | speckit.orchestrator.resume | Crash/pause recovery |
+| consolidate.md | speckit.orchestrator.consolidate | Knowledge compression + archival |
+
+### Scripts (scripts/)
+| Directory | Script | Purpose |
+|-----------|--------|---------|
+| state/ | derive-phase.sh | 9-state derivation from disk |
+| state/ | read-config.sh | 4-layer config resolution |
+| state/ | read-roadmap.sh | Roadmap parser (6 query modes) |
+| dispatch/ | build-context.sh | Assemble minimal dispatch payload |
+| dispatch/ | scope-filter.sh | Filter knowledge/decisions by scope |
+| dispatch/ | detect-capabilities.sh | Runtime capability detection |
+| verify/ | check-must-haves.sh | Artifact/truth/link verification |
+| verify/ | check-boundary-map.sh | Cross-phase interface checks |
+| verify/ | check-scope.sh | Scope violation warnings |
+| verify/ | run-commands.sh | Execute verification commands |
+| verify/ | check-external-mods.sh | External modification detection (FR-064) |
+| util/ | json-field.sh | Shared JSON field extraction utility |
+| knowledge/ | write-summary.sh | Generate structured summaries |
+| knowledge/ | append-decision.sh | Append to DECISIONS.md |
+| knowledge/ | append-knowledge.sh | Append to KNOWLEDGE.md |
+| knowledge/ | consolidate-artifacts.sh | Compress + archive (≥60% reduction) |
+| lifecycle/ | scaffold.sh | Idempotent milestone scaffolding |
+| lifecycle/ | lock-manager.sh | Create/status/break/update locks |
+| lifecycle/ | stuck-detector.sh | Dispatch-twice-without-completion |
+| lifecycle/ | recovery-briefing.sh | Crash recovery context synthesis |
+| lifecycle/ | budget-checker.sh | Dispatch count + duration budgets |
+| lifecycle/ | rollback-phase.sh | Phase rollback with dep flagging |
+| lifecycle/ | mark-complete.sh | Milestone validation marker |
+
+### Templates (templates/)
+Planning: roadmap.md, phase-plan.md, task-plan.md
+Summaries: task-summary.md, phase-summary.md, milestone-summary.md
+Dispatch: dispatch-prompt.md, verification-report.md, spec-compliance-review.md
+Lifecycle: recovery-briefing.md, continue-file.md, context-draft.md
+Config: orchestrator-config-default.yml
+
+### References (references/)
+state-machine.md, verification-ladder.md, tier-definitions.md, file-formats.md
+
+## How to Extend
+
+### Adding a new command
+1. Create `commands/<name>.md` following the standard structure (see any existing command)
+2. Register in `extension.yml` under `provides.commands`
+3. Add integration test assertions in appropriate test file
+4. If the command uses helper scripts, register those in `provides.scripts`
+
+### Adding a new script
+1. Create under the appropriate `scripts/<concern>/` directory
+2. Make executable (`chmod +x`)
+3. Use structured prefix output (`PREFIX: message`) to stdout
+4. Register in `extension.yml` under `provides.scripts`
+5. Avoid `declare -A` — use parallel indexed arrays for bash 3.2
+
+### Adding a new template
+1. Create in `templates/` with YAML frontmatter (`schema_version`, `type`)
+2. Use `{{placeholder}}` syntax for all dynamic values
+3. No hardcoded IDs — templates must be context-free
+4. Add assertions in `test-s03-design-artifacts.sh`
+
+### Adding a new state
+1. Add derivation rule in `scripts/state/derive-phase.sh` (priority-ordered)
+2. Add fixture directory in `tests/fixtures/state-<name>/`
+3. Update `references/state-machine.md`
+4. Add test assertion in `test-s02-state-machine.sh`
+
+### Future milestones
+- [M002](../milestones/M002/index.md) candidates: GitHub Agentic Workflows (US7), APM packaging (US8), docs
+- `check-external-mods.sh` (FR-064) and git worktree isolation (FR-075) implemented in v0.1.0 audit remediation
+- `write-lock.sh` and `write-continue.sh` were planned as separate scripts but their functionality was absorbed into `lock-manager.sh` and command-level logic

@@ -6,8 +6,8 @@ title: "Dispatch Context -- T01-scanner-extensions (Phase P04, Milestone M032)"
      Source of truth: ../../../../../../../.orchestrator/milestones/M032/phases/P04/tasks/T01-scanner-extensions-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M032/phases/P04/tasks/T01-scanner-extensions-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M032/phases/P04/tasks/T01-scanner-extensions-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

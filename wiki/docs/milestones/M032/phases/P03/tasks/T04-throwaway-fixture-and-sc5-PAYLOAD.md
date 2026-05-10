@@ -6,8 +6,8 @@ title: "Dispatch Context -- T04-throwaway-fixture-and-sc5 (Phase P03, Milestone 
      Source of truth: ../../../../../../../.orchestrator/milestones/M032/phases/P03/tasks/T04-throwaway-fixture-and-sc5-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M032/phases/P03/tasks/T04-throwaway-fixture-and-sc5-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M032/phases/P03/tasks/T04-throwaway-fixture-and-sc5-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

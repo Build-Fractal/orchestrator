@@ -6,8 +6,8 @@ title: "Dispatch Context -- T01-investigation-wrappers-A (Phase P04, Milestone M
      Source of truth: ../../../../../../../.orchestrator/milestones/M028/phases/P04/tasks/T01-investigation-wrappers-A-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M028/phases/P04/tasks/T01-investigation-wrappers-A-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M028/phases/P04/tasks/T01-investigation-wrappers-A-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

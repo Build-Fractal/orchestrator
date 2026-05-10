@@ -6,8 +6,8 @@ title: "m020-p01-jaccard-validation-report.sh — assert the demo-sentence repor
      Source of truth: ../../../../../../../.orchestrator/milestones/M020/phases/P01/tasks/T05-jaccard-validation-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M020/phases/P01/tasks/T05-jaccard-validation-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M020/phases/P01/tasks/T05-jaccard-validation-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

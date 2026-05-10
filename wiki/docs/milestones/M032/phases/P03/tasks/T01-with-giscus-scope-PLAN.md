@@ -6,8 +6,8 @@ title: "(inside the existing while [ $# -gt 0 ]; do case \"$1\" in ... esac done
      Source of truth: ../../../../../../../.orchestrator/milestones/M032/phases/P03/tasks/T01-with-giscus-scope-PLAN.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M032/phases/P03/tasks/T01-with-giscus-scope-PLAN.md"
+  include-markdown "../../../../../../.staged/milestones/M032/phases/P03/tasks/T01-with-giscus-scope-PLAN.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

@@ -6,8 +6,8 @@ title: "Dispatch Context -- T01-cluster-helper (Phase P05, Milestone M020)"
      Source of truth: ../../../../../../../.orchestrator/milestones/M020/phases/P05/tasks/T01-cluster-helper-PAYLOAD.md (M012 AD-3). -->
 
 {%
-  include-markdown "../../../../../../../.orchestrator/milestones/M020/phases/P05/tasks/T01-cluster-helper-PAYLOAD.md"
+  include-markdown "../../../../../../.staged/milestones/M020/phases/P05/tasks/T01-cluster-helper-PAYLOAD.md"
   start="\n---\n"
   heading-offset=0
-  rewrite-relative-urls=true
+  rewrite-relative-urls=false
 %}

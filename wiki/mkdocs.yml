@@ -144,8 +144,10 @@ nav:
       - "MEM028: Bash arithmetic silently interprets zero-padded numerics as octal": knowledge/lessons/MEM028.md
   - Proposals:
     - Overview: proposals/index.md
+    - "Proposal: Concurrent-Agent Commit Isolation": proposals/concurrent-agent-commit-isolation.md
     - "Proposal: Constitution Amendment — Inclusion Criteria + Governance Log + Distribution Surface": proposals/constitution-amendment-inclusion-criteria.md
     - "Proposal: Delegation Policy — Per-Tool Background-Safety Table": proposals/delegation-policy-table.md
+    - Downstream Agent Feedback — 2026-05-08 Triage: proposals/downstream-feedback-2026-05-08-triage.md
     - EOS Patterns for the Orchestrator: proposals/eos-patterns-for-orchestrator.md
     - GSD 2 Adoption Scan — 2026-05-04: proposals/gsd-2-adoption-scan-2026-05-04.md
     - Brief — install-template should preserve operator-authored config.yml keys: proposals/install-template-preserve-operator-keys.md
@@ -167,7 +169,9 @@ nav:
     - "Proposal: M037 — Wiki Team-Feedback-Ready (PBJ Round 3)": proposals/M037-wiki-team-feedback-ready.md
     - "Proposal: M038 — Living Documents (framework-owned primitive)": proposals/M038-living-documents.md
     - "Proposal: M039 — Theme-Leveraged Process Primitives (post-launch, demand-driven)": proposals/M039-theme-leveraged-process-primitives.md
+    - M0xx — Out-of-Tree Runtime Footprint Refactor: proposals/M0xx-out-of-tree-runtime-footprint.md
     - Thinking-Document — Operator Secrets Surface + Adaptive-Init UX: proposals/operator-secrets-and-adaptive-init.md
+    - "Proposal: `/orchestrator-discuss-phase` — phase-level discussion command": proposals/orchestrator-discuss-phase-command.md
     - "Proposal: `orchestrator:exec` — Subprocess-Output Context Discipline (Context Mode equivalent)": proposals/orchestrator-exec-primitive.md
     - "Paper-Cut: `auto-loop.sh --output-file` template substitution is fragile": proposals/papercut-auto-loop-output-file-typo.md
     - "Proposal: Papercut — `check-boundary-map.sh` brace-glob tokenization false positive": proposals/papercut-boundary-map-brace-glob-tokenizer.md
@@ -185,6 +189,7 @@ nav:
     - "Paper-Cut: `orchestrator:specify` emits a Pass-1 `unit_close` only — Pass 2 + Pass 3 never log a follow-up": proposals/papercut-specify-pass23-unit-close.md
     - Paper-cut Sweep round 2 — M032 wiki tooling, PBJ-central dogfood: proposals/papercut-sweep-m032-pbj-dogfood-round2.md
     - Paper-cut Sweep — M032 wiki tooling, PBJ-central dogfood: proposals/papercut-sweep-m032-pbj-dogfood.md
+    - Paper-Cut Sweep PR Brief — Post-M035: proposals/papercut-sweep-post-M035.md
     - Paper-Cut Sweep PR Brief — Pre-M030: proposals/papercut-sweep-pre-M030.md
     - Paper-Cut Sweep — wiki-deploy session (2026-05-07, PBJ-central round 3): proposals/papercut-sweep-wiki-deploy-2026-05-07.md
     - "Paper-Cut: `wiki-deploy.sh` and `wiki-init.sh --with-giscus` are not": proposals/papercut-wiki-deploy-env-loader.md
@@ -1963,7 +1968,7 @@ nav:
         - T06 Milestone-closure-payload: milestones/M029/phases/P03/tasks/T06-milestone-closure-PAYLOAD.md
         - T06 Milestone-closure-plan: milestones/M029/phases/P03/tasks/T06-milestone-closure-PLAN.md
         - T06 Milestone-closure-summary: milestones/M029/phases/P03/tasks/T06-milestone-closure-SUMMARY.md
-    - M030 — close → M031 → M032 → M033 → M029 → M035 → launch:
+    - M030 — Adaptive Model Selection:
       - Overview: milestones/M030/index.md
       - Acceptance-evidence: milestones/M030/M030-ACCEPTANCE-EVIDENCE.md
       - Context: milestones/M030/M030-CONTEXT.md
@@ -2357,9 +2362,11 @@ nav:
       - Context: milestones/M035/M035-CONTEXT.md
       - Evaluation: milestones/M035/M035-EVALUATION.md
       - Roadmap: milestones/M035/M035-ROADMAP.md
+      - Summary: milestones/M035/M035-SUMMARY.md
       - P00:
         - Overview: milestones/M035/phases/P00/index.md
         - Plan: milestones/M035/phases/P00/P00-PLAN.md
+        - Summary: milestones/M035/phases/P00/P00-SUMMARY.md
         - T01 Bash32-installer-exit-status-payload: milestones/M035/phases/P00/tasks/T01-bash32-installer-exit-status-PAYLOAD.md
         - T01 Bash32-installer-exit-status-plan: milestones/M035/phases/P00/tasks/T01-bash32-installer-exit-status-PLAN.md
         - T01 Summary: milestones/M035/phases/P00/tasks/T01-SUMMARY.md
@@ -2372,6 +2379,131 @@ nav:
         - T04 M032-wiki-deploy-stage-and-npm-evidence-payload: milestones/M035/phases/P00/tasks/T04-m032-wiki-deploy-stage-and-npm-evidence-PAYLOAD.md
         - T04 M032-wiki-deploy-stage-and-npm-evidence-plan: milestones/M035/phases/P00/tasks/T04-m032-wiki-deploy-stage-and-npm-evidence-PLAN.md
         - T04 Summary: milestones/M035/phases/P00/tasks/T04-SUMMARY.md
+      - P01:
+        - Overview: milestones/M035/phases/P01/index.md
+        - Plan: milestones/M035/phases/P01/P01-PLAN.md
+        - Summary: milestones/M035/phases/P01/P01-SUMMARY.md
+        - T01 Mode-flag-and-symlink-source-payload: milestones/M035/phases/P01/tasks/T01-mode-flag-and-symlink-source-PAYLOAD.md
+        - T01 Mode-flag-and-symlink-source-plan: milestones/M035/phases/P01/tasks/T01-mode-flag-and-symlink-source-PLAN.md
+        - T01 Summary: milestones/M035/phases/P01/tasks/T01-SUMMARY.md
+        - T02 Mode-aware-uninstall-payload: milestones/M035/phases/P01/tasks/T02-mode-aware-uninstall-PAYLOAD.md
+        - T02 Mode-aware-uninstall-plan: milestones/M035/phases/P01/tasks/T02-mode-aware-uninstall-PLAN.md
+        - T02 Summary: milestones/M035/phases/P01/tasks/T02-SUMMARY.md
+        - T03 Check-orchestrator-drift-payload: milestones/M035/phases/P01/tasks/T03-check-orchestrator-drift-PAYLOAD.md
+        - T03 Check-orchestrator-drift-plan: milestones/M035/phases/P01/tasks/T03-check-orchestrator-drift-PLAN.md
+        - T03 Summary: milestones/M035/phases/P01/tasks/T03-SUMMARY.md
+        - T04 Drift-line-in-status-payload: milestones/M035/phases/P01/tasks/T04-drift-line-in-status-PAYLOAD.md
+        - T04 Drift-line-in-status-plan: milestones/M035/phases/P01/tasks/T04-drift-line-in-status-PLAN.md
+        - T04 Summary: milestones/M035/phases/P01/tasks/T04-SUMMARY.md
+      - P01.5:
+        - Overview: milestones/M035/phases/P01.5/index.md
+        - operator-runbook: milestones/M035/phases/P01.5/operator-runbook.md
+        - P01.5-PLAN: milestones/M035/phases/P01.5/P01.5-PLAN.md
+        - P01.5-SUMMARY: milestones/M035/phases/P01.5/P01.5-SUMMARY.md
+        - T01 Decisions-tag-allowlist-payload: milestones/M035/phases/P01.5/tasks/T01-decisions-tag-allowlist-PAYLOAD.md
+        - T01 Decisions-tag-allowlist-plan: milestones/M035/phases/P01.5/tasks/T01-decisions-tag-allowlist-PLAN.md
+        - T01 Summary: milestones/M035/phases/P01.5/tasks/T01-SUMMARY.md
+        - T02 Spec-dir-rename-payload: milestones/M035/phases/P01.5/tasks/T02-spec-dir-rename-PAYLOAD.md
+        - T02 Spec-dir-rename-plan: milestones/M035/phases/P01.5/tasks/T02-spec-dir-rename-PLAN.md
+        - T02 Summary: milestones/M035/phases/P01.5/tasks/T02-SUMMARY.md
+        - T03 Operator-paths-payload: milestones/M035/phases/P01.5/tasks/T03-operator-paths-PAYLOAD.md
+        - T03 Operator-paths-plan: milestones/M035/phases/P01.5/tasks/T03-operator-paths-PLAN.md
+        - T03 Summary: milestones/M035/phases/P01.5/tasks/T03-SUMMARY.md
+        - T04 C1-lowercase-hyphenated-payload: milestones/M035/phases/P01.5/tasks/T04-c1-lowercase-hyphenated-PAYLOAD.md
+        - T04 C1-lowercase-hyphenated-plan: milestones/M035/phases/P01.5/tasks/T04-c1-lowercase-hyphenated-PLAN.md
+        - T04 Summary: milestones/M035/phases/P01.5/tasks/T04-SUMMARY.md
+        - T05 C2-c3-prose-payload: milestones/M035/phases/P01.5/tasks/T05-c2-c3-prose-PAYLOAD.md
+        - T05 C2-c3-prose-plan: milestones/M035/phases/P01.5/tasks/T05-c2-c3-prose-PLAN.md
+        - T05 Summary: milestones/M035/phases/P01.5/tasks/T05-SUMMARY.md
+        - T06 C5-cohort-finish-payload: milestones/M035/phases/P01.5/tasks/T06-c5-cohort-finish-PAYLOAD.md
+        - T06 C5-cohort-finish-plan: milestones/M035/phases/P01.5/tasks/T06-c5-cohort-finish-PLAN.md
+        - T06 Summary: milestones/M035/phases/P01.5/tasks/T06-SUMMARY.md
+        - T07 C4-classification-payload: milestones/M035/phases/P01.5/tasks/T07-c4-classification-PAYLOAD.md
+        - T07 C4-classification-plan: milestones/M035/phases/P01.5/tasks/T07-c4-classification-PLAN.md
+        - T07 Summary: milestones/M035/phases/P01.5/tasks/T07-SUMMARY.md
+        - T08 Acceptance-and-runbook-payload: milestones/M035/phases/P01.5/tasks/T08-acceptance-and-runbook-PAYLOAD.md
+        - T08 Acceptance-and-runbook-plan: milestones/M035/phases/P01.5/tasks/T08-acceptance-and-runbook-PLAN.md
+        - T08 Summary: milestones/M035/phases/P01.5/tasks/T08-SUMMARY.md
+      - P02:
+        - Overview: milestones/M035/phases/P02/index.md
+        - Plan: milestones/M035/phases/P02/P02-PLAN.md
+        - Summary: milestones/M035/phases/P02/P02-SUMMARY.md
+        - T01 Package-json-and-bin-payload: milestones/M035/phases/P02/tasks/T01-package-json-and-bin-PAYLOAD.md
+        - T01 Package-json-and-bin-plan: milestones/M035/phases/P02/tasks/T01-package-json-and-bin-PLAN.md
+        - T01 Package-json-and-bin-summary: milestones/M035/phases/P02/tasks/T01-package-json-and-bin-SUMMARY.md
+        - T02 Postinstall-driver-payload: milestones/M035/phases/P02/tasks/T02-postinstall-driver-PAYLOAD.md
+        - T02 Postinstall-driver-plan: milestones/M035/phases/P02/tasks/T02-postinstall-driver-PLAN.md
+        - T02 Postinstall-driver-summary: milestones/M035/phases/P02/tasks/T02-postinstall-driver-SUMMARY.md
+        - T03 Byte-equivalence-skeleton-payload: milestones/M035/phases/P02/tasks/T03-byte-equivalence-skeleton-PAYLOAD.md
+        - T03 Byte-equivalence-skeleton-plan: milestones/M035/phases/P02/tasks/T03-byte-equivalence-skeleton-PLAN.md
+        - T03 Byte-equivalence-skeleton-summary: milestones/M035/phases/P02/tasks/T03-byte-equivalence-skeleton-SUMMARY.md
+        - T04 Release-workflow-payload: milestones/M035/phases/P02/tasks/T04-release-workflow-PAYLOAD.md
+        - T04 Release-workflow-plan: milestones/M035/phases/P02/tasks/T04-release-workflow-PLAN.md
+        - T04 Release-workflow-summary: milestones/M035/phases/P02/tasks/T04-release-workflow-SUMMARY.md
+        - T05 Bundle-hygiene-and-phase-suite-payload: milestones/M035/phases/P02/tasks/T05-bundle-hygiene-and-phase-suite-PAYLOAD.md
+        - T05 Bundle-hygiene-and-phase-suite-plan: milestones/M035/phases/P02/tasks/T05-bundle-hygiene-and-phase-suite-PLAN.md
+        - T05 Bundle-hygiene-and-phase-suite-summary: milestones/M035/phases/P02/tasks/T05-bundle-hygiene-and-phase-suite-SUMMARY.md
+      - P03:
+        - Overview: milestones/M035/phases/P03/index.md
+        - Plan: milestones/M035/phases/P03/P03-PLAN.md
+        - Summary: milestones/M035/phases/P03/P03-SUMMARY.md
+        - T01 Formula-template-and-render-plan: milestones/M035/phases/P03/tasks/T01-formula-template-and-render-PLAN.md
+        - T01 Formula-template-and-render-summary: milestones/M035/phases/P03/tasks/T01-formula-template-and-render-SUMMARY.md
+        - T02 Release-workflow-homebrew-job-plan: milestones/M035/phases/P03/tasks/T02-release-workflow-homebrew-job-PLAN.md
+        - T02 Release-workflow-homebrew-job-summary: milestones/M035/phases/P03/tasks/T02-release-workflow-homebrew-job-SUMMARY.md
+        - T03 Byte-equivalence-homebrew-arm-plan: milestones/M035/phases/P03/tasks/T03-byte-equivalence-homebrew-arm-PLAN.md
+        - T03 Byte-equivalence-homebrew-arm-summary: milestones/M035/phases/P03/tasks/T03-byte-equivalence-homebrew-arm-SUMMARY.md
+        - T04 Installation-doc-and-phase-suite-plan: milestones/M035/phases/P03/tasks/T04-installation-doc-and-phase-suite-PLAN.md
+        - T04 Installation-doc-and-phase-suite-summary: milestones/M035/phases/P03/tasks/T04-installation-doc-and-phase-suite-SUMMARY.md
+      - P04:
+        - Overview: milestones/M035/phases/P04/index.md
+        - Plan: milestones/M035/phases/P04/P04-PLAN.md
+        - Summary: milestones/M035/phases/P04/P04-SUMMARY.md
+        - T01 Install-sh-curl-pipe-bash-plan: milestones/M035/phases/P04/tasks/T01-install-sh-curl-pipe-bash-PLAN.md
+        - T01 Install-sh-curl-pipe-bash-summary: milestones/M035/phases/P04/tasks/T01-install-sh-curl-pipe-bash-SUMMARY.md
+        - T02 Release-workflow-curl-arm-plan: milestones/M035/phases/P04/tasks/T02-release-workflow-curl-arm-PLAN.md
+        - T02 Release-workflow-curl-arm-summary: milestones/M035/phases/P04/tasks/T02-release-workflow-curl-arm-SUMMARY.md
+        - T03 Byte-equivalence-curl-arm-plan: milestones/M035/phases/P04/tasks/T03-byte-equivalence-curl-arm-PLAN.md
+        - T03 Byte-equivalence-curl-arm-summary: milestones/M035/phases/P04/tasks/T03-byte-equivalence-curl-arm-SUMMARY.md
+        - T04 Installation-doc-and-phase-suite-plan: milestones/M035/phases/P04/tasks/T04-installation-doc-and-phase-suite-PLAN.md
+        - T04 Installation-doc-and-phase-suite-summary: milestones/M035/phases/P04/tasks/T04-installation-doc-and-phase-suite-SUMMARY.md
+      - P05:
+        - Overview: milestones/M035/phases/P05/index.md
+        - Plan: milestones/M035/phases/P05/P05-PLAN.md
+        - Summary: milestones/M035/phases/P05/P05-SUMMARY.md
+        - T01 Rollback-marker-contract-payload: milestones/M035/phases/P05/tasks/T01-rollback-marker-contract-PAYLOAD.md
+        - T01 Rollback-marker-contract-plan: milestones/M035/phases/P05/tasks/T01-rollback-marker-contract-PLAN.md
+        - T01 Rollback-marker-contract-summary: milestones/M035/phases/P05/tasks/T01-rollback-marker-contract-SUMMARY.md
+        - T02 Rollback-dispatch-payload: milestones/M035/phases/P05/tasks/T02-rollback-dispatch-PAYLOAD.md
+        - T02 Rollback-dispatch-plan: milestones/M035/phases/P05/tasks/T02-rollback-dispatch-PLAN.md
+        - T02 Rollback-dispatch-summary: milestones/M035/phases/P05/tasks/T02-rollback-dispatch-SUMMARY.md
+        - T03 Sigstore-signing-release-workflow-payload: milestones/M035/phases/P05/tasks/T03-sigstore-signing-release-workflow-PAYLOAD.md
+        - T03 Sigstore-signing-release-workflow-plan: milestones/M035/phases/P05/tasks/T03-sigstore-signing-release-workflow-PLAN.md
+        - T03 Sigstore-signing-release-workflow-summary: milestones/M035/phases/P05/tasks/T03-sigstore-signing-release-workflow-SUMMARY.md
+        - T04 Installation-doc-verifying-integrity-payload: milestones/M035/phases/P05/tasks/T04-installation-doc-verifying-integrity-PAYLOAD.md
+        - T04 Installation-doc-verifying-integrity-plan: milestones/M035/phases/P05/tasks/T04-installation-doc-verifying-integrity-PLAN.md
+        - T04 Installation-doc-verifying-integrity-summary: milestones/M035/phases/P05/tasks/T04-installation-doc-verifying-integrity-SUMMARY.md
+        - T05 Acceptance-tests-and-fixtures-payload: milestones/M035/phases/P05/tasks/T05-acceptance-tests-and-fixtures-PAYLOAD.md
+        - T05 Acceptance-tests-and-fixtures-plan: milestones/M035/phases/P05/tasks/T05-acceptance-tests-and-fixtures-PLAN.md
+        - T05 Acceptance-tests-and-fixtures-summary: milestones/M035/phases/P05/tasks/T05-acceptance-tests-and-fixtures-SUMMARY.md
+        - T06 Phase-suite-aggregator-payload: milestones/M035/phases/P05/tasks/T06-phase-suite-aggregator-PAYLOAD.md
+        - T06 Phase-suite-aggregator-plan: milestones/M035/phases/P05/tasks/T06-phase-suite-aggregator-PLAN.md
+        - T06 Phase-suite-aggregator-summary: milestones/M035/phases/P05/tasks/T06-phase-suite-aggregator-SUMMARY.md
+      - P06:
+        - Overview: milestones/M035/phases/P06/index.md
+        - Plan: milestones/M035/phases/P06/P06-PLAN.md
+        - Summary: milestones/M035/phases/P06/P06-SUMMARY.md
+        - T01 Config-schema-update-source-plan: milestones/M035/phases/P06/tasks/T01-config-schema-update-source-PLAN.md
+        - T01 Config-schema-update-source-summary: milestones/M035/phases/P06/tasks/T01-config-schema-update-source-SUMMARY.md
+        - T02 Multi-source-dispatch-plan: milestones/M035/phases/P06/tasks/T02-multi-source-dispatch-PLAN.md
+        - T02 Multi-source-dispatch-summary: milestones/M035/phases/P06/tasks/T02-multi-source-dispatch-SUMMARY.md
+        - T03 Update-run-jsonl-emission-plan: milestones/M035/phases/P06/tasks/T03-update-run-jsonl-emission-PLAN.md
+        - T03 Update-run-jsonl-emission-summary: milestones/M035/phases/P06/tasks/T03-update-run-jsonl-emission-SUMMARY.md
+        - T04 Update-skill-doc-multi-source-plan: milestones/M035/phases/P06/tasks/T04-update-skill-doc-multi-source-PLAN.md
+        - T04 Update-skill-doc-multi-source-summary: milestones/M035/phases/P06/tasks/T04-update-skill-doc-multi-source-SUMMARY.md
+        - T05 Acceptance-battery-and-fixtures-plan: milestones/M035/phases/P06/tasks/T05-acceptance-battery-and-fixtures-PLAN.md
+        - T05 Acceptance-battery-and-fixtures-summary: milestones/M035/phases/P06/tasks/T05-acceptance-battery-and-fixtures-SUMMARY.md
+        - T06 Phase-suite-and-milestone-close-plan: milestones/M035/phases/P06/tasks/T06-phase-suite-and-milestone-close-PLAN.md
     - M036 — Reference-Corpus Ingest (deferred post-launch, demand-driven):
       - Overview: milestones/M036/index.md
       - Acceptance-evidence: milestones/M036/M036-ACCEPTANCE-EVIDENCE.md

@@ -113,12 +113,49 @@ hash_payload_tree() {
 FIXTURE_A=""
 FIXTURE_B=""
 
+# Capture the original branch + SHA before run-update.sh's --rollback
+# arm runs `git checkout <prior-sha>` against the host repo (which is
+# a content-no-op when prior-SHA equals current-HEAD but leaves HEAD
+# detached). The trap below restores it post-test.
+# (papercut-sweep-post-M035 PC-6.)
+_orig_branch=""
+_orig_sha=""
+if git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+  _orig_branch="$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")"
+  _orig_sha="$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo "")"
+fi
+
 cleanup() {
   if [ -n "$FIXTURE_A" ] && [ -d "$FIXTURE_A" ]; then
     rm -rf "$FIXTURE_A"
   fi
   if [ -n "$FIXTURE_B" ] && [ -d "$FIXTURE_B" ]; then
     rm -rf "$FIXTURE_B"
+  fi
+  # Detached-HEAD recovery (PC-6). The rollback driver's `git checkout
+  # <prior-sha>` (run-update.sh:~172) leaves HEAD detached when the
+  # prior-SHA equals current-HEAD. Restore the original branch so the
+  # caller (M035 acceptance battery, orchestrator-loop dispatcher,
+  # operator) doesn't have to manually re-attach.
+  if [ -n "$_orig_branch" ] && [ "$_orig_branch" != "HEAD" ] \
+       && git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+    cur_branch="$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")"
+    if [ "$cur_branch" = "HEAD" ]; then
+      echo "INFO: m035-p05-rollback-byte-equivalence — restoring HEAD to $_orig_branch (was detached)" >&2
+      git -C "$REPO_ROOT" checkout "$_orig_branch" >/dev/null 2>&1 || \
+        echo "WARN: failed to restore $_orig_branch — re-attach manually" >&2
+      # If the original SHA is ahead of branch tip after checkout
+      # (defensive — should not happen on content-no-op rollback),
+      # fast-forward.
+      if [ -n "$_orig_sha" ]; then
+        post_sha="$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo "")"
+        if [ -n "$post_sha" ] && [ "$post_sha" != "$_orig_sha" ]; then
+          if git -C "$REPO_ROOT" merge-base --is-ancestor "$post_sha" "$_orig_sha" 2>/dev/null; then
+            git -C "$REPO_ROOT" merge --ff-only "$_orig_sha" >/dev/null 2>&1 || true
+          fi
+        fi
+      fi
+    fi
   fi
 }
 trap cleanup EXIT

@@ -10,7 +10,16 @@
 # growth those changes pulled in, refreshed 2026-05-07 post-M037/P03/round-3.5
 # to track scripts/{lib/yaml-merge.sh, wiki/resolve-default-branch.sh,
 # verify/decisions-shape-lint.sh, verify/m028/p02-repair-legacy-bloat.sh} —
-# net +1 against the prior refresh after intra-window churn).
+# net +1 against the prior refresh after intra-window churn, refreshed
+# 2026-05-10 post-M033/M035-pre-launch + m040 to track scripts/{diagnostics/
+# wiki-stubs-fresh.sh (78d27e02 PBJ-2026-05-07 surgical fixes), lifecycle/
+# emit-managed-gitignore.sh (1aba20e7 M035 P00), lifecycle/write-rollback-
+# marker.sh (4bbc8bc7 M035 P05 T01), state/check-orchestrator-drift.sh
+# (b6538e20 M035 P01 T03), verify/.npmignore (d3ba6dc2 M035 P02), wiki/
+# wiki-decorate-build.py (69293440 m040)} minus scripts/wiki/
+# wiki-decorate-codes.sh (deleted in 69293440 m040 backport) — net +5
+# against the prior refresh; templates/ +1 from templates/conversus-presets/
+# .npmignore (d3ba6dc2 M035 P02 npm packaging churn)).
 # Source: bash packaging/install/install-claude-code.sh --dry-run
 # Format: <runtime-dir> file_count=<N>
 # Refresh policy: re-capture at HEAD whenever a sibling milestone closes and
@@ -27,8 +36,8 @@
 # produces the same output as the pre-M032 RUNTIME_DIRS bulk-copy would today,
 # not the same output as a frozen historical snapshot.
 commands/ file_count=37
-scripts/ file_count=1173
+scripts/ file_count=1178
 references/ file_count=36
-templates/ file_count=52
+templates/ file_count=53
 # Total post-refresh RUNTIME_DIRS file count:
-total file_count=1298
+total file_count=1304

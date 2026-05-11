@@ -227,3 +227,86 @@ deliberation pending.
 (`final.md:141`-`final.md:175`) carry the per-convergence-point
 detail.
 **Status**: Open (blind deliberation pending)
+
+---
+
+## 2026-05-11 — Blind deliberation for Tier 2 XXII + conversus Tier 2 XII inheritance amendment
+
+**Type**: Proposal (operator review pending)
+**Trigger**: Third of the three-deliberation set. Blind pass tested
+the two candidate principles on their own merits, with the artifact
+de-provenanced (`/tmp/inheritance-claims-blind.md` — no reference to
+conversus, Tier 2, or build-fractal inheritance). Source-grounding
+was `.orchestrator/memory/constitution.md` at the post-self-consistency
+revert state (commit `0f0db069`, no embedded Tier 2 alignment
+paragraph; held text lives in PENDING-VIII-AMENDMENT.md). Purpose:
+catch first-deliberation echo bias by presenting the principles
+fresh.
+**Outcome** (blind only): Headline verdict **PASS** (0 surviving
+disputes per the gate adapter); substance is **PASS-WITH-MAJOR-FIXES**
+— 12 P1 items unanimous (or unanimous-with-modification) + 2
+unresolved disputes about Candidate A's relationship to existing
+Principle XI. The blind agents (principle-advocate and
+principle-skeptic) surfaced **substantive distinctness challenges**
+that the headline PASS does not reflect:
+  - **Candidate A Invariant 1 (single-source versioning)** may be an
+    application of existing Principle XI (Single Source of Truth);
+    skeptic's default position is unconditional reassignment of the
+    `scripts/verify/version-source-of-truth.sh` script as an XI
+    enforcement script with a compliance note in XI's body. Advocate
+    proposed PATCH-then-decide branching. **Disputed** (S1 vs A-N1).
+  - **Candidate A Invariant 2 (force-include discipline)** requires
+    first-principles textual analysis against Principle X (Templating
+    Over Inference). If X covers manifest discipline, reassign
+    `manifest-coverage.sh` as an X enforcement script — Candidate A
+    has no surviving distinct constitutional content. Evaluation
+    prerequisite not yet performed.
+  - **Candidate A Invariant 3 (end-to-end install testing)** belongs
+    in `## Quality Gates`, not as a constitutional invariant
+    (unanimous, S2). Triggering condition: version-tag publication
+    via M035 GH release automation.
+  - **Candidate B requires Principle VIII PATCH** as a hard
+    prerequisite (unanimous, S4 + A-N2). VIII's "configuration entry"
+    wording is ambiguous about Candidate B's domain. PATCH must
+    resolve the scope boundary before Candidate B ratifies.
+  - **Candidate B scope narrows to demonstrated verifier coverage
+    only** (unanimous, S5 + A3 + A-N3). Drop "documented consumer in
+    reference docs" sub-category.
+  - **"Reader" needs mechanical-precision definition** (unanimous,
+    A2 + S5 modified) — verbatim-pattern requirement + dynamic-reader
+    exception table.
+  - **Joint scope table in CONFORMANCE.md** (unanimous, A8 modified
+    to P1 + S-N1) for XXII / Candidate B overlap surfaces, committed
+    with the VIII PATCH.
+  - **PENDING/ACTIVE tier with named consequence** (unanimous,
+    S-N2 + A1 modified) for the three `scripts/verify/*.sh` stubs.
+  - **Procedural finding** (unanimous, S3 + A4 modified):
+    CONFORMANCE.md should have been supplied as deliberation
+    grounding ("BINDING PROCEDURAL BLOCK"). I supplied only
+    constitution.md per the blind preset's design (test the
+    candidates on their own merits, no provenance). The agents
+    argued criterion (i) cannot be evaluated against the membership
+    basis preamble without CONFORMANCE.md. Future ratification
+    deliberations should supply both as `--source`.
+
+**Operator routing**: per the operator's authorized "Pause: surface
+findings to operator before any implementation move" path, the
+substantive findings are routed to a decision packet at
+`.orchestrator/comments/review-queue/2026-05-11-XXII-XII-blind-substantive-findings.md`.
+Implementation Steps 4-5 (close log entries; restore VIII Tier 2
+alignment from PENDING file; bump constitution to 2.2.0; apply L48
+annotation; author operator-vs-developer-config.md + deep-modules
+subsection; drop CONFORMANCE.md pending-amendment caveats) are
+PAUSED pending operator decision among three resolution paths
+(accept-as-is / restructure / defer-XXII).
+
+**References**:
+`.orchestrator/ratification/2026-05-11-XXII-XII/blind-evidence/blind-gate-result.md`
+(headline verdict);
+`.orchestrator/ratification/2026-05-11-XXII-XII/blind-evidence/summary/final.md`
+(Phase 4 convergence + 12 P1 items + 2 disputes);
+`.orchestrator/ratification/2026-05-11-XXII-XII/blind-evidence/arbiter/resolution.md`
+(arbitration on the 2 disputes);
+`.orchestrator/comments/review-queue/2026-05-11-XXII-XII-blind-substantive-findings.md`
+(operator decision packet).
+**Status**: Open (operator decision pending)

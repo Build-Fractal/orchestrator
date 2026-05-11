@@ -1,0 +1,115 @@
+mode: cooperative
+target: /private/tmp/inheritance-claims-blind.md
+output: /Users/brettkellgren/Sites/orchestrator/.orchestrator/ratification/2026-05-11-XXII-XII
+iterations: 1
+agents:
+- name: principle-advocate
+  prompt: "You are the Principle Advocate. The artifact under deliberation is\na de-provenanced\
+    \ extract containing two candidate principles \u2014 one\ngoverning distribution\
+    \ surfaces (single-source versioning,\nforce-include discipline, end-to-end install\
+    \ testing), one\ngoverning dead infrastructure (every declared config knob / helper\n\
+    script / reference scaffold must have at least one reader; fully\ndefined, fully\
+    \ typed, fully dead is a defect).\n\nYou do NOT know whether these claims were\
+    \ authored by this project\nor inherited from a parent. Evaluate them on their\
+    \ own merits.\n\nArgue that these two candidate principles should be adopted.\
+    \ Cite\nthe proposal text verbatim. Point at evidence the principles can\nbe mechanically\
+    \ enforced. Defend the falsifiable scope of each:\na hypothetical PR violator\
+    \ should be flaggable without\n\"interpretation.\"\n\nConcede points to the skeptic\
+    \ where the proposal genuinely fails\nthe inclusion criteria (mechanical verification\
+    \ feasibility,\nfalsifiable scope, distinctness).\n"
+  docs:
+  - /Users/brettkellgren/Sites/orchestrator/.orchestrator/memory/constitution.md
+  - /Users/brettkellgren/Sites/orchestrator/CONFORMANCE.md
+- name: principle-skeptic
+  prompt: "You are the Principle Skeptic. The artifact contains two candidate\nprinciples.\
+    \ You do NOT know their provenance. Evaluate them on\ntheir own merits using the\
+    \ grounding constitution at\n`--source`.\n\nArgue that AT LEAST ONE of the two\
+    \ candidate principles fails the\ninclusion criteria (mechanical verification\
+    \ feasibility,\nfalsifiable scope, distinctness from existing principles I-XV).\n\
+    Specifically:\n- Is the distribution-surface principle distinct from existing\n\
+    \  principle XI (Single Source of Truth) and X (Configuration Over\n  Code)? If\
+    \ not, fold it.\n- Is the dead-infrastructure principle distinct from existing\n\
+    \  principle XIV (No Speculative Complexity) and existing\n  principle VIII (No\
+    \ Dead Infrastructure)? If not, fold it OR\n  declare an explicit scope boundary.\n\
+    - Are the named verification scripts actually mechanically\n  enforceable, or\
+    \ are they human-judgment gates dressed up as\n  scripts?\n\nRaise disputes where\
+    \ the candidate principles fail on their own\nterms. Do NOT raise disputes that\
+    \ rely on inheritance reasoning \u2014\nthis is a blind pass.\n\n### Cross-tier\
+    \ weakening checklist\n\nIn addition to the inclusion-criteria checks above, evaluate\
+    \ the\nmembership basis preamble in CONFORMANCE.md (the three-paragraph\nprinciple-specific\
+    \ independence argument) against this binding\nchecklist. The checklist was added\
+    \ 2026-05-11 as P2 of the\noriginating deliberation; the arbiter named criterion\
+    \ (i) as the\nload-bearing test the blind pass must run.\n\n**Criterion (i) \u2014\
+    \ Implicit relief detection (BINDING)**:\n  Does the membership basis declaration\
+    \ grant the project\n  IMPLICIT RELIEF from any parent-constitution requirement\n\
+    \  WITHOUT routing that relief through the formal Relief pathway\n  documented\
+    \ at SOURCE B's Part VI? A declaration that argues\n  \"prerequisite X doesn't\
+    \ apply to us because we don't have\n  feature Y\" is acceptable ONLY when the\
+    \ inherited principle's\n  normative body is genuinely scope-independent of feature\
+    \ Y;\n  otherwise it is implicit relief and MUST route through Part VI.\n\n  Raise\
+    \ a dispute under criterion (i) if any of the following is\n  true: (a) the principle-specific\
+    \ independence argument fails\n  to acknowledge a parent prerequisite that the\
+    \ inherited\n  principle's normative body actually depends on; (b) the\n  argument\
+    \ substitutes a role-claim (\"we are the implementing\n  tool for X\") for a structural\
+    \ argument about the principle's\n  normative scope; (c) the argument claims independence\
+    \ by\n  narrowing the inherited principle's scope without declaring\n  the narrowing\
+    \ explicitly in the CONFORMANCE.md row.\n\n**Criterion (ii) \u2014 Scope-boundary\
+    \ discoverability (advisory)**:\n  Is every scope boundary the declaration claims\
+    \ discoverable by\n  a future maintainer from CONFORMANCE.md alone, or does it\n\
+    \  require reading external context (e.g., the proposal text,\n  SOURCE B's commit\
+    \ history, the deliberation evidence tree)?\n  Advisory dispute only \u2014 does\
+    \ not block the headline verdict\n  unless the answer materially compromises the\
+    \ membership basis\n  argument's coherence.\n\n**Criterion (iii) \u2014 Verification-evidence\
+    \ sufficiency (advisory)**:\n  For each \"Satisfied\" bucket the declaration claims\
+    \ under the\n  three-bucket XII row structure, is the named evidence\n  (verification\
+    \ script, linter, fixture) sufficient to\n  discharge the parent principle's mechanical-verification\n\
+    \  requirement at the inheritance-declaration level, or does it\n  require a stronger\
+    \ discharge later? Stub paths that exist but\n  emit \"TODO\" satisfy Criterion\
+    \ 1 feasibility but NOT Criterion\n  3 sufficiency \u2014 surface this distinction\
+    \ explicitly.\n\nThe criterion (i) finding MUST be named in your disputes section\n\
+    verbatim, regardless of whether it is PASS / FLAG / BLOCK, so\nthe arbiter can\
+    \ route the procedural verdict to the rationale\nblock.\n"
+  docs:
+  - /Users/brettkellgren/Sites/orchestrator/.orchestrator/memory/constitution.md
+  - /Users/brettkellgren/Sites/orchestrator/CONFORMANCE.md
+arbiter:
+  name: arbiter
+  prompt: 'The arbiter evaluates the disputes against the orchestrator
+
+    constitution (Inclusion Criteria from Change 1, plus Principles I,
+
+    XI, XIV, XV). Headline verdict is PASS or BLOCK; the rationale
+
+    section MUST contain a per-principle blind verdict (one for the
+
+    distribution-surface principle, one for the dead-infrastructure
+
+    principle) using `PASS | FLAG | BLOCK` and naming the inclusion
+
+    criterion any FLAG / BLOCK verdict violates.
+
+
+    Echo-bias detection: if the arbiter notices either advocate
+
+    referencing the principles'' provenance (conversus, Tier 2,
+
+    build-fractal), the rationale MUST note this as a procedural FLAG
+
+    even if the headline verdict is PASS.
+
+
+    Headline PASS requires both per-principle blind verdicts to be
+
+    PASS or FLAG. Headline BLOCK is emitted when EITHER blind verdict
+
+    is BLOCK.
+
+
+    Ties resolve in favor of BLOCK.
+
+    '
+  docs:
+  - /Users/brettkellgren/Sites/orchestrator/.orchestrator/memory/constitution.md
+  - /Users/brettkellgren/Sites/orchestrator/CONFORMANCE.md
+  grounding: /Users/brettkellgren/Sites/orchestrator/.orchestrator/memory/constitution.md
+  trigger: disputes_remain

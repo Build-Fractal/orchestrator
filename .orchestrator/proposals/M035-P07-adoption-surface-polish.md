@@ -252,6 +252,18 @@ rather than letting it block the launch ship date.
   Principle XVI (Distribution Surface Integrity) is the constitutional
   framing for adoption-surface integrity.
 
+## Addendum (2026-05-11) — P07 #3 blocked on first v* tag publication
+
+Surfaced when working the P07 sub-item sweep. `npm view @build-fractal/orchestrator version` returns `E404 Not Found`; the npm, Homebrew, and curl-pipe-bash publish pipelines exist (M035 P02-P06 shipped to disk and `validate-milestone.sh M035` reports 185/185 PASS), but no `v*` tag has been pushed, so MOS-3/MOS-4/MOS-5 have not fired and no installer artifacts are reachable from a public package manager.
+
+Recording asciinemas against the current clone-and-bash install path would lock the demos to a transient install shape that disappears the moment the first `v*` tag publishes. Either the recordings would need to be re-recorded post-publication (the failure mode #3 already names as the hard dep), or the README would briefly carry asciinemas pointing at install commands the launch event itself is supposed to retire.
+
+**Decision**: defer P07 #3 until the first `v*` tag publishes. Revisit when MOS-3/MOS-4/MOS-5 land — at that point `npx @build-fractal/orchestrator init` (or equivalent) becomes the canonical demo invocation, and the asciinemas can be recorded against the launch-event install shape they were designed for.
+
+**Trigger to revisit**: first successful `npm view @build-fractal/orchestrator version` (returns a real version string instead of E404). Until then, P07 #3 stays unscheduled.
+
+P07 sub-items #2 (origin story) and #5 (hero polish) shipped 2026-05-11 in this same sweep — they have no dependency on the publish pipelines and unblock immediately.
+
 ## Open questions
 
 1. **Voice consistency pass: who edits?** Editorial work tends to need

@@ -25,6 +25,8 @@ Most coding agents start each task from zero: no memory of yesterday's decisions
 
 > **v0.9.3** — in production use, dogfooded daily on its own development. Built on Claude Code (primary); Codex CLI and Cursor adapters exist (formal multi-runtime parity is a post-launch fast-follow). See [CHANGELOG.md](./CHANGELOG.md) for version history.
 
+> **Sister project — [conversus](https://github.com/Build-Fractal/conversus-oss)**: multi-agent deliberation engine. Pits AI agents against each other in structured adversarial review across cooperative / winner-take-all / prisoner's-dilemma / red-blue modes. Both projects stand alone; the orchestrator invokes conversus through a graceful-degradation adapter (`/orchestrator-conversus-gate`) for spec-fidelity gates and pressure-tested artifact review. Same build-fractal suite, same governance discipline, no hard runtime dependency in either direction.
+
 ---
 
 ## Why use it
@@ -184,7 +186,7 @@ Each of these maps to a journey row in [Pick your path](#pick-your-path) — the
 - **Materials intake** — `/orchestrator-materials-intake` reconciles heterogeneous inputs (Product Brief, Decision Register, MVP Plan, Handoff JSON) into a single pre-spec, surfacing drift and asking only about real conflicts.
 - **Cost observability** — `/orchestrator-cost` gives both predictive per-tier estimates (Quick / Standard / Full) before dispatch and retrospective rollups from the JSONL execution log after. Bash-only, zero LLM tokens — the cost view itself is free.
 - **Adaptive model routing** — Orchestrator auto-routes between Quick / Standard / Full pipelines per task and host capability. Small work doesn't pay big-work overhead; large work doesn't get under-resourced. Shadow-mode default with a programmatic flip-gate when the shadow corpus reaches the configured confidence threshold.
-- **Multi-agent deliberation** (Conversus integration) — `/orchestrator-conversus-gate` runs adversarial review of high-stakes artifacts in cooperative, winner-take-all, red-blue, or prisoner's-dilemma modes. Used internally for spec fidelity gates; available for any artifact you want pressure-tested.
+- **Multi-agent deliberation** (sister-project [conversus](https://github.com/Build-Fractal/conversus-oss) integration) — `/orchestrator-conversus-gate` runs adversarial review of high-stakes artifacts in cooperative, winner-take-all, red-blue, or prisoner's-dilemma modes. Used internally for spec fidelity gates; available for any artifact you want pressure-tested. Conversus is an optional external dependency — the adapter degrades gracefully (emits `SKIPPED:` and proceeds) when the binary isn't on PATH, so this surface is "use it if installed, no-op if not."
 - **Diagnostic doctor** — `/orchestrator-doctor` runs 12+ checks: orphaned artifacts, stale knowledge, scope drift, cost spikes, permissions drift, plan-shape audits, constitution consistency. Emits structured `DOCTOR:<NAME> status=ok|warn|fail` lines for human and machine consumers.
 - **Crash recovery built-in** — Every state derives from disk; nothing in memory. Kill the process, reboot, lose your terminal — `/orchestrator-resume` reads disk state and picks up at the exact next undone step.
 

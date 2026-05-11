@@ -382,3 +382,71 @@ surface behavioral-correctness scope).
 `.orchestrator/ratification/2026-05-11-XXII-XII/blind-rerun-with-conformance/COMPARISON.md`
 (Divergence 5 — both runs agree to ship VIII PATCH).
 **Status**: Closed
+
+## 2026-05-11 — Constitution v2.3.0: Decision A Pathway 1 ship (Items 1+2+3 + Decision B)
+
+**Type**: Amendment
+**Trigger**: Operator resolution of Decision A (Candidate A
+structural shape) captured in
+`.orchestrator/ratification/2026-05-11-XXII-XII/blind-rerun-with-conformance/COMPARISON.md
+§ Operator decision points`. The 2026-05-11 dual-grounding rerun
+(under Item 8's procedural fix) produced a structural reframe that
+was architecturally incompatible with the original 2026-05-11 blind
+run's Quality-Gates-move recommendation. The operator selected
+**Pathway 1 (Quality Gates move)** over **Pathway 2
+(restructure-in-place)** after reviewing the
+`decision-a-brief.md` evidence packet. Pathway 1's case rests on
+the constitution already housing Quality Gates as the structural
+home for release-time mechanical evidence; install testing matches
+that section's existing pattern; the operational definitions the
+rerun introduces ("fresh project fixture" / "works") are themselves
+procedural-test content that lands naturally in the Quality Gates
+bullet body rather than awkwardly inside a constitutional invariant.
+**Outcome**: ships ledger Items 1 + 2 + 3 of
+`.orchestrator/proposals/M0XX-tier-2-xxii-xii-substantive-followups.md`
+across three commits. Item 3 (Invariant 3 → Quality Gates) lands in
+the constitution as a new `## Quality Gates` § Install gates bullet
+whose body carries the "fresh project fixture" + "works" operational
+definitions verbatim from the rerun's arbiter Dispute 1 + Dispute 3
+rulings (Decision B resolved in this same amendment — the
+definitions ship now, not deferred to a later cycle). Item 1
+(Invariant 1 → Principle XI enforcement) reassigns
+`scripts/verify/version-source-of-truth.sh` as XI's enforcement
+script with a new compliance-note paragraph appended to XI's body
+declaring installer-channel version SST. Item 2 (Invariant 2 / X
+distinctness) records the rerun's bilaterally-drafted X-distinctness
+sentence in a new CONFORMANCE.md sub-section "Tier 2 XXII —
+Invariant 2 / Principle X distinctness" and confirms Invariant 2 as
+Candidate A / Tier 2 XXII's sole surviving constitutional invariant
+after Pathway 1 relocation. Constitution bumped 2.2.1 → 2.3.0
+(MINOR — Quality Gates section gains new bullet; XXII inheritance
+shape changes materially; XI gains an authoritative-location
+surface). CONFORMANCE.md updates: XXII inheritance row's surviving
+content narrowed to Invariant 2; Two-principle boundary table's
+installer-script row attribution split across Invariant 2 (XXII) +
+XI (version SST) + Quality Gates (install-smoke); PENDING/ACTIVE
+cap rows annotated with new principle attribution; failure-
+consequence rollup refined per attribution split. Decision C
+(post-ratification grounding caveat) resolved as not load-bearing —
+the rerun's substantive findings stand and the procedural fix from
+Item 8 makes dual-grounding the new default for future
+deliberations. The pre-ratification grounding caveat would have
+required re-running against constitution sha d36e70eab8…; doing so
+would not surface different findings because XXII+XII's
+principle-specific scope arguments (CONFORMANCE.md § Tier 2
+Inheritance Basis Paragraphs 2-3) do not depend on whether
+XXII+XII references are present in the grounding constitution.
+**References**:
+`.orchestrator/ratification/2026-05-11-XXII-XII/decision-a-brief.md`
+(operator decision evidence packet);
+`.orchestrator/ratification/2026-05-11-XXII-XII/blind-evidence/summary/final.md`
+(original blind P1 #2 + P1 #3 + P1 #4 + Convergence Achieved #3);
+`.orchestrator/ratification/2026-05-11-XXII-XII/blind-rerun-with-conformance/arbiter-resolution.md`
+(rerun arbiter rulings for Dispute 1 + Dispute 3 — operational
+definitions adopted into Quality Gates bullet body; Dispute 2 Path A
+X-distinctness sentence adopted into CONFORMANCE.md);
+`.orchestrator/ratification/2026-05-11-XXII-XII/blind-rerun-with-conformance/COMPARISON.md`
+(Divergences 1+2+3 + Operator decision points A/B/C);
+`.orchestrator/proposals/M0XX-tier-2-xxii-xii-substantive-followups.md`
+(Items 1+2+3 ship-now ledger).
+**Status**: Closed

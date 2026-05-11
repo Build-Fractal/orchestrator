@@ -318,6 +318,21 @@ a consistency bug waiting to happen.
   cold archive) with one entry per concept.
 - Roadmap phase status: the roadmap file is the single source; phase
   directories are artifacts, not status indicators.
+- **Installer-channel version SST** (added 2026-05-11 at v2.3.0 per
+  follow-on amendment Item 1 of
+  `.orchestrator/proposals/M0XX-tier-2-xxii-xii-substantive-followups.md`,
+  reassigned from Candidate A / Tier 2 XXII Invariant 1 under
+  Decision A Pathway 1): the version string consumed by every
+  per-runtime installer in `packaging/install/install-*.sh` and by
+  every bundle manifest in `packaging/bundle/*/manifest.txt` MUST
+  derive from the `CHANGELOG.md` top-line `## [X.Y.Z]` heading. No
+  installer or manifest may embed a hardcoded version literal.
+  Enforcement script: `scripts/verify/version-source-of-truth.sh`
+  (PENDING per CONFORMANCE.md § Tier 2 XXII PENDING/ACTIVE
+  verifier-stub cap — the cap row remains in the XXII table by
+  convention because the stub was created in that lineage; the cap's
+  failure-consequence rollup attributes this row's ADVISORY demotion
+  to Principle XI rather than Tier 2 XXII at v2.3.0).
 
 ### XII. Hook Isolation
 

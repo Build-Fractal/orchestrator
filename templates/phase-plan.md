@@ -27,10 +27,16 @@ depends_on: {{depends_on}}
      Forbidden:
        - Check: `( . scripts/lib/errors.sh && fn | grep -q X )`
        - Check: `test $(grep -c foo file) -gt 0`
+       - Check: `bash scripts/verify/check-must-haves.sh <phase-dir>`
+         # ^ NEVER cite the rollup as a Truth Check. The rollup IS the runner
+         # that evaluates every Truth — listing it inside a Truth makes it
+         # call itself recursively (hangs / always-FAIL).
 
      Required:
        - Check: `bash tools/verify/<phase>-<task>-<name>.sh`         # project-owned
-       - Check: `bash scripts/verify/check-must-haves.sh <phase-dir>` # framework-owned
+     The framework-owned `scripts/verify/*` helpers (check-must-haves,
+     run-*, validate-*) are invoked BY the runner, not FROM individual
+     Truth lines.
 -->
 - {{truth statement}}
   - Check: `bash tools/verify/{{check-script}}.sh`

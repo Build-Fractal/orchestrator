@@ -1,24 +1,24 @@
 # Getting Started
 
-> Your first 30 minutes with the orchestrator. By the end, you'll have a project initialized, a feature scoped, and a sense of when to lean on the orchestrator vs when to step around it.
+> Your first 30 minutes with the orchestrator. By the end, your project is onboarded, the knowledge graph is seeded, and you've used the orchestrator for both a small task and a larger feature.
 
 ## What you're about to do
 
-If your feature fits in a single agent session, the orchestrator detects it (Tier A) and steps aside — you keep using your runtime's native flow with zero overhead. This guide assumes you've got something larger: a feature that's going to span multiple sessions, a project where state needs to survive between conversations, or work where you want autonomous execution you can actually walk away from.
+The orchestrator's job is to make every coding task — from a one-line tweak to a multi-month rewrite — execute against a project-aware knowledge base. Once you're onboarded, every dispatch carries the relevant decisions, conventions, and prior context with it. The agent isn't starting from zero, even on the smallest tasks.
 
 The shape of the next 30 minutes:
 
 1. **Install** the orchestrator into your runtime (~30 seconds).
-2. **Start** your project. `/orchestrator-start` auto-detects which of four shapes you're in (empty / has-materials / existing-codebase / migrating) and routes you to the right onboarding flow. No 50-question interrogation if you've already got a codebase — it'll do deterministic structural extraction instead.
-3. **Build something small.** `/orchestrator-do "your task"` is the one-shot entry; for larger work, the full evaluate → discuss → roadmap → plan-phase → auto chain takes over.
+2. **Onboard** your project with `/orchestrator-start`. It auto-detects which of four shapes you're in (empty / has-materials / existing-codebase / migrating) and routes you accordingly. For an existing codebase: deterministic structural extraction → 5–15 seed knowledge entries (no 50-question interrogation). For greenfield: a 7-question grilling protocol that captures vision, scope, and constraints.
+3. **Use it for any task.** `/orchestrator-do "your task"` is the universal entry — small tweaks get fast-pathed with knowledge inject; larger work auto-routes through `evaluate → discuss → roadmap → plan-phase → auto`.
 4. **Feel the loop.** Mid-execution: `/orchestrator-status` and `/orchestrator-where` are read-only and always safe. After a crash: `/orchestrator-resume` picks up exactly where it left off.
 
 Two things to set expectations on:
 
 - The orchestrator is **opinionated about verification.** Every task and phase runs through a 4-tier ladder before it counts as done. Self-graded "I think that worked" doesn't make it past tier 1.
-- The orchestrator is **honest about when to step aside.** Small features classify as Tier A and you skip the whole orchestration loop — that's a feature, not a limitation.
+- The orchestrator **scales down as well as up.** Small one-shot tasks (Tier A) skip the full lifecycle but still benefit from knowledge inject — `/orchestrator-do` runs in seconds and the dispatched agent gets the relevant MEMs in its context. The orchestration scaffolding only kicks in for tasks that genuinely warrant it.
 
-**Who this is for**: developers using Claude Code (primary), Codex CLI, or Cursor who hit the wall where a single context window stops being enough.
+**Who this is for**: developers using Claude Code (primary), Codex CLI, or Cursor who want every task they dispatch — large or small — to inherit the project's accumulated knowledge.
 
 ---
 
@@ -142,13 +142,13 @@ The orchestrator commands follow a sequential workflow. Each step produces files
 
 This is always the first orchestrator command. It reads your feature spec, counts user stories, acceptance scenarios, and functional requirements, then classifies your project into one of three tiers:
 
-- **Tier A** -- Single context. The orchestrator steps aside entirely. Use your host runtime's native single-context workflow.
+- **Tier A** -- Single context. Best handled by `/orchestrator-do "..."` directly: knowledge-injected one-shot dispatch, no scaffolding overhead. The agent still runs against your project's MEMs — Tier A skips orchestration, not knowledge inject.
 - **Tier B** -- One SDD flow, multiple contexts. Manual dispatch with simplified state machine (5 states).
 - **Tier C** -- Multiple SDD flows. Full orchestration with autonomous dispatch, crash recovery, discussion gates, and milestone validation (10 states).
 
 The evaluate command scaffolds the orchestrator directory structure at `.orchestrator/milestones/M001/` and writes an evaluation file (`M001-EVALUATION.md`) that records the tier, spec path, and scope metrics.
 
-If the evaluation classifies your project as Tier A, you are done with the orchestrator. Proceed with your host runtime's native workflow.
+If the evaluation classifies your project as Tier A, the recommended path is `/orchestrator-do "..."` — the universal entry runs the M024 classifier, dispatches with Quick-profile knowledge inject, and exits. No state machine, no auto-loop. For Tier B/C, continue with the steps below.
 
 ### Step 2: Discuss (Tier C only)
 

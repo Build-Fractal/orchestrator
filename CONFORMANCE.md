@@ -123,6 +123,26 @@ Demonstrated PASS-only behavior without a paired FAIL fixture does NOT qualify; 
 
 **Failure-consequence rollup**: if any of these three stubs demotes to ADVISORY at the first `v*` tag publication, the Tier 2 XXII inheritance row in the Component-tier declarations table automatically annotates `Provisional (verifier-stubs demoted to ADVISORY; XXII Criterion 3 enforcement unmet; re-promotion requires fresh ratification)`. The XXII inheritance declaration itself does not revert — the criterion-1 feasibility discharge stands — but the Criterion 3 enforcement claim does not advance.
 
+### Tier 2 XII — Reader-precision definition
+
+Added 2026-05-11 alongside follow-on amendment Item 7 of `.orchestrator/proposals/M0XX-tier-2-xxii-xii-substantive-followups.md` (ship-now finding from the original 2026-05-11 XXII+XII blind deliberation P1 #7; not contradicted by the dual-grounding rerun per `blind-rerun-with-conformance/COMPARISON.md` Divergence 6).
+
+A **reader** of a config-knob leaf in `templates/orchestrator-config-default.yml`, for the purposes of the inherited conversus Tier 2 XII "at least one reader in the codebase" clause, is any one of:
+
+1. **Class (a)** — A direct shell variable assignment consuming the key via `config_get` (or an equivalent canonical helper), where the key's full dotted YAML path appears as a literal string argument.
+2. **Class (b)** — A `jq` or `yq` expression addressing the key by its full documented YAML path (the path appears literally in the expression argument; partial-path traversals do not count for leaf paths).
+3. **Class (c)** — A reader-exception entry in the table below, which records the dynamic access pattern verbatim and the file(s) where it appears. An exception entry that asserts a dynamic reader exists without recording its access pattern is invalid and treated as absent.
+
+Comments mentioning a key, reference-doc prose mentioning a key, and commit messages mentioning a key are **NOT** readers. The full convention — including non-reader cases, linter implementation sketch, and the boundary with Principle VIII — is documented in [`references/dead-infra-linter-conventions.md`](./references/dead-infra-linter-conventions.md).
+
+#### Reader-exception table
+
+| Canonical YAML path | Verbatim access pattern | File(s) | Notes |
+|---|---|---|---|
+| _(none recorded)_ | _(none recorded)_ | _(none recorded)_ | Initial state at 2026-05-11. The 41 known config-knob leaves in `templates/orchestrator-config-default.yml` are all matched by class (a) or class (b); no dynamic readers currently exist. This `(none recorded)` row is itself load-bearing — it makes the empty-state visible so that auditors do not mistake the table's absence for its emptiness. |
+
+A row is valid only if **all three** of `Canonical YAML path`, `Verbatim access pattern`, and `File(s)` are non-empty and non-placeholder. A row that copies an example pattern from the conventions doc without naming an actual file and key is invalid.
+
 ### Tier 2 XII — Clause-mapping scaffold
 
 Per the originating-deliberation arbiter Dispute 1 ruling, the XII normative body's four clauses are mapped to orchestrator analogs in a scaffold table below. **Every content cell is labeled PENDING** because the cell content depends on follow-on amendment work that populates each row in a single commit alongside its declaration. **This scaffold is NOT a Criterion 1 feasibility claim**; Criterion 1 feasibility for each clause will be demonstrated when content cells are populated.

@@ -1,0 +1,1 @@
+{"event":"unit_close","unit":"M036","result":"success","verification_result":"pass","completed_at":"2026-05-07T17:10:00Z","summary_path":".orchestrator/milestones/M036/M036-SUMMARY.md","scope_note":"M036a P00-P07; M036b P08-P09 deferred per papercut-m036b-deferred-state-vs-find-active.md Option A","reconciled_at":"2026-05-11"}

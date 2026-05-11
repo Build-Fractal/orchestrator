@@ -11,7 +11,7 @@ requires:
 affects:
   - "P01,P02,P05"
 key_files:
-  - "references/reference-taxonomy.md,references/reference-frontmatter-contract.md,references/reference-source-types.yaml,tools/verify/p00-taxonomy-shape.sh,tools/verify/p00-frontmatter-contract-shape.sh,tools/verify/p00-source-types-shape.sh,references/reference-edge-types.md,scripts/dispatch/adapters/format/registry.tsv,tools/verify/p00-edge-types-shape.sh,tools/verify/p00-adapter-registry-shape.sh,references/file-formats.md,references/spec-management.md,tools/verify/lib/p00-validate-chunk-frontmatter.sh,tools/verify/p00-scope-tag-extension.sh,tools/verify/p00-spec-management-crossref.sh,tools/verify/p00-taxonomy-rejects-unknown.sh,tools/verify/m036-p00-phase-suite.sh"
+  - "references/reference-taxonomy.md,references/reference-frontmatter-contract.md,references/reference-source-types.yaml,tools/verify/p00-taxonomy-shape.sh,tools/verify/p00-frontmatter-contract-shape.sh,tools/verify/p00-source-types-shape.sh,references/reference-edge-types.md,scripts/dispatch/adapters/format/registry.tsv,tools/verify/p00-edge-types-shape.sh,tools/verify/p00-adapter-registry-shape.sh,references/file-formats.md,references/spec-management.md,scripts/knowledge/lib/validate-chunk-frontmatter.sh,tools/verify/p00-scope-tag-extension.sh,tools/verify/p00-spec-management-crossref.sh,tools/verify/p00-taxonomy-rejects-unknown.sh,tools/verify/m036-p00-phase-suite.sh"
 key_decisions:
   - "none"
 patterns_established:

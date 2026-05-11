@@ -89,23 +89,14 @@ This roadmap was substantially restructured 2026-05-01 to reflect the spec amend
     - Produces: extended `context-recipe.yaml` (new declarative `reference:` section per Principle X / Principle XIII); reference-injection logic in `scripts/dispatch/build-context.sh` (or its successor) hooked behind the recipe; token-budget governor (algorithm decided at plan-phase per Open Question #Q-2); `tests/test-reference-dispatch-injection.sh` (SC-3); `tests/test-reference-backwards-compat-golden.sh` (SC-7, M030 SC-11 shape).
     - Consumes: P04 reference chunks + index; P05 scope-filter `--tag '[source:...]'` + traverse-graph edges; existing tokenizer (M018); existing dispatch context-builder + recipe machinery (M005/M018).
 
-### M036b — Post-Launch
+### Deferred to future milestone (post-launch demand-driven)
 
-- [ ] **P08**: Wiki projection — "Operator runs `mkdocs build` after ingest + index rebuild; the rendered site nav contains `Reference > CMS Rules`, `Reference > Training Materials`, `Reference > Glossary`, `Reference > Regulatory Docs` (SC-8); inline `cites` references in spec pages render as cross-doc links to the reference chunk's wiki page."
-  - Risk: low
-  - Depends: P04, P05
-  - Blocked by: M032 wiki tooling (`--with-wiki` plumbing) closure
-  - Boundary Map:
-    - Produces: extended `wiki/` nav generator (or template fragment) that reads `knowledge/reference/**` and emits the `Reference` nav section; cross-doc link template for `cites:` frontmatter; `tests/test-reference-wiki-projection.sh` (SC-8).
-    - Consumes: P04 reference chunks; P05 edge-graph for cross-doc rendering; existing wiki tooling from M012 (and M032 distribution plumbing).
+M036b's two phases (P08 wiki projection + P09 operator-facing scale UX) were intentionally cut from M036's committed scope at the 2026-05-01 milestone split. They ship demand-driven post-launch — likely as a new milestone (e.g. `M0XX-reference-corpus-post-launch`) authored when validator-pilot feedback surfaces concrete operator pain. Forward-pointing context preserved in the `## Milestone Split` section above and in `.orchestrator/proposals/papercut-m036b-deferred-state-vs-find-active.md` (Option A taken 2026-05-11; the per-phase entries below were removed from M036's active-phase list to unblock `find-active-milestone.sh` selection while preserving the original scope description for re-planning).
 
-- [ ] **P09**: Operator-facing scale UX — REVIEW queue + change-over-time queries + supersede chain at scale — "Operator runs `bash scripts/knowledge/review-queue.sh` and gets a list of every spec/memory chunk currently citing a superseded reference, ordered by oldest-supersession-date. Operator runs `bash scripts/knowledge/reference-history.sh REF-cms-rule-483-20` and gets a chronological list of all versions with content-diff between adjacent versions."
-  - Risk: medium
-  - Depends: P06
-  - Blocked by: none
-  - Boundary Map:
-    - Produces: `commands/review-queue.md` + `scripts/knowledge/review-queue.sh`; `scripts/knowledge/reference-history.sh` (change-over-time query); operator-facing tier-upgrade-advisory consumer (reads the dispatch-side advisory log per CON-6, presents an upgrade queue); `tests/test-review-queue.sh`; `tests/test-reference-history.sh`.
-    - Consumes: P06 supersede chain; P07 dispatch advisory log; existing knowledge index.
+Original P08 / P09 scope (deferred — DO NOT execute against M036):
+
+- **P08 — Wiki projection** — `mkdocs build` after ingest + index rebuild renders `Reference > CMS Rules`, `Reference > Training Materials`, `Reference > Glossary`, `Reference > Regulatory Docs` nav (SC-8); inline `cites` references render as cross-doc links. Blocked by M032 wiki tooling closure (no longer blocking — M032 closed 2026-05-05). Depends: P04, P05.
+- **P09 — Operator-facing scale UX** — REVIEW queue (`scripts/knowledge/review-queue.sh`) listing spec/memory chunks citing superseded references; change-over-time queries (`scripts/knowledge/reference-history.sh`); operator-facing tier-upgrade-advisory consumer. Depends: P06.
 
 ## Cross-Cutting Concerns
 

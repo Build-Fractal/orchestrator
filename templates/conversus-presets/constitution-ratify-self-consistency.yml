@@ -65,7 +65,14 @@ agents:
       Be specific. Cite the proposal's invariants verbatim.
 
 arbiter:
-  grounding_file: .orchestrator/memory/constitution.md
+  # Two grounding files per Item 8 of the XXII+XII follow-on ledger:
+  # constitution.md for the existing principle bodies that the
+  # coherence-advocate checks against; CONFORMANCE.md for the
+  # cross-suite component-tier table the pairwise-advocate uses to
+  # detect overlap and gap surfaces between the inheritance shapes.
+  grounding_files:
+    - .orchestrator/memory/constitution.md
+    - CONFORMANCE.md
   verdict_contract: PASS|BLOCK
   description: |
     The arbiter weighs both advocates' disputes against the

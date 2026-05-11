@@ -113,7 +113,17 @@ agents:
       block.
 
 arbiter:
-  grounding_file: .orchestrator/memory/constitution.md
+  # Two grounding files per Item 8 of the XXII+XII follow-on ledger:
+  # the blind preset's original design (constitution.md only, to test
+  # candidates on their own merits without provenance) was insufficient
+  # — Criterion (i) of the cross-tier-weakening checklist cannot be
+  # evaluated against the membership-basis preamble without
+  # CONFORMANCE.md available. Both blind agents and the arbiter receive
+  # both files. Provenance-blindness is preserved by the agent prompts
+  # themselves, not by withholding CONFORMANCE.md.
+  grounding_files:
+    - .orchestrator/memory/constitution.md
+    - CONFORMANCE.md
   verdict_contract: PASS|BLOCK
   description: |
     The arbiter evaluates the disputes against the orchestrator

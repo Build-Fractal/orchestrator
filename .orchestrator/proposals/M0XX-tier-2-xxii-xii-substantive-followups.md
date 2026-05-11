@@ -110,6 +110,8 @@ The six deferred items below are listed verbatim from the decision packet's "Thr
 
 **Resolution path**: update the three deliberation preset templates under `templates/conversus-presets/constitution-ratify-{originating,self-consistency,blind}.yml` to declare both `--source` files. Backport-compatible — existing deliberations stay valid; future ones get both files.
 
+**Shipped (2026-05-11)**: scope expanded beyond the proposal's 15-min YAML-only estimate when investigation revealed the consumer (`scripts/dispatch/adapters/tool/conversus-synth.py` + `scripts/dispatch/adapters/tool/conversus.sh`) only supported single-string `grounding_file:` and single-valued `--source`. Operator authorized the larger scope (option A). Single commit landed: (a) synth accepts new `grounding_files:` list key alongside legacy `grounding_file:` scalar; (b) synth `--source` flag now accepts repeated invocations (`action="append"`); (c) bash adapter accumulates repeated `--source` flags into a newline-separated set, validates each, threads each through to synth, and emits plural `grounding_sources:` / `grounding_source_hashes:` YAML list fields in gate-result frontmatter when count ≥ 2 (singular fields preserved for back-compat); (d) all three constitution-ratify preset YAMLs switched to `grounding_files:` list with `[constitution.md, CONFORMANCE.md]`. Back-compat verified — `m036-p03-conversus-preset-shape.sh` (tier-2-fidelity, single `grounding_file:`) and `m014-p04-pressure-test-preset.sh` (spec-pressure-test, single `grounding_file:`) both PASS unchanged. Synth + adapter smoke tests confirmed single-source / multi-source / no-source-on-required / bad-source paths all behave correctly.
+
 ---
 
 ## Estimated effort

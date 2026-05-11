@@ -70,7 +70,13 @@ agents:
       dispute.
 
 arbiter:
-  grounding_file: .orchestrator/memory/constitution.md
+  # Two grounding files per Item 8 of the XXII+XII follow-on ledger:
+  # constitution.md provides the principle bodies; CONFORMANCE.md
+  # provides the membership-basis preamble that Criterion (i) of the
+  # blind cross-tier-weakening checklist evaluates against.
+  grounding_files:
+    - .orchestrator/memory/constitution.md
+    - CONFORMANCE.md
   verdict_contract: PASS|BLOCK
   description: |
     The arbiter reads disputes from both advocates and emits PASS or

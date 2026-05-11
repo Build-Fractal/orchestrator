@@ -8,7 +8,9 @@ that almost-but-not-quite matches conversus's native config schema; this
 helper bridges the last mile:
 
   preset.system_prompt        -> agent.prompt
-  preset.arbiter.grounding_file -> arbiter.grounding + arbiter.docs
+  preset.arbiter.grounding_file  -> arbiter.grounding + arbiter.docs
+  preset.arbiter.grounding_files -> arbiter.grounding (first) + arbiter.docs
+                                    (all). List form; either key works.
   preset.arbiter.description  -> arbiter.prompt (the role charter for the
                                  arbiter, which conversus treats as a
                                  real agent with its own system prompt)
@@ -21,10 +23,12 @@ Args:
   --artifact <path>    file being deliberated over
   --output-dir <path>  where conversus should write its output tree
   --out <path>         where to write the synthesized conversus.yml
-  --source <path>      (optional) grounding source document; when set, the
-                       path is appended to each agent's `docs:` list so
-                       the fidelity-advocate can compare the artifact
-                       against its source. Used by tier-2-fidelity.
+  --source <path>      (optional, repeatable) grounding source document;
+                       each --source is appended to every agent's `docs:`
+                       list so advocates can compare the artifact against
+                       its source(s). Tier 2 fidelity passes one source;
+                       constitution-ratify presets pass two
+                       (constitution.md + CONFORMANCE.md).
 
 Exit codes: 0 on success, 1 on parse/write error.
 """
@@ -74,7 +78,7 @@ def synthesize(
     preset_path: Path,
     artifact: Path,
     output_dir: Path,
-    source: Path | None = None,
+    sources: list[Path] | None = None,
 ) -> dict:
     raw = preset_path.read_text(encoding="utf-8")
     body = _strip_orchestrator_frontmatter(raw)
@@ -90,7 +94,7 @@ def synthesize(
     if not preset_agents:
         raise ValueError(f"preset has no agents: {preset_path}")
 
-    source_abs = str(source.resolve()) if source is not None else None
+    source_abs_list = [str(s.resolve()) for s in (sources or [])]
 
     conv_agents = []
     for a in preset_agents:
@@ -102,9 +106,9 @@ def synthesize(
         role = _derive_role(name, mode)
         if role is not None:
             entry["role"] = role
-        if source_abs is not None:
+        if source_abs_list:
             preset_docs = a.get("docs") or []
-            entry["docs"] = list(preset_docs) + [source_abs]
+            entry["docs"] = list(preset_docs) + source_abs_list
         conv_agents.append(entry)
 
     config: dict = {
@@ -117,15 +121,36 @@ def synthesize(
 
     preset_arbiter = preset.get("arbiter")
     if preset_arbiter:
-        grounding = preset_arbiter.get("grounding_file")
-        if not grounding:
-            raise ValueError(f"preset arbiter missing grounding_file: {preset_path}")
-        grounding_abs = (preset_path.parent / grounding).resolve()
-        if not grounding_abs.exists():
-            # Try resolving from repo root (preset path is typically
-            # templates/conversus-presets/*.yml; go up two levels)
-            repo_root = preset_path.parent.parent.parent
-            grounding_abs = (repo_root / grounding).resolve()
+        # Accept either `grounding_file:` (single string, legacy) or
+        # `grounding_files:` (list, multi-source). Both keys may appear;
+        # entries are concatenated in declared order with the singular
+        # field first to preserve back-compat for callers that read
+        # `arbiter.grounding` as the canonical (first) doc.
+        grounding_entries: list[str] = []
+        single = preset_arbiter.get("grounding_file")
+        if single:
+            grounding_entries.append(single)
+        multi = preset_arbiter.get("grounding_files") or []
+        if not isinstance(multi, list):
+            raise ValueError(
+                f"preset arbiter grounding_files must be a list: {preset_path}"
+            )
+        grounding_entries.extend(multi)
+        if not grounding_entries:
+            raise ValueError(
+                f"preset arbiter missing grounding_file/grounding_files: {preset_path}"
+            )
+
+        grounding_abs_list: list[str] = []
+        for g in grounding_entries:
+            g_abs = (preset_path.parent / g).resolve()
+            if not g_abs.exists():
+                # Try resolving from repo root (preset path is typically
+                # templates/conversus-presets/*.yml; go up two levels)
+                repo_root = preset_path.parent.parent.parent
+                g_abs = (repo_root / g).resolve()
+            grounding_abs_list.append(str(g_abs))
+
         arbiter_prompt = preset_arbiter.get("description") or (
             "You arbitrate disputes between the advocates. "
             "Weigh each dispute against the grounding document and "
@@ -134,8 +159,8 @@ def synthesize(
         config["arbiter"] = {
             "name": preset_arbiter.get("name") or "arbiter",
             "prompt": arbiter_prompt,
-            "docs": [str(grounding_abs)],
-            "grounding": str(grounding_abs),
+            "docs": list(grounding_abs_list),
+            "grounding": grounding_abs_list[0],
             "trigger": preset_arbiter.get("trigger") or "disputes_remain",
         }
 
@@ -148,19 +173,28 @@ def main() -> int:
     ap.add_argument("--artifact", required=True, type=Path)
     ap.add_argument("--output-dir", required=True, type=Path)
     ap.add_argument("--out", required=True, type=Path)
-    ap.add_argument("--source", required=False, type=Path, default=None)
+    ap.add_argument(
+        "--source",
+        required=False,
+        type=Path,
+        action="append",
+        default=None,
+        help="grounding source document; repeat to pass multiple",
+    )
     args = ap.parse_args()
 
     for label, path in (("preset", args.preset), ("artifact", args.artifact)):
         if not path.exists():
             print(f"error: {label} not found: {path}", file=sys.stderr)
             return 1
-    if args.source is not None and not args.source.exists():
-        print(f"error: source not found: {args.source}", file=sys.stderr)
-        return 1
+    sources: list[Path] = list(args.source or [])
+    for s in sources:
+        if not s.exists():
+            print(f"error: source not found: {s}", file=sys.stderr)
+            return 1
 
     try:
-        config = synthesize(args.preset, args.artifact, args.output_dir, args.source)
+        config = synthesize(args.preset, args.artifact, args.output_dir, sources)
     except (ValueError, yaml.YAMLError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1

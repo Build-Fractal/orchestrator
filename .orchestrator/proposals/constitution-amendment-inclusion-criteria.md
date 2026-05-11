@@ -1,9 +1,52 @@
 # Proposal: Constitution Amendment — Inclusion Criteria + Governance Log + Distribution Surface
 
 **Captured**: 2026-04-27
+**Last refreshed**: 2026-05-11 (alignment sweep with conversus v4.0.0 tier extraction — see "Refresh" block below)
 **Shape**: Single PR. No milestone needed.
-**Source**: Conversus sweep — `~/Sites/conversus-oss/CONSTITUTION.md` v2.4.0 (`:1077-1138`, `:832-859`, `:996-1030`) and `~/Sites/conversus-oss/CONSTITUTIONAL_CONVERSATIONS.md`.
+**Source**: Conversus sweep — `~/Sites/conversus-oss/CONSTITUTION.md` v2.4.0 (`:1077-1138`, `:832-859`, `:996-1030`) and `~/Sites/conversus-oss/CONSTITUTIONAL_CONVERSATIONS.md`. **Updated source (refresh)**: conversus-oss commits `79fcf0f` (v4.0.0 tier extraction) and `15f0f2f` (Principle XII dead-infrastructure linter).
 **Target file**: `.orchestrator/memory/constitution.md` (currently 15 principles, last sync impact report 2026-04-23)
+
+---
+
+## Refresh 2026-05-11 — alignment with conversus v4.0.0 tier extraction
+
+Three updates supersede parts of the original draft below. The original Changes 1-6 remain as audit trail; the refresh changes which **shape** each lands in. Order matches the original Change numbering.
+
+### Supersedes Change 1 (Inclusion Criteria)
+
+Conversus's Inclusion Criteria already lives at `~/Sites/conversus-oss/CONSTITUTION.md` Governance section (v3.2.0+, currently v4.0.0) and is meant as the canonical procedural reference for amendments **at any tier** in the build-fractal suite. Orchestrator now inherits Tier 1 (per [`CONFORMANCE.md`](../../CONFORMANCE.md), 2026-05-10), so re-authoring Inclusion Criteria as an orchestrator-only addition would duplicate work and risk drift.
+
+**New shape**: Change 1 lands as a one-paragraph **reference** in `.orchestrator/memory/constitution.md`'s Governance section pointing at conversus's canonical taxonomy ("Inclusion Criteria for new principles are defined in `build-fractal/conversus/CONSTITUTION.md` Governance § Inclusion Criteria and apply to orchestrator amendments by Tier 1 inheritance. No orchestrator-specific override authored at this time."). The three tests (mechanical verification capability / falsifiable scope / distinctness) are not re-stated — readers follow the cross-reference. Grandfather clause for orchestrator principles I-XV is preserved verbatim.
+
+### Supersedes Change 2 (`CONSTITUTION-LOG.md`)
+
+Rename to **`CONSTITUTIONAL_CONVERSATIONS.md`** to match conversus's file (which is the canonical sibling-project pattern, currently 332 lines, append-only). Same purpose, same shape, recognizable filename across the suite. Path: `.orchestrator/memory/CONSTITUTIONAL_CONVERSATIONS.md`.
+
+Entry-format draft from the original Change 2 is preserved unchanged — it already matches conversus's structure.
+
+### Supersedes Change 3 (Principle XVI — Distribution Surface Integrity)
+
+Conversus carries this principle at **Tier 2 XXII** (Distribution Surface Integrity) — same name, same intent. Authoring orchestrator's own component-tier XVI would duplicate a principle that's already canonical in the build-fractal namespace.
+
+**New shape**: instead of authoring Principle XVI in `.orchestrator/memory/constitution.md`, the amendment declares **orchestrator inherits conversus Tier 2 XXII** for all installer / packaging / distribution surfaces. This is recorded in [`CONFORMANCE.md`](../../CONFORMANCE.md)'s "Component-tier declarations" cross-suite analogue table (already landed 2026-05-11). The mechanical verification scripts named in the original Change 3 (`version-source-of-truth.sh` / `manifest-coverage.sh` / `installer-smoke.sh`) still ship — they're the orchestrator's **evidence** for satisfying inherited XXII, not their own principle's enforcement mechanism.
+
+The original component-tier numbering (XVI) is freed for future use. The constitution's principle count stays at 15.
+
+### Ratification path (new)
+
+Original draft did not specify how the amendment gets ratified. Refresh adopts the **three-deliberation pattern** conversus used for v4.0.0 (originating + self-consistency + blind), dispatched through `/orchestrator-conversus-gate`:
+
+1. **Originating deliberation** — does the amendment shape pass? (PASS / FLAG / BLOCK)
+2. **Self-consistency deliberation** — does the amendment cohere with the existing constitution? (PASS WITH FIXES if drift surfaces)
+3. **Blind deliberation** — does the amendment pass when re-presented without provenance? (catches first-deliberation echo bias)
+
+Each deliberation logs to `CONSTITUTIONAL_CONVERSATIONS.md` (the renamed Change 2). Soft target: 2026-06-15 (60-day post-launch window).
+
+### Changes 4, 5, 6 (light)
+
+Untouched by the refresh. Operator-subtraction asymmetry doc (Change 4), Principle I clarification (Change 5), and deep-modules planning lens (Change 6) all stand as drafted. Change 5's clarification is independent of tier-extraction — Principle I is orchestrator-specific (component-tier identity) and doesn't have a Tier 1 analogue to inherit from.
+
+---
 
 ## Goal
 
@@ -19,6 +62,8 @@ Separately: the constitution today preserves only *accepted* amendments via Sync
 
 ### Change 1 — Add "Inclusion Criteria for New Principles" subsection to Governance
 
+> **Superseded 2026-05-11** by the Refresh block — Change 1 now lands as a one-paragraph cross-reference to conversus's canonical Inclusion Criteria taxonomy rather than re-authoring it in orchestrator's constitution. Original draft preserved below for audit.
+
 Adopted from `~/Sites/conversus-oss/CONSTITUTION.md:1077-1138`. Verbatim spirit, orchestrator-flavored wording. Three tests every new principle MUST satisfy before adoption:
 
 1. **Mechanical verification capability** — a CI check, lint, or parity test must be *feasible* (even if not yet built). Principles whose violation cannot be detected by tooling are routed to operational guidance (`AGENTS.md`, `references/`, command docs) instead.
@@ -30,6 +75,8 @@ Principles that fail any test are recorded in the governance log (Change 2) as d
 **Grandfather clause**: I-XV are not retroactively required to satisfy these tests. The gate applies only to amendments dated after this PR lands.
 
 ### Change 2 — Introduce `.orchestrator/memory/CONSTITUTION-LOG.md`
+
+> **Renamed 2026-05-11** by the Refresh block — file path is now `.orchestrator/memory/CONSTITUTIONAL_CONVERSATIONS.md` to match the conversus sibling-project canonical filename. Entry format and purpose unchanged.
 
 Append-only log of every deliberation that produced or *proposed* a constitutional change — including deferred and rejected proposals. Distinct from the constitution itself (the contract) and from `.orchestrator/DECISIONS.md` (general project decisions, broader scope).
 
@@ -50,6 +97,8 @@ Initial entries: backfill the 4 most recent constitutional amendments (XIII-XV p
 **Alternative considered**: extend `DECISIONS.md` with a `scope: constitution` filter. Rejected because the constitution governs everything else and deserves its own provenance trail — co-mingling with day-to-day decisions makes both harder to navigate. Conversus reached the same conclusion (per its own README and structure).
 
 ### Change 3 — Add Principle XVI: Distribution Surface Integrity
+
+> **Superseded 2026-05-11** by the Refresh block — instead of authoring a new orchestrator Principle XVI, the amendment declares Tier 2 inheritance of conversus XXII (same name, same intent). The verification scripts named below still ship as orchestrator's evidence for satisfying inherited XXII. Principle slot XVI stays free for future use. Original draft preserved below for audit.
 
 Adopted from `~/Sites/conversus-oss/CONSTITUTION.md:832-859` (Principle XXII in conversus's numbering). Highly relevant given M025 (installer coexistence, shipped 2026-04-23) just exposed how multi-surface installation drift happens.
 
@@ -123,13 +172,27 @@ Operative principle from the source: **the interface is the test surface**. The 
 
 ## Estimated effort
 
+Pre-refresh estimate (kept as audit trail):
+
 - Change 1 (~30 LOC in constitution.md): 30 min draft + review
 - Change 2 (new file + 4 backfill entries): 1 hour
 - Change 3 (~50 LOC in constitution.md + 3 verification scripts as stubs / TODO): 2 hours
 - Change 4 (~80 LOC in references/): 1 hour
 - Change 6 (~40 LOC subsection in references/plan-time-discipline.md + 1 cross-ref): 30 min
 
-**Total**: ~5.5 hours, single PR. No dependency on any milestone.
+**Pre-refresh total**: ~5.5 hours, single PR.
+
+Post-refresh estimate (2026-05-11):
+
+- Change 1 (now a one-paragraph cross-reference): 15 min
+- Change 2 (rename to `CONSTITUTIONAL_CONVERSATIONS.md` + 4 backfill entries): 1 hour
+- Change 3 (now a CONFORMANCE.md row + 3 verification-script stubs as evidence for inherited XXII): 1.5 hours
+- Change 4 (unchanged): 1 hour
+- Change 5 (Principle I clarification, unchanged): 30 min
+- Change 6 (unchanged): 30 min
+- Ratification: three-deliberation pass via `/orchestrator-conversus-gate` (originating + self-consistency + blind): ~2-3 hours wall time across the three gates
+
+**Post-refresh total**: ~4.5 hours implementation + 2-3 hours ratification, single PR. No dependency on any milestone. Net reduction: ~1 hour, because Tier 1 / Tier 2 inheritance is cheaper than re-authoring.
 
 ## Risk / open questions
 

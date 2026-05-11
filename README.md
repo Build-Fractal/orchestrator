@@ -1,8 +1,8 @@
-# orchestrator
+# Orchestrator
 
 **Every coding task — small or large — runs against a project-aware knowledge base, fresh-context dispatch, and mechanical verification.**
 
-Most coding agents start each task from zero: no memory of yesterday's decisions, no map of your conventions, no thread to last week's architecture call. orchestrator changes that. Once your project is onboarded — about a minute for any existing codebase — every task you run, from a one-line typo fix to a multi-month rewrite, executes against a knowledge graph of your decisions, patterns, and prior work.
+Most coding agents start each task from zero: no memory of yesterday's decisions, no map of your conventions, no thread to last week's architecture call. Orchestrator changes that. Once your project is onboarded — about a minute for any existing codebase — every task you run, from a one-line typo fix to a multi-month rewrite, executes against a knowledge graph of your decisions, patterns, and prior work.
 
 > **v0.9.3** — production. Live in development against this repo's own work; see [CHANGELOG.md](./CHANGELOG.md) for milestone history. Built on Claude Code (primary). Codex CLI and Cursor adapters exist; formal multi-runtime parity (M009) lands when the first non-Claude-Code user arrives.
 
@@ -89,26 +89,37 @@ That's the whole loop for most tasks. `start` auto-detects which of four shapes 
 
 ## Commands
 
+The five commands you'll use most:
+
 | Command | When to use |
 |---|---|
 | `/orchestrator-start` | First time in any project — warm front door, auto-routes onboarding |
 | `/orchestrator-do "..."` | Any task — auto-classifies scope and dispatches with knowledge inject |
-| `/orchestrator-status` | Anytime — read-only progress check |
-| `/orchestrator-where` | Visual tree — milestone → phase → task hierarchy |
-| `/orchestrator-resume` | After crash or pause — picks up exactly where it left off |
-| `/orchestrator-evaluate` | Manual scope classification (Tier A/B/C) |
-| `/orchestrator-discuss` | Capture architectural decisions before roadmap (Tier C) |
-| `/orchestrator-roadmap` | Decompose spec into phases with dependency graph |
-| `/orchestrator-plan-phase` | Generate detailed task plan for one phase |
-| `/orchestrator-dispatch` | Manual dispatch of a single task |
 | `/orchestrator-auto` | Autonomous loop — dispatch → verify → record → advance |
-| `/orchestrator-verify` | Re-run mechanical verification on a phase |
-| `/orchestrator-consolidate` | Compress knowledge at milestone end |
-| `/orchestrator-doctor` | Health check — orphans, drift, cost spikes |
-| `/orchestrator-migrate` | Import prior state from GSD / spec-kit |
-| `/orchestrator-ingest-codebase` | Re-seed knowledge from current code state |
+| `/orchestrator-status` | Anytime — read-only progress check |
+| `/orchestrator-resume` | After crash or pause — picks up exactly where it left off |
 
 For larger features, the explicit chain is `evaluate → discuss → roadmap → plan-phase → auto → verify → consolidate`. `/orchestrator-do` runs the appropriate subset automatically based on task scope.
+
+### Full command reference
+
+**Onboarding & entry** — `start` (front door) · `init` (lower-level scaffold) · `do "..."` (universal task entry) · `evaluate` (manual scope classification)
+
+**Project intake** (called by `start`; available standalone) — `ideation` (greenfield grilling) · `materials-intake` (reconcile briefs / PDFs / decision logs) · `ingest-codebase` (seed knowledge from existing code) · `migrate` (import from GSD / spec-kit) · `constitution` (author project constitution)
+
+**Planning** — `specify` (author feature spec) · `discuss` (capture architectural decisions) · `roadmap` (decompose spec into phases) · `plan-phase` (task decomposition with must-haves)
+
+**Execution** — `dispatch` (manual single task) · `auto` (autonomous loop) · `verify` (re-run mechanical 4-tier verification)
+
+**Knowledge layer** — `extract` (PDF / DOCX / XLSX / Markdown → reference corpus) · `ingest` (chunk a spec into knowledge entries) · `ingest-reference` (reference corpus → knowledge graph) · `consolidate` (compress and archive at milestone end) · `zoom-out` (one-layer-up code map)
+
+**Wiki** — `wiki-init` (mkdocs scaffold + optional GitHub Pages deploy + Giscus comments)
+
+**GitHub integration** — `github-init` (project state → Issues / Milestones / Projects v2) · `github-sync` (reconcile state with GitHub) · `github-status` (sidecar state report) · `comments` (GitHub comments → workflow classifier with human-gated apply)
+
+**Operations** — `status` · `where` (visual milestone → phase → task tree) · `context` (runtime profile) · `resume` (crash recovery) · `doctor` (health diagnostics) · `cost` (predictive + retrospective cost) · `diagnose` (systematic debugging loop) · `update` (refresh runtime)
+
+**Advanced** — `conversus-gate` (multi-agent adversarial deliberation gate) · `customblock-draft` (CLAUDE.md custom block authoring)
 
 ---
 
@@ -129,9 +140,24 @@ your-project/
 │   ├── execution-log.jsonl
 │   └── milestones/               ← per-milestone artifacts
 │
-├── commands/  scripts/  templates/  references/   ← orchestrator runtime, staged into your project
+├── commands/  scripts/  templates/  references/   ← Orchestrator runtime, staged into your project
 └── (your code, unchanged)
 ```
+
+---
+
+## Built-in capabilities
+
+Beyond the core dispatch-and-verify loop, Orchestrator ships with a set of capabilities that turn it into more than just a task runner:
+
+- **Wiki publishing** — `/orchestrator-wiki-init` scaffolds an mkdocs-based wiki that surfaces your project's milestones, phases, decisions, and knowledge entries as a browsable, team-shareable site. Optional one-flag GitHub Pages deploy (`--deploy`) and Giscus comments (`--with-giscus`). Recently polished in M037 for non-author readers — the wiki is the team-facing view of the knowledge graph.
+- **GitHub native integration** — `/orchestrator-github-init` projects orchestrator state onto GitHub Issues, Milestones, and Projects v2 with marker-bearing bodies. `/orchestrator-comments` classifies inbound issue/PR comments into workflow actions (spec amendments, scope changes, etc.) with a human-gated apply step. Opt-in and reversible — delete `.orchestrator/integrations/github.json` to return to GitHub-free behavior.
+- **Reference corpus ingest** — `/orchestrator-extract` and `/orchestrator-ingest-reference` turn PDFs, Word docs, Excel sheets, and Markdown reference materials (regulatory specs, training docs, glossaries) into queryable knowledge-graph chunks. Three-tier extraction: deterministic shell adapters (fast, free) for plain text, LLM-driven structured Markdown (high-fidelity, conversus fidelity-gated) for complex layouts.
+- **Cost observability** — `/orchestrator-cost` gives both predictive per-tier estimates (Quick / Standard / Full) before you dispatch and retrospective rollups from the JSONL execution log after. Bash-only, zero LLM tokens — the cost view itself is free.
+- **Adaptive model routing** — Orchestrator auto-routes between Quick / Standard / Full pipelines per task and host capability. Small work doesn't pay big-work overhead; large work doesn't get under-resourced. Shadow-mode default with a programmatic flip-gate when the shadow corpus reaches the configured confidence threshold.
+- **Multi-agent deliberation** (Conversus integration) — `/orchestrator-conversus-gate` runs adversarial review of high-stakes artifacts in cooperative, winner-take-all, red-blue, or prisoner's-dilemma modes. Used internally for spec fidelity gates; available for any artifact you want pressure-tested before committing to it.
+- **Diagnostic doctor** — `/orchestrator-doctor` runs 12+ checks: orphaned artifacts, stale knowledge, scope drift, cost spikes, permissions drift, plan-shape audits, constitution consistency. Each check emits structured `DOCTOR:<NAME> status=ok|warn|fail` lines for both human and machine consumers.
+- **Crash recovery built-in** — Every state derives from disk; nothing in memory. Kill the process, reboot, lose your terminal — `/orchestrator-resume` reads disk state and picks up at the exact next undone step.
 
 ---
 
@@ -148,7 +174,7 @@ your-project/
 
 ## Principles
 
-The orchestrator is governed by 7 principles in `.orchestrator/memory/constitution.md`:
+Orchestrator is governed by 7 principles in `.orchestrator/memory/constitution.md`:
 
 1. **Context Minimization** — every decision optimizes for tokens-per-task
 2. **Evidence Before Claims** — no completion without fresh verification

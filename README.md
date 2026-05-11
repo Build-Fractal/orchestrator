@@ -1,6 +1,25 @@
 # Orchestrator
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![Version](https://img.shields.io/badge/version-v0.9.3-green.svg)](./CHANGELOG.md)
+[![Runtime](https://img.shields.io/badge/runtime-Claude%20Code-orange.svg)](./packaging/install/install-claude-code.sh)
+[![Spec-driven](https://img.shields.io/badge/spec--driven-development-purple.svg)](./docs/why-this-exists.md)
+
 **Every coding task — small or large — runs against a project-aware knowledge base, fresh-context dispatch, and mechanical verification.**
+
+```
+  ┌──────────┐   ┌──────┐   ┌──────────┐   ┌────────┐
+  │ evaluate │──▶│ plan │──▶│ dispatch │──▶│ verify │
+  └──────────┘   └──────┘   └──────────┘   └────────┘
+        │            │           │              │
+        └────────────┴─────┬─────┴──────────────┘
+                           ▼
+            ┌─────────────────────────────────┐
+            │ .orchestrator/ knowledge graph  │
+            │ MEMs · decisions · summaries    │
+            └─────────────────────────────────┘
+              ▲ injected into every dispatch
+```
 
 Most coding agents start each task from zero: no memory of yesterday's decisions, no map of your conventions, no thread to last week's architecture call. Orchestrator changes that. Once your project is onboarded — about a minute for any existing codebase — every task you run, from a one-line typo fix to a multi-month rewrite, executes against a knowledge graph of your decisions, patterns, and prior work.
 

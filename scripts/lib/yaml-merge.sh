@@ -8,7 +8,8 @@
 # Usage:
 #   bash scripts/lib/yaml-merge.sh merge \
 #     --target <file> --framework-default <file> \
-#     --managed-namespaces <comma-separated-list> [--dry-run]
+#     --managed-namespaces <comma-separated-list> \
+#     [--replace-list-keys <comma-separated-list>] [--dry-run]
 #
 # Behaviour (per T06 plan):
 #   - If target absent → copy framework-default byte-identical, exit 0.
@@ -26,6 +27,21 @@
 #   - Header (lines preceding the first top-level key): prefer target's,
 #     else framework's.
 #   - --dry-run: emit merged content to stdout, no write.
+#
+# --replace-list-keys (PC-7, paper-cut-sweep-post-M035):
+#   Opt-in framework-wins override at sub-key granularity inside managed
+#   namespaces. Default behaviour (flag absent or empty) preserves the
+#   pre-PC-7 contract: under a managed top-level key present in BOTH framework
+#   and target, sub-key values come from target byte-identical (operator wins
+#   on value).
+#
+#   When the flag is set to a comma-separated list of sub-key names, those
+#   sub-keys are taken from the framework default instead of the target. This
+#   addresses the M037 round-5 list-element preservation gap: framework-side
+#   list mutations (additions/removals) do not propagate to existing projects
+#   because operator-wins-byte-identical at sub-key level holds the entire
+#   list. Callers opt-in per-sub-key via this flag; back-compat preserved for
+#   every existing call site that does not pass the flag.
 #
 # FR-11 fail-closed: if either input cannot be parsed (mismatched indentation,
 # syntactically broken top-level key lines, etc.), abort with diagnostic to
@@ -52,11 +68,16 @@ yaml-merge.sh — shared YAML-merge primitive (M037 FR-10/FR-11).
 Usage:
   bash scripts/lib/yaml-merge.sh merge \
     --target <file> --framework-default <file> \
-    --managed-namespaces <comma-list> [--dry-run]
+    --managed-namespaces <comma-list> \
+    [--replace-list-keys <comma-list>] [--dry-run]
 
 See script header for full behaviour. managed_namespaces classifies which
 top-level keys are owned by the framework (replaced on merge) versus
-operator-authored (preserved byte-identical).
+operator-authored (preserved byte-identical). --replace-list-keys (PC-7)
+opt-in flag: under managed top-level keys, sub-keys named in this list use
+the framework default instead of the operator's value byte-identical
+(addresses the M037 round-5 list-element preservation gap; default behaviour
+unchanged when flag absent).
 EOF
     exit 0
   fi
@@ -68,6 +89,7 @@ shift
 TARGET=""
 FRAMEWORK=""
 MANAGED=""
+REPLACE_LIST_KEYS=""
 DRY_RUN=0
 
 while [ $# -gt 0 ]; do
@@ -75,6 +97,7 @@ while [ $# -gt 0 ]; do
     --target) TARGET="$2"; shift 2;;
     --framework-default) FRAMEWORK="$2"; shift 2;;
     --managed-namespaces) MANAGED="$2"; shift 2;;
+    --replace-list-keys) REPLACE_LIST_KEYS="$2"; shift 2;;
     --dry-run) DRY_RUN=1; shift;;
     *) echo "FAIL: yaml-merge: unknown flag '$1'" >&2; exit 2;;
   esac
@@ -233,6 +256,18 @@ is_managed() {
   return 1
 }
 
+# Helper: is-in-replace-list <sub-key> <replace-list>
+# PC-7: comma-separated membership check; empty list always returns 1.
+is_in_replace_list() {
+  _k="$1"
+  _list="$2"
+  [ -z "$_list" ] && return 1
+  case ",$_list," in
+    *",$_k,"*) return 0 ;;
+  esac
+  return 1
+}
+
 # Helper: target-has-key <key>
 target_has_key() {
   [ -f "$WORK/tg/key-$1" ]
@@ -337,7 +372,10 @@ merge_managed_block() {
   # Walk framework's sub-key order.
   while IFS= read -r sk; do
     [ -z "$sk" ] && continue
-    if [ -f "$_scratch/tg-sub/sub-$sk" ]; then
+    if is_in_replace_list "$sk" "$REPLACE_LIST_KEYS"; then
+      # PC-7 opt-in override: framework wins regardless of target's presence.
+      cat "$_scratch/fw-sub/sub-$sk" >> "$OUT"
+    elif [ -f "$_scratch/tg-sub/sub-$sk" ]; then
       cat "$_scratch/tg-sub/sub-$sk" >> "$OUT"
     else
       cat "$_scratch/fw-sub/sub-$sk" >> "$OUT"

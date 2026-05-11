@@ -565,7 +565,7 @@ fi
 INSTALLER="$SOURCE_REPO/packaging/install/install-claude-code.sh"
 if [ ! -f "$INSTALLER" ]; then
   echo "FAIL: installer not found: $INSTALLER" >&2
-  echo "      $SOURCE_REPO does not look like a spec-kit-orchestrator source tree." >&2
+  echo "      $SOURCE_REPO does not look like an orchestrator source tree." >&2
   exit 1
 fi
 

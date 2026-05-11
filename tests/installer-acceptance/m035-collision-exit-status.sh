@@ -68,7 +68,7 @@ TEMP_MANIFEST="$TEMP_BUNDLE/manifest.yml"
 cat > "$TEMP_MANIFEST" <<'EOF_MANIFEST'
 schema_version: "1.0"
 type: bundle-manifest
-name: "spec-kit-orchestrator"
+name: "orchestrator"
 version: "0.0.0-fixture"
 description: "M035 P00 T01 corrupt-manifest fixture"
 project_assets:

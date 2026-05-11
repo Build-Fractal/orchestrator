@@ -169,8 +169,8 @@ fi
 
 # Parse <owner>/<repo> from either https or ssh remote shapes.
 # Examples:
-#   https://github.com/Build-Fractal/spec-kit-orchestrator(.git)
-#   git@github.com:Build-Fractal/spec-kit-orchestrator(.git)
+#   https://github.com/Build-Fractal/orchestrator(.git)
+#   git@github.com:Build-Fractal/orchestrator(.git)
 OWNER_REPO="$(printf '%s' "$ORIGIN_URL" | sed -E 's#^https?://github\.com/##; s#^git@github\.com:##; s#\.git$##')"
 OWNER="${OWNER_REPO%%/*}"
 REPO="${OWNER_REPO##*/}"

@@ -227,7 +227,7 @@ matches classified into the 5 buckets below. `wiki/.staged/*` paths are
 transitive (include-markdown copies of `.orchestrator/...` originals) and
 fold under the bucket of their source file; they are not re-listed.
 
-### MISSED-RENAME (must fix)
+### MISSED-RENAME (fixed in this WS2 commit)
 
 | File | Line(s) | Match shape | Why MISSED-RENAME |
 |------|---------|-------------|-------------------|
@@ -236,9 +236,20 @@ fold under the bucket of their source file; they are not re-listed.
 | `scripts/dispatch/adapters/runtime/codex.sh` | 142 | Comment: "spec-kit orchestrator lifecycle hooks" | Descriptor text; should be "orchestrator lifecycle hooks". |
 | `scripts/migrate/migrate.sh` | 47 | Usage text: "the spec-kit-orchestrator intermediate format" | User-facing CLI help; should be "the orchestrator intermediate format". |
 | `tests/installer-acceptance/m035-collision-exit-status.sh` | 71 | Fixture manifest: `name: "spec-kit-orchestrator"` | The bundle manifest at `packaging/bundle/manifest.yml:23` now reads `name: "orchestrator"`; fixture should mirror. |
-| `tests/m032-acceptance/p02-wiki-init-default-scope.sh` | 57, 59 | Defensive grep: assert orchestrator-identity (`spec-kit-orchestrator`) does NOT leak into consumer mkdocs.yml | Orchestrator's own name is now `orchestrator`; the leak-check should grep for the new name. |
-| `tools/verify/m032-p02-mkdocs-templating-and-self-application.sh` | 10-11, 58, 59, 61, 65, 66, 71-73 (multiple) | Self-application verifier: asserts mkdocs.yml resolves to `site_name: "spec-kit-orchestrator"`, `site_url: "https://build-fractal.github.io/spec-kit-orchestrator/"`, `repo_url: "https://github.com/Build-Fractal/spec-kit-orchestrator"` | After rename, mkdocs.yml resolves to the new name; verifier expectations must match. |
 | `specs/040-wiki-readability-decorator/spec.md` | 182 | Spec body: `https://raw.githubusercontent.com/<org>/spec-kit-orchestrator/<tag>/...` | Live spec content; should reflect the new repo name. |
+
+### DEFER-TO-WS3 — current-state assertions of orchestrator's own identity
+
+These two were initially classified as MISSED-RENAME but are actually
+correct *for the current state*. The orchestrator's identity is still
+`spec-kit-orchestrator` until WS3 renames the GH repo + the operator
+runs `git remote set-url`. Once WS3 lands and `wiki/mkdocs.yml`
+re-templates from the renamed remote, both must flip to `orchestrator`.
+
+| File | Line(s) | Match shape | Defer reason |
+|------|---------|-------------|--------------|
+| `tests/m032-acceptance/p02-wiki-init-default-scope.sh` | 57, 59 | Defensive grep: assert `spec-kit-orchestrator` (orchestrator's identity) does NOT leak into consumer mkdocs.yml | The orchestrator's identity is still `spec-kit-orchestrator`. The grep target must remain in lock-step with the orchestrator's repo basename, which WS3 changes. |
+| `tools/verify/m032-p02-mkdocs-templating-and-self-application.sh` | 10-11, 58, 59, 61, 65, 66, 71-73 (multiple) | Self-application verifier: asserts `wiki/mkdocs.yml` resolves to `site_name: "spec-kit-orchestrator"`, `site_url: "https://build-fractal.github.io/spec-kit-orchestrator/"`, `repo_url: "https://github.com/Build-Fractal/spec-kit-orchestrator"` | The host repo's `wiki/mkdocs.yml` is currently templated from the still-`spec-kit-orchestrator` git remote. Verifier expectations are in lock-step. WS3 rename + git-remote update + wiki regen flips all three values to `orchestrator`. |
 
 ### EXTERNAL-URL (fix; GH redirect makes them work either way, but freshness is preferred)
 

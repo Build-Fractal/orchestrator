@@ -139,7 +139,7 @@ fi
 if [[ "$MODE" = "hook-config" ]]; then
   # Emit a TOML-shaped config.toml fragment describing the hook
   # registrations for Codex CLI lifecycle events. No external deps.
-  # hook_count reflects spec-kit orchestrator lifecycle hooks (5 points
+  # hook_count reflects orchestrator lifecycle hooks (5 points
   # per CLAUDE.md: before_tasks, after_tasks, before_implement,
   # after_implement, before_commit).
   target_file="${HOME:-}/.codex/config.toml"

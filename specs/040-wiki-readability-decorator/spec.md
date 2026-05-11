@@ -179,7 +179,7 @@ decoration via the regen sequence in `wiki-serve.sh`.
 **Why not Option A (install orchestrator at CI time)?** Option A is the
 architecturally clean answer — preserves `scripts/`-as-framework-managed,
 ships full decoration in CI — but requires a published install endpoint
-(`https://raw.githubusercontent.com/<org>/spec-kit-orchestrator/<tag>/packaging/install/install-claude-code.sh`)
+(`https://raw.githubusercontent.com/<org>/orchestrator/<tag>/packaging/install/install-claude-code.sh`)
 to pin against. M035 packaging (npm + homebrew + curl-pipe-bash) is
 in-flight and *constitutes the launch event*; no canonical release tag
 exists yet. Wiring CI to a not-yet-published endpoint is premature

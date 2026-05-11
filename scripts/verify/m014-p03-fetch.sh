@@ -70,7 +70,7 @@ else
 fi
 
 # ---------------- Case B ----------------
-echo '{"comment_url":"https://github.com/Build-Fractal/spec-kit-orchestrator/issues/1#issuecomment-1","actioned_at":"2026-04-24T00:00:00Z","class":"uat-bug","applied":true}' > "$SCRATCH/.orchestrator/comments/actioned.jsonl"
+echo '{"comment_url":"https://github.com/Build-Fractal/orchestrator/issues/1#issuecomment-1","actioned_at":"2026-04-24T00:00:00Z","class":"uat-bug","applied":true}' > "$SCRATCH/.orchestrator/comments/actioned.jsonl"
 rm -rf "$SCRATCH/.orchestrator/comments/inbox"
 ORCHESTRATOR_PROJECT_ROOT="$SCRATCH" \
 GH_API_STUB="$FIXTURE" \

@@ -44,7 +44,7 @@ usage() {
 Usage: migrate.sh --path <path> [OPTIONS]
 
 Migrate project data from GSD2, GSD1, or spec-kit sources into
-the spec-kit-orchestrator intermediate format.
+the orchestrator intermediate format.
 
 REQUIRED:
   --path <path>          Source project path to migrate from

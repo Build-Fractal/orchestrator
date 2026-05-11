@@ -544,4 +544,10 @@ fi
 
 # --- 5. Summary line ---
 echo "SUMMARY: runtime=cursor skills_installed=${skills_installed} hooks_wired=${hooks_wired} config_written=${config_written} runtime_staged=${runtime_staged} dry_run=${DRY_RUN}"
+
+# --- 6. Optional sister-project hint (purely informational; never alters exit) ---
+# shellcheck disable=SC1091
+. "$REPO_ROOT/scripts/lib/conversus-detect.sh"
+emit_conversus_note
+
 exit 0

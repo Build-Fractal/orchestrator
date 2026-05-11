@@ -42,6 +42,7 @@
 | VI (State On Disk Is Truth) | None — orchestrator-specific identity | No — define-the-product |
 | XII (Hook Isolation) | XV (Plugin Isolation) | Yes — same shape, different vocabulary |
 | (pending XVI — Distribution Surface Integrity, see [proposal](./.orchestrator/proposals/constitution-amendment-inclusion-criteria.md)) | XXII (Distribution Surface Integrity) | Yes — inherit Tier 2 XXII directly rather than duplicate at component tier |
+| (capability shipped — dead-infrastructure linter at `scripts/diagnostics/check-dead-infra.sh` + `tests/test-dead-infra-knobs.sh`, ported from conversus `linter/dead_infra.py` per the 2026-05-11 alignment sweep) | XII (No Dead Infrastructure) | Yes — but inheritance is **not yet declared**. The constitution-amendment proposal currently ratifies XXII (Distribution Surface Integrity), not XII. Inheriting XII is a separate follow-on amendment whose evidence (this linter + test) is already on disk. Surface during the three-deliberation ratification of the pending amendment. |
 
 The other 12 principles (I Context Minimization, II Evidence Before Claims, III Design Before Code, IV Plans Assume Zero Context, V Fresh Context Per Unit, VII Knowledge Compounds, VIII Pattern-Driven Execution, IX Telemetry Through Events, X Configuration Over Code, XI Single Source of Truth, XIII Agent Instruction Schema, XIV No Speculative Complexity, XV Surgical Precision) are orchestrator-specific or already covered by Tier 1 inheritance (XI maps to Tier 1 XI; XIV maps to Tier 1 XXVIII via test-fix-boundary phrasing).
 

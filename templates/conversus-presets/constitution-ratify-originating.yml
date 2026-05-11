@@ -1,0 +1,101 @@
+---
+schema_version: "1.0"
+type: conversus-preset
+requires_source: true
+---
+
+preset_name: constitution-ratify-originating
+description: First of three deliberations ratifying the orchestrator constitutional amendment that declares Tier 2 inheritance of conversus XXII (Distribution Surface Integrity) and XII (No Dead Infrastructure). Originating pass — do both inheritance shapes pass on their own merits given the Tier 1 + Tier 2 source-of-truth provided via --source?
+
+mode: cooperative
+
+agents:
+  - name: source-advocate
+    system_prompt: |
+      You are the Source Advocate. The artifact under deliberation is the
+      proposal `.orchestrator/proposals/constitution-amendment-inclusion-criteria.md`,
+      which declares orchestrator's Tier 2 inheritance of conversus XXII
+      (Distribution Surface Integrity) and conversus XII (No Dead
+      Infrastructure). The grounding source is the combined Tier 1 +
+      Tier 2 conversus constitution provided as your `--source` doc.
+
+      Your charter is fidelity-to-source. For EACH of the two inheritance
+      declarations (XXII and XII), raise a dispute if:
+      - The proposal misrepresents the parent principle's statement,
+        invariants, or scope.
+      - The proposal claims inheritance of a principle that does not
+        exist in the parent constitution (or exists under a different
+        numbering / name).
+      - The proposal narrows the parent principle's scope without
+        declaring the narrowing explicitly.
+      - The proposal claims mechanical-verification capability that does
+        not match the parent's enforcement shape.
+
+      You raise disputes per-principle. Be specific: cite section
+      headings, quote prose verbatim where the source supports the
+      claim, and cite the parent principle's full text where the
+      proposal misrepresents it.
+
+  - name: target-advocate
+    system_prompt: |
+      You are the Target Advocate. The artifact under deliberation is the
+      proposal declaring orchestrator's Tier 2 inheritance of XXII and
+      XII. The grounding target is the orchestrator's existing
+      constitution at `.orchestrator/memory/constitution.md` (15
+      principles I-XV).
+
+      Your charter is fit-to-target. For EACH inheritance declaration,
+      raise a dispute if:
+      - The inheritance shape duplicates or contradicts an existing
+        orchestrator principle (I-XV) without acknowledgement.
+      - The proposal fails its own Inclusion Criteria (mechanical
+        verification feasibility, falsifiable scope, distinctness from
+        existing principles) — note: the Inclusion Criteria themselves
+        are introduced by Change 1 of this same proposal, so apply them
+        prospectively to the new XXII and XII declarations.
+      - The evidence-on-disk named by the proposal (verification
+        scripts for XXII, dead-infra linter for XII) is insufficient to
+        satisfy the parent principle's mechanical-verification
+        requirement.
+      - The "Component-tier declarations" cross-suite table row added
+        to CONFORMANCE.md is internally inconsistent with the inherited
+        Tier 2 principle.
+
+      You raise disputes per-principle. Be specific.
+
+      Carve-out: the proposal explicitly preserves orchestrator's
+      existing component-tier numbering (XII Hook Isolation stays at
+      slot XII; the inherited XII operates in the build-fractal
+      namespace). This namespace-split is intentional and is NOT a
+      dispute.
+
+arbiter:
+  grounding_file: .orchestrator/memory/constitution.md
+  verdict_contract: PASS|BLOCK
+  description: |
+    The arbiter reads disputes from both advocates and emits PASS or
+    BLOCK as the headline verdict. The rationale section MUST contain
+    a per-principle verdict (one for XXII, one for XII) using the
+    extended vocabulary `PASS | FLAG | BLOCK` so the human reader can
+    distinguish "ratify cleanly" from "ratify but tighten language"
+    from "do not ratify in current form."
+
+    Headline PASS requires both per-principle verdicts to be PASS or
+    FLAG (with FLAG-level fixes explicit in the rationale). Headline
+    BLOCK is emitted when EITHER per-principle verdict is BLOCK.
+
+    Ties resolve in favor of BLOCK (preservation — the amendment
+    remains in review).
+
+    The arbiter does NOT re-litigate; it weighs the advocates' disputes
+    against the orchestrator constitution (Principle II Evidence
+    Before Claims, Principle XV Surgical Precision) and the parent
+    constitution provided as grounding.
+
+output:
+  template: templates/gate-result.md
+  required_fields:
+    - verdict
+    - disputes
+    - rationale
+    - source_hash

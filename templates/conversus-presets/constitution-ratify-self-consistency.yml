@@ -1,0 +1,92 @@
+---
+schema_version: "1.0"
+type: conversus-preset
+requires_source: true
+---
+
+preset_name: constitution-ratify-self-consistency
+description: Second of three deliberations ratifying the constitutional amendment declaring Tier 2 inheritance of conversus XXII + XII. Self-consistency pass — do the inheritance declarations cohere with the existing orchestrator constitution AND with each other? Source-grounding is the orchestrator's own constitution.
+
+mode: cooperative
+
+agents:
+  - name: coherence-advocate
+    system_prompt: |
+      You are the Coherence Advocate. The artifact under deliberation
+      is the proposal declaring Tier 2 inheritance of XXII and XII. The
+      grounding source is the orchestrator's own constitution at
+      `.orchestrator/memory/constitution.md` (15 principles I-XV)
+      provided via `--source`.
+
+      Your charter is internal coherence. Raise a dispute if:
+      - The XXII inheritance contradicts or weakens any of orchestrator's
+        existing principles (most likely candidates: XI Single Source of
+        Truth, X Configuration Over Code, XV Surgical Precision).
+      - The XII inheritance contradicts or weakens any existing
+        orchestrator principle (most likely candidates: XIV No
+        Speculative Complexity, X Configuration Over Code, I Context
+        Minimization).
+      - The proposal's Change 5 (Principle I clarification) is
+        in tension with the XII inheritance's framing of "fully
+        defined, fully typed, fully dead" infrastructure.
+      - The Sync Impact Report shape implied by the amendment leaves
+        any existing principle without a clear cross-reference.
+
+      Be specific. Cite principle numbers, quote the prose, and show
+      the contradiction or tension.
+
+  - name: pairwise-advocate
+    system_prompt: |
+      You are the Pairwise Advocate. The artifact under deliberation is
+      the proposal declaring inheritance of BOTH XXII and XII in a
+      single deliberation set. Your charter is to check that the two
+      declarations do not overlap, contradict, or leave a gap between
+      them.
+
+      Raise a dispute if:
+      - XXII (Distribution Surface Integrity) and XII (No Dead
+        Infrastructure) overlap in scope without acknowledgement —
+        e.g., a packaging manifest that's also dead infrastructure
+        would be governed by both, but the proposal doesn't say which
+        principle is load-bearing for that case.
+      - The "Force-include discipline" invariant in XXII and the "fully
+        defined, fully typed, fully dead" invariant in XII produce
+        contradictory guidance on the same artifact class (e.g.,
+        manifest entries vs config knobs).
+      - The mechanical verification scripts named for XXII and the
+        dead-infra linter named for XII share an enforcement boundary
+        that the proposal does not address (e.g., a config knob
+        manifested by an installer that's then dead-infra'd downstream).
+      - The combined inheritance leaves a class of orchestrator
+        infrastructure ungoverned — e.g., reference docs in
+        `references/` that are neither distribution surface nor
+        infrastructure-by-config.
+
+      Be specific. Cite the proposal's invariants verbatim.
+
+arbiter:
+  grounding_file: .orchestrator/memory/constitution.md
+  verdict_contract: PASS|BLOCK
+  description: |
+    The arbiter weighs both advocates' disputes against the
+    orchestrator constitution. Headline verdict is PASS or BLOCK; the
+    rationale section MUST contain a per-principle coherence verdict
+    using `PASS | PASS-WITH-FIXES | BLOCK` so the human reader can
+    distinguish "coheres cleanly" from "coheres but tighten wording in
+    these named places" from "do not adopt in current form due to
+    contradiction with principle X."
+
+    Headline PASS requires both per-principle verdicts to be PASS or
+    PASS-WITH-FIXES (with fixes named explicitly). Headline BLOCK is
+    emitted when EITHER coherence dimension (vs existing constitution,
+    OR vs each other) is BLOCK.
+
+    Ties resolve in favor of BLOCK.
+
+output:
+  template: templates/gate-result.md
+  required_fields:
+    - verdict
+    - disputes
+    - rationale
+    - source_hash

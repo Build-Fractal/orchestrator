@@ -1,0 +1,63 @@
+mode: cooperative
+target: /Users/brettkellgren/Sites/orchestrator/.orchestrator/proposals/constitution-amendment-inclusion-criteria.md
+output: /Users/brettkellgren/Sites/orchestrator/.orchestrator/ratification/2026-05-11-XXII-XII
+iterations: 1
+agents:
+- name: source-advocate
+  prompt: "You are the Source Advocate. The artifact under deliberation is the\nproposal\
+    \ `.orchestrator/proposals/constitution-amendment-inclusion-criteria.md`,\nwhich\
+    \ declares orchestrator's Tier 2 inheritance of conversus XXII\n(Distribution\
+    \ Surface Integrity) and conversus XII (No Dead\nInfrastructure). The grounding\
+    \ source is the combined Tier 1 +\nTier 2 conversus constitution provided as your\
+    \ `--source` doc.\n\nYour charter is fidelity-to-source. For EACH of the two inheritance\n\
+    declarations (XXII and XII), raise a dispute if:\n- The proposal misrepresents\
+    \ the parent principle's statement,\n  invariants, or scope.\n- The proposal claims\
+    \ inheritance of a principle that does not\n  exist in the parent constitution\
+    \ (or exists under a different\n  numbering / name).\n- The proposal narrows the\
+    \ parent principle's scope without\n  declaring the narrowing explicitly.\n- The\
+    \ proposal claims mechanical-verification capability that does\n  not match the\
+    \ parent's enforcement shape.\n\nYou raise disputes per-principle. Be specific:\
+    \ cite section\nheadings, quote prose verbatim where the source supports the\n\
+    claim, and cite the parent principle's full text where the\nproposal misrepresents\
+    \ it.\n"
+  docs:
+  - /private/tmp/orchestrator-ratify-source-full.md
+- name: target-advocate
+  prompt: "You are the Target Advocate. The artifact under deliberation is the\nproposal\
+    \ declaring orchestrator's Tier 2 inheritance of XXII and\nXII. The grounding\
+    \ target is the orchestrator's existing\nconstitution at `.orchestrator/memory/constitution.md`\
+    \ (15\nprinciples I-XV).\n\nYour charter is fit-to-target. For EACH inheritance\
+    \ declaration,\nraise a dispute if:\n- The inheritance shape duplicates or contradicts\
+    \ an existing\n  orchestrator principle (I-XV) without acknowledgement.\n- The\
+    \ proposal fails its own Inclusion Criteria (mechanical\n  verification feasibility,\
+    \ falsifiable scope, distinctness from\n  existing principles) \u2014 note: the\
+    \ Inclusion Criteria themselves\n  are introduced by Change 1 of this same proposal,\
+    \ so apply them\n  prospectively to the new XXII and XII declarations.\n- The\
+    \ evidence-on-disk named by the proposal (verification\n  scripts for XXII, dead-infra\
+    \ linter for XII) is insufficient to\n  satisfy the parent principle's mechanical-verification\n\
+    \  requirement.\n- The \"Component-tier declarations\" cross-suite table row added\n\
+    \  to CONFORMANCE.md is internally inconsistent with the inherited\n  Tier 2 principle.\n\
+    \nYou raise disputes per-principle. Be specific.\n\nCarve-out: the proposal explicitly\
+    \ preserves orchestrator's\nexisting component-tier numbering (XII Hook Isolation\
+    \ stays at\nslot XII; the inherited XII operates in the build-fractal\nnamespace).\
+    \ This namespace-split is intentional and is NOT a\ndispute.\n"
+  docs:
+  - /private/tmp/orchestrator-ratify-source-full.md
+arbiter:
+  name: arbiter
+  prompt: "The arbiter reads disputes from both advocates and emits PASS or\nBLOCK\
+    \ as the headline verdict. The rationale section MUST contain\na per-principle\
+    \ verdict (one for XXII, one for XII) using the\nextended vocabulary `PASS | FLAG\
+    \ | BLOCK` so the human reader can\ndistinguish \"ratify cleanly\" from \"ratify\
+    \ but tighten language\"\nfrom \"do not ratify in current form.\"\n\nHeadline\
+    \ PASS requires both per-principle verdicts to be PASS or\nFLAG (with FLAG-level\
+    \ fixes explicit in the rationale). Headline\nBLOCK is emitted when EITHER per-principle\
+    \ verdict is BLOCK.\n\nTies resolve in favor of BLOCK (preservation \u2014 the\
+    \ amendment\nremains in review).\n\nThe arbiter does NOT re-litigate; it weighs\
+    \ the advocates' disputes\nagainst the orchestrator constitution (Principle II\
+    \ Evidence\nBefore Claims, Principle XV Surgical Precision) and the parent\nconstitution\
+    \ provided as grounding.\n"
+  docs:
+  - /Users/brettkellgren/Sites/orchestrator/.orchestrator/memory/constitution.md
+  grounding: /Users/brettkellgren/Sites/orchestrator/.orchestrator/memory/constitution.md
+  trigger: disputes_remain

@@ -172,6 +172,18 @@ future use" or "just in case" violates Context Minimization
 - Removing dead infrastructure is always cheaper than maintaining it.
   When in doubt, delete.
 
+**Tier 2 alignment** (added 2026-05-11 by the XXII + XII inheritance
+amendment): the build-fractal namespace carries Tier 2 XII (No Dead
+Infrastructure) governing config-knob, schema-variable, and
+documented-consumer surfaces with `scripts/diagnostics/check-dead-infra.sh`
+as the canonical linter. VIII governs file-system-level infrastructure
+reachability with `scripts/diagnostics/run-doctor.sh` as the canonical
+audit. The scope boundary is declared explicitly in
+[`CONFORMANCE.md`](../../CONFORMANCE.md) under the Component-tier
+declarations § XII inheritance row and its three-bucket structure.
+Together VIII + inherited Tier 2 XII discharge the orchestrator's
+full dead-infrastructure coverage.
+
 ### IX. Reproducibility Over Convenience
 
 Given identical inputs (disk state, configuration, environment), any

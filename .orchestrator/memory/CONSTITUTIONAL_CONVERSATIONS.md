@@ -163,7 +163,12 @@ blind deliberations pending.
 (binding rulings); `.orchestrator/ratification/2026-05-11-XXII-XII/summary/final.md`
 (synthesis); `CONFORMANCE.md` § "Component-tier declarations"
 (declaration rows under amendment).
-**Status**: Open (self-consistency + blind deliberations pending)
+**Closure** (2026-05-11): self-consistency + blind deliberations
+both closed PASS; operator-routed Path 1 selected via decision packet
+at `.orchestrator/comments/review-queue/2026-05-11-XXII-XII-blind-substantive-findings.md`.
+Constitution bumped to v2.2.0 in commit `e2c510ef` (originating P1+P2
+fixes from commit `11523319` carry through to the ratified version).
+**Status**: Closed
 
 ---
 
@@ -222,11 +227,20 @@ deliberation pending.
 **References**: `.orchestrator/ratification/2026-05-11-XXII-XII/self-consistency-gate-result.md`
 (headline verdict); `.orchestrator/ratification/2026-05-11-XXII-XII/summary/final.md`
 (Phase 4 convergence + P1/P2/P3 actionable spec changes);
-`.orchestrator/ratification/2026-05-11-XXII-XII/PENDING-VIII-AMENDMENT.md`
-(held VIII Tier 2 alignment text). Synthesis line numbers
+`.orchestrator/ratification/2026-05-11-XXII-XII/archive/PENDING-VIII-AMENDMENT.md`
+(archived: held VIII Tier 2 alignment text — restored to constitution
+body at v2.2.0 ratification, commit `e2c510ef`). Synthesis line numbers
 (`final.md:141`-`final.md:175`) carry the per-convergence-point
 detail.
-**Status**: Open (blind deliberation pending)
+**Closure** (2026-05-11): blind deliberation closed PASS; operator
+selected Path 1. Self-consistency P1 fixes carried through to the
+ratified amendment. The PENDING-VIII-AMENDMENT.md text landed in
+`.orchestrator/memory/constitution.md` Principle VIII body at the
+v2.2.0 ratification commit. P2 and P3 items remain documented in
+the synthesis but unapplied per the user's authorized scope ("apply
+all P1 proposal edits"); these are candidates for the follow-on
+amendment per Path 1.
+**Status**: Closed
 
 ---
 
@@ -308,5 +322,14 @@ PAUSED pending operator decision among three resolution paths
 `.orchestrator/ratification/2026-05-11-XXII-XII/blind-evidence/arbiter/resolution.md`
 (arbitration on the 2 disputes);
 `.orchestrator/comments/review-queue/2026-05-11-XXII-XII-blind-substantive-findings.md`
-(operator decision packet).
-**Status**: Open (operator decision pending)
+(operator decision packet, status path-1-selected);
+`.orchestrator/proposals/M0XX-tier-2-xxii-xii-substantive-followups.md`
+(follow-on proposal stub capturing the deferred findings).
+**Closure** (2026-05-11): operator selected Path 1 — accept headline
+PASS, defer the 12 P1 substantive findings to a follow-on amendment.
+Constitution bumped to v2.2.0 in commit `e2c510ef`; CONFORMANCE.md
+inheritance-row caveats dropped in commit `b2895b17`; references
+artifacts (operator-vs-developer-config.md + plan-time-discipline.md)
+shipped in commit `7816b459`. Substantive findings carried forward
+to the follow-on proposal.
+**Status**: Closed

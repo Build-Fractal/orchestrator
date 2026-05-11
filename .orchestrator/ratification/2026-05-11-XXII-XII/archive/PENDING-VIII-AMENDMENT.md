@@ -1,6 +1,16 @@
-# Pending VIII Amendment Text — held for blind-deliberation gate
+# Pending VIII Amendment Text — archived after blind-PASS ratification
 
-**Status**: Pending. This text was previously added to
+**Status**: Archived 2026-05-11. The text below landed in
+`.orchestrator/memory/constitution.md` Principle VIII body at the
+v2.2.0 ratification commit `e2c510ef` (Path 1 ratification per the
+operator-routed decision packet
+`.orchestrator/comments/review-queue/2026-05-11-XXII-XII-blind-substantive-findings.md`).
+This file is kept in
+`.orchestrator/ratification/2026-05-11-XXII-XII/archive/` as the
+audit trail of the held-text mechanism the self-consistency
+deliberation introduced.
+
+This text was previously added to
 `.orchestrator/memory/constitution.md` as a `**Tier 2 alignment**`
 paragraph under Principle VIII as part of the originating-deliberation
 P1+P2 fixes commit (`11523319`, 2026-05-11). The self-consistency

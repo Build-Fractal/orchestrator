@@ -5,8 +5,9 @@ confidence: high (operator-routed, not classifier-routed)
 source: .orchestrator/proposals/constitution-amendment-inclusion-criteria.md
 deliberation_set: .orchestrator/ratification/2026-05-11-XXII-XII/
 operator_routed: true
-status: pending-review
+status: path-1-selected
 created: 2026-05-11
+decided: 2026-05-11
 ---
 
 # Decision Packet — Constitutional Amendment Ratification (Tier 2 XXII + conversus Tier 2 XII)
@@ -124,3 +125,30 @@ Smallest landing scope:
 This packet remains in `pending-review` status until the operator selects a path. Apply path via `commands/comments.md` `apply <queue_id>` is NOT the appropriate mechanism here — the choice is between three substantively different amendment shapes, each requiring different follow-on work that doesn't fit the comment-apply pattern. The operator's decision should be recorded by editing this file's `status:` to `path-1-selected` / `path-2-selected` / `path-3-selected` and adding a `decision:` block at the bottom describing the rationale, then the implementation work proceeds per that path.
 
 The default fallback (if no operator decision lands within a reasonable window) is **NOT** to auto-proceed with Path 1 — the blind's substantive findings are load-bearing enough that auto-proceeding would constitute the "auto-apply" path that `commands/comments.md` CON-5/SC-5 explicitly forbids for spec-amendment-class items.
+
+---
+
+## Decision (2026-05-11)
+
+**Path selected**: **Path 1 — Accept headline PASS, defer findings to follow-on amendment.**
+
+**Decided by**: operator (Brett Kellgren), responding to the path-selection question in the resume-ratification dispatch. Selection captured via `AskUserQuestion` response: `"Which resolution path should the XXII + XII ratification take?" → "Path 1 — Accept PASS, defer findings"`.
+
+**Rationale (operator's framing)**: ship the amendment under the three headline-PASS verdicts already in hand; surface the substantive distinctness gaps as a separate, deliberate follow-on rather than blocking the v2.2.0 bump on them. The git trail (CONSTITUTIONAL_CONVERSATIONS.md entries, this packet, the follow-on proposal stub) preserves the substantive findings for future auditors so the headline PASS is never misread as "no findings."
+
+**Implementation commits**:
+
+- Constitution v2.2.0 bump (`e2c510ef`): Sync Impact Report rewritten; Principle I clarification + L48 PATCH annotation; Principle VIII Tier 2 alignment paragraph restored from PENDING-VIII-AMENDMENT.md; Governance cross-reference to conversus Inclusion Criteria; version line 2.1.0 → 2.2.0; Last Amended → 2026-05-11.
+- References artifacts (`7816b459`): `references/operator-vs-developer-config.md` (Change 4) + `references/plan-time-discipline.md` (Change 6) + cross-reference from `commands/plan-phase.md`.
+- CONFORMANCE.md ratification record (`b2895b17`): Status line + Last re-audit + Tier 2 Inheritance Basis criterion (i) closure + XXII / conversus Tier 2 XII row caveats dropped.
+- Log closures + archival + follow-on proposal (this commit): CONSTITUTIONAL_CONVERSATIONS.md three Open entries marked Closed with ratification-commit references; PENDING-VIII-AMENDMENT.md moved to `.orchestrator/ratification/2026-05-11-XXII-XII/archive/` with archived-status preamble; this packet's `status:` updated to `path-1-selected`; follow-on proposal stub authored at `.orchestrator/proposals/M0XX-tier-2-xxii-xii-substantive-followups.md`.
+
+**Deferred to follow-on amendment** (carried forward to `.orchestrator/proposals/M0XX-tier-2-xxii-xii-substantive-followups.md`):
+- Candidate A Invariants 1 & 2 distinctness analysis against Principles XI and X (PATCH-then-decide branching).
+- Candidate A Invariant 3 reassignment to `## Quality Gates`.
+- Candidate B's Principle VIII PATCH prerequisite + scope narrowing to demonstrated verifier coverage + mechanical-precision "reader" definition.
+- Joint scope table in CONFORMANCE.md for XXII / Candidate B overlap surfaces.
+- PENDING/ACTIVE tier with named failure consequence for the three `scripts/verify/*.sh` stubs.
+- Procedural fix: future ratification deliberations supply both `constitution.md` AND `CONFORMANCE.md` as `--source` grounding.
+
+This packet is closed. The follow-on proposal carries the substantive work forward.

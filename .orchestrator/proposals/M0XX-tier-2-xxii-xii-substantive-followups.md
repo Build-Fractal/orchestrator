@@ -1,7 +1,7 @@
 # Proposal: Tier 2 XXII + conversus Tier 2 XII — Substantive Follow-Ups (deferred from Path 1)
 
 **Captured**: 2026-05-11 (alongside the Path 1 ratification of the original Tier 2 XXII + XII inheritance amendment).
-**Status**: Open — awaiting demand signal before queue entry.
+**Status**: Partially Shipped — Items 4, 5, 6, 7, 8 shipped 2026-05-11 (uncontested ship-now ledger). Items 1, 2, 3 deferred under Decision A (Candidate A structural shape — Quality-Gates move vs enabling-constraint restructuring, architecturally incompatible per `blind-rerun-with-conformance/COMPARISON.md § Operator decision points`). Items 9+ (rerun-unique findings: pre-ratification Invariant 3 operational definitions, section rename, Criterion 1/3 labels, Invariant 3-leads restructuring, echo-bias check institutionalization) not yet captured as ledger items — see COMPARISON.md § "New findings unique to the rerun."
 **Predecessor**: `.orchestrator/proposals/constitution-amendment-inclusion-criteria.md` (closed at v2.2.0, 2026-05-11).
 **Originating decision packet**: `.orchestrator/comments/review-queue/2026-05-11-XXII-XII-blind-substantive-findings.md` (Path 1).
 **Originating blind deliberation**: `.orchestrator/ratification/2026-05-11-XXII-XII/blind-evidence/`.
@@ -66,6 +66,8 @@ The six deferred items below are listed verbatim from the decision packet's "Thr
 
 **Resolution path**: a VIII PATCH amendment that promotes the scope-boundary statement from "see CONFORMANCE.md" cross-reference to constitutional-body text. The PATCH should land alongside the joint scope table (Item 5) in the same commit.
 
+**Shipped (2026-05-11, commit `0edcdf29`)**: constitution v2.2.0 → v2.2.1 (PATCH). VIII opening declaration rewritten so the scope boundary between file-system reachability (Principle VIII) and variable-level config-knob liveness (inherited conversus Tier 2 XII) is constitutionally self-derivable from VIII's plain text without requiring cross-reference to CONFORMANCE.md. Wording adopted from the dual-grounding rerun's P1 #3 proposed text (`blind-rerun-with-conformance/arbiter-resolution.md`); the v2.2.0 Tier 2 alignment paragraph preserved as evidentiary elaboration. CONSTITUTIONAL_CONVERSATIONS.md entry added for the v2.2.1 amendment. Shipped in the same commit as Item 5 per the blind run's sequencing requirement.
+
 ---
 
 ## Deferred Item 5 — Joint scope table for XXII / Candidate B overlap surfaces
@@ -78,6 +80,8 @@ The six deferred items below are listed verbatim from the decision packet's "Thr
 
 **Sequencing**: must be committed in the same batch as the VIII PATCH (Item 4).
 
+**Shipped (2026-05-11, commit `0edcdf29`)**: new `### Two-principle boundary` sub-section added to CONFORMANCE.md immediately after the Tier 2 XII three-bucket structure. Three-row table declares: `run-doctor.sh` ↔ Principle VIII (file-system objects); `check-dead-infra.sh` ↔ inherited Tier 2 XII (variable-level liveness in `templates/orchestrator-config-default.yml`); installer-script config-knob shapes inside `packaging/install/install-*.sh` ↔ inherited Tier 2 XXII behavioral-correctness scope (explicitly NOT governed by `check-dead-infra.sh` — installer mechanics would produce false positives). Sub-table includes a Cross-references block clarifying that the constitutional scope boundary is in VIII's text (v2.2.1, same commit) and this table is evidentiary. Shipped in the same commit as Item 4.
+
 ---
 
 ## Deferred Item 6 — PENDING/ACTIVE tier with named consequence for stub scripts
@@ -87,6 +91,8 @@ The six deferred items below are listed verbatim from the decision packet's "Thr
 **Statement**: the three `scripts/verify/*.sh` stubs created in commit `11523319` (`version-source-of-truth.sh`, `manifest-coverage.sh`, `installer-smoke.sh`) are "infrastructure declared, never implemented." Without a named PENDING→ACTIVE promotion deadline + failure consequence, they violate Candidate B's own normative body (dead-infrastructure).
 
 **Required**: declare PENDING → ACTIVE promotion deadline (e.g., "by next MAJOR" or "by first `v*` tag publication"), with named consequence on miss (e.g., XXII inheritance reverts to Provisional until implementations land).
+
+**Shipped (2026-05-11, commit `6e0c837b`)**: new `### Tier 2 XXII — PENDING/ACTIVE verifier-stub cap` sub-section added to CONFORMANCE.md after the Two-principle boundary table (commit `0edcdf29`). Tier name resolution: chose **PENDING/ACTIVE** (original blind P1 #10) over **Provisional** (rerun P1 #2 terminology) because CONFORMANCE.md already uses "Provisional" at two distinct compliance layers (Tier 1 audit status and Tier 2 inheritance-criterion-1-feasibility status); reusing the term for verifier-stub maturity would obscure which "provisional" applies. The two runs agree on the underlying mechanism; only the name diverges. Cap is comprehensive per the rerun's mechanical-precision requirement: status semantics (records normative intent, not a mechanical enforcement gate); promotion deadline (first `v*` tag publication — milestone-identifier, not calendar-date); automatic ADVISORY demotion on miss without recorded extension; re-promotion after demotion requires fresh three-deliberation ratification; ACTIVE promotion requires deterministic verdict=PASS|FAIL emission + paired green-path + red-path test fixtures (PASS-only is not sufficient) + CI wiring + recorded promotion entry. Per-stub state table enumerates outstanding conditions for each of `version-source-of-truth.sh`, `manifest-coverage.sh`, `installer-smoke.sh`. The `installer-smoke.sh` red-path fixture requires the "fresh project fixture" operational definition that the rerun proposes under Item 3 — noted as a known cross-cap dependency deferred until Decision A is resolved. Failure-consequence rollup: if any stub demotes to ADVISORY at first `v*` tag publication, the XXII row's status annotation updates to record Criterion 3 enforcement unmet; the XXII inheritance itself does not revert (Criterion 1 feasibility stands).
 
 ---
 
@@ -99,6 +105,8 @@ The six deferred items below are listed verbatim from the decision packet's "Thr
 - **Dynamic-reader exception table**: config keys read via `${jq -r .field}` in shell need explicit allowlist or runtime introspection.
 
 **Where**: lives in the scope-precision text of the inheritance declaration (CONFORMANCE.md) or in a co-shipped reference doc (e.g., `references/dead-infra-linter-conventions.md`).
+
+**Shipped (2026-05-11, commit `9fb08e8c`)**: definition lands in **two surfaces** to keep CONFORMANCE.md skim-readable while preserving authoritativeness for linter authors. (1) New reference doc at `references/dead-infra-linter-conventions.md` carries the full convention: three exhaustive reader classes, explicit non-reader cases, linter-implementation sketch, and the boundary with Principle VIII. (2) CONFORMANCE.md gains a short `### Tier 2 XII — Reader-precision definition` sub-section summarizing the three classes plus a `### Reader-exception table` initialized with a `(none recorded)` row — the empty-state row is itself load-bearing (it makes the empty contract visible so auditors don't mistake the table's absence for its emptiness). Verbatim text from the original blind run P1 #7 (`blind-evidence/summary/final.md`, modified A2 + S5 convergence) adopted; the dual-grounding rerun did not contradict or strengthen this finding (per `blind-rerun-with-conformance/COMPARISON.md` Divergence 6) so the original's specificity stands. Row validity rule: a row is valid only if all three of canonical YAML path, verbatim access pattern, and file(s) are non-empty — the no-evidence escape hatch is explicitly closed.
 
 ---
 

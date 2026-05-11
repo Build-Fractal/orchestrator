@@ -333,3 +333,52 @@ artifacts (operator-vs-developer-config.md + plan-time-discipline.md)
 shipped in commit `7816b459`. Substantive findings carried forward
 to the follow-on proposal.
 **Status**: Closed
+
+---
+
+## 2026-05-11 — Constitution v2.2.1: VIII bullet 1 PATCH (scope boundary self-derivable)
+
+**Type**: Amendment
+**Trigger**: Follow-on amendment Item 4 of
+`.orchestrator/proposals/M0XX-tier-2-xxii-xii-substantive-followups.md`
+— ship-now finding from both the original 2026-05-11 XXII+XII blind
+deliberation (P1 #5 in `blind-evidence/summary/final.md`) and the
+2026-05-11 dual-grounding rerun (P1 #3 in
+`blind-rerun-with-conformance/arbiter-resolution.md`). Both runs
+converged on the same requirement: VIII's "configuration entry"
+wording was ambiguous about whether it covers config-knob variable
+liveness (Candidate B / Tier 2 XII territory). At v2.2.0 the scope
+boundary was declared by cross-reference to CONFORMANCE.md's
+three-bucket structure; both blind runs found this prose-only
+resolution insufficient — the scope boundary must be derivable from
+VIII's own text without requiring a cross-reference lookup.
+**Outcome**: PATCH amendment to VIII's opening declaration. "Every
+file, script, template, and configuration entry MUST be reachable
+from a live code path" → "Every file, script, template, and
+configuration file — interpreted in this principle as a file-system
+artifact audited by `scripts/diagnostics/run-doctor.sh` — MUST be
+reachable from a live code path. Variable-level liveness of
+individual config knobs within those files is outside this
+principle's scope; that variable-level scope is governed by the
+inherited conversus Tier 2 XII (No Dead Infrastructure) declaration
+enforced by `scripts/diagnostics/check-dead-infra.sh`." The Tier 2
+alignment paragraph at the end of VIII (added at v2.2.0) is
+preserved as evidentiary elaboration; the new opening makes the
+scope boundary load-bearing in VIII's plain text. Constitution
+bumped 2.2.0 → 2.2.1. Companion change in the same commit batch
+(Item 5): a "Two-principle boundary" sub-table added to
+CONFORMANCE.md immediately after the Tier 2 XII three-bucket
+structure, declaring run-doctor.sh ↔ VIII (file-system scope),
+check-dead-infra.sh ↔ Tier 2 XII (variable-liveness scope), and
+installer-script config-knob shapes ↔ Tier 2 XXII (distribution
+surface behavioral-correctness scope).
+**References**:
+`.orchestrator/proposals/M0XX-tier-2-xxii-xii-substantive-followups.md`
+(follow-on ledger, Items 4 + 5);
+`.orchestrator/ratification/2026-05-11-XXII-XII/blind-evidence/summary/final.md`
+(original blind P1 #5 + P1 #11);
+`.orchestrator/ratification/2026-05-11-XXII-XII/blind-rerun-with-conformance/arbiter-resolution.md`
+(rerun P1 #3, refined proposed text);
+`.orchestrator/ratification/2026-05-11-XXII-XII/blind-rerun-with-conformance/COMPARISON.md`
+(Divergence 5 — both runs agree to ship VIII PATCH).
+**Status**: Closed

@@ -1,7 +1,14 @@
 <!--
   Sync Impact Report
   ==================
-  Version change: 2.1.0 → 2.2.0 (MINOR — Tier 2 inheritance declarations,
+  Version change: 2.2.0 → 2.2.1 (PATCH — Principle VIII scope-boundary
+  clarification per follow-on amendment Item 4 of
+  .orchestrator/proposals/M0XX-tier-2-xxii-xii-substantive-followups.md;
+  VIII bullet 1 made self-derivable without cross-reference to
+  CONFORMANCE.md, distinguishing file-system reachability from
+  variable-level config-knob liveness)
+
+  Previous: 2.1.0 → 2.2.0 (MINOR — Tier 2 inheritance declarations,
   amended guidance)
 
   Added (Tier 2 inheritance, recorded in CONFORMANCE.md not as new
@@ -22,7 +29,11 @@
     - VIII. No Dead Infrastructure — appended Tier 2 alignment
       paragraph clarifying scope boundary with inherited conversus
       Tier 2 XII (check-dead-infra.sh = config-knob class; run-doctor.sh
-      = file-system-level reachability).
+      = file-system-level reachability). At v2.2.1 the opening
+      declaration was further PATCHed so the scope boundary is
+      constitutionally self-derivable from VIII's plain text without
+      requiring cross-reference to CONFORMANCE.md (per follow-on
+      amendment Item 4).
 
   Amended sections:
     - Governance — added one-paragraph cross-reference to conversus
@@ -50,6 +61,8 @@
        references.
 
   Prior version history:
+    - 2.2.0: Tier 2 XXII + conversus Tier 2 XII inheritance
+      declarations ratified (2026-05-11, Path 1)
     - 2.1.0: Added XIV-XV, amended II (success criteria) + III
       (ambiguity surfacing)
     - 2.0.0: Added VIII-XIII, amended II (event emission)
@@ -203,9 +216,15 @@ documentation.
 
 ### VIII. No Dead Infrastructure
 
-Every file, script, template, and configuration entry MUST be
-reachable from a live code path. Infrastructure that exists "for
-future use" or "just in case" violates Context Minimization
+Every file, script, template, and configuration file — interpreted
+in this principle as a file-system artifact audited by
+`scripts/diagnostics/run-doctor.sh` — MUST be reachable from a live
+code path. Variable-level liveness of individual config knobs within
+those files is outside this principle's scope; that variable-level
+scope is governed by the inherited conversus Tier 2 XII (No Dead
+Infrastructure) declaration enforced by
+`scripts/diagnostics/check-dead-infra.sh`. Infrastructure that exists
+"for future use" or "just in case" violates Context Minimization
 (Principle I) by consuming context budget without delivering value.
 
 - New files MUST be referenced by at least one command, script, or
@@ -406,4 +425,4 @@ outside the request scope is not yours to modify.
   review MUST include an explicit constitution check section
   referencing each applicable principle by number.
 
-**Version**: 2.2.0 | **Ratified**: 2026-03-18 | **Last Amended**: 2026-05-11
+**Version**: 2.2.1 | **Ratified**: 2026-03-18 | **Last Amended**: 2026-05-11

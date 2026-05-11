@@ -1,29 +1,57 @@
 <!--
   Sync Impact Report
   ==================
-  Version change: 2.0.0 → 2.1.0 (MINOR — new principles, amended guidance)
+  Version change: 2.1.0 → 2.2.0 (MINOR — Tier 2 inheritance declarations,
+  amended guidance)
 
-  Added principles:
-    - XIV. No Speculative Complexity
-    - XV. Surgical Precision
+  Added (Tier 2 inheritance, recorded in CONFORMANCE.md not as new
+  numbered principles):
+    - Tier 2 XXII (Distribution Surface Integrity) — inherited from
+      conversus; orchestrator-side evidence under scripts/verify/*.sh
+      stubs + CHANGELOG.md single-source versioning.
+    - conversus Tier 2 XII (No Dead Infrastructure) — inherited from
+      conversus; orchestrator-side evidence via
+      scripts/diagnostics/check-dead-infra.sh against
+      templates/orchestrator-config-default.yml (41 leaves, baseline 0
+      dead).
 
   Amended principles:
-    - II. Evidence Before Claims — added upfront success criteria requirement
-    - III. Design Before Code — added ambiguity surfacing requirement
+    - I. Context Minimization — appended clarification on total-task-
+      tokens optimization target; L48 ratio carries PATCH-level
+      proxy-status annotation.
+    - VIII. No Dead Infrastructure — appended Tier 2 alignment
+      paragraph clarifying scope boundary with inherited conversus
+      Tier 2 XII (check-dead-infra.sh = config-knob class; run-doctor.sh
+      = file-system-level reachability).
 
-  Unchanged principles:
-    - I, IV, V, VI, VII, VIII, IX, X, XI, XII, XIII
+  Amended sections:
+    - Governance — added one-paragraph cross-reference to conversus
+      Inclusion Criteria for new principles (build-fractal Tier 1
+      inheritance basis); orchestrator I-XV grandfathered.
 
-  Unchanged sections:
-    - Quality Gates, Governance (no changes)
-    - Constraints: updated for standalone direction (spec-kit optional)
+  Unchanged principles (by number and body):
+    - II, III, IV, V, VI, VII, IX, X, XI, XII, XIII, XIV, XV
+
+  Ratification provenance:
+    - Originating + self-consistency + blind deliberations 2026-05-11
+      (.orchestrator/ratification/2026-05-11-XXII-XII/, all three
+      gate-result.md files PASS).
+    - Operator-routed Path 1 (accept headline PASS, defer blind's
+      substantive distinctness findings to follow-on amendment).
+    - Decision packet:
+      .orchestrator/comments/review-queue/2026-05-11-XXII-XII-blind-substantive-findings.md
+    - Deliberation log entries: .orchestrator/memory/CONSTITUTIONAL_CONVERSATIONS.md
+      (three 2026-05-11 entries).
 
   Templates requiring updates:
-    ⚠️ templates/phase-plan.md — Constitution Check should reference
-       principles XIV-XV where applicable. Low urgency: templates
-       dynamically load constitution; no hardcoded principle references.
+    ⚠️ templates/phase-plan.md — Constitution Check may reference Tier 2
+       XXII / conversus Tier 2 XII where applicable. Low urgency:
+       templates dynamically load constitution; no hardcoded principle
+       references.
 
   Prior version history:
+    - 2.1.0: Added XIV-XV, amended II (success criteria) + III
+      (ambiguity surfacing)
     - 2.0.0: Added VIII-XIII, amended II (event emission)
     - 1.0.0: Original I-VII
 -->
@@ -46,8 +74,23 @@ each individual task consumes.
   the handoff artifact between units of work.
 - The optimization target:
   `Context_Efficiency = Relevant_Instructions / Total_Instructions_Inherited`
+  *(Note: this ratio measures context payload efficiency as a proxy
+  for the governing optimization target; the operative target is
+  total task tokens across the full dispatch cycle, including
+  exploration-recovery costs, per the clarification below.)*
 - When this ratio degrades, the system is failing. Every design
   choice MUST be evaluated against this metric.
+- **Minimize total task tokens** by delivering the right context
+  efficiently — not by sending less context. The knowledge graph is
+  the orchestrator's compression mechanism; bypassing it to "save
+  tokens" typically increases total tokens spent because the agent
+  recovers context the expensive way (exploration tokens) or
+  produces lower-quality output that requires re-dispatch. Context
+  minimization means *minimum sufficient context, delivered via the
+  cheapest pipeline available*. A future execution path that
+  proposes bypassing the knowledge graph + compression pipeline
+  MUST justify the bypass with empirical token data showing total
+  task tokens go down, not just payload size.
 
 ### II. Evidence Before Claims
 
@@ -171,6 +214,19 @@ future use" or "just in case" violates Context Minimization
   report them as warnings.
 - Removing dead infrastructure is always cheaper than maintaining it.
   When in doubt, delete.
+
+**Tier 2 alignment** (added 2026-05-11 by the XXII + conversus Tier 2
+XII inheritance amendment): the build-fractal namespace carries
+conversus Tier 2 XII (No Dead Infrastructure) governing config-knob,
+schema-variable, and documented-consumer surfaces with
+`scripts/diagnostics/check-dead-infra.sh` as the canonical linter.
+VIII governs file-system-level infrastructure reachability with
+`scripts/diagnostics/run-doctor.sh` as the canonical audit. The
+scope boundary is declared explicitly in
+[`CONFORMANCE.md`](../../CONFORMANCE.md) under the Component-tier
+declarations § conversus Tier 2 XII inheritance row and its
+three-bucket structure. Together VIII + inherited conversus Tier 2
+XII discharge the orchestrator's full dead-infrastructure coverage.
 
 ### IX. Reproducibility Over Convenience
 
@@ -321,6 +377,16 @@ outside the request scope is not yours to modify.
 
 ## Governance
 
+- **Inclusion Criteria for new principles** (added 2026-05-11) are
+  defined in the build-fractal suite constitution's Governance
+  section (`build-fractal/conversus/CONSTITUTION.md` §
+  "Inclusion Criteria for New Principles") and apply to orchestrator
+  amendments by Tier 1 inheritance per
+  [`CONFORMANCE.md`](../../CONFORMANCE.md). The three tests
+  (mechanical verification capability / falsifiable scope /
+  distinctness) are not re-stated here — amendment authors follow
+  the cross-reference. Orchestrator principles I-XV are grandfathered
+  and are not retroactively required to satisfy these tests.
 - This constitution supersedes all other project guidance. In case of
   conflict between the constitution and any other document, the
   constitution wins.
@@ -340,4 +406,4 @@ outside the request scope is not yours to modify.
   review MUST include an explicit constitution check section
   referencing each applicable principle by number.
 
-**Version**: 2.1.0 | **Ratified**: 2026-03-18 | **Last Amended**: 2026-04-14
+**Version**: 2.2.0 | **Ratified**: 2026-03-18 | **Last Amended**: 2026-05-11

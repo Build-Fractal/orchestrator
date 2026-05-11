@@ -1,6 +1,7 @@
 # spec-kit-orchestrator — Conformance Declaration
 
 **Product:** spec-kit-orc (autonomous multi-phase orchestrator)
+**Sister project:** [conversus-oss](https://github.com/Build-Fractal/conversus-oss) — multi-agent deliberation engine. Same build-fractal namespace, same Tier 1 inheritance, no hard runtime dependency in either direction. The orchestrator invokes conversus through a graceful-degradation adapter for spec-fidelity and artifact-review gates; conversus operates standalone.
 **Governance shape:** single-product (no Tier 2 suite tier)
 **Inherits from:**
 - `https://github.com/clariti-care/payer-index-mono/blob/main/build-fractal/CONSTITUTION.md` (Tier 1 — Universal, v1.0.0 ratified 2026-05-07 with v4.0.0)
@@ -34,7 +35,17 @@
 
 ## Component-tier declarations
 
-*None yet.* spec-kit-orc inherits Tier 1 directly without adding component-tier principles. If component-tier discipline is needed (e.g., orchestrator-specific rules around phase autonomy, resume safety, or knowledge compounding), a component `CONSTITUTION.md` may be added at this repo's root via the standard pathway taxonomy.
+**Not yet declared in the Tier 1 framework.** spec-kit-orc inherits Tier 1 directly without a separate Tier-1-framework-shaped component constitution at the repo root. However, the orchestrator does carry 15 active component-tier principles in [`.orchestrator/memory/constitution.md`](./.orchestrator/memory/constitution.md) (v2.1.0). Three of those map to conversus's Tier 2 principles and are candidates for relocation if/when build-fractal adds a Tier 2 layer shared between this project and conversus:
+
+| Orchestrator principle | Conversus Tier 2 analogue | Relocation candidate? |
+|---|---|---|
+| VI (State On Disk Is Truth) | None — orchestrator-specific identity | No — define-the-product |
+| XII (Hook Isolation) | XV (Plugin Isolation) | Yes — same shape, different vocabulary |
+| (pending XVI — Distribution Surface Integrity, see [proposal](./.orchestrator/proposals/constitution-amendment-inclusion-criteria.md)) | XXII (Distribution Surface Integrity) | Yes — inherit Tier 2 XXII directly rather than duplicate at component tier |
+
+The other 12 principles (I Context Minimization, II Evidence Before Claims, III Design Before Code, IV Plans Assume Zero Context, V Fresh Context Per Unit, VII Knowledge Compounds, VIII Pattern-Driven Execution, IX Telemetry Through Events, X Configuration Over Code, XI Single Source of Truth, XIII Agent Instruction Schema, XIV No Speculative Complexity, XV Surgical Precision) are orchestrator-specific or already covered by Tier 1 inheritance (XI maps to Tier 1 XI; XIV maps to Tier 1 XXVIII via test-fix-boundary phrasing).
+
+Promotion path: when a sibling orchestrator-shaped product joins build-fractal, decide whether to lift these component-tier principles into a shared Tier 2 constitution at that point. Until then, the Tier 1 inheritance + component-tier `.orchestrator/memory/constitution.md` is the canonical pair.
 
 ---
 

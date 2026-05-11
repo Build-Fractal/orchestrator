@@ -18,6 +18,19 @@ Most coding agents start each task from zero: no memory of yesterday's decisions
 
 ---
 
+## When this isn't a fit
+
+The orchestrator earns its overhead when work has structure to capture and continuity to preserve. Some shapes it's the wrong tool for:
+
+- **Exploratory spike work where the product shape isn't known yet.** The orchestrator wants you to author a spec (or have one inferred); that's friction when you're still figuring out what you're building. **Reach for** your runtime's native flow first — `claude` / `cursor` / `codex` directly — and come back once the shape is clear.
+- **Single-session work that fits in your head.** If a task is going to live in one context window and never resurface, the on-disk state-of-truth discipline is overhead without payoff. **Reach for** a one-shot dispatch in your runtime; bring the orchestrator in when the work crosses sessions or hands off between people.
+- **Sandboxed or ephemeral environments.** The orchestrator's *State on Disk is Truth* invariant assumes a persistent project tree with `.orchestrator/`. Notebooks, CI-only runs, web-IDE scratchpads — anywhere files don't persist — break the model. **Reach for** an in-context flow until you have a real working tree.
+- **Pure greenfield ideation without users.** `/orchestrator-ideation` helps structure thinking, but it isn't a substitute for talking to people who'd use what you're building. **Reach for** real user conversation first; bring the orchestrator in when the problem is sharp enough to spec.
+
+These aren't permanent disqualifiers — they're "wrong-time, not wrong-tool" cases. When the work crosses into "multi-session continuity matters" or "I'd lose context if I closed this terminal," the orchestrator becomes the right fit.
+
+---
+
 ## Pick your path
 
 Find the row that matches what you brought. Each path assumes you've [installed](#install) and are sitting in your project directory.

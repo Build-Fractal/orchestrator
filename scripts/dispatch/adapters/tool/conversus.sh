@@ -73,6 +73,16 @@
 #     auto-sets CONVERSUS_PROVIDER=claude-code and emits a `note:` line
 #     to stderr. Any explicit CONVERSUS_PROVIDER value (including empty)
 #     wins — the operator's setting is never overridden.
+#   - Sister-project overlap (conversus PR #133, commit 18ef4dc, 2026-05-05):
+#     conversus itself now does context-aware provider defaulting when run
+#     inside a Claude Code session (CLAUDECODE / CLAUDE_CODE / CLAUDE_CODE_ACTIVE
+#     env vars). For CC-session callers on conversus >= 18ef4dc the orchestrator
+#     preflight is redundant but harmless (the explicit env-var wins ordering
+#     means double-setting is a no-op). The preflight is retained because it
+#     covers a strictly-larger set: headless / cron / non-CC dispatch paths
+#     where CLAUDECODE is not set but ~/.conversus/auth.json still carries
+#     an OAuth marker. Drop the preflight only if we pin a conversus minimum
+#     that owns OAuth detection across all dispatch contexts (not just CC).
 #   See `references/architecture.md` ("Conversus Adapter — Operator
 #   Notes") for the full operator runbook.
 #

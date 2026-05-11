@@ -1,12 +1,22 @@
 <!--
   Sync Impact Report
   ==================
-  Version change: 2.2.0 → 2.2.1 (PATCH — Principle VIII scope-boundary
-  clarification per follow-on amendment Item 4 of
+  Version change: 2.2.1 → 2.3.0 (MINOR — Quality Gates section gains
+  a new "Install gates" bullet per follow-on amendment Item 3 of
   .orchestrator/proposals/M0XX-tier-2-xxii-xii-substantive-followups.md;
-  VIII bullet 1 made self-derivable without cross-reference to
-  CONFORMANCE.md, distinguishing file-system reachability from
-  variable-level config-knob liveness)
+  Candidate A / Tier 2 XXII inheritance shape changes materially —
+  Invariant 3 (end-to-end install testing) relocates from XXII's
+  invariant body to constitution Quality Gates as release-time
+  evidence per Decision A Pathway 1; Items 1 + 2 also ship in this
+  amendment batch — Invariant 1 reassigned to Principle XI
+  enforcement; Invariant 2 X-distinctness sentence recorded.
+  Operational definitions for "fresh project fixture" and "works"
+  land in the new Quality Gates bullet body — Decision B resolved
+  in this amendment.)
+
+  Previous: 2.2.0 → 2.2.1 (PATCH — Principle VIII scope-boundary
+  clarification per follow-on amendment Item 4; VIII bullet 1 made
+  self-derivable without cross-reference to CONFORMANCE.md.)
 
   Previous: 2.1.0 → 2.2.0 (MINOR — Tier 2 inheritance declarations,
   amended guidance)
@@ -34,6 +44,21 @@
       constitutionally self-derivable from VIII's plain text without
       requiring cross-reference to CONFORMANCE.md (per follow-on
       amendment Item 4).
+    - XI. Single Source of Truth — at v2.3.0 a compliance-note
+      paragraph appended documenting that
+      scripts/verify/version-source-of-truth.sh is XI's enforcement
+      script for installer-channel version SST. Reassigned from
+      Candidate A / Tier 2 XXII per follow-on amendment Item 1
+      (Decision A Pathway 1 ship-commit batch).
+
+  Amended sections:
+    - Quality Gates — at v2.3.0 gains a new "Install gates" bullet
+      relocating Candidate A / Tier 2 XXII Invariant 3 (end-to-end
+      install testing) from XXII's invariant body to release-time
+      evidence per follow-on amendment Item 3 (Decision A Pathway 1).
+      Bullet body carries the operational definitions for
+      "fresh project fixture" and "works" — Decision B resolved
+      in-this-amendment.
 
   Amended sections:
     - Governance — added one-paragraph cross-reference to conversus
@@ -61,6 +86,8 @@
        references.
 
   Prior version history:
+    - 2.2.1: VIII bullet 1 PATCH (scope boundary self-derivable;
+      2026-05-11)
     - 2.2.0: Tier 2 XXII + conversus Tier 2 XII inheritance
       declarations ratified (2026-05-11, Path 1)
     - 2.1.0: Added XIV-XV, amended II (success criteria) + III
@@ -393,6 +420,42 @@ outside the request scope is not yours to modify.
   2. After implementation (before the phase is marked complete).
   Violations MUST be justified in a Complexity Tracking table or the
   design MUST be changed.
+- **Install gates** (added 2026-05-11 at v2.3.0 per follow-on
+  amendment Item 3 of
+  `.orchestrator/proposals/M0XX-tier-2-xxii-xii-substantive-followups.md`,
+  shipping Candidate A / Tier 2 XXII Invariant 3 to its constitutional
+  structural home as release-time evidence rather than as an
+  architectural invariant): every version-tag publication triggering
+  the GH release automation workflow introduced in M035 runs each
+  per-runtime installer in `packaging/install/install-*.sh` against a
+  **fresh project fixture** and verifies that the installation
+  **works**. Both operational terms are defined below to satisfy
+  Principle II's mechanical-gate requirement; the gate emits a
+  deterministic PASS/FAIL without human judgment. Evidence:
+  `scripts/verify/installer-smoke.sh` (PENDING per CONFORMANCE.md
+  § Tier 2 XXII — PENDING/ACTIVE verifier-stub cap; promotion to
+  ACTIVE per the cap's promotion conditions).
+  - **Fresh project fixture**: a temporary directory containing only
+    the files the installer places there, with no prior
+    `.orchestrator/` state. The fixture is created immediately
+    before and destroyed immediately after each release gate run.
+    Where a runtime requires pre-existing scaffold files before the
+    installer can be invoked, those files MUST be enumerated
+    explicitly in the smoke test fixture's documented preconditions
+    and MUST NOT overlap with any file that the installation itself
+    places. A fixture specification that requires runtime-specific
+    preconditions must document those preconditions in a named
+    fixture manifest file within `scripts/verify/`.
+  - **Works**: the installer invocation exits with code 0 and the
+    resulting project's status command exits with code 0 and emits
+    at least one line of output matching the structured status
+    format. These are the minimum conditions for
+    `installer-smoke.sh` to emit a deterministic PASS/FAIL without
+    human judgment.
+  - **Non-substitutability**: ad-hoc freshly-generated directories
+    are not acceptable. Non-deterministic environments violate
+    Principle IX (Reproducibility Over Convenience); the fixture
+    discipline above is the determinacy mechanism.
 
 ## Governance
 
@@ -425,4 +488,4 @@ outside the request scope is not yours to modify.
   review MUST include an explicit constitution check section
   referencing each applicable principle by number.
 
-**Version**: 2.2.1 | **Ratified**: 2026-03-18 | **Last Amended**: 2026-05-11
+**Version**: 2.3.0 | **Ratified**: 2026-03-18 | **Last Amended**: 2026-05-11

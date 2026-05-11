@@ -243,6 +243,12 @@ These five rules turn known plan-time confabulations into mechanical fail-fast c
 
 6. **Path-collision check.** Every artifact path the plan declares as `Produces:` (in the Boundary Map) or as a `create` deliverable (in `## Files Likely Touched`) MUST NOT already exist on disk at plan-authoring time. The planner MUST `ls -la` each declared `create` path before authoring. If a path already exists: STOP. Either (a) the convention is wrong (rename the planned artifact to a milestone-prefixed slug — see Naming convention rule above), or (b) the existing file belongs to a closed milestone and the plan is silently overwriting it (escalate to the user; do not proceed). Surfaced 2026-05-01 by M036/P00/T03 (the M031 P00 phase-suite aggregator at `tools/verify/p00-phase-suite.sh` was silently overwritten when M036's T03 plan declared the same path as a `create` deliverable; M030's prior P00 aggregator had been similarly lost weeks earlier without anyone noticing). The planner cannot rely on the executor to catch this — the executor honors the plan literally.
 
+### Planning lenses (non-mechanical)
+
+The six rules above are mechanical fail-fast checks. Planning lenses are non-mechanical disciplines that improve plan quality but don't flag a violator a CI check could detect. They land in `references/`, not as inclusion-criteria-gated principles:
+
+- **Deep Modules** — see [`references/plan-time-discipline.md`](../references/plan-time-discipline.md) § Deep Modules. Vocabulary (module / interface / implementation / depth / seam / adapter / locality) + the deletion test as an optional planning gate, applied in the plan's *Risk* section when proposing new helper scripts or new `references/` docs. Composes with Constitution Principles III (Design Before Code) and XIV (No Speculative Complexity).
+
 ## Scope Declaration
 
 Include a "Files Likely Touched" section listing all files the phase will create or modify:

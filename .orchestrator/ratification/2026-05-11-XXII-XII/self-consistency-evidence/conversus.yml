@@ -1,0 +1,75 @@
+mode: cooperative
+target: /Users/brettkellgren/Sites/orchestrator/.orchestrator/proposals/constitution-amendment-inclusion-criteria.md
+output: /Users/brettkellgren/Sites/orchestrator/.orchestrator/ratification/2026-05-11-XXII-XII
+iterations: 1
+agents:
+- name: coherence-advocate
+  prompt: "You are the Coherence Advocate. The artifact under deliberation\nis the\
+    \ proposal declaring Tier 2 inheritance of XXII and XII. The\ngrounding source\
+    \ is the orchestrator's own constitution at\n`.orchestrator/memory/constitution.md`\
+    \ (15 principles I-XV)\nprovided via `--source`.\n\nYour charter is internal coherence.\
+    \ Raise a dispute if:\n- The XXII inheritance contradicts or weakens any of orchestrator's\n\
+    \  existing principles (most likely candidates: XI Single Source of\n  Truth,\
+    \ X Configuration Over Code, XV Surgical Precision).\n- The XII inheritance contradicts\
+    \ or weakens any existing\n  orchestrator principle (most likely candidates: XIV\
+    \ No\n  Speculative Complexity, X Configuration Over Code, I Context\n  Minimization).\n\
+    - The proposal's Change 5 (Principle I clarification) is\n  in tension with the\
+    \ XII inheritance's framing of \"fully\n  defined, fully typed, fully dead\" infrastructure.\n\
+    - The Sync Impact Report shape implied by the amendment leaves\n  any existing\
+    \ principle without a clear cross-reference.\n\nBe specific. Cite principle numbers,\
+    \ quote the prose, and show\nthe contradiction or tension.\n"
+  docs:
+  - /Users/brettkellgren/Sites/orchestrator/.orchestrator/memory/constitution.md
+- name: pairwise-advocate
+  prompt: "You are the Pairwise Advocate. The artifact under deliberation is\nthe\
+    \ proposal declaring inheritance of BOTH XXII and XII in a\nsingle deliberation\
+    \ set. Your charter is to check that the two\ndeclarations do not overlap, contradict,\
+    \ or leave a gap between\nthem.\n\nRaise a dispute if:\n- XXII (Distribution Surface\
+    \ Integrity) and XII (No Dead\n  Infrastructure) overlap in scope without acknowledgement\
+    \ \u2014\n  e.g., a packaging manifest that's also dead infrastructure\n  would\
+    \ be governed by both, but the proposal doesn't say which\n  principle is load-bearing\
+    \ for that case.\n- The \"Force-include discipline\" invariant in XXII and the\
+    \ \"fully\n  defined, fully typed, fully dead\" invariant in XII produce\n  contradictory\
+    \ guidance on the same artifact class (e.g.,\n  manifest entries vs config knobs).\n\
+    - The mechanical verification scripts named for XXII and the\n  dead-infra linter\
+    \ named for XII share an enforcement boundary\n  that the proposal does not address\
+    \ (e.g., a config knob\n  manifested by an installer that's then dead-infra'd\
+    \ downstream).\n- The combined inheritance leaves a class of orchestrator\n  infrastructure\
+    \ ungoverned \u2014 e.g., reference docs in\n  `references/` that are neither\
+    \ distribution surface nor\n  infrastructure-by-config.\n\nBe specific. Cite the\
+    \ proposal's invariants verbatim.\n"
+  docs:
+  - /Users/brettkellgren/Sites/orchestrator/.orchestrator/memory/constitution.md
+arbiter:
+  name: arbiter
+  prompt: 'The arbiter weighs both advocates'' disputes against the
+
+    orchestrator constitution. Headline verdict is PASS or BLOCK; the
+
+    rationale section MUST contain a per-principle coherence verdict
+
+    using `PASS | PASS-WITH-FIXES | BLOCK` so the human reader can
+
+    distinguish "coheres cleanly" from "coheres but tighten wording in
+
+    these named places" from "do not adopt in current form due to
+
+    contradiction with principle X."
+
+
+    Headline PASS requires both per-principle verdicts to be PASS or
+
+    PASS-WITH-FIXES (with fixes named explicitly). Headline BLOCK is
+
+    emitted when EITHER coherence dimension (vs existing constitution,
+
+    OR vs each other) is BLOCK.
+
+
+    Ties resolve in favor of BLOCK.
+
+    '
+  docs:
+  - /Users/brettkellgren/Sites/orchestrator/.orchestrator/memory/constitution.md
+  grounding: /Users/brettkellgren/Sites/orchestrator/.orchestrator/memory/constitution.md
+  trigger: disputes_remain

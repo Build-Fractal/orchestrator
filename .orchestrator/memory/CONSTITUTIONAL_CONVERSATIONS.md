@@ -164,3 +164,66 @@ blind deliberations pending.
 (synthesis); `CONFORMANCE.md` § "Component-tier declarations"
 (declaration rows under amendment).
 **Status**: Open (self-consistency + blind deliberations pending)
+
+---
+
+## 2026-05-11 — Self-consistency deliberation for Tier 2 XXII + conversus Tier 2 XII inheritance amendment
+
+**Type**: Proposal (deliberation in progress)
+**Trigger**: Second of the three-deliberation set ratifying the
+2026-05-11 amendment. The self-consistency pass tests whether the
+inheritance declarations cohere with the existing orchestrator
+constitution AND with each other. Source-grounding was the
+orchestrator's own `.orchestrator/memory/constitution.md` at the
+post-P1-fixes commit (`11523319`), which at dispatch time embedded
+the Tier 2 alignment paragraph in Principle VIII's body.
+**Outcome** (self-consistency only): Headline verdict **PASS** (0
+surviving disputes); substance is **PASS-WITH-EXTENSIVE-FIXES** —
+6 P1 items, 7 P2 items, 3 P3 items. **Load-bearing finding**: both
+advocates (coherence-advocate and pairwise-advocate) converged
+unanimously that the Principle VIII Tier 2 alignment paragraph
+embedded in the constitution by the 2026-05-11 P1+P2 commit
+(`11523319`) violates **Principle VI (State On Disk Is Truth)** —
+the constitution as-written claimed a ratification event that had
+not yet occurred (the blind deliberation hadn't run). The blind
+agents would have reviewed a constitution that already embedded the
+outcome they were chartered to evaluate, defeating the
+three-deliberation pattern's echo-bias-prevention function. **Fix
+landed** (commit pending alongside this log entry): reverted the
+Tier 2 alignment paragraph from `constitution.md:175-185`; placed
+the text verbatim (with namespace-qualification correction per P1-4
+— `conversus Tier 2 XII`) in
+`.orchestrator/ratification/2026-05-11-XXII-XII/PENDING-VIII-AMENDMENT.md`;
+the held text lands in `constitution.md` along with the 2.2.0
+version bump (per P1-2) only upon blind-deliberation PASS verdict.
+Other P1 items applied as proposal-text edits in the same commit:
+P1-2 declares 2.2.0 version-bump target in the Ratification path
+section; P1-3 declares `packaging/install/*.sh` scope as option (b)
+— outside conversus Tier 2 XII's linter scope, governed by inherited
+XXII; P1-4 establishes the global `conversus Tier 2 XII`
+namespace-qualification rule (rather than bare `XII` or `Tier 2 XII`
+which would collide with orchestrator §XII Hook Isolation); P1-5
+formalizes the two-phase implementation sequencing rule with
+CONFORMANCE.md-authoritative Phase 2 framing; P1-6 declares the
+constitution `L48` formula receives a PATCH-level annotation
+clarifying it measures a payload-efficiency proxy for the
+governing total-task-tokens target — without this, the blind
+deliberation would encounter Principle I with two irreconcilable
+enforcement expressions. P2 items (`references/` Extended-bucket
+callout; pairwise interaction paragraph for dual-governed
+artifacts; adoption-feasibility / scope-separation split at L45;
+Governance-section CONFORMANCE.md pointer; XII design-before-code
+inversion documented as bounded exception; installed-artifact
+reachability surfaced as open question; XXII evidence-script
+config-knob attribution) and P3 items are documented in the
+synthesis but not applied in the pre-blind commit per the user's
+authorized scope ("apply all P1 proposal edits"). Blind
+deliberation pending.
+**References**: `.orchestrator/ratification/2026-05-11-XXII-XII/self-consistency-gate-result.md`
+(headline verdict); `.orchestrator/ratification/2026-05-11-XXII-XII/summary/final.md`
+(Phase 4 convergence + P1/P2/P3 actionable spec changes);
+`.orchestrator/ratification/2026-05-11-XXII-XII/PENDING-VIII-AMENDMENT.md`
+(held VIII Tier 2 alignment text). Synthesis line numbers
+(`final.md:141`-`final.md:175`) carry the per-convergence-point
+detail.
+**Status**: Open (blind deliberation pending)

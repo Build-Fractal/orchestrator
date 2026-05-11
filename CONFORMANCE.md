@@ -1,14 +1,14 @@
-# spec-kit-orchestrator — Conformance Declaration
+# orchestrator — Conformance Declaration
 
-**Product:** spec-kit-orc (autonomous multi-phase orchestrator)
+**Product:** orchestrator (autonomous multi-phase orchestrator)
 **Sister project:** [conversus-oss](https://github.com/Build-Fractal/conversus-oss) — multi-agent deliberation engine. Same build-fractal namespace, same Tier 1 inheritance, no hard runtime dependency in either direction. The orchestrator invokes conversus through a graceful-degradation adapter for spec-fidelity and artifact-review gates; conversus operates standalone.
 **Governance shape:** single-product (no Tier 2 suite tier)
 **Inherits from:**
 - `https://github.com/clariti-care/payer-index-mono/blob/main/build-fractal/CONSTITUTION.md` (Tier 1 — Universal, v1.0.0 ratified 2026-05-07 with v4.0.0)
 
-**Component constitution:** none yet (component-tier principles not yet declared for spec-kit-orc).
+**Component constitution:** [`.orchestrator/memory/constitution.md`](./.orchestrator/memory/constitution.md) — currently v2.1.0 with 15 active principles. The Tier-1-framework-shaped component-tier declarations are not yet authored at the repo root; see "Component-tier declarations" below.
 
-**Admission deliberation:** none — spec-kit-orc joined the build-fractal namespace via the orchestrator-combine PR (clariti-care/payer-index-mono#6, 2026-05-10) under the single-product governance shape. Formal admission deliberation deferred until a sibling orchestrator joins and the suite shape becomes warranted (see `https://github.com/clariti-care/payer-index-mono/blob/main/build-fractal/conversus/COMPLIANCE.md` for the suite admission pathway).
+**Admission deliberation:** none — orchestrator joined the build-fractal namespace via the orchestrator-combine PR (clariti-care/payer-index-mono#6, 2026-05-10) under the single-product governance shape. Formal admission deliberation deferred until a sibling orchestrator joins and the suite shape becomes warranted (see `https://github.com/clariti-care/payer-index-mono/blob/main/build-fractal/conversus/COMPLIANCE.md` for the suite admission pathway).
 
 **Status:** Implicit-Provisional — admitted via combine PR; 4 open audits before status flips to Compliant-Provisional or Compliant.
 
@@ -20,7 +20,7 @@
 
 | # | Principle | Status | Evidence / Rationale |
 |---|---|---|---|
-| I | Spec-Driven Development | Satisfied | `specs/` directory with 26+ numbered specs (001-orchestrator through 026-specify-three-pass-impl). Every behavioral change has a spec; spec-first is the explicit discipline (the product literally is named "spec-kit-orchestrator"). |
+| I | Spec-Driven Development | Satisfied | `specs/` directory with 26+ numbered specs (001-orchestrator through 026-specify-three-pass-impl). Every behavioral change has a spec; spec-first is the explicit discipline this product is built around. |
 | II | Stable Interfaces | Provisional | 13 commands + script entry-points form the stable surface. No formal stable-interfaces enumeration document yet. **Audit:** enumerate command + script API stability tier in a `STABLE-INTERFACES.md` (deadline: 2026-08-01). |
 | III | Backward-Compatible Extension | Satisfied | `CHANGELOG.md` follows Keep-a-Changelog 1.1.0; semantic versioning declared; current version 0.9.0 with `[Unreleased]` accumulating ahead of next release. PR-shape entries with Added/Changed/Deprecated/Removed/Fixed sections. |
 | IV | Documentation Is the Product | Satisfied | `README.md`, `AGENTS.md`, `CLAUDE.md`, `ANTIPATTERNS.md`, `KNOWLEDGE-INDEX.md`, `RUNTIME-ASSUMPTIONS.md`, `competitive-landscape.md`, plus 5 user guides + 15 reference docs (per README). Documentation is co-evolved with code. |
@@ -35,7 +35,7 @@
 
 ## Component-tier declarations
 
-**Not yet declared in the Tier 1 framework.** spec-kit-orc inherits Tier 1 directly without a separate Tier-1-framework-shaped component constitution at the repo root. However, the orchestrator does carry 15 active component-tier principles in [`.orchestrator/memory/constitution.md`](./.orchestrator/memory/constitution.md) (v2.1.0). Three of those map to conversus's Tier 2 principles and are candidates for relocation if/when build-fractal adds a Tier 2 layer shared between this project and conversus:
+**Not yet declared in the Tier 1 framework.** orchestrator inherits Tier 1 directly without a separate Tier-1-framework-shaped component constitution at the repo root. However, the orchestrator does carry 15 active component-tier principles in [`.orchestrator/memory/constitution.md`](./.orchestrator/memory/constitution.md) (v2.1.0). Three of those map to conversus's Tier 2 principles and are candidates for relocation if/when build-fractal adds a Tier 2 layer shared between this project and conversus:
 
 | Orchestrator principle | Conversus Tier 2 analogue | Relocation candidate? |
 |---|---|---|
@@ -72,15 +72,15 @@ Promotion path: when a sibling orchestrator-shaped product joins build-fractal, 
 This declaration is re-audited:
 - Annually (next: 2027-05-10).
 - On any structural change to this repo (e.g., adding a Python package distribution would shift VII evidence from "Bash + requirements.txt" to "lockfile-pinned").
-- On any Tier 1 amendment that changes the principles spec-kit-orc inherits.
-- On promotion to suite shape (if/when sibling orchestrators join under `build-fractal/spec-kit-orc-suite/` or similar).
+- On any Tier 1 amendment that changes the principles orchestrator inherits.
+- On promotion to suite shape (if/when sibling orchestrators join under `build-fractal/orchestrator-suite/` or similar).
 
 ---
 
 ## Status & Provenance
 
-This declaration was created 2026-05-10 alongside the orchestrator-combine PR (clariti-care/payer-index-mono#6) that physically moved spec-kit-orc into `build-fractal/spec-kit-orc/`. It uses the **single-product governance shape** documented in `https://github.com/clariti-care/payer-index-mono/blob/main/build-fractal/README.md` — Tier 1 inheritance only, no Tier 2 suite tier, no separate suite-level governance docs.
+This declaration was created 2026-05-10 alongside the orchestrator-combine PR (clariti-care/payer-index-mono#6) that physically moved orchestrator into `build-fractal/orchestrator/`. It uses the **single-product governance shape** documented in `https://github.com/clariti-care/payer-index-mono/blob/main/build-fractal/README.md` — Tier 1 inheritance only, no Tier 2 suite tier, no separate suite-level governance docs.
 
-Promotion path to suite shape: when a sibling orchestrator product joins the build-fractal namespace (e.g., a vertical-specific orchestrator), promote the layout to `build-fractal/{suite-name}/spec-kit-orc/` and add Tier 2 governance (CONSTITUTION.md, COMPLIANCE.md, GOVERNANCE.md) at the suite directory. The Tier 2 governance pattern is documented in `https://github.com/clariti-care/payer-index-mono/blob/main/build-fractal/conversus/COMPLIANCE.md`.
+Promotion path to suite shape: when a sibling orchestrator product joins the build-fractal namespace (e.g., a vertical-specific orchestrator), promote the layout to `build-fractal/{suite-name}/orchestrator/` and add Tier 2 governance (CONSTITUTION.md, COMPLIANCE.md, GOVERNANCE.md) at the suite directory. The Tier 2 governance pattern is documented in `https://github.com/clariti-care/payer-index-mono/blob/main/build-fractal/conversus/COMPLIANCE.md`.
 
 See `https://github.com/clariti-care/payer-index-mono/blob/main/build-fractal/README.md` for the build-fractal namespace overview and governance-shape documentation.

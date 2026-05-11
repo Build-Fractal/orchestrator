@@ -1,4 +1,4 @@
-# wiki/mkdocs.yml — spec-kit-orchestrator dogfood wiki.
+# wiki/mkdocs.yml — orchestrator dogfood wiki.
 #
 # This config is assembled across M012/P01 in stages:
 #   T01 writes this base (theme + plugins + markdown_extensions).

@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to spec-kit-orchestrator are documented in this file.
+All notable changes to orchestrator are documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This project uses semantic versioning.
 

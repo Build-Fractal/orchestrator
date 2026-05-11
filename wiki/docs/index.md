@@ -1,8 +1,8 @@
 ---
-title: "spec-kit-orchestrator dogfood wiki"
+title: "orchestrator dogfood wiki"
 ---
 
-# spec-kit-orchestrator dogfood wiki
+# orchestrator dogfood wiki
 
 A browseable projection of the orchestrator's `.orchestrator/` state —
 Constitution, Decisions, Knowledge, every milestone's plans and

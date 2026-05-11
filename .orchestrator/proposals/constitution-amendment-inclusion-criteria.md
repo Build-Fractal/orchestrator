@@ -32,13 +32,21 @@ Conversus carries this principle at **Tier 2 XXII** (Distribution Surface Integr
 
 The original component-tier numbering (XVI) is freed for future use. The constitution's principle count stays at 15.
 
+### Adds (new): Tier 2 XII inheritance declaration (No Dead Infrastructure)
+
+Captured 2026-05-11 during the same alignment sweep that produced the XXII inheritance shape. Conversus carries **Tier 2 XII (No Dead Infrastructure)** — the "fully defined, fully typed, fully dead" gate that catches config knobs, helper scripts, and reference scaffolding declared but never read. The Tier C layer of the alignment sweep ported conversus's `linter/dead_infra.py` to orchestrator as `scripts/diagnostics/check-dead-infra.sh` + `tests/test-dead-infra-knobs.sh` (baseline: 0 dead / 41 leaves scanned across `templates/orchestrator-config-default.yml`). The capability is on disk; the inheritance declaration is not.
+
+**Shape**: parallel to the XXII inheritance. Instead of authoring an orchestrator-side Principle XII (no original draft existed — this inheritance surfaced after the Tier C port), the amendment declares **orchestrator inherits conversus Tier 2 XII** for all config knobs / infrastructure surfaces in `templates/`, `scripts/`, `commands/`, and `references/`. This is recorded in [`CONFORMANCE.md`](../../CONFORMANCE.md)'s "Component-tier declarations" cross-suite analogue table (XII row already landed 2026-05-11; the "not yet declared" caveat on that row is dropped once this amendment ratifies). The shipped linter + test are the orchestrator's **evidence** for satisfying inherited XII, not their own principle's enforcement mechanism.
+
+Orchestrator's existing component-tier numbering uses XII for "Hook Isolation" — that mapping (XII Hook Isolation ↔ conversus Tier 2 XV Plugin Isolation) is also a relocation candidate per CONFORMANCE.md but is a **separate** inheritance question and is not in scope for this amendment. Tier 1 / Tier 2 numerals operate in the build-fractal namespace; orchestrator's component-tier numerals operate in the `.orchestrator/memory/constitution.md` namespace. No collision.
+
 ### Ratification path (new)
 
-Original draft did not specify how the amendment gets ratified. Refresh adopts the **three-deliberation pattern** conversus used for v4.0.0 (originating + self-consistency + blind), dispatched through `/orchestrator-conversus-gate`:
+Original draft did not specify how the amendment gets ratified. Refresh adopts the **three-deliberation pattern** conversus used for v4.0.0 (originating + self-consistency + blind), dispatched through `/orchestrator-conversus-gate`. **Both inheritance declarations (XXII and XII) ratify in a single deliberation set** — they share the same inheritance-not-authoring shape, the same Tier 2 source, and the same evidence-on-disk posture, so splitting them into two deliberation sets would duplicate the procedural work without adding scrutiny:
 
-1. **Originating deliberation** — does the amendment shape pass? (PASS / FLAG / BLOCK)
-2. **Self-consistency deliberation** — does the amendment cohere with the existing constitution? (PASS WITH FIXES if drift surfaces)
-3. **Blind deliberation** — does the amendment pass when re-presented without provenance? (catches first-deliberation echo bias)
+1. **Originating deliberation** — do both inheritance shapes pass? (PASS / FLAG / BLOCK per principle)
+2. **Self-consistency deliberation** — do the inheritance declarations cohere with the existing constitution and with each other? (PASS WITH FIXES if drift surfaces)
+3. **Blind deliberation** — do the declarations pass when re-presented without provenance? (catches first-deliberation echo bias)
 
 Each deliberation logs to `CONSTITUTIONAL_CONVERSATIONS.md` (the renamed Change 2). Soft target: 2026-06-15 (60-day post-launch window).
 
@@ -187,12 +195,13 @@ Post-refresh estimate (2026-05-11):
 - Change 1 (now a one-paragraph cross-reference): 15 min
 - Change 2 (rename to `CONSTITUTIONAL_CONVERSATIONS.md` + 4 backfill entries): 1 hour
 - Change 3 (now a CONFORMANCE.md row + 3 verification-script stubs as evidence for inherited XXII): 1.5 hours
+- **New: Tier 2 XII inheritance declaration** (CONFORMANCE.md row caveat drop; linter + test already shipped at `scripts/diagnostics/check-dead-infra.sh` + `tests/test-dead-infra-knobs.sh`): 15 min
 - Change 4 (unchanged): 1 hour
 - Change 5 (Principle I clarification, unchanged): 30 min
 - Change 6 (unchanged): 30 min
-- Ratification: three-deliberation pass via `/orchestrator-conversus-gate` (originating + self-consistency + blind): ~2-3 hours wall time across the three gates
+- Ratification: three-deliberation pass via `/orchestrator-conversus-gate` covering **both XXII and XII inheritance in a single deliberation set** (originating + self-consistency + blind): ~2-3 hours wall time across the three gates
 
-**Post-refresh total**: ~4.5 hours implementation + 2-3 hours ratification, single PR. No dependency on any milestone. Net reduction: ~1 hour, because Tier 1 / Tier 2 inheritance is cheaper than re-authoring.
+**Post-refresh total**: ~4.75 hours implementation + 2-3 hours ratification, single PR. No dependency on any milestone. Net reduction vs the pre-refresh draft: still ~1 hour, because Tier 1 / Tier 2 inheritance is cheaper than re-authoring even with the added XII declaration (the linter + test are already on disk from the Tier C alignment-sweep port).
 
 ## Risk / open questions
 

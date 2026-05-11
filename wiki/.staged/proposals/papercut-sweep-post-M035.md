@@ -124,6 +124,47 @@ The other three P00 verifiers (`bash32-collision`, `managed-gitignore`, `wiki-st
 
 **Commit**: `paper-cut(wiki-init): bundle-stage wiki-deploy.sh from REPO_ROOT (M032 SC-5 fix)`
 
+### PC-5 status — DEFERRED + new finding (2026-05-10 papercut-sweep)
+
+The PM session's handoff identified the runtime fix as *already shipped*
+under M035 P00 T04 (commit `1aba20e7`,
+`scripts/lifecycle/wiki-init.sh:1146-1159`), so PC-5 was reduced to test +
+evidence reconciliation. A live SC-5 run on `papercut-sweep-post-M035`
+showed the closure is **partial**: M035 P00 T04 stages `wiki-deploy.sh`
+but the deploy chain ALSO requires:
+
+- `scripts/wiki/wiki-scan-sources.sh` (invoked by `wiki-init.sh` pre-deploy)
+- `scripts/diagnostics/wiki-giscus-config-check.sh` (invoked by `wiki-deploy.sh` pre-deploy gate)
+
+…and probably any other helpers transitively invoked from the four
+pre-deploy gates inside `wiki-deploy.sh` (a full chain audit was not
+performed). The current `--deploy` chain therefore still hits `rc=1`
+on the giscus-config-check step before reaching the actual mkdocs
+gh-deploy.
+
+**PC-5 scope outgrew paper-cut**: full closure requires either (a)
+extending the M035 P00 T04 staging block to bundle-stage the entire
+deploy helper chain (deeper change to `wiki-init.sh`, plus a chain
+audit), or (b) bootstrapping the test fixture post-install so
+`scripts/` is materially present before SC-5 runs. Either path is a
+real follow-on milestone-grain fix, not a paper-cut.
+
+**What landed on this branch**:
+
+- PC-8 (golden refresh) only — `tools/verify/fixtures/m032-pre-m032-golden.txt` updated to track post-M033/M035/m040 churn so M032 SC-1 stays green. M032 battery without PC-5 attempt still reports `pass=10 skip=1 fail=0` (unchanged from M032 close).
+
+**What was reverted**:
+
+- Test patch retiring the SKIP_REASON precondition (restored to HEAD).
+- Evidence doc `M032-ACCEPTANCE-EVIDENCE.md` reconciliation (restored to HEAD; the doc's existing "Deferred-Validation Acknowledgment" remains accurate).
+
+**Two co-discovered side issues** (each a separate paper-cut candidate, not addressed here):
+
+1. The SC-5 test's `cleanup()` trap calls `gh repo delete --yes` and silently absorbs the 403 returned when the gh token lacks `delete_repo` scope. The throwaway repo is left on GitHub. The trap should distinguish "delete succeeded" from "delete failed because of missing scope" and emit a loud `say_fail` for the latter so the operator can recover before next run.
+2. The SC-5 test's fixture-remote restore line (`git -C "$FIXTURE" remote set-url origin ...`) lives AFTER the cleanup() invocation and downstream invariants. When `wiki-init.sh --deploy` exits non-zero (which it currently does), the script returns at line 99 and the fixture remote is left pointing at the throwaway repo. Restore should be wrapped into the EXIT trap, not the linear flow.
+
+Operator follow-up: re-run gh auth refresh with `delete_repo` scope (`gh auth refresh -h github.com -s delete_repo`) before any future SC-5 attempt.
+
 ---
 
 ## PC-6 — Rollback test detaches host-repo HEAD
@@ -180,7 +221,77 @@ Plus regression sweep over every existing `yaml-merge.sh` call site with the new
 
 ## Rename audit verdict matrix (Workstream 2)
 
-(Filled in during execution after WS2 grep sweep completes. Buckets: `LEGITIMATE-HISTORICAL`, `RENAME-INSTRUCTION`, `MISSED-RENAME`, `EXTERNAL-URL`, `OPERATOR-OWNED-WIP`. Per-match verdict + rationale.)
+Audit driver: `/tmp/ws2-audit-driver.sh` (11 sections; 9 git-grep audits per the
+original briefing + GH-side metadata + wiki `site_url` cross-check). All
+matches classified into the 5 buckets below. `wiki/.staged/*` paths are
+transitive (include-markdown copies of `.orchestrator/...` originals) and
+fold under the bucket of their source file; they are not re-listed.
+
+### MISSED-RENAME (fixed in this WS2 commit)
+
+| File | Line(s) | Match shape | Why MISSED-RENAME |
+|------|---------|-------------|-------------------|
+| `scripts/lifecycle/wiki-init.sh` | 172-173 | Comment example URLs `Build-Fractal/spec-kit-orchestrator(.git)` for the remote-URL parser | Comment-as-documentation; the parser handles old + new shapes via GH redirect, but the example should reflect the new name. |
+| `scripts/lifecycle/run-update.sh` | 568 | Live error: "does not look like a spec-kit-orchestrator source tree" | User-facing error message; should match the renamed source tree. |
+| `scripts/dispatch/adapters/runtime/codex.sh` | 142 | Comment: "spec-kit orchestrator lifecycle hooks" | Descriptor text; should be "orchestrator lifecycle hooks". |
+| `scripts/migrate/migrate.sh` | 47 | Usage text: "the spec-kit-orchestrator intermediate format" | User-facing CLI help; should be "the orchestrator intermediate format". |
+| `tests/installer-acceptance/m035-collision-exit-status.sh` | 71 | Fixture manifest: `name: "spec-kit-orchestrator"` | The bundle manifest at `packaging/bundle/manifest.yml:23` now reads `name: "orchestrator"`; fixture should mirror. |
+| `specs/040-wiki-readability-decorator/spec.md` | 182 | Spec body: `https://raw.githubusercontent.com/<org>/spec-kit-orchestrator/<tag>/...` | Live spec content; should reflect the new repo name. |
+
+### DEFER-TO-WS3 — current-state assertions of orchestrator's own identity
+
+These two were initially classified as MISSED-RENAME but are actually
+correct *for the current state*. The orchestrator's identity is still
+`spec-kit-orchestrator` until WS3 renames the GH repo + the operator
+runs `git remote set-url`. Once WS3 lands and `wiki/mkdocs.yml`
+re-templates from the renamed remote, both must flip to `orchestrator`.
+
+| File | Line(s) | Match shape | Defer reason |
+|------|---------|-------------|--------------|
+| `tests/m032-acceptance/p02-wiki-init-default-scope.sh` | 57, 59 | Defensive grep: assert `spec-kit-orchestrator` (orchestrator's identity) does NOT leak into consumer mkdocs.yml | The orchestrator's identity is still `spec-kit-orchestrator`. The grep target must remain in lock-step with the orchestrator's repo basename, which WS3 changes. |
+| `tools/verify/m032-p02-mkdocs-templating-and-self-application.sh` | 10-11, 58, 59, 61, 65, 66, 71-73 (multiple) | Self-application verifier: asserts `wiki/mkdocs.yml` resolves to `site_name: "spec-kit-orchestrator"`, `site_url: "https://build-fractal.github.io/spec-kit-orchestrator/"`, `repo_url: "https://github.com/Build-Fractal/spec-kit-orchestrator"` | The host repo's `wiki/mkdocs.yml` is currently templated from the still-`spec-kit-orchestrator` git remote. Verifier expectations are in lock-step. WS3 rename + git-remote update + wiki regen flips all three values to `orchestrator`. |
+
+### EXTERNAL-URL (fix; GH redirect makes them work either way, but freshness is preferred)
+
+| File | Line(s) | Match shape | Notes |
+|------|---------|-------------|-------|
+| `scripts/verify/m014-p03-fetch.sh` | 73 | Fixture write: `"comment_url":"https://github.com/Build-Fractal/spec-kit-orchestrator/issues/1#issuecomment-1"` | Fixture data; GH redirect handles old form, but inline-fixture should reflect current repo. |
+| `tests/fixtures/m014-p03/sample-inbox.jsonl` | 1-4 | Four `Build-Fractal/spec-kit-orchestrator` issue/discussion URLs | Same rationale; freshness only. |
+
+### LEGITIMATE-HISTORICAL (do not touch)
+
+Captures audit-trail content frozen at a point in time. Touching these would
+falsify history.
+
+- [`.orchestrator/milestones/M005/phases/P07/tasks/T05-PLAN.md`](../milestones/M005/phases/P07/tasks/T05-PLAN.md) — [M005](../milestones/M005/index.md) archive (P07 plan body).
+- [`.orchestrator/milestones/M008/M008-SUMMARY.md`](../milestones/M008/M008-SUMMARY.md) + [`.orchestrator/milestones/M008/archive/P06/T02-PAYLOAD.md`](../milestones/M008/archive/P06/T02-PAYLOAD.md) + [`.orchestrator/milestones/M008/archive/P06/T02-PLAN.md`](../milestones/M008/archive/P06/T02-PLAN.md) + [`.orchestrator/milestones/M008/archive/P07/P07-PLAN.md`](../milestones/M008/archive/P07/P07-PLAN.md) — [M008](../milestones/M008/index.md) archive.
+- `.orchestrator/milestones/M015/phases/P04/evidence/doctor-report.txt` — captured doctor evidence.
+- `.orchestrator/scratch/m018-p00-fixture-test.sh` + `.orchestrator/scratch/m018-p02-t03-{disabled,e2e,smoke}.sh` — one-off debug scripts (operator-only, baked-in absolute path to old project dir).
+- [`.orchestrator/milestones/M035/M035-CONTEXT.md`](../milestones/M035/M035-CONTEXT.md) + `.orchestrator/milestones/M035/phases/P01.5/{P01.5-PLAN.md,P01.5-SUMMARY.md,operator-runbook.md,c4-classification.txt,phase-body.txt,tasks/T04-c1-lowercase-hyphenated-PLAN.md,tasks/T07-SUMMARY.md,tasks/T08-acceptance-and-runbook-PLAN.md}` — M035 P01.5 audit trail (the rename phase itself).
+- [`.orchestrator/proposals/M035-packaging-distribution.md`](../proposals/M035-packaging-distribution.md) + `.orchestrator/proposals/README.md` + `specs/039-packaging-distribution/spec.md` — packaging proposal/spec referencing the OLD npm scope `@spec-kit/orchestrator` as the predecessor.
+- `CHANGELOG.md` — intentional historical preservation per audit 5 in the briefing.
+- `packaging/bundle/D-RN-1-evidence.txt` — D-RN evidence trail.
+- `tests/m035-acceptance/fixtures/install-meta-pre-m035.txt` + `tests/m035-acceptance/fixtures/install-meta-with-sha.txt` — fixtures named "pre-m035" that intentionally encode the pre-rename source_root path.
+- `tools/verify/m035-p015-{c1-sweep,c2-c3-prose,c4-classification,c5-cohort-finish,operator-paths,sc7b}.sh` — the C1 sweep verifiers themselves; they intentionally search FOR the legacy name to enforce its absence elsewhere.
+
+### RENAME-INSTRUCTION (do not touch — these document the rename)
+
+- `references/RENAME-PLAN.md` — the rename plan; its body is *about* the legacy name.
+- [`.orchestrator/proposals/papercut-sweep-post-M035.md`](../proposals/papercut-sweep-post-M035.md) (this file) + [`.orchestrator/proposals/papercut-sweep-post-M035-HANDOFF.md`](../proposals/papercut-sweep-post-M035-HANDOFF.md) — sweep proposal + handoff doc; quotes the audit-grep examples literally so the legacy name appears in code blocks.
+
+### EXTERNAL (GH-side, handled by WS3 rename)
+
+- `.git/config` — `url = git@github.com:Build-Fractal/spec-kit-orchestrator.git` (audit 6). Updated by operator-side `git remote set-url` after `gh repo rename`. Defer to WS3.
+- `gh repo view Build-Fractal/spec-kit-orchestrator` JSON metadata — `description`, `homepageUrl`. WS3 reconciles after rename. (Audit 10 returned a `gh` field-name error for `topics` — use `repositoryTopics` if needed; not load-bearing for the matrix.)
+
+### OPERATOR-OWNED-WIP (must not touch)
+
+- `templates/phase-plan.md` and `.orchestrator/direct-mode-execution-log.jsonl` were not surfaced by any audit grep (no legacy-name residue in them).
+
+### No-finding sections
+
+- Audit 8 (`.github/`) — only wiki transitive (post-exclusion: zero matches in actual `.github/` content).
+- Audit 9 (`package.json`/`bin/`) — `git grep` reports `package-lock.json` not in working tree; `package.json` itself already uses `@build-fractal/orchestrator` and `homepage: "https://github.com/Build-Fractal/orchestrator"`; `bin/orchestrator` clean. Zero residue.
 
 **Commit**: `rename audit: close residue from M035 P01.5 sweep`
 

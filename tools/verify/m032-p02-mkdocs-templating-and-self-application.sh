@@ -7,8 +7,8 @@
 # Asserts:
 #   1. wiki/mkdocs.yml at the orchestrator-repo root carries RESOLVED
 #      orchestrator-identity values (site_name contains
-#      "spec-kit-orchestrator", site_url is the lowercase build-fractal
-#      GitHub Pages URL, repo_url points at Build-Fractal/spec-kit-orchestrator).
+#      "orchestrator", site_url is the lowercase build-fractal
+#      GitHub Pages URL, repo_url points at Build-Fractal/orchestrator).
 #   2. wiki/mkdocs.yml does NOT contain literal {{site_name}} /
 #      {{site_description}} / {{site_url}} / {{repo_url}} placeholders
 #      (placeholders cleared by the FR-6 self-application loop).
@@ -55,22 +55,22 @@ else
 fi
 
 # Check 2: site_name resolved to orchestrator identity.
-if grep -q 'site_name: "spec-kit-orchestrator' "$MKDOCS"; then
-  check_pass "wiki/mkdocs.yml site_name resolved (contains 'spec-kit-orchestrator')"
+if grep -q 'site_name: "orchestrator' "$MKDOCS"; then
+  check_pass "wiki/mkdocs.yml site_name resolved (contains 'orchestrator')"
 else
-  check_fail "wiki/mkdocs.yml site_name NOT resolved (expected 'spec-kit-orchestrator')"
+  check_fail "wiki/mkdocs.yml site_name NOT resolved (expected 'orchestrator')"
 fi
 
 # Check 3: site_url resolved to lowercase build-fractal GitHub Pages URL.
-if grep -q 'site_url: "https://build-fractal.github.io/spec-kit-orchestrator/"' "$MKDOCS"; then
-  check_pass "wiki/mkdocs.yml site_url resolved (build-fractal.github.io/spec-kit-orchestrator/)"
+if grep -q 'site_url: "https://build-fractal.github.io/orchestrator/"' "$MKDOCS"; then
+  check_pass "wiki/mkdocs.yml site_url resolved (build-fractal.github.io/orchestrator/)"
 else
   check_fail "wiki/mkdocs.yml site_url NOT resolved correctly"
 fi
 
-# Check 4: repo_url resolved to Build-Fractal/spec-kit-orchestrator.
-if grep -q 'repo_url: "https://github.com/Build-Fractal/spec-kit-orchestrator"' "$MKDOCS"; then
-  check_pass "wiki/mkdocs.yml repo_url resolved (Build-Fractal/spec-kit-orchestrator)"
+# Check 4: repo_url resolved to Build-Fractal/orchestrator.
+if grep -q 'repo_url: "https://github.com/Build-Fractal/orchestrator"' "$MKDOCS"; then
+  check_pass "wiki/mkdocs.yml repo_url resolved (Build-Fractal/orchestrator)"
 else
   check_fail "wiki/mkdocs.yml repo_url NOT resolved correctly"
 fi

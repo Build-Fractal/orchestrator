@@ -7,10 +7,10 @@
 # Do not edit the nav: block by hand — regenerate via
 # scripts/wiki/wiki-generate-nav.sh.
 
-site_name: "spec-kit-orchestrator — dogfood wiki"
+site_name: "orchestrator"
 site_description: "Browseable projection of .orchestrator/ artifacts for the dogfood team."
-site_url: "https://build-fractal.github.io/spec-kit-orchestrator/"
-repo_url: "https://github.com/Build-Fractal/spec-kit-orchestrator"
+site_url: ""
+repo_url: "https://github.com/Build-Fractal/orchestrator"
 edit_uri: "edit/main/wiki/docs/"
 docs_dir: "docs"
 site_dir: "site"

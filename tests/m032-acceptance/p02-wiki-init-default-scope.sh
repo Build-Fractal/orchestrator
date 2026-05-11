@@ -54,9 +54,9 @@ grep -q 'repo_url: "https://github.com/fixture-owner/m032-fresh-project-fixture"
 
 # Negative: no orchestrator-identity values leaked into the four templated
 # IDENTITY fields (site_name, site_description, site_url, repo_url). Comments
-# and other context that mention 'spec-kit-orchestrator' are not load-bearing
+# and other context that mention 'orchestrator' are not load-bearing
 # -- only the four resolved field lines must reflect the fixture's identity.
-if grep -E '^(site_name|site_url|repo_url):' "$TMP/wiki/mkdocs.yml" | grep -q 'spec-kit-orchestrator'; then
+if grep -E '^(site_name|site_url|repo_url):' "$TMP/wiki/mkdocs.yml" | grep -q 'orchestrator'; then
   echo "FAIL: SC-3 orchestrator identity leaked into a templated identity field"
   grep -E '^(site_name|site_url|repo_url|site_description):' "$TMP/wiki/mkdocs.yml" >&2
   exit 1

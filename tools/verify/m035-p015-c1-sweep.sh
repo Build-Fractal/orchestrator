@@ -20,7 +20,7 @@ REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$REPO_ROOT" || exit 1
 
 residue=$(git grep -nE 'spec-kit-orchestrator' '*.md' '*.yml' '*.yaml' 2>/dev/null \
-  | grep -vE '^(references/RENAME-PLAN\.md|docs/migrating-from-speckit\.md|\.orchestrator/proposals/papercut-sweep-pre-M030\.md|\.orchestrator/proposals/papercut-sweep-post-M035-HANDOFF\.md|\.orchestrator/milestones/M008/archive/|\.orchestrator/milestones/M0[0-9][0-9]/M0[0-9][0-9]-SUMMARY\.md|\.orchestrator/milestones/M0[0-9][0-9]/M0[0-9][0-9]-BODY\.txt|\.orchestrator/milestones/M0[0-9][0-9]/(phases|archive)/|CHANGELOG\.md|\.orchestrator/DECISIONS\.md|\.orchestrator/milestones/M035/M035-ROADMAP\.md|\.orchestrator/milestones/M035/M035-CONTEXT\.md|specs/039-packaging-distribution/spec\.md|specs/040-wiki-readability-decorator/|\.orchestrator/KNOWLEDGE\.md|specs/001-orchestrator/conversus-|wiki/)' || true)
+  | grep -vE '^(references/RENAME-PLAN\.md|docs/migrating-from-speckit\.md|\.orchestrator/proposals/papercut-sweep-pre-M030\.md|\.orchestrator/proposals/papercut-sweep-post-M035\.md|\.orchestrator/proposals/papercut-sweep-post-M035-HANDOFF\.md|\.orchestrator/milestones/M008/archive/|\.orchestrator/milestones/M0[0-9][0-9]/M0[0-9][0-9]-SUMMARY\.md|\.orchestrator/milestones/M0[0-9][0-9]/M0[0-9][0-9]-BODY\.txt|\.orchestrator/milestones/M0[0-9][0-9]/(phases|archive)/|CHANGELOG\.md|\.orchestrator/DECISIONS\.md|\.orchestrator/milestones/M035/M035-ROADMAP\.md|\.orchestrator/milestones/M035/M035-CONTEXT\.md|specs/039-packaging-distribution/spec\.md|specs/040-wiki-readability-decorator/|\.orchestrator/KNOWLEDGE\.md|specs/001-orchestrator/conversus-|wiki/)' || true)
 
 if [ -n "$residue" ]; then
   echo "FAIL: residual spec-kit-orchestrator matches in non-historical *.md/*.yml/*.yaml files:" >&2

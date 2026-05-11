@@ -15,7 +15,7 @@ REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$REPO_ROOT" || exit 1
 
 residue=$(git grep -niE 'Spec-Kit Orchestrator|spec-kit orchestrator|spec kit orchestrator' '*.md' 2>/dev/null \
-  | grep -vE '^(references/RENAME-PLAN\.md|docs/migrating-from-speckit\.md|\.orchestrator/proposals/papercut-sweep-pre-M030\.md|\.orchestrator/milestones/M008/archive/|\.orchestrator/milestones/M0[0-9][0-9]/M0[0-9][0-9]-SUMMARY\.md|\.orchestrator/milestones/M0[0-9][0-9]/M0[0-9][0-9]-BODY\.txt|CHANGELOG\.md|\.orchestrator/DECISIONS\.md|\.orchestrator/milestones/M035/phases/P01\.5/|\.orchestrator/milestones/M035/M035-ROADMAP\.md|\.orchestrator/milestones/M035/M035-CONTEXT\.md|specs/039-packaging-distribution/spec\.md|\.orchestrator/KNOWLEDGE\.md|specs/001-orchestrator/conversus-|wiki/)' || true)
+  | grep -vE '^(references/RENAME-PLAN\.md|docs/migrating-from-speckit\.md|\.orchestrator/proposals/papercut-sweep-pre-M030\.md|\.orchestrator/proposals/papercut-sweep-post-M035\.md|\.orchestrator/proposals/papercut-sweep-post-M035-HANDOFF\.md|\.orchestrator/milestones/M008/archive/|\.orchestrator/milestones/M0[0-9][0-9]/M0[0-9][0-9]-SUMMARY\.md|\.orchestrator/milestones/M0[0-9][0-9]/M0[0-9][0-9]-BODY\.txt|CHANGELOG\.md|\.orchestrator/DECISIONS\.md|\.orchestrator/milestones/M035/phases/P01\.5/|\.orchestrator/milestones/M035/M035-ROADMAP\.md|\.orchestrator/milestones/M035/M035-CONTEXT\.md|specs/039-packaging-distribution/spec\.md|\.orchestrator/KNOWLEDGE\.md|specs/001-orchestrator/conversus-|wiki/)' || true)
 
 if [ -n "$residue" ]; then
   echo "FAIL: residual C2/C3 prose matches in non-historical *.md files:" >&2

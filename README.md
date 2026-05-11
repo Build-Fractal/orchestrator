@@ -132,6 +132,8 @@ For larger features the explicit chain is `evaluate → discuss → roadmap → 
 
 ## How it works
 
+> For the origin story — how the orchestrator went from a spec-kit extension to a standalone project, and what prior failures the constitution codifies — see [Why this exists](docs/why-this-exists.md).
+
 1. **Onboard once.** `/orchestrator-start` detects your project shape and seeds the knowledge graph (5–15 MEMs from existing code; ideation flow for greenfield).
 2. **Knowledge inject on every task.** `/orchestrator-do` and `/orchestrator-dispatch` pull relevant MEMs — decisions, conventions, related summaries — into the dispatched context. The agent isn't starting from zero.
 3. **Fresh context per dispatch.** Each task runs in a clean session carrying only what it needs. No scrollback to pollute the next decision.

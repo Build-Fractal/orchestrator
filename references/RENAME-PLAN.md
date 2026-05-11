@@ -35,7 +35,7 @@ The rename cannot start until these are decided. Record decisions in `.orchestra
 | **D-RN-3**: Command-cohort prefix | `orchestrator:<cmd>` (already in CLAUDE.md) / `orc:<cmd>` (terser) / `o:<cmd>` (terse-extreme) | `orchestrator:<cmd>` — already canonical in `CLAUDE.md` and `commands/*.md` | Per-line judgment in `commands/*.md` files where `speckit.orchestrator.*` and `orchestrator:*` already coexist. |
 | **D-RN-4**: Homebrew tap | `build-fractal/orchestrator` / `build-fractal/tap` (multi-formula) | `build-fractal/orchestrator` (single-formula tap) | Defer until M035 P03 if formula authoring slips. |
 | **D-RN-5**: Local clone path | `~/Sites/orchestrator` / `~/Sites/build-fractal-orchestrator` / `~/Code/orchestrator` | `~/Sites/orchestrator` — minimal disturbance | Operator-personal, low blast radius beyond local toolchain. |
-| **D-RN-6**: Memory-dir migration | Migrate `~/.claude/projects/-Users-brettkellgren-Sites-spec-kit-orchestrator/` / accept memory loss | Migrate (see § 9) | Renaming the path triggers a new Claude project key; without migration, accumulated memory entries become orphaned. |
+| **D-RN-6**: Memory-dir migration | Migrate `~/.claude/projects/-Users-<user>-Sites-spec-kit-orchestrator/` / accept memory loss | Migrate (see § 9) | Renaming the path triggers a new Claude project key; without migration, accumulated memory entries become orphaned. |
 | **D-RN-7**: Pre-rename version-tag preservation | Tag `v0.9.X-final-spec-kit-name` immediately before rename / no special tag | Tag — preserves a clean cutover marker for future archaeology | One-line `git tag` operation; trivial. |
 
 ---
@@ -55,7 +55,7 @@ This is the source of truth for all replacements. Categorize every match in the 
 | C7 | npm scope token | (none yet) | resolved per D-RN-1 | `package.json` (when authored in M035 P02) + curl-pipe-bash install URLs |
 | C8 | GitHub remote URL | `Build-Fractal/spec-kit-orchestrator` | `Build-Fractal/orchestrator` (per D-RN-2) | Remote-only (handled in § 9), no in-repo string changes — GitHub provides automatic redirect |
 | C9 | Spec directory basename | `specs/001-speckit-orchestrator/` | `specs/001-orchestrator/` | `git mv` + content references to that path |
-| C10 | Project key in Claude memory | `-Users-brettkellgren-Sites-spec-kit-orchestrator` | `-Users-brettkellgren-Sites-orchestrator` | `~/.claude/projects/` directory rename (per D-RN-6) |
+| C10 | Project key in Claude memory | `-Users-<user>-Sites-spec-kit-orchestrator` | `-Users-<user>-Sites-orchestrator` | `~/.claude/projects/` directory rename (per D-RN-6) |
 
 **Critical:** C4 is where the most damage happens. Run grep with eyeballs, not sed. If you can't tell from context whether a `spec-kit` reference is about the upstream framework or about this orchestrator project, leave it and flag for review.
 
@@ -404,14 +404,14 @@ If the function is documented in `references/installation.md`, the doc-side upda
 ### Step 9.4 — Migrate the Claude memory directory (per D-RN-6)
 
 ```bash
-mv ~/.claude/projects/-Users-brettkellgren-Sites-spec-kit-orchestrator \
-   ~/.claude/projects/-Users-brettkellgren-Sites-orchestrator
+mv ~/.claude/projects/-Users-<user>-Sites-spec-kit-orchestrator \
+   ~/.claude/projects/-Users-<user>-Sites-orchestrator
 ```
 
 Inside the migrated directory, `MEMORY.md` and individual memory files reference the project by its OLD path encoding internally? Sweep them:
 
 ```bash
-cd ~/.claude/projects/-Users-brettkellgren-Sites-orchestrator
+cd ~/.claude/projects/-Users-<user>-Sites-orchestrator
 git grep -niE 'spec-kit-orchestrator' . 2>/dev/null  # if it's a git repo
 # or for non-git:
 grep -rniE 'spec-kit-orchestrator' . 2>/dev/null

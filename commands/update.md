@@ -156,15 +156,15 @@ M035 introduces no new suppression knob beyond `--no-emit-jsonl`
 ## Output
 
 ```
-source repo:      /Users/brettkellgren/Sites/orchestrator
+source repo:      /path/to/orchestrator
 source HEAD:      67aedf3a M029/P03: stage closure follow-up artifacts + knowledge-graph drift sync
 bundle version:   0.3.0-dev
-project dir:      /Users/brettkellgren/Sites/pbj-central-mono-repo
+project dir:      /path/to/your-project
 ---
 running install...
 SUMMARY: install_state=clean files_staged=N skills_registered=M ...
 ---
-orchestrator:update OK -- runtime in /Users/brettkellgren/Sites/pbj-central-mono-repo refreshed from /Users/brettkellgren/Sites/orchestrator (67aedf3a)
+orchestrator:update OK -- runtime in /path/to/your-project refreshed from /path/to/orchestrator (67aedf3a)
 ```
 
 When `--dry-run` is set, the install dispatch is replaced with `DRY RUN: would invoke: bash <installer> --project-dir <project> --force` and the script exits 0.

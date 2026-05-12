@@ -23,6 +23,19 @@
 
 **Verdict**: do not flip the repo public until Item 4 is resolved (the constitution's Tier 1 inheritance chain is otherwise unverifiable from a public visitor's vantage). Item 2 is operator's choice — neither path blocks the flip but the choice influences which constitutional claim degrades and when. Items 3, 5b are already cleared. Item 5a depends on operator taste for the install section and stub disclosure.
 
+### Operator-decision pass — recorded 2026-05-11
+
+Operator-decision pass run after the audit shipped (single session, all four open items surfaced via `AskUserQuestion`). Recorded outcomes:
+
+| Item | Choice | Action this session |
+|---|---|---|
+| 2 — verifier stubs | **DEFERRED** pending Slater's input on CONFORMANCE shape | None |
+| 4 — inheritance URLs | **DEFERRED** pending Slater's input (clariti-care citations live in the same CONFORMANCE.md Slater merged; rewriting the inheritance chain is the same substantive work as Item 2) | None |
+| 5a.1 + 5a.2 — README prose | **DEFERRED** (operator: "this makes no sense to me, hold on it" — likely re-engages once Item 2/4 lands, since 5a.2 names the same three stubs) | None |
+| 5a.3 — AGENTS.md | **DEFERRED** (Leave as-is) | None |
+
+**Net effect**: the public-flip blocker (Item 4) remains open. No further public-flip work this session. Operator stance is "no rush to go OSS" pending Slater conversation. Per-item resolution lines are appended to each item's section below; original NEEDS-OPERATOR-DECISION framing preserved so the audit trail shape is intact for Slater's re-engagement.
+
 ---
 
 ## Item 2 — Three `scripts/verify/*.sh` PENDING stubs
@@ -64,6 +77,12 @@ The exact deadline shape is operator's call. The extension protocol does NOT req
 Option A is the durable answer (and the constitution would prefer it) but the effort isn't bounded to a single safe-fix sweep, and the first `v*` tag could publish before stub implementations land. Option C is reversible only through a full constitution-amendment ratification — the most expensive recovery path of the three.
 
 Operator decides. This audit makes no choice.
+
+### Resolved 2026-05-11 — DEFERRED pending Slater's input
+
+Operator stance: *"im not sure about this conformance stuff, slater merged it in and im not seeing the full vision, lets hold off until his input, no rush to go oss"*. No path chosen; CONFORMANCE.md untouched this session. Re-engage when Slater can walk through the Tier 1/Tier 2 inheritance design intent and the three stubs' future ownership.
+
+NEEDS-OPERATOR-DECISION framing preserved — Slater's input feeds back into a fresh Option A / B / C selection.
 
 ---
 
@@ -116,6 +135,16 @@ Operator decides. This audit makes no choice.
 Operator decides. This audit makes no choice.
 
 **Additional reachability note (raised, not in the prompt)**: `README.md:80` instructs users to `git clone git@github.com:Build-Fractal/orchestrator.git`. That URL's reachability depends on whether `Build-Fractal/orchestrator` itself is public when orchestrator flips. The audit cannot verify that condition from inside this repo. Flag for operator confirmation.
+
+### Resolved 2026-05-11 — DEFERRED pending Slater's input (BLOCKER for public flip remains open)
+
+Operator initial directive (paraphrased): keep `Build-Fractal/conversus-oss` (will go public); the `clariti-care/payer-index-mono` references should not be in the orchestrator repo at all. On clarification that the 7 clariti-care citations live in `CONFORMANCE.md` (L7, L11, L31, L40, L206, L208, L210) — the file Slater merged that declares the Tier 1 inheritance chain — operator chose to **hold Item 4 for Slater too**: removing those citations rewrites the inheritance chain, which is the same substantive CONFORMANCE work that Item 2 defers.
+
+Conversus-OSS-side scope (the `Build-Fractal/conversus-oss` link in `README.md:28` + `README.md:189` and the `~/Sites/conversus-oss` mentions in `CHANGELOG.md:126` + `docs/ingesting-arbitrary-specs.md:184,193` + `references/spec-management.md:148` + `references/github-integration.md:330`) likewise unchanged — operator stated conversus-oss will go public, so the URL becomes self-clearing when that flip lands; no in-repo edit needed.
+
+Public-flip blocker therefore **remains open**. Re-engage when Slater can co-decide the inheritance-chain rewrite (Option 4A/4B/4C path or a new shape that drops clariti-care references entirely without breaking the Tier 1 constitutional dependency).
+
+NEEDS-OPERATOR-DECISION framing preserved.
 
 ---
 
@@ -214,7 +243,19 @@ In production use against this repo's own development. 30+ closed milestones spa
 
 The exact wording is operator's. This audit flags the gap with a proposed shape.
 
+### Resolved 2026-05-11 — Gaps 5a.1 + 5a.2 DEFERRED
+
+Operator stance on combined 5a.1 + 5a.2 question: *"this makes no sense to me, hold on it"*. README L79–91 install section and L248–250 Status section unchanged this session. Likely re-engages once the Item 2/Item 4 Slater conversation lands, since the disclosure shape in 5a.2 names the same three PENDING stubs that Item 2 governs.
+
+NEEDS-OPERATOR-DECISION framing preserved.
+
 **Gap 5a.3 — AGENTS.md is a 3-line stub.** The file at repo root carries only an `orchestrator:recent-changes` block. It will look strange to a Codex/Cursor visitor who expects AGENTS.md to mirror CLAUDE.md's content shape. Either populate it (mirror the relevant CLAUDE.md sections) or omit it from the public tree via `.gitignore` until populated. Out of scope for safe-fix sweep; flag for operator.
+
+### Resolved 2026-05-11 — Gap 5a.3 DEFERRED
+
+Operator chose "Leave as-is (defer decision)". AGENTS.md remains as the 3-line `orchestrator:recent-changes` stub. Re-engages when AGENTS.md becomes user-visible (likely tied to either: a Codex/Cursor consumer's first encounter post-launch, or the public flip itself).
+
+NEEDS-OPERATOR-DECISION framing preserved.
 
 ### 5b — LICENSE
 

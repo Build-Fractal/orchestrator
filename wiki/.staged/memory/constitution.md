@@ -1,29 +1,97 @@
 <!--
   Sync Impact Report
   ==================
-  Version change: 2.0.0 → 2.1.0 (MINOR — new principles, amended guidance)
+  Version change: 2.2.1 → 2.3.0 (MINOR — Quality Gates section gains
+  a new "Install gates" bullet per follow-on amendment Item 3 of
+  .orchestrator/proposals/M0XX-tier-2-xxii-xii-substantive-followups.md;
+  Candidate A / Tier 2 XXII inheritance shape changes materially —
+  Invariant 3 (end-to-end install testing) relocates from XXII's
+  invariant body to constitution Quality Gates as release-time
+  evidence per Decision A Pathway 1; Items 1 + 2 also ship in this
+  amendment batch — Invariant 1 reassigned to Principle XI
+  enforcement; Invariant 2 X-distinctness sentence recorded.
+  Operational definitions for "fresh project fixture" and "works"
+  land in the new Quality Gates bullet body — Decision B resolved
+  in this amendment.)
 
-  Added principles:
-    - XIV. No Speculative Complexity
-    - XV. Surgical Precision
+  Previous: 2.2.0 → 2.2.1 (PATCH — Principle VIII scope-boundary
+  clarification per follow-on amendment Item 4; VIII bullet 1 made
+  self-derivable without cross-reference to CONFORMANCE.md.)
+
+  Previous: 2.1.0 → 2.2.0 (MINOR — Tier 2 inheritance declarations,
+  amended guidance)
+
+  Added (Tier 2 inheritance, recorded in CONFORMANCE.md not as new
+  numbered principles):
+    - Tier 2 XXII (Distribution Surface Integrity) — inherited from
+      conversus; orchestrator-side evidence under scripts/verify/*.sh
+      stubs + CHANGELOG.md single-source versioning.
+    - conversus Tier 2 XII (No Dead Infrastructure) — inherited from
+      conversus; orchestrator-side evidence via
+      scripts/diagnostics/check-dead-infra.sh against
+      templates/orchestrator-config-default.yml (41 leaves, baseline 0
+      dead).
 
   Amended principles:
-    - II. Evidence Before Claims — added upfront success criteria requirement
-    - III. Design Before Code — added ambiguity surfacing requirement
+    - I. Context Minimization — appended clarification on total-task-
+      tokens optimization target; L48 ratio carries PATCH-level
+      proxy-status annotation.
+    - VIII. No Dead Infrastructure — appended Tier 2 alignment
+      paragraph clarifying scope boundary with inherited conversus
+      Tier 2 XII (check-dead-infra.sh = config-knob class; run-doctor.sh
+      = file-system-level reachability). At v2.2.1 the opening
+      declaration was further PATCHed so the scope boundary is
+      constitutionally self-derivable from VIII's plain text without
+      requiring cross-reference to CONFORMANCE.md (per follow-on
+      amendment Item 4).
+    - XI. Single Source of Truth — at v2.3.0 a compliance-note
+      paragraph appended documenting that
+      scripts/verify/version-source-of-truth.sh is XI's enforcement
+      script for installer-channel version SST. Reassigned from
+      Candidate A / Tier 2 XXII per follow-on amendment Item 1
+      (Decision A Pathway 1 ship-commit batch).
 
-  Unchanged principles:
-    - I, IV, V, VI, VII, VIII, IX, X, XI, XII, XIII
+  Amended sections:
+    - Quality Gates — at v2.3.0 gains a new "Install gates" bullet
+      relocating Candidate A / Tier 2 XXII Invariant 3 (end-to-end
+      install testing) from XXII's invariant body to release-time
+      evidence per follow-on amendment Item 3 (Decision A Pathway 1).
+      Bullet body carries the operational definitions for
+      "fresh project fixture" and "works" — Decision B resolved
+      in-this-amendment.
 
-  Unchanged sections:
-    - Quality Gates, Governance (no changes)
-    - Constraints: updated for standalone direction (spec-kit optional)
+  Amended sections:
+    - Governance — added one-paragraph cross-reference to conversus
+      Inclusion Criteria for new principles (build-fractal Tier 1
+      inheritance basis); orchestrator I-XV grandfathered.
+
+  Unchanged principles (by number and body):
+    - II, III, IV, V, VI, VII, IX, X, XI, XII, XIII, XIV, XV
+
+  Ratification provenance:
+    - Originating + self-consistency + blind deliberations 2026-05-11
+      (.orchestrator/ratification/2026-05-11-XXII-XII/, all three
+      gate-result.md files PASS).
+    - Operator-routed Path 1 (accept headline PASS, defer blind's
+      substantive distinctness findings to follow-on amendment).
+    - Decision packet:
+      .orchestrator/comments/review-queue/2026-05-11-XXII-XII-blind-substantive-findings.md
+    - Deliberation log entries: .orchestrator/memory/CONSTITUTIONAL_CONVERSATIONS.md
+      (three 2026-05-11 entries).
 
   Templates requiring updates:
-    ⚠️ templates/phase-plan.md — Constitution Check should reference
-       principles XIV-XV where applicable. Low urgency: templates
-       dynamically load constitution; no hardcoded principle references.
+    ⚠️ templates/phase-plan.md — Constitution Check may reference Tier 2
+       XXII / conversus Tier 2 XII where applicable. Low urgency:
+       templates dynamically load constitution; no hardcoded principle
+       references.
 
   Prior version history:
+    - 2.2.1: VIII bullet 1 PATCH (scope boundary self-derivable;
+      2026-05-11)
+    - 2.2.0: Tier 2 XXII + conversus Tier 2 XII inheritance
+      declarations ratified (2026-05-11, Path 1)
+    - 2.1.0: Added XIV-XV, amended II (success criteria) + III
+      (ambiguity surfacing)
     - 2.0.0: Added VIII-XIII, amended II (event emission)
     - 1.0.0: Original I-VII
 -->
@@ -46,8 +114,23 @@ each individual task consumes.
   the handoff artifact between units of work.
 - The optimization target:
   `Context_Efficiency = Relevant_Instructions / Total_Instructions_Inherited`
+  *(Note: this ratio measures context payload efficiency as a proxy
+  for the governing optimization target; the operative target is
+  total task tokens across the full dispatch cycle, including
+  exploration-recovery costs, per the clarification below.)*
 - When this ratio degrades, the system is failing. Every design
   choice MUST be evaluated against this metric.
+- **Minimize total task tokens** by delivering the right context
+  efficiently — not by sending less context. The knowledge graph is
+  the orchestrator's compression mechanism; bypassing it to "save
+  tokens" typically increases total tokens spent because the agent
+  recovers context the expensive way (exploration tokens) or
+  produces lower-quality output that requires re-dispatch. Context
+  minimization means *minimum sufficient context, delivered via the
+  cheapest pipeline available*. A future execution path that
+  proposes bypassing the knowledge graph + compression pipeline
+  MUST justify the bypass with empirical token data showing total
+  task tokens go down, not just payload size.
 
 ### II. Evidence Before Claims
 
@@ -160,9 +243,15 @@ documentation.
 
 ### VIII. No Dead Infrastructure
 
-Every file, script, template, and configuration entry MUST be
-reachable from a live code path. Infrastructure that exists "for
-future use" or "just in case" violates Context Minimization
+Every file, script, template, and configuration file — interpreted
+in this principle as a file-system artifact audited by
+`scripts/diagnostics/run-doctor.sh` — MUST be reachable from a live
+code path. Variable-level liveness of individual config knobs within
+those files is outside this principle's scope; that variable-level
+scope is governed by the inherited conversus Tier 2 XII (No Dead
+Infrastructure) declaration enforced by
+`scripts/diagnostics/check-dead-infra.sh`. Infrastructure that exists
+"for future use" or "just in case" violates Context Minimization
 (Principle I) by consuming context budget without delivering value.
 
 - New files MUST be referenced by at least one command, script, or
@@ -171,6 +260,19 @@ future use" or "just in case" violates Context Minimization
   report them as warnings.
 - Removing dead infrastructure is always cheaper than maintaining it.
   When in doubt, delete.
+
+**Tier 2 alignment** (added 2026-05-11 by the XXII + conversus Tier 2
+XII inheritance amendment): the build-fractal namespace carries
+conversus Tier 2 XII (No Dead Infrastructure) governing config-knob,
+schema-variable, and documented-consumer surfaces with
+`scripts/diagnostics/check-dead-infra.sh` as the canonical linter.
+VIII governs file-system-level infrastructure reachability with
+`scripts/diagnostics/run-doctor.sh` as the canonical audit. The
+scope boundary is declared explicitly in
+[`CONFORMANCE.md`](../../CONFORMANCE.md) under the Component-tier
+declarations § conversus Tier 2 XII inheritance row and its
+three-bucket structure. Together VIII + inherited conversus Tier 2
+XII discharge the orchestrator's full dead-infrastructure coverage.
 
 ### IX. Reproducibility Over Convenience
 
@@ -216,6 +318,21 @@ a consistency bug waiting to happen.
   cold archive) with one entry per concept.
 - Roadmap phase status: the roadmap file is the single source; phase
   directories are artifacts, not status indicators.
+- **Installer-channel version SST** (added 2026-05-11 at v2.3.0 per
+  follow-on amendment Item 1 of
+  `.orchestrator/proposals/M0XX-tier-2-xxii-xii-substantive-followups.md`,
+  reassigned from Candidate A / Tier 2 XXII Invariant 1 under
+  Decision A Pathway 1): the version string consumed by every
+  per-runtime installer in `packaging/install/install-*.sh` and by
+  every bundle manifest in `packaging/bundle/*/manifest.txt` MUST
+  derive from the `CHANGELOG.md` top-line `## [X.Y.Z]` heading. No
+  installer or manifest may embed a hardcoded version literal.
+  Enforcement script: `scripts/verify/version-source-of-truth.sh`
+  (PENDING per CONFORMANCE.md § Tier 2 XXII PENDING/ACTIVE
+  verifier-stub cap — the cap row remains in the XXII table by
+  convention because the stub was created in that lineage; the cap's
+  failure-consequence rollup attributes this row's ADVISORY demotion
+  to Principle XI rather than Tier 2 XXII at v2.3.0).
 
 ### XII. Hook Isolation
 
@@ -318,9 +435,55 @@ outside the request scope is not yours to modify.
   2. After implementation (before the phase is marked complete).
   Violations MUST be justified in a Complexity Tracking table or the
   design MUST be changed.
+- **Install gates** (added 2026-05-11 at v2.3.0 per follow-on
+  amendment Item 3 of
+  `.orchestrator/proposals/M0XX-tier-2-xxii-xii-substantive-followups.md`,
+  shipping Candidate A / Tier 2 XXII Invariant 3 to its constitutional
+  structural home as release-time evidence rather than as an
+  architectural invariant): every version-tag publication triggering
+  the GH release automation workflow introduced in [M035](milestones/M035/index.md) runs each
+  per-runtime installer in `packaging/install/install-*.sh` against a
+  **fresh project fixture** and verifies that the installation
+  **works**. Both operational terms are defined below to satisfy
+  Principle II's mechanical-gate requirement; the gate emits a
+  deterministic PASS/FAIL without human judgment. Evidence:
+  `scripts/verify/installer-smoke.sh` (PENDING per CONFORMANCE.md
+  § Tier 2 XXII — PENDING/ACTIVE verifier-stub cap; promotion to
+  ACTIVE per the cap's promotion conditions).
+  - **Fresh project fixture**: a temporary directory containing only
+    the files the installer places there, with no prior
+    `.orchestrator/` state. The fixture is created immediately
+    before and destroyed immediately after each release gate run.
+    Where a runtime requires pre-existing scaffold files before the
+    installer can be invoked, those files MUST be enumerated
+    explicitly in the smoke test fixture's documented preconditions
+    and MUST NOT overlap with any file that the installation itself
+    places. A fixture specification that requires runtime-specific
+    preconditions must document those preconditions in a named
+    fixture manifest file within `scripts/verify/`.
+  - **Works**: the installer invocation exits with code 0 and the
+    resulting project's status command exits with code 0 and emits
+    at least one line of output matching the structured status
+    format. These are the minimum conditions for
+    `installer-smoke.sh` to emit a deterministic PASS/FAIL without
+    human judgment.
+  - **Non-substitutability**: ad-hoc freshly-generated directories
+    are not acceptable. Non-deterministic environments violate
+    Principle IX (Reproducibility Over Convenience); the fixture
+    discipline above is the determinacy mechanism.
 
 ## Governance
 
+- **Inclusion Criteria for new principles** (added 2026-05-11) are
+  defined in the build-fractal suite constitution's Governance
+  section (`build-fractal/conversus/CONSTITUTION.md` §
+  "Inclusion Criteria for New Principles") and apply to orchestrator
+  amendments by Tier 1 inheritance per
+  [`CONFORMANCE.md`](../../CONFORMANCE.md). The three tests
+  (mechanical verification capability / falsifiable scope /
+  distinctness) are not re-stated here — amendment authors follow
+  the cross-reference. Orchestrator principles I-XV are grandfathered
+  and are not retroactively required to satisfy these tests.
 - This constitution supersedes all other project guidance. In case of
   conflict between the constitution and any other document, the
   constitution wins.
@@ -340,4 +503,4 @@ outside the request scope is not yours to modify.
   review MUST include an explicit constitution check section
   referencing each applicable principle by number.
 
-**Version**: 2.1.0 | **Ratified**: 2026-03-18 | **Last Amended**: 2026-04-14
+**Version**: 2.3.0 | **Ratified**: 2026-03-18 | **Last Amended**: 2026-05-11

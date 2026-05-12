@@ -79,13 +79,13 @@ Every prior-phase phase-suite still exits 0 against the post-P05 working tree; C
 
 > Signed attestation: M033 closes without an outsider friendly-tester pass per the launch sequencing amendment #Q-1 fallback path. Cold-start UX risk acknowledged.
 >
-> No friendly-tester report has been filed under `tests/m033-acceptance/friendly-tester-pass/report-*.md` as of 2026-05-04 close time. Recruiting outreach is deferred to the 2026-05-12 fallback deadline. If a friendly-tester report is filed by that date with `friction_blockers: 0` AND `eligible_testers >= 1`, `validate-report.sh` exits 0 and the SC-15 verdict upgrades from SIGNED-ATTESTATION to PASS without re-issuing the `M033-VALIDATED` marker.
+> No friendly-tester report has been filed under `tests/m033-acceptance/friendly-tester-pass/report-*.md` as of 2026-05-04 close time. Recruiting outreach was originally deferred to the 2026-05-12 fallback deadline; that deadline lapsed without a recruited tester. Deadline revised to 2026-05-19 (pushed 2026-05-11 per operator authorization, amendment Q1). If a friendly-tester report is filed by that date with `friction_blockers: 0` AND `eligible_testers >= 1`, `validate-report.sh` exits 0 and the SC-15 verdict upgrades from SIGNED-ATTESTATION to PASS without re-issuing the `M033-VALIDATED` marker.
 >
 > The cold-start UX risk this attestation acknowledges: an outsider running `orchestrator:start` for the first time may encounter friction not surfaced by maintainer-internal dogfooding. The signed-attestation path leaves M033 closeable for downstream sequencing ([M029](../../milestones/M029/index.md), [M035](../../milestones/M035/index.md) P02--P06 publishing) while preserving the ability to upgrade SC-15 once a real tester runs the four onboarding branches.
 >
 > Maintainer signature: Brett Kellgren <brett@fivestar.studio>
 > Date: 2026-05-04
-> Recruiting outreach attempted by: 2026-05-04 (deferred to 2026-05-12 deadline per amendment #Q-1)
+> Recruiting outreach attempted by: 2026-05-04 (originally deferred to 2026-05-12 deadline per amendment Q1; revised 2026-05-11 to 2026-05-19 per operator authorization after original deadline lapsed without recruited tester)
 
 ## Patterns established (cross-phase)
 
@@ -104,7 +104,7 @@ The most load-bearing patterns repeated across P01--P05:
 ## Open follow-ups (deferred)
 
 - **M032/P02 closure for SC-9 real-mode** (paired-launch contract per CON-1): once `scripts/lifecycle/wiki-init.sh` lands, the SC-9 acceptance script's Test 3 fires the real-mode degenerate-pass branch automatically; no additional M033 work required.
-- **M033 friendly-tester recruiting** (deadline 2026-05-12): if a real outsider runs the four onboarding branches and files `tests/m033-acceptance/friendly-tester-pass/report-2026-05-DD.md` with `friction_blockers: 0` AND `eligible_testers >= 1`, the SC-15 verdict upgrades from SIGNED-ATTESTATION to PASS without re-issuing the `M033-VALIDATED` marker. If the deadline passes without a tester confirmed, the signed attestation in this summary stands.
+- **M033 friendly-tester recruiting** (revised deadline 2026-05-19, pushed 2026-05-11 from original 2026-05-12 per operator authorization): if a real outsider runs the four onboarding branches and files `tests/m033-acceptance/friendly-tester-pass/report-2026-05-DD.md` with `friction_blockers: 0` AND `eligible_testers >= 1`, the SC-15 verdict upgrades from SIGNED-ATTESTATION to PASS without re-issuing the `M033-VALIDATED` marker. If the revised deadline passes without a tester confirmed, the signed attestation in this summary stands.
 - **M033.5 LLM-augmentation for codebase ingestion per #Q-3** (demand-driven post-launch): the deterministic `ingest-codebase.sh` emits a "minimum-viable seed" diagnostic when extraction yields fewer than 5 MEMs; demand for LLM-augmented extraction is post-launch and recovered via `references/RUNTIME-ASSUMPTIONS.md` notes.
 - **Constitution starter library expansion per #Q-2** (demand-driven post-launch, threshold: 2 external requests trigger expansion): closed v1 list is web-saas / cli-tool / library; demand-driven expansion path documented in `references/constitution-starter-format.md`.
 - **M034 interactive review gates** (deferred post-launch, demand-driven): first-class interactive-review stage between artifact authoring and SIGNOFF.md population per [`.orchestrator/proposals/M034-interactive-review-gates.md`](../../proposals/M034-interactive-review-gates.md).
@@ -125,7 +125,7 @@ The most load-bearing patterns repeated across P01--P05:
 
 (a) **M032 + M033 paired closure**: per the 2026-05-03 launch sequencing amendment, M032 + M033 ship as a paired unit. M033/P05 calls into M032's `--with-wiki` gate; the SC-9 stub-mode contract ensures M033 closes independently of M032's real-mode landing.
 
-(b) **Friendly-tester recruiting deadline (2026-05-12)**: the SC-15 signed-attestation path leaves M033 closeable for downstream sequencing while preserving the upgrade path. Recruiting outreach is the maintainer's load-bearing follow-up.
+(b) **Friendly-tester recruiting deadline (revised 2026-05-19; pushed 2026-05-11 from original 2026-05-12)**: the SC-15 signed-attestation path leaves M033 closeable for downstream sequencing while preserving the upgrade path. Recruiting outreach is the maintainer's load-bearing follow-up.
 
 (c) **M035 (packaging & distribution) consumes the friendly-tester recruiting protocol** from P01 (`tests/m033-acceptance/friendly-tester-pass/protocol.md` + `report-template.md` + `validate-report.sh`); the protocol generalizes to other UX milestones once M033 ships.
 

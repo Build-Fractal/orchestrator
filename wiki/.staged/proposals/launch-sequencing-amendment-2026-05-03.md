@@ -66,6 +66,7 @@ The published order is dependency-correct but does not surface where the *blast 
 ## Open Questions
 
 - **Q1**: Friendly-tester recruiting — who, by when?
+  - **Resolved (partial, 2026-05-03 → 2026-05-11)**: original deadline 2026-05-12 set at finalize-2026-05-03 (fallback path via `M033_SKIP_FRIENDLY_TESTER_PASS=1` US-8 AS-5 if recruiting fails). 2026-05-12 lapsed without a recruited tester; M033 closed 2026-05-04 under signed-attestation fallback. **Revised deadline 2026-05-19** (pushed 2026-05-11 per operator authorization to allow one additional recruiting week before re-evaluation). Protocol at `tests/m033-acceptance/friendly-tester-pass/protocol.md`. Not blocking; the signed-attestation path keeps the SC-15 verdict valid.
 - **Q2**: M036a live-LLM smoke test fixture choice — pick a single representative PBJ document or use the existing tier-2 fixture?
 - **Q3**: M032/M033 pairing — single dispatcher running both, or two dispatchers with explicit synchronization handoffs?
 

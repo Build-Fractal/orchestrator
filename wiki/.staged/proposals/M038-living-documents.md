@@ -217,6 +217,15 @@ orchestrator:living-doc drift
 
 **9.7 Operator-declared "no user-visible change" exemption** — `docs_sweep_exemption: <reason>` in milestone close summary; living-doc gate honors it.
 
+**9.8 Project-brief / synthesis-doc as a first-class living-doc type** (added 2026-05-10 from M040 RFC) — the daily/weekly project brief that M040 generates *is* a living document: it has section-level structure (`Connections` / `Drift signal` / `One question`), evolves over time, the prior week's brief is a queryable historical artifact, and the *patterns it surfaces* are reviewer-relevant in the same way audit-doc sections are. When M040 enters the queue, M038's queue-entry pass should add `feedback/brief` as a built-in living-doc type with:
+
+- **Section-binding shape**: each brief's `Connections` / `Drift signal` / `One question` sections bind to the MEMs / phases / decisions they synthesized from (read-side anchors, not code anchors).
+- **Lifecycle**: `generated:<date>` → `acknowledged:<operator>:<date>` → `acted-on:<task-or-decision-ref>` or `closed:stale`.
+- **Cross-doc edges**: `feedback/brief --surfaces--> decision/contradiction` (from M040 contradiction gate output), `feedback/brief --references--> mem/<id>`.
+- **Wiki rendering**: brief history page (per project) with timeline of patterns surfaced; reviewer-filtered view of unacknowledged briefs.
+
+This is **strong primitive overlap** with the LakeLedger MATT-RULES-AUDIT.md pattern despite the use case being different (synthesis output vs. domain-expert rule lock). The same primitive — sections + bindings + status + history — serves both. Argues that M038 is the right home for the abstraction even if M040 ships first as the generator. Queue-entry decision: if M040 lands pre-M038, M038's spec inherits `feedback/brief` as the canonical first non-RFC-derived test case for the living-doc primitive.
+
 ### 10. Open questions (from upstream RFC)
 
 1. **Markdown ownership.** Inline HTML markers (Option A) vs sidecar bindings (Option B) — default-on which? Recommendation: Option B for v1 (byte-clean source), Option A as opt-in.

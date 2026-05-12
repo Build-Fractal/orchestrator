@@ -58,6 +58,8 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import fnmatch
+import json
 import os
 import re
 import sys
@@ -72,6 +74,8 @@ DECISIONS = ORCH / "DECISIONS.md"
 WIKI_DIR = REPO_ROOT / "wiki"
 WIKI_DOCS = WIKI_DIR / "docs"
 WIKI_STAGED = WIKI_DIR / ".staged"
+WIKI_SUPPRESS_RULES = ORCH / "wiki" / "suppress-rules.json"
+WIKI_WRAP_RULES = ORCH / "wiki" / "wrap-rules.json"
 SUMMARY_TODO = Path("/tmp/wiki-summary-todo.md")
 
 # Populated by load_wiki_config(); generic shape so the decorator runs
@@ -84,12 +88,15 @@ SPEC_PATHS: tuple[Path, ...] = ()
 
 def _rebind_paths(root: Path) -> None:
     global REPO_ROOT, ORCH, DECISIONS, WIKI_DIR, WIKI_DOCS, WIKI_STAGED
+    global WIKI_SUPPRESS_RULES, WIKI_WRAP_RULES
     REPO_ROOT = root
     ORCH = REPO_ROOT / ".orchestrator"
     DECISIONS = ORCH / "DECISIONS.md"
     WIKI_DIR = REPO_ROOT / "wiki"
     WIKI_DOCS = WIKI_DIR / "docs"
     WIKI_STAGED = WIKI_DIR / ".staged"
+    WIKI_SUPPRESS_RULES = ORCH / "wiki" / "suppress-rules.json"
+    WIKI_WRAP_RULES = ORCH / "wiki" / "wrap-rules.json"
 
 
 # ---------- config loader ----------
@@ -371,6 +378,579 @@ def build_heading_index(text: str) -> tuple[set[str], dict[str, str]]:
         if nm:
             num_to_slug.setdefault(nm.group(1), slug)
     return slugs, num_to_slug
+
+
+# ---------- suppress + wrap pre-decorate transforms ----------
+#
+# Two optional sidecar transforms that run on RAW source text BEFORE
+# decorate() inserts `[code](url "title")` link syntax. Order is
+# load-bearing:
+#
+#   raw source  →  suppress_text()  →  wrap_text()  →  decorate()
+#
+# - suppress (T1, line-level): strip render-only inline content (severity
+#   tags, redline framing). Configured by .orchestrator/wiki/suppress-rules.json.
+# - wrap (T2, block-level): demote multi-line audit blocks (STATUS,
+#   changelogs, amendment notes) into mkdocs-material `??? note` drawers.
+#   Configured by .orchestrator/wiki/wrap-rules.json.
+#
+# Both must run before decorate() because decorated output can contain `)`
+# inside link URLs/titles, which would corrupt regex lookaheads keyed off
+# bare `)` and break admonition `??? note "..."` attribute parsing.
+#
+# Both configs are optional: missing files = no-op pass-through. Schema is
+# JSON (not YAML) so we stay on stdlib only and keep the rule shape easy
+# to validate by hand.
+#
+# Schemas (v1):
+#
+#   suppress-rules.json:
+#     {
+#       "version": 1,
+#       "rules": [
+#         {
+#           "name": "strip-severity-tags",
+#           "pages": ["**/decisions.md", "**/BG-*.md"],
+#           "patterns": [
+#             {"regex": "^\\*\\*\\(SEVERITY: .*?\\)\\*\\*\\s*\n",
+#              "replace": "",
+#              "flags": "m"},
+#             {"regex": "(\\|\\s*)(error|warning|info)(\\s*\\|)",
+#              "replace": "\\1—\\3",
+#              "flags": "IGNORECASE"}
+#           ]
+#         }
+#       ]
+#     }
+#
+#   `replace` defaults to "" (strip). Backref syntax (`\1`, `\2`, ...) is
+#   honored — use when preserving structural surroundings like table-cell
+#   pipes. `flags` accepts both short-form (`"m"`, `"mi"`) and long-form
+#   (`"IGNORECASE"`, `"MULTILINE, DOTALL"`) tokens.
+#
+#   wrap-rules.json — canonical nested shape (one rule may carry many
+#   block patterns; symmetric with suppress-rules.json):
+#     {
+#       "version": 1,
+#       "rules": [
+#         {
+#           "name": "wrap BG-002 STATUS + CALLOUT stacks",
+#           "pages": ["decisions/BG-002-validation-inventory.md"],
+#           "patterns": [
+#             {
+#               "block_start_regex": "^> \\*\\*STATUS — (?P<d>[^*]+)\\*\\*",
+#               "block_end_regex":   "^(?:(?!>)|> \\*\\*(?:STATUS|CALLOUT) — )",
+#               "drawer_type": "note",
+#               "title_template": "STATUS — {d}",
+#               "default_expanded": false,
+#               "flags": ""
+#             }
+#           ]
+#         }
+#       ]
+#     }
+#
+#   `pages` entries are matched case-sensitively against the full
+#   `.orchestrator`-relative path via `fnmatch.fnmatchcase`. Both exact
+#   paths ("milestones/M001/M001-CONTEXT.md") and globs
+#   ("milestones/*/M*.md") work.
+#
+#   `wrap_as` is a dual-shape field, auto-detected:
+#     - FLAVOUR shape: bare name like "note" / "info" / "warning".
+#       Upstream synthesizes `??? <flavour> "<title_template-rendered>"`.
+#     - FULL-OPENER shape: complete opener starting with `???`, `???+`,
+#       or `!!!`, e.g. `"??? note \"Audit trail — STATUS: {title}\""`.
+#       Named groups from `block_start_regex` are substituted via
+#       `.format(**groupdict)` and the result is emitted verbatim.
+#       `title_template` is ignored in this shape.
+#   `drawer_type` only accepts the flavour-name shape and wins over
+#   `wrap_as` when both are set.
+#
+#   `re.MULTILINE` is ALWAYS forced on top of pattern `flags` so `^`/`$`
+#   anchor at line boundaries regardless of per-rule flags value.
+#   `flags` accepts short-form (`"m"`, `"mi"`) and long-form
+#   (`"IGNORECASE"`, `"MULTILINE, DOTALL"`) tokens.
+#
+# Edge cases worth knowing (surfaced by the PBJ rule-config that motivated
+# these transforms — see UPSTREAM-PATCH-HANDOFF-wiki-{decorate-suppress,
+# wrap}-rules-2026-05-1[12].md):
+#
+#   1. Decorator can break admonition titles. If `title_template` captures
+#      a token the decorator transforms (DR-X code, .orchestrator/<path>.md
+#      reference, milestone name), the decorator will inject
+#      `[token](url "title")` into the title string when it later runs
+#      against the wrap output. The injected `"` terminates the outer
+#      `??? note "..."` attribute prematurely. Rule authors should capture
+#      only text the decorator won't transform (plain dates, free-form
+#      identifiers).
+#
+#   2. Stacked blocks in one continuous blockquote. If multiple STATUS
+#      sections live inside ONE `>`-prefixed blockquote with no blank-line
+#      separators, a naive `block_end_regex = ^(?!>)` swallows all of them
+#      into the first drawer. The terminator must allow stopping at the
+#      next STATUS/CALLOUT header within the same blockquote — e.g.
+#      `^(?:(?!>)|> \*\*(?:STATUS|CALLOUT) — )`. The `block_end_regex`
+#      match line is EXCLUDED from the wrapped drawer body so consecutive
+#      blocks each get their own drawer.
+
+_FLAG_MAP_SHORT = {
+    "m": re.MULTILINE,
+    "s": re.DOTALL,
+    "i": re.IGNORECASE,
+    "x": re.VERBOSE,
+    "a": re.ASCII,
+    "u": re.UNICODE,
+}
+_FLAG_MAP_LONG = {
+    "MULTILINE": re.MULTILINE,
+    "DOTALL": re.DOTALL,
+    "IGNORECASE": re.IGNORECASE,
+    "VERBOSE": re.VERBOSE,
+    "ASCII": re.ASCII,
+    "UNICODE": re.UNICODE,
+}
+_FLAG_TOKEN_SPLIT_RX = re.compile(r"[\s,|]+")
+
+
+def _compile_flags(flag_str: str) -> int:
+    """Parse a `flags` config value into an `re` flag bitmask.
+
+    Two shapes are accepted, mixable in a single value:
+      - Short:  `"m"`, `"mi"`, `"ms"` (each char is one flag).
+      - Long:   `"MULTILINE"`, `"IGNORECASE, MULTILINE"`,
+                `"MULTILINE | DOTALL"` (case-insensitive token list).
+
+    Tokens may be separated by comma, whitespace, or `|`. Unrecognised
+    tokens are silently ignored (defensive: don't error a single bad
+    flag name when the rest of the rule is sound — re.error from a bad
+    regex catches the real failures).
+    """
+    if not flag_str:
+        return 0
+    flags = 0
+    matched_long = False
+    for token in _FLAG_TOKEN_SPLIT_RX.split(flag_str):
+        if not token:
+            continue
+        upper = token.upper()
+        if upper in _FLAG_MAP_LONG:
+            flags |= _FLAG_MAP_LONG[upper]
+            matched_long = True
+    # If we matched at least one long-form name, treat the whole string
+    # as long-form (avoids `"IGNORECASE"` ALSO picking up `i` char-wise).
+    if matched_long:
+        return flags
+    # Pure short-form: each char is a flag.
+    for ch in flag_str:
+        if ch in _FLAG_MAP_SHORT:
+            flags |= _FLAG_MAP_SHORT[ch]
+    return flags
+
+
+def _page_matches_globs(orch_rel: str, globs: list[str]) -> bool:
+    """Return True iff `orch_rel` matches at least one glob.
+
+    Matching is case-sensitive (`fnmatch.fnmatchcase`) and tests the full
+    `.orchestrator`-relative path — NOT the basename. This keeps
+    path-specificity intact for rules like
+    `"milestones/M001/M001-CONTEXT.md"` that would otherwise collide with
+    same-named files in sibling milestone directories.
+
+    Supported pattern shapes:
+      - Exact path:   `"decisions/BG-002-validation-inventory.md"`
+      - Glob:         `"milestones/*/M*-CONTEXT.md"`
+      - Path-spanning glob: `"**/decisions.md"`
+        (`fnmatch` treats `*` as matching ANY character including `/`, so
+        the `**` is semantically identical to `*` here but preserved for
+        author readability.)
+
+    Empty globs list = matches nothing (rule is inert). Use `["*"]` or
+    `["**"]` to match every page.
+    """
+    if not globs:
+        return False
+    for pat in globs:
+        if fnmatch.fnmatchcase(orch_rel, pat):
+            return True
+    return False
+
+
+def load_suppress_rules() -> list[dict]:
+    """Read suppress-rules.json. Returns [] when absent or malformed."""
+    if not WIKI_SUPPRESS_RULES.exists():
+        return []
+    try:
+        data = json.loads(WIKI_SUPPRESS_RULES.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        print(f"WARN: suppress-rules.json unreadable: {e}", file=sys.stderr)
+        return []
+    rules = data.get("rules") if isinstance(data, dict) else None
+    if not isinstance(rules, list):
+        return []
+    return [r for r in rules if isinstance(r, dict)]
+
+
+def load_wrap_rules() -> list[dict]:
+    """Read wrap-rules.json. Returns [] when absent or malformed."""
+    if not WIKI_WRAP_RULES.exists():
+        return []
+    try:
+        data = json.loads(WIKI_WRAP_RULES.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        print(f"WARN: wrap-rules.json unreadable: {e}", file=sys.stderr)
+        return []
+    rules = data.get("rules") if isinstance(data, dict) else None
+    if not isinstance(rules, list):
+        return []
+    return [r for r in rules if isinstance(r, dict)]
+
+
+def suppress_text(text: str, orch_rel: str, rules: list[dict]) -> str:
+    """Apply line-level suppress rules to raw source text.
+
+    Each pattern has shape:
+        {"regex": "...", "replace": "...", "flags": "..."}
+
+    - `regex` (str, required): re pattern.
+    - `replace` (str, optional, default ""): substitution string. Standard
+      `re.sub` semantics — `\\1`, `\\2`, ... backrefs are honored. Use the
+      default `""` for pure deletion (the strip-noise use case); use a
+      non-empty value when preserving structural surroundings (e.g.
+      `"\\1—\\3"` to replace a table cell value while keeping the
+      surrounding pipes).
+    - `flags` (str, optional): re flags (see `_compile_flags` docstring).
+      `re.MULTILINE` is ALWAYS forced on top so `^` / `$` anchor at line
+      boundaries regardless of value.
+
+    Rules whose `pages` glob doesn't match orch_rel are skipped. ALL
+    patterns in a matching rule's `patterns[]` array are applied in
+    order.
+
+    Frontmatter and fenced code blocks are protected — patterns are
+    NEVER applied inside them. The segment partitioner that decorate()
+    uses (`split_safe_segments`) is reused here so the protection
+    invariant is consistent across all three transforms (suppress, wrap,
+    decorate).
+    """
+    # Pre-filter rules to those matching the page. Done once; rule
+    # selection is page-level and segment-independent.
+    applicable: list[tuple[str, list[dict]]] = []
+    for rule in rules:
+        pages = rule.get("pages") or []
+        if not isinstance(pages, list):
+            continue
+        if not _page_matches_globs(orch_rel, [p for p in pages if isinstance(p, str)]):
+            continue
+        patterns = rule.get("patterns") or []
+        if not isinstance(patterns, list):
+            continue
+        applicable.append((rule.get("name", "<unnamed>"), patterns))
+    if not applicable:
+        return text
+    # Apply patterns to non-protected segments only.
+    out: list[str] = []
+    for seg, protected in split_safe_segments(text):
+        if protected:
+            out.append(seg)
+            continue
+        for rule_name, patterns in applicable:
+            for pat in patterns:
+                if not isinstance(pat, dict):
+                    continue
+                regex = pat.get("regex")
+                if not isinstance(regex, str) or not regex:
+                    continue
+                replace = pat.get("replace")
+                if not isinstance(replace, str):
+                    replace = ""
+                flags = _compile_flags(pat.get("flags") or "") | re.MULTILINE
+                try:
+                    seg = re.sub(regex, replace, seg, flags=flags)
+                except re.error as e:
+                    print(
+                        f"WARN: suppress rule '{rule_name}' bad regex {regex!r}: {e}",
+                        file=sys.stderr,
+                    )
+        out.append(seg)
+    return "".join(out)
+
+
+def wrap_text(text: str, orch_rel: str, rules: list[dict]) -> str:
+    """Apply block-level wrap rules to raw source text.
+
+    Schema (canonical) — symmetric with suppress: nested `patterns[]`
+    under each rule, so one page-rule can carry multiple block-shapes
+    (STATUS + CALLOUT under one BG-002 rule, say):
+
+        {
+          "name": "wrap BG-002 STATUS + CALLOUT stacks",
+          "pages": ["decisions/BG-002-validation-inventory.md"],
+          "patterns": [
+            {
+              "block_start_regex": "^> \\*\\*STATUS — (?P<d>[^*]+)\\*\\*",
+              "block_end_regex":   "^(?:(?!>)|> \\*\\*(?:STATUS|CALLOUT) — )",
+              "drawer_type": "note",
+              "title_template": "STATUS — {d}",
+              "default_expanded": false,
+              "flags": ""
+            },
+            { ... }
+          ]
+        }
+
+    Pattern keys:
+      - block_start_regex (str, required): multi-line start anchor.
+      - block_end_regex (str, required): multi-line end anchor. The first
+        match AFTER the start line marks the boundary; the matched line
+        is EXCLUDED from the wrapped drawer body (allows stacked blocks
+        per edge case 2).
+      - drawer_type (str, default "note"): mkdocs-material admonition
+        flavour — note / info / warning / tip / etc. `wrap_as` is
+        accepted as an alias for cross-implementation rule-config compat.
+      - title_template (str, default "Details"): format string with
+        named-group substitution from block_start_regex named groups.
+      - default_expanded (bool, default false): when true, emit `???+`
+        (admonition opens expanded) instead of `???` (collapsed). The
+        non-collapsible `!!!` flavour is not supported here — the use
+        case is "demote audit trail to a click-to-expand drawer".
+      - flags (str, default ""): re flags applied to both start and end
+        regex. `re.MULTILINE` is ALWAYS forced on top so `^`/`$` anchor
+        at line boundaries. `start_flags` / `end_flags` (str) may be
+        provided as per-end overrides.
+
+    Wrapped output uses the mkdocs-material collapsible admonition syntax:
+
+      ??? note "{title}"
+          {body line 1}
+          {body line 2}
+          ...
+
+    Body lines are indented 4 spaces per the admonition convention; blank
+    lines inside the block remain blank (no indent).
+    """
+    # Pre-filter rules to those matching the page; collect their compiled
+    # pattern configs. Frontmatter and fenced code blocks are protected
+    # via split_safe_segments — wrap blocks NEVER span across protected
+    # boundaries and NEVER fire inside protected segments.
+    applicable_patterns: list[dict] = []
+    for rule in rules:
+        pages = rule.get("pages") or []
+        if not isinstance(pages, list):
+            continue
+        if not _page_matches_globs(orch_rel, [p for p in pages if isinstance(p, str)]):
+            continue
+        patterns = rule.get("patterns")
+        # Back-compat: also accept the flat "one pattern at the rule level"
+        # shape that v1 shipped with. Detect by presence of block_start_regex
+        # at the rule level. New rule authors should prefer nested patterns[].
+        if patterns is None and isinstance(rule.get("block_start_regex"), str):
+            patterns = [{
+                k: rule[k] for k in (
+                    "block_start_regex", "block_end_regex", "drawer_type",
+                    "wrap_as", "title_template", "default_expanded",
+                    "flags", "start_flags", "end_flags",
+                ) if k in rule
+            }]
+        if not isinstance(patterns, list):
+            continue
+        for pat in patterns:
+            if isinstance(pat, dict):
+                # Attach the rule name once for diagnostic warnings.
+                applicable_patterns.append({
+                    **pat, "_rule_name": rule.get("name", "<unnamed>"),
+                })
+    if not applicable_patterns:
+        return text
+
+    # Apply each pattern to each non-protected segment, in order.
+    out: list[str] = []
+    for seg, protected in split_safe_segments(text):
+        if protected:
+            out.append(seg)
+            continue
+        for pat in applicable_patterns:
+            if not isinstance(pat, dict):
+                continue
+            start_re_str = pat.get("block_start_regex")
+            end_re_str = pat.get("block_end_regex")
+            if not isinstance(start_re_str, str) or not isinstance(end_re_str, str):
+                continue
+            base_flags_str = pat.get("flags") or ""
+            try:
+                start_re = re.compile(
+                    start_re_str,
+                    _compile_flags(pat.get("start_flags") or base_flags_str)
+                    | re.MULTILINE,
+                )
+                end_re = re.compile(
+                    end_re_str,
+                    _compile_flags(pat.get("end_flags") or base_flags_str)
+                    | re.MULTILINE,
+                )
+            except re.error as e:
+                name = pat.get("_rule_name", "<unnamed>")
+                print(
+                    f"WARN: wrap rule '{name}' bad regex: {e}", file=sys.stderr,
+                )
+                continue
+            # `wrap_as` has two accepted shapes, auto-detected:
+            #
+            #   1. FLAVOUR-NAME shape: a bare admonition flavour like
+            #      "note" / "info" / "warning". Upstream synthesizes the
+            #      full opener: `??? <flavour> "<title_template>"`. This
+            #      is the canonical schema and matches `drawer_type`.
+            #
+            #   2. FULL-OPENER shape: the complete admonition opener
+            #      string starting with `???`, `???+`, or `!!!`, with
+            #      `{title}` (or any other named-group placeholder) for
+            #      substitution. Upstream substitutes named groups via
+            #      `.format(**groupdict)` and emits the result verbatim
+            #      as the opener line. `title_template` is ignored when
+            #      this shape is detected (the opener IS the title
+            #      template).
+            #
+            # Preference order when both `drawer_type` and `wrap_as` are
+            # set: `drawer_type` wins (it can only carry the flavour-name
+            # shape; `wrap_as` is the dual-shape field).
+            drawer_type = pat.get("drawer_type")
+            wrap_as = pat.get("wrap_as")
+            title_template = pat.get("title_template") or "Details"
+            default_expanded = bool(pat.get("default_expanded") or False)
+
+            full_opener_template: str | None = None
+            flavour: str = "note"
+            if isinstance(drawer_type, str) and drawer_type:
+                flavour = drawer_type
+            elif isinstance(wrap_as, str) and wrap_as:
+                stripped = wrap_as.lstrip()
+                if stripped.startswith("???") or stripped.startswith("!!!"):
+                    # Full-opener shape — substitute groups, emit verbatim.
+                    full_opener_template = wrap_as
+                else:
+                    flavour = wrap_as
+
+            seg = _apply_wrap_rule(
+                seg, start_re, end_re, flavour, title_template,
+                default_expanded, full_opener_template,
+            )
+        out.append(seg)
+    return "".join(out)
+
+
+def _apply_wrap_rule(text: str, start_re: "re.Pattern", end_re: "re.Pattern",
+                     drawer_type: str, title_template: str,
+                     default_expanded: bool = False,
+                     full_opener_template: str | None = None) -> str:
+    """Single-rule scan: find each start match in left-to-right order,
+    bracket against next end match, replace the block with an admonition.
+
+    Re-scans from after each replacement to support stacked blocks (edge
+    case 2). Non-overlapping by construction: end-line is EXCLUDED so the
+    next start match can land on it.
+    """
+    pos = 0
+    pieces: list[str] = []
+    while True:
+        m_start = start_re.search(text, pos)
+        if not m_start:
+            pieces.append(text[pos:])
+            break
+        # Find the end of the start LINE (newline after the start match).
+        line_end = text.find("\n", m_start.start())
+        if line_end == -1:
+            # Start match runs to EOF — no body, skip.
+            pieces.append(text[pos:])
+            break
+
+        # Find next end match strictly after the start line.
+        m_end = end_re.search(text, line_end + 1)
+        if m_end:
+            block_end = m_end.start()  # end-line excluded
+        else:
+            block_end = len(text)
+
+        # Block body spans from m_start.start() through block_end (exclusive
+        # of the end-line, inclusive of the start line up to block_end).
+        pieces.append(text[pos:m_start.start()])
+
+        block_region = text[m_start.start():block_end]
+        # Source-shape preservation: the captured region may end in N
+        # trailing blank lines. Those belong AFTER the drawer (not inside),
+        # so we partition the region into a content-lines prefix and a
+        # trailing-blank-lines suffix. Both are re-emitted in order:
+        #   admonition(opener + blank + indented content) + N \n's.
+        block_lines = block_region.splitlines()
+        last_content_idx = len(block_lines)
+        while (last_content_idx > 0
+               and block_lines[last_content_idx - 1].strip() == ""):
+            last_content_idx -= 1
+        content_lines = block_lines[:last_content_idx]
+        trailing_blank_count = len(block_lines) - last_content_idx
+        # If the region ended without a final newline (mid-line — unusual
+        # for our regex shapes), we don't add an extra trailing newline.
+        region_ended_with_newline = block_region.endswith("\n")
+
+        groupdict = m_start.groupdict()
+
+        # Render the opener line. Two paths:
+        #   (a) full_opener_template — substitute named groups into the
+        #       caller-provided opener string, defensively escape inner
+        #       `"` to `'` to keep the admonition attribute well-formed
+        #       (but only inside the attribute body, not the closing `"`).
+        #   (b) flavour-name path — synthesize `??? <flavour> "<title>"`
+        #       from drawer_type + title_template + default_expanded.
+        if full_opener_template is not None:
+            try:
+                opener_line = full_opener_template.format(**groupdict)
+            except (KeyError, IndexError):
+                opener_line = full_opener_template
+            # Defensive title-attribute hygiene: replace `"` characters
+            # that appear BETWEEN the outer `"..."` attribute markers.
+            # We assume the template's outer wrapper is `"..."` and any
+            # inner `"` should be neutralised to `'`. Conservative
+            # heuristic: only the inner span between the first and last
+            # `"` is normalised.
+            first_q = opener_line.find('"')
+            last_q = opener_line.rfind('"')
+            if first_q != -1 and last_q != -1 and last_q > first_q:
+                inner = opener_line[first_q + 1:last_q].replace('"', "'")
+                opener_line = (
+                    opener_line[:first_q + 1] + inner + opener_line[last_q:]
+                )
+        else:
+            try:
+                title = title_template.format(**groupdict)
+            except (KeyError, IndexError):
+                title = title_template
+            title = title.replace('"', "'")
+            # mkdocs-material admonition flavour:
+            #   `???`  → collapsible, default-collapsed (canonical shape)
+            #   `???+` → collapsible, default-expanded
+            opener = "???+" if default_expanded else "???"
+            opener_line = f'{opener} {drawer_type} "{title}"'
+
+        indented_lines = []
+        for line in content_lines:
+            if line.strip() == "":
+                indented_lines.append("")
+            else:
+                indented_lines.append("    " + line)
+        # mkdocs-material convention: an admonition opener may be followed
+        # by an OPTIONAL blank line before the indented content. We always
+        # emit that blank line so the rendered drawer is visually
+        # readable in source form and the source-vs-rendered diff stays
+        # stable (closing the Regression B blank-line-around-drawer leak).
+        admonition = opener_line + "\n\n"
+        if indented_lines:
+            admonition += "\n".join(indented_lines) + "\n"
+        # Re-emit the trailing blank lines that were in the source span
+        # so they live AFTER the drawer (not inside, where rstrip used to
+        # eat them).
+        if trailing_blank_count > 0:
+            admonition += "\n" * trailing_blank_count
+        pieces.append(admonition)
+        pos = block_end
+    return "".join(pieces)
 
 
 # ---------- segment splitter (skip frontmatter + fenced code) ----------
@@ -938,7 +1518,9 @@ def needs_regeneration(src: Path, dst: Path, force: bool) -> bool:
 
 
 def process_stub(stub: Path, code_map, heading_cache, milestone_dirs,
-                 force: bool, missing_summaries: list[Path]) -> bool:
+                 force: bool, missing_summaries: list[Path],
+                 suppress_rules: list[dict] | None = None,
+                 wrap_rules: list[dict] | None = None) -> bool:
     """Process one stub: decorate the included source into .staged/,
     rewrite the stub include + admonition, touch stub mtime.
 
@@ -981,6 +1563,12 @@ def process_stub(stub: Path, code_map, heading_cache, milestone_dirs,
     if needs_regeneration(src, staged_dst, force):
         page_wiki_dir = stub.parent
         text = src.read_text(encoding="utf-8")
+        # Pre-decorate transforms (order is load-bearing — see the
+        # "suppress + wrap pre-decorate transforms" section comment for why).
+        if suppress_rules:
+            text = suppress_text(text, orch_rel, suppress_rules)
+        if wrap_rules:
+            text = wrap_text(text, orch_rel, wrap_rules)
         out = decorate(text, code_map, page_wiki_dir,
                        heading_cache, list_milestone_dirs(),
                        src_dir=src.parent)
@@ -1038,6 +1626,10 @@ def main() -> int:
     heading_cache: dict[str, tuple[set[str], dict[str, str]]] = {}
     milestone_dirs = list_milestone_dirs()
 
+    # Optional pre-decorate transforms — loaded once, applied per-stub.
+    suppress_rules = load_suppress_rules()
+    wrap_rules = load_wrap_rules()
+
     if args.only:
         stubs = [WIKI_DOCS / p for p in args.only]
     else:
@@ -1050,7 +1642,9 @@ def main() -> int:
     for stub in stubs:
         try:
             if process_stub(stub, code_map, heading_cache, milestone_dirs,
-                            args.force, missing_summaries):
+                            args.force, missing_summaries,
+                            suppress_rules=suppress_rules,
+                            wrap_rules=wrap_rules):
                 changed_count += 1
             else:
                 skipped_count += 1

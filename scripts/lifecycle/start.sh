@@ -774,7 +774,7 @@ wiki_init_passthrough() {
 #     Returns M033_GHINIT_STUB_EXIT_CODE (default 0). Does NOT invoke
 #     github-init.sh.
 #   Real mode (M033_GHINIT_STUB unset/0):
-#     If scripts/lifecycle/github-init.sh exists (M013 closed), invokes it.
+#     If scripts/integrations/github-init.sh exists (M013 closed), invokes it.
 #     Otherwise, emits 'github-init.sh not found ...' diagnostic and
 #     returns rc=1 (genuine failure, NOT skip -- SC-14 skip=0 invariant).
 #
@@ -800,10 +800,10 @@ github_init_passthrough() {
         stub_mode="true"
         printf 'STUB: github-init invoked --project-dir=%s\n' "$project_dir"
         rc="${M033_GHINIT_STUB_EXIT_CODE:-0}"
-    elif [ -f "scripts/lifecycle/github-init.sh" ]; then
+    elif [ -f "scripts/integrations/github-init.sh" ]; then
         # Real-mode: M013 has shipped github-init.sh.
         rc=0
-        bash scripts/lifecycle/github-init.sh --project-dir "$project_dir" || rc=$?
+        bash scripts/integrations/github-init.sh --root "$project_dir" || rc=$?
     else
         # M013 absent AND no stub mode -- genuine failure (not skip).
         printf 'github-init.sh not found -- M013 must be installed before --with-github real-mode can fire\n' 1>&2

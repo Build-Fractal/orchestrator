@@ -97,8 +97,8 @@ if [ "$SUBCMD" = "split" ]; then
   RUNTIME_SIG=""
   if [ "${CLAUDE_CODE_RUNTIME:-0}" = "1" ]; then
     RUNTIME_SIG="claude-code"
-  elif [ -x "${PROJECT_ROOT}/scripts/lifecycle/detect-capabilities.sh" ]; then
-    RUNTIME_SIG="$(bash "${PROJECT_ROOT}/scripts/lifecycle/detect-capabilities.sh" --runtime 2>/dev/null || echo "")"
+  elif [ -x "${PROJECT_ROOT}/scripts/dispatch/detect-capabilities.sh" ]; then
+    RUNTIME_SIG="$(bash "${PROJECT_ROOT}/scripts/dispatch/detect-capabilities.sh" --runtime 2>/dev/null || echo "")"
   fi
 
   SPLITTER_PROMPT="${PROJECT_ROOT}/templates/spec-splitter-prompt.md"

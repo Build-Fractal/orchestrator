@@ -88,8 +88,6 @@ bash packaging/install/install-claude-code.sh --project-dir /path/to/your-projec
 
 The installer registers `orchestrator:*` skills with your runtime and stages the runtime tree (`scripts/`, `templates/`, `references/`) into your project. Idempotent — re-run any time to update.
 
-> **Coming with M035 (launch):** one-liner install via npm, Homebrew, or `curl | bash`. Tracking in [`CHANGELOG.md`](./CHANGELOG.md).
-
 ---
 
 ## Your first command

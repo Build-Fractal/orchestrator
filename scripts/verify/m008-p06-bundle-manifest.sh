@@ -4,7 +4,7 @@
 # Checks:
 #   - manifest.yml exists
 #   - contains version: field
-#   - skills: list has 12 entries
+#   - skills: list has 13 entries
 #   - hooks: list has 5 events (before-tasks, after-tasks, before-implement,
 #     after-implement, before-commit)
 #
@@ -16,7 +16,7 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
 REPO_ROOT=$(cd -- "$SCRIPT_DIR/../.." && pwd)
 MANIFEST="$REPO_ROOT/packaging/bundle/manifest.yml"
 
-EXPECTED_SKILLS=12
+EXPECTED_SKILLS=13
 EXPECTED_HOOKS=5
 EXPECTED_HOOK_EVENTS="before-tasks after-tasks before-implement after-implement before-commit"
 

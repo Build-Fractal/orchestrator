@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# m008-p06-skills-coverage.sh — verify 12 orchestrator skill files with required frontmatter.
+# m008-p06-skills-coverage.sh — verify 13 orchestrator skill files with required frontmatter.
 #
 # Checks:
-#   1. packaging/skills/ contains exactly 12 orchestrator-*.md files.
+#   1. packaging/skills/ contains exactly 13 orchestrator-*.md files.
 #   2. Each file carries the required frontmatter keys:
 #        schema_version, type, name, namespace, description,
 #        runtime_compatibility, command_file.
@@ -29,8 +29,8 @@ for f in "$SKILLS_DIR"/orchestrator-*.md; do
     files="$files $f"
 done
 
-if [ "$count" -ne 12 ]; then
-    echo "FAIL: expected 12 packaging/skills/orchestrator-*.md files, found $count" >&2
+if [ "$count" -ne 13 ]; then
+    echo "FAIL: expected 13 packaging/skills/orchestrator-*.md files, found $count" >&2
     exit 1
 fi
 
@@ -51,5 +51,5 @@ if [ "$bad" -ne 0 ]; then
     exit 1
 fi
 
-echo "PASS: 12 orchestrator skill files present with required frontmatter"
+echo "PASS: 13 orchestrator skill files present with required frontmatter"
 exit 0

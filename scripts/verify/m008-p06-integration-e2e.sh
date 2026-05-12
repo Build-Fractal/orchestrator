@@ -5,7 +5,7 @@
 #   1. Regenerate skills (idempotency check).
 #   2. Rebuild bundle in --check mode (layout validation).
 #   3. Dry-run Claude Code install against fixture HOME + project dir.
-#   4. Real install; verify all 12 skills land under $FIXTURE_HOME/.claude/
+#   4. Real install; verify all 13 skills land under $FIXTURE_HOME/.claude/
 #      commands/, hooks fragment lands at $FIXTURE_HOME/.claude/settings.json,
 #      and the default orchestrator config is staged at the project state root.
 #   5. Run check-update.sh pointing at an unreachable .invalid host and
@@ -81,15 +81,15 @@ if [ $rc -ne 0 ]; then
 fi
 
 # ------------------------------------------------------------------
-# Step 4: verify 12 skills landed under hermetic HOME.
+# Step 4: verify 13 skills landed under hermetic HOME.
 # ------------------------------------------------------------------
 skill_count=0
 for f in "$FIXTURE_HOME/.claude/commands/orchestrator-"*.md; do
   [ -f "$f" ] && skill_count=$(( skill_count + 1 ))
 done
 
-if [ "$skill_count" -ne 12 ]; then
-  echo "FAIL: expected 12 skills under $FIXTURE_HOME/.claude/commands/, found $skill_count" >&2
+if [ "$skill_count" -ne 13 ]; then
+  echo "FAIL: expected 13 skills under $FIXTURE_HOME/.claude/commands/, found $skill_count" >&2
   exit 1
 fi
 
@@ -154,5 +154,5 @@ if ! grep -q '^update_available=' "$upd"; then
 fi
 rm -f "$upd"
 
-echo "PASS: P06 integration e2e — 12 skills installed, config staged, check-update offline-safe"
+echo "PASS: P06 integration e2e — 13 skills installed, config staged, check-update offline-safe"
 exit 0

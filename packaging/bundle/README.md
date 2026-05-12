@@ -8,7 +8,7 @@ and Cursor. The bundle is assembled from source by
 ## Contents
 
 - `manifest.yml` — machine-readable index of skills, hooks, config, and version.
-- `skills/` — 12 skill files (copies of `packaging/skills/orchestrator-*.md`).
+- `skills/` — 13 skill files (copies of `packaging/skills/orchestrator-*.md`).
 - `hooks/` — 5 lifecycle hook fragments (JSON): before/after tasks,
   before/after implement, before-commit.
 - `config/orchestrator.default.yml` — default orchestrator config shipped

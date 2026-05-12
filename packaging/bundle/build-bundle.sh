@@ -4,7 +4,7 @@
 # Modes:
 #   (default)  Rebuild skills/ from packaging/skills/, substitute version into
 #              manifest.yml, emit one wrote=<path> line per written file.
-#   --check    Verify bundle contents match expected set (12 skills, 5 hooks,
+#   --check    Verify bundle contents match expected set (13 skills, 5 hooks,
 #              1 config, 1 README, 1 manifest). Exit non-zero on drift.
 #
 # Bash 3.2 compatible. No python, no jq.
@@ -24,12 +24,13 @@ MANIFEST="$BUNDLE_DIR/manifest.yml"
 README="$BUNDLE_DIR/README.md"
 CONFIG_FILE="$BUNDLE_CONFIG/orchestrator.default.yml"
 
-EXPECTED_SKILLS=12
+EXPECTED_SKILLS=13
 EXPECTED_HOOKS=5
 
 # Expected skill filenames (sorted, as they appear in manifest.yml).
 EXPECTED_SKILL_NAMES="orchestrator-auto.md
 orchestrator-consolidate.md
+orchestrator-cost.md
 orchestrator-discuss.md
 orchestrator-dispatch.md
 orchestrator-doctor.md

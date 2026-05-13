@@ -67,7 +67,7 @@ err_capture=$(mktemp)
 if bash "$FINDER" "$ORCH_ROOT" --milestone garbage 2>"$err_capture"; then
   fail "--milestone garbage should exit non-zero"
 else
-  if grep -q "M### form" "$err_capture"; then
+  if grep -q "M-prefixed identifier" "$err_capture"; then
     pass "--milestone garbage emits format hint"
   else
     fail "--milestone garbage emits format hint (got: '$(cat "$err_capture")')"

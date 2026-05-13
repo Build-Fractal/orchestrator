@@ -47,15 +47,15 @@ while [[ $# -gt 0 ]]; do
     --all) SHOW_ALL=true; shift ;;
     --milestone)
       TARGET_MILESTONE="$2"; shift 2
-      if [[ ! "$TARGET_MILESTONE" =~ ^M[0-9]+$ ]]; then
-        echo "find-active-milestone.sh: --milestone expects M### form, got '$TARGET_MILESTONE'" >&2
+      if [[ ! "$TARGET_MILESTONE" =~ ^M[A-Za-z0-9-]+$ ]]; then
+        echo "find-active-milestone.sh: --milestone expects M-prefixed identifier (e.g. M001, M2a-min, M-Reporter-scope), got '$TARGET_MILESTONE'" >&2
         exit 2
       fi
       ;;
     --milestone=*)
       TARGET_MILESTONE="${1#--milestone=}"; shift
-      if [[ ! "$TARGET_MILESTONE" =~ ^M[0-9]+$ ]]; then
-        echo "find-active-milestone.sh: --milestone expects M### form, got '$TARGET_MILESTONE'" >&2
+      if [[ ! "$TARGET_MILESTONE" =~ ^M[A-Za-z0-9-]+$ ]]; then
+        echo "find-active-milestone.sh: --milestone expects M-prefixed identifier (e.g. M001, M2a-min, M-Reporter-scope), got '$TARGET_MILESTONE'" >&2
         exit 2
       fi
       ;;
@@ -116,10 +116,16 @@ fi
 
 found_eligible=false
 
-# Process milestones in sorted order
-for milestone_dir in "$MILESTONES_DIR"/M[0-9]*; do
+# Process milestones in sorted order. Iterator includes both numeric (M001)
+# and non-numeric (M2a-min, M-Reporter-scope) forms. `M[0-9]*` previously
+# silently skipped M-prefixed-hyphen milestones like M-Spike-A.
+for milestone_dir in "$MILESTONES_DIR"/M*; do
   [[ -d "$milestone_dir" ]] || continue
   mid=$(basename "$milestone_dir")
+  # Skip sentinel directories (e.g. _imported-context). Milestones never
+  # start with an underscore — the M* glob already filters them, but a
+  # belt-and-suspenders skip keeps the loop tolerant of future renames.
+  [[ "$mid" == _* ]] && continue
 
   # Derive state
   state=$(bash "$DERIVE_PHASE" "$milestone_dir" 2>/dev/null) || state="error"

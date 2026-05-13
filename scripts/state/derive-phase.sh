@@ -65,28 +65,18 @@ if [[ ! -d "$MILESTONE_DIR" ]]; then
   exit 0
 fi
 
-# Extract milestone ID from files in the directory (look for M###-*.md pattern).
-# Falls back to directory basename if no matching files found.
+# Trust directory basename as the milestone ID. Naming convention accepts
+# both numeric (M001) and non-numeric (M2a-min, M-Reporter-scope, M-Spike-A,
+# M-Spike-BG001, M2b-min, M2a-polish, M2b-polish) forms. Earlier code parsed
+# `^M[0-9]+` from a file glob, which captured "M2" from "M2a-min-CONTEXT.md"
+# and mis-pointed downstream <ID>-CONTEXT.md / <ID>-ROADMAP.md lookups.
 MILESTONE_ID="$(basename "$MILESTONE_DIR")"
-detected_id=$(find "$MILESTONE_DIR" -maxdepth 1 -name 'M[0-9]*-*' -print 2>/dev/null \
-  | head -1 \
-  | xargs -I{} basename {} \
-  | grep -oE '^M[0-9]+' || true)
-if [[ -n "$detected_id" ]]; then
-  MILESTONE_ID="$detected_id"
-fi
 
-# If we couldn't detect a milestone ID from files, the directory is empty → pre-planning
-if [[ "$MILESTONE_ID" = "$(basename "$MILESTONE_DIR")" ]]; then
-  # No M###-*.md files found — check if the dir is truly empty of milestone artifacts
-  milestone_file_count=$(find "$MILESTONE_DIR" -maxdepth 1 -name 'M[0-9]*-*' 2>/dev/null | wc -l | tr -d ' ')
-  if [[ "$milestone_file_count" -eq 0 ]]; then
-    # Also check for phases/ dir or other artifacts
-    if [[ ! -d "$MILESTONE_DIR/phases" ]]; then
-      echo "pre-planning"
-      exit 0
-    fi
-  fi
+# Empty milestone directory (no <ID>-*.md files AND no phases/) → pre-planning
+milestone_file_count=$(find "$MILESTONE_DIR" -maxdepth 1 -name "${MILESTONE_ID}-*" 2>/dev/null | wc -l | tr -d ' ')
+if [[ "$milestone_file_count" -eq 0 && ! -d "$MILESTONE_DIR/phases" ]]; then
+  echo "pre-planning"
+  exit 0
 fi
 
 # --- Rule 2: Context draft with status: draft → discussing ---

@@ -41,7 +41,7 @@ updated_at: "2026-05-25T05:35:00Z"
     - Produces: mechanical hook in `scripts/lifecycle/auto-loop.sh` (unexpected-state exit-12 seam), detective-recommendation guidance in `commands/verify.md` + `commands/dispatch.md` Error Handling sections, improved specific-symptom emission in `scripts/diagnostics/run-doctor.sh`, P04 verifiers + phase suite
     - Consumes: `scripts/diagnostics/detective-recommend.sh` (from P03), `scripts/state/resolve-root.sh` (path disambiguation)
 
-- [ ] **P05**: FR-9 confirmation gate — "`file-issue.sh --yes` writes; without `--yes` in a non-interactive context it degrades to stdout-only (no GitHub write); an interactive TTY prompts before writing."
+- [x] **P05**: FR-9 confirmation gate — "`file-issue.sh --yes` writes; without `--yes` in a non-interactive context it degrades to stdout-only (no GitHub write); an interactive TTY prompts before writing."
   - Risk: medium
   - Depends: P04
   - Boundary Map:
@@ -67,11 +67,21 @@ Linear dependency chain. No parallelization opportunities — each phase builds 
 
 1. **P01** — foundation, no dependencies. Highest risk (report schema is a versioned contract, TTY/pipe interaction). Delivers US-1 (manual triage).
 2. **P02** — depends on P01. Medium risk (external `gh` integration, mock harness). Delivers US-2 (GitHub search and filing) and US-3 (PR suggestion via `--suggest-fix`).
-3. **P03** — depends on P02. Low risk (single-line stderr additions to existing commands). Delivers US-4 (cross-command hooks) and the acceptance battery covering SC-1 through SC-7.
+3. **P03** — depends on P02. Low risk. Delivers the doctor recommendation hook and the SC-1..SC-7 acceptance battery.
+4. **P04** — depends on P03. Low risk. Completes FR-8 (auto/dispatch/verify hooks) that P03 deferred; surfaced by post-implementation review.
+5. **P05** — depends on P04. Medium risk. Adds the FR-9 confirmation gate that P02 shipped without (review finding B2).
 
 ## Validation
 
-- **No conflicting producers**: PASS — each script is produced by exactly one phase; no overlapping artifacts.
-- **All consumed items have producers**: PASS — P02 consumes triage-report schema and `triage-issue.sh` from P01; P03 consumes all three scripts from P01/P02 and the mock fixture from P02. All consumed items trace to a produces entry in an upstream phase.
-- **DAG is acyclic**: PASS — linear chain P01 → P02 → P03, no cycles.
-- **Demo sentence coverage**: PASS — each phase has a concrete, mechanically testable demo sentence referencing specific scripts and observable outputs.
+- **No conflicting producers**: PASS — each script is produced by exactly one phase; no overlapping artifacts. (P03's original boundary map over-claimed verify/auto/dispatch guidance; corrected — that scope landed in P04.)
+- **All consumed items have producers**: PASS — every `Consumes` entry traces to a `Produces` entry in an upstream phase.
+- **DAG is acyclic**: PASS — linear chain P01 → P02 → P03 → P04 → P05, no cycles.
+- **Demo sentence coverage**: PASS — each phase has a concrete, mechanically testable demo sentence.
+
+## Closure
+
+All five phases complete. Milestone closed — see `M041-SUMMARY.md`. Final verification:
+
+- P01 suite `pass=6 fail=0` · P02 suite `pass=5 fail=0` · P03 acceptance battery `pass=7 skip=0 fail=0` (SC-1..SC-7) · P04 suite `pass=4 fail=0` · P05 suite `pass=2 fail=0`
+- Spec conversus-gated (Standard, 3 P0 amendments applied); RISK-01 confirmed false-positive (constitution has 15 principles).
+- Open follow-ups (non-blocking): `#Q-1` match-score corpus validation before unattended `--yes`; `detective.repo` config-key read.

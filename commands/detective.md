@@ -54,7 +54,18 @@ When steps 2-3 scripts are not available, detective operates in **local-only mod
 
 - Triage report to stdout (always).
 - Status messages to stderr: `DETECTIVE: commented on #<N>`, `DETECTIVE: opened #<N>`, `DETECTIVE: gh unavailable`, etc.
-- `unit_close` record appended to `.orchestrator/execution-log.jsonl`.
+- `unit_close` record appended to `.orchestrator/execution-log.jsonl` (see Observability).
+
+## Observability
+
+After a detective run completes (any terminal outcome — filed, commented, degraded, or declined), append a single `unit_close` record to `.orchestrator/execution-log.jsonl` so the run is visible to `orchestrator:cost` and `orchestrator:doctor` anomaly rollups (SC-7). Emit it with a single append — do NOT use `$(date ...)` substitution inside a compound command (AP-008 shape guard); compute the timestamp first if needed:
+
+```bash
+printf '{"type":"unit_close","command":"orchestrator:detective","outcome":"<filed|commented|degraded|declined>","issue_number":"<N or empty>","repo":"<owner/name>","gh_available":<true|false>,"timestamp":"%s","source":"runtime"}\n' \
+  "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> .orchestrator/execution-log.jsonl
+```
+
+The `outcome` field records which terminal path the run took: `filed` (new issue opened), `commented` (added to an existing issue), `degraded` (gh unavailable / API error → stdout-only), or `declined` (operator answered no at the confirmation gate, or non-interactive without `--yes`). This is best-effort — a failed append warns on stderr but never changes the run's exit code.
 
 ## Idempotency
 

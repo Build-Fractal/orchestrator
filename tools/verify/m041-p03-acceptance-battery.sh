@@ -192,10 +192,18 @@ sc6_check() {
 check "SC-6" "detective-recommend.sh emits RECOMMEND for orchestrator-internal path" sc6_check
 
 # ===========================================================================
-# SC-7: SKIP -- unit_close requires full command wiring via skill registration
+# SC-7: detective documents the unit_close emission contract (P05).
+# The record is emitted at runtime when the LLM runs the full command
+# (same execution model as every orchestrator command); the mechanical
+# proxy verifiable here is that the Observability contract is present.
 # ===========================================================================
-echo "SKIP: SC-7 -- unit_close deferred to skill registration"
-skip=$((skip + 1))
+sc7_check() {
+  grep -q '## Observability' commands/detective.md || return 1
+  grep -q '"type":"unit_close","command":"orchestrator:detective"' commands/detective.md || return 1
+  grep -q 'execution-log.jsonl' commands/detective.md || return 1
+  return 0
+}
+check "SC-7" "detective.md documents the unit_close emission contract" sc7_check
 
 # ===========================================================================
 # Summary

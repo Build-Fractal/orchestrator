@@ -185,7 +185,8 @@ Each of these maps to a journey row in [Pick your path](#pick-your-path) — the
 - **Cost observability** — `/orchestrator-cost` gives both predictive per-tier estimates (Quick / Standard / Full) before dispatch and retrospective rollups from the JSONL execution log after. Bash-only, zero LLM tokens — the cost view itself is free.
 - **Adaptive model routing** — Orchestrator auto-routes between Quick / Standard / Full pipelines per task and host capability. Small work doesn't pay big-work overhead; large work doesn't get under-resourced. Shadow-mode default with a programmatic flip-gate when the shadow corpus reaches the configured confidence threshold.
 - **Multi-agent deliberation** (sister-project [conversus](https://github.com/Build-Fractal/conversus-oss) integration) — `/orchestrator-conversus-gate` runs adversarial review of high-stakes artifacts in cooperative, winner-take-all, red-blue, or prisoner's-dilemma modes. Used internally for spec fidelity gates; available for any artifact you want pressure-tested. Conversus is an optional external dependency — the adapter degrades gracefully (emits `SKIPPED:` and proceeds) when the binary isn't on PATH, so this surface is "use it if installed, no-op if not."
-- **Diagnostic doctor** — `/orchestrator-doctor` runs 12+ checks: orphaned artifacts, stale knowledge, scope drift, cost spikes, permissions drift, plan-shape audits, constitution consistency. Emits structured `DOCTOR:<NAME> status=ok|warn|fail` lines for human and machine consumers.
+- **Diagnostic doctor** — `/orchestrator-doctor` runs 12+ checks: orphaned artifacts, stale knowledge, scope drift, cost spikes, permissions drift, plan-shape audits, constitution consistency. Emits structured `DOCTOR:<NAME> status=ok|warn|fail` lines for human and machine consumers. When checks fail, doctor recommends `/orchestrator-detective` for structured triage.
+- **Issue triage & GitHub filing** — `/orchestrator-detective` triages orchestrator-internal issues (not user-project bugs). Captures a structured report with diagnostic context, searches `Build-Fractal/orchestrator` GitHub Issues for matches, and files or comments with the triage report — or degrades gracefully to stdout when `gh` isn't available. Distinct from `diagnose` (user-project debugging loop) and `doctor` (health symptoms).
 - **Crash recovery built-in** — Every state derives from disk; nothing in memory. Kill the process, reboot, lose your terminal — `/orchestrator-resume` reads disk state and picks up at the exact next undone step.
 
 ---
@@ -206,7 +207,7 @@ Each of these maps to a journey row in [Pick your path](#pick-your-path) — the
 
 **GitHub integration** — `github-init` (project state → Issues / Milestones / Projects v2) · `github-sync` (reconcile state with GitHub) · `github-status` (sidecar state report) · `comments` (GitHub comments → workflow classifier with human-gated apply)
 
-**Operations** — `status` · `where` (visual milestone → phase → task tree) · `context` (runtime profile) · `resume` (crash recovery) · `doctor` (health diagnostics) · `cost` (predictive + retrospective cost) · `diagnose` (systematic debugging loop) · `update` (refresh runtime)
+**Operations** — `status` · `where` (visual milestone → phase → task tree) · `context` (runtime profile) · `resume` (crash recovery) · `doctor` (health diagnostics) · `detective` (triage orchestrator-internal issues → GitHub) · `cost` (predictive + retrospective cost) · `diagnose` (systematic debugging loop) · `update` (refresh runtime)
 
 **Advanced** — `conversus-gate` (multi-agent adversarial deliberation gate) · `customblock-draft` (CLAUDE.md custom block authoring)
 

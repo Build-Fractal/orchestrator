@@ -1,0 +1,20 @@
+[
+  {
+    "number": 42,
+    "title": "[detective] scaffold.sh exits 1 when milestone dir exists",
+    "body": "## Symptom\n\nscaffold.sh exits non-zero when the milestone directory already exists.\n\n## Environment\n\n- Orchestrator version: 0.9.2\n- Platform: Darwin",
+    "labels": [{"name": "detective-triage"}, {"name": "bug"}]
+  },
+  {
+    "number": 15,
+    "title": "derive-phase.sh returns unexpected state",
+    "body": "The state machine returns an impossible state after interrupted auto run. derive-phase returns foo.",
+    "labels": [{"name": "bug"}]
+  },
+  {
+    "number": 7,
+    "title": "Feature request: add --verbose flag to status command",
+    "body": "Would be nice to have more detail in orchestrator:status output.",
+    "labels": [{"name": "enhancement"}]
+  }
+]

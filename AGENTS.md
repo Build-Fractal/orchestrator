@@ -1,3 +1,3 @@
 # >>> orchestrator:recent-changes >>>
-- 039-packaging-distribution: M035 packaging and distribution: the launch-readiness milestone. Two layers sequ
+- 041-detective: orchestrator:detective — a new command that triages issues with the orchestrator
 # <<< orchestrator:recent-changes <<<

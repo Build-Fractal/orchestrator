@@ -241,6 +241,12 @@ else
   echo ""
 fi
 
+# --- Detective recommendation hook (M041/FR-8) ---
+_detective_recommend="$SCRIPT_DIR/detective-recommend.sh"
+if [ -f "$_detective_recommend" ] && [ "$checks_passed" -lt "$checks_total" ]; then
+  bash "$_detective_recommend" --symptom "doctor found $((checks_total - checks_passed)) failing checks — run detective for triage" >&2
+fi
+
 # --- Summary ---
 if [ "$checks_passed" -eq "$checks_total" ]; then
   status_label="HEALTHY"

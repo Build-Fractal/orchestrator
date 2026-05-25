@@ -130,6 +130,7 @@ fi
 checks_passed=0
 checks_total=0
 advisory_warnings=0
+failed_check_names=""
 
 # --- Runner function ---
 run_check() {
@@ -187,6 +188,8 @@ run_check() {
     checks_total=$((checks_total + 1))
     if [ "$passed" -eq 1 ]; then
       checks_passed=$((checks_passed + 1))
+    else
+      failed_check_names="${failed_check_names}${failed_check_names:+, }${name}"
     fi
   fi
 
@@ -244,7 +247,7 @@ fi
 # --- Detective recommendation hook (M041/FR-8) ---
 _detective_recommend="$SCRIPT_DIR/detective-recommend.sh"
 if [ -f "$_detective_recommend" ] && [ "$checks_passed" -lt "$checks_total" ]; then
-  bash "$_detective_recommend" --symptom "doctor found $((checks_total - checks_passed)) failing checks — run detective for triage" >&2
+  bash "$_detective_recommend" --symptom "doctor checks failed: ${failed_check_names}" >&2
 fi
 
 # --- Summary ---

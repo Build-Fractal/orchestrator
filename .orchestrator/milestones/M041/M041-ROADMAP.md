@@ -12,26 +12,34 @@ updated_at: "2026-05-25T05:35:00Z"
 
 ## Phases
 
-- [ ] **P01**: Core triage engine + command definition — "Running `triage-issue.sh --symptom 'test' --capture-log` exits 0 and prints a structured report with all six body sections; `commands/detective.md` passes shape lint."
+- [x] **P01**: Core triage engine + command definition — "Running `triage-issue.sh --symptom 'test' --capture-log` exits 0 and prints a structured report with all six body sections; `commands/detective.md` passes shape lint."
   - Risk: high
   - Depends: none
   - Boundary Map:
     - Produces: `scripts/diagnostics/triage-issue.sh`, `commands/detective.md`, triage-report schema (6-section Markdown with YAML frontmatter)
     - Consumes: `references/file-formats.md` (execution-log JSONL schema), `scripts/state/resolve-root.sh` (orchestrator root resolution), `templates/` (command-doc structure conventions)
 
-- [ ] **P02**: GitHub integration + mock harness — "Running `search-issues.sh` against the mock fixture returns valid JSON with match scores; `file-issue.sh` writes the correct request to the mock; invoking detective with `gh` absent from PATH prints the report to stdout with a degradation diagnostic."
+- [x] **P02**: GitHub integration + mock harness — "Running `search-issues.sh` against the mock fixture returns valid JSON with match scores; `file-issue.sh` writes the correct request to the mock; invoking detective with `gh` absent from PATH prints the report to stdout with a degradation diagnostic."
   - Risk: medium
   - Depends: P01
   - Boundary Map:
     - Produces: `scripts/diagnostics/search-issues.sh`, `scripts/diagnostics/file-issue.sh`, `tests/fixtures/detective/gh-mock/` (mock fixture directory with `issue-list-response.json` and `issue-create-response.json`), `GH_MOCK_DIR` env-var convention
     - Consumes: triage-report schema (from P01), `scripts/diagnostics/triage-issue.sh` (from P01)
 
-- [ ] **P03**: Cross-command hooks + acceptance battery — "Running `run-doctor.sh` against a fixture with an orchestrator-side orphan emits `RECOMMEND: orchestrator:detective` on stderr; the full acceptance battery (SC-1 through SC-7) passes."
+- [x] **P03**: Doctor hook + acceptance battery — "Running `run-doctor.sh` with failing checks emits `RECOMMEND: orchestrator:detective` on stderr; the full acceptance battery (SC-1 through SC-7) passes."
   - Risk: low
   - Depends: P02
   - Boundary Map:
-    - Produces: recommendation hook in `scripts/diagnostics/run-doctor.sh`, recommendation hook guidance in `commands/verify.md`, recommendation hook guidance in `commands/auto.md`, recommendation hook guidance in `commands/dispatch.md`, acceptance battery at `tests/m041-acceptance/`
+    - Produces: recommendation hook in `scripts/diagnostics/run-doctor.sh`, `scripts/diagnostics/detective-recommend.sh` (shared helper), acceptance battery at `tools/verify/m041-p03-acceptance-battery.sh`
     - Consumes: `scripts/diagnostics/triage-issue.sh` (from P01), `scripts/diagnostics/search-issues.sh` (from P02), `scripts/diagnostics/file-issue.sh` (from P02), `tests/fixtures/detective/gh-mock/` (from P02), `scripts/state/resolve-root.sh` (for `$ORCHESTRATOR_ROOT` prefix comparison in FR-8)
+  - Note: P03 shipped only the doctor hook. FR-8's verify/auto/dispatch hooks were deferred to P04 (gap surfaced by post-implementation code review). P03's original boundary map over-claimed verify/auto/dispatch guidance — corrected here.
+
+- [ ] **P04**: Complete FR-8 — auto/dispatch/verify recommendation hooks — "Feeding `auto-loop.sh` an unexpected state emits `RECOMMEND: orchestrator:detective` on stderr; `commands/verify.md` and `commands/dispatch.md` carry detective-recommendation guidance in their Error Handling sections; doctor's hook names the specific failing checks."
+  - Risk: low
+  - Depends: P03
+  - Boundary Map:
+    - Produces: mechanical hook in `scripts/lifecycle/auto-loop.sh` (unexpected-state exit-12 seam), detective-recommendation guidance in `commands/verify.md` + `commands/dispatch.md` Error Handling sections, improved specific-symptom emission in `scripts/diagnostics/run-doctor.sh`, P04 verifiers + phase suite
+    - Consumes: `scripts/diagnostics/detective-recommend.sh` (from P03), `scripts/state/resolve-root.sh` (path disambiguation)
 
 ## Cross-Cutting Concerns
 
@@ -42,7 +50,7 @@ updated_at: "2026-05-25T05:35:00Z"
 ## Dependency Graph
 
 ```
-P01 → P02 → P03
+P01 → P02 → P03 → P04
 ```
 
 Linear dependency chain. No parallelization opportunities — each phase builds on the prior phase's artifacts.

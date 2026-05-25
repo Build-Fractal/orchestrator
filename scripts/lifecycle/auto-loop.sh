@@ -533,6 +533,12 @@ case "$state" in
     ;;
   *)
     echo "auto-loop.sh: unexpected state '$state' from derive-phase.sh" >&2
+    # Detective recommendation hook (M041/FR-8): an unrecognized state is an
+    # orchestrator-internal inconsistency — derive-phase.sh should never emit one.
+    _detective_recommend="$SCRIPT_DIR/../diagnostics/detective-recommend.sh"
+    if [ -f "$_detective_recommend" ]; then
+      bash "$_detective_recommend" --symptom "auto-loop received unexpected state '$state' from derive-phase.sh" >&2
+    fi
     exit 12
     ;;
 esac

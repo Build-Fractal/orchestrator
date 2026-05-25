@@ -172,6 +172,18 @@ If the target task already has a `<T##>-SUMMARY.md` file, the dispatch is skippe
 - Context budget exceeded (payload > 20% of total artifacts) → warn to stderr but continue (unless budget_enforcement=strict)
 - Dispatch failure (subagent crashes, timeout) → record failure in execution log, do NOT retry automatically
 
+### Detective recommendation hook (M041 / FR-8)
+
+When dispatch fails because of an **orchestrator-internal** error — `build-context.sh` exits non-zero with an internal/config error, the payload assembler malfunctions, or a backend adapter under `scripts/dispatch/` throws — recommend the detective triage workflow:
+
+```bash
+bash scripts/diagnostics/detective-recommend.sh \
+  --symptom "dispatch: <script-path> errored — <error summary>" \
+  --path "<script-path>"
+```
+
+Do **not** fire this hook for user-fixable preconditions (missing task plan because the user hasn't run `plan-phase` yet, missing milestone because `evaluate` hasn't run). Those are sequencing errors the user resolves themselves, not orchestrator bugs (NG-1). The `--path` argument keeps the recommendation scoped to orchestrator-internal paths.
+
 ## Claude Code Appendix
 
 When running in Claude Code (detected via `CLAUDE_CODE` environment variable by `detect-capabilities.sh`), see `templates/claude-code-appendix.md` for platform-specific dispatch instructions including:

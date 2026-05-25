@@ -159,6 +159,18 @@ Write the verification report using the template at `templates/verification-repo
 - If the milestone directory doesn't exist, exit with error: *"Milestone directory not found. Run evaluate first."*
 - If state derivation shows `complete`, report: *"Phase already verified and complete. No action needed."*
 
+### Detective recommendation hook (M041 / FR-8)
+
+When verification fails because of an **orchestrator-internal** problem — a verifier script under `scripts/verify/` or `tools/verify/` is missing, unreadable, or throws an interpreter error (as opposed to a user's code legitimately failing a check) — recommend the detective triage workflow:
+
+```bash
+bash scripts/diagnostics/detective-recommend.sh \
+  --symptom "verify: <verifier-path> failed to execute — <error summary>" \
+  --path "<verifier-path>"
+```
+
+The `--path` argument lets `detective-recommend.sh` confirm the path is orchestrator-internal (under `$ORCHESTRATOR_ROOT`) before emitting; it stays silent for user-project paths. Do **not** fire this hook when a verifier runs correctly and reports a genuine must-have failure in the user's code — that is `orchestrator:diagnose` territory (NG-1), not detective's.
+
 ## Gotchas
 
 - **Tier 1 failures don't short-circuit other tiers**: The full verification report is always produced regardless of individual tier results. This ensures all issues are surfaced in a single run.

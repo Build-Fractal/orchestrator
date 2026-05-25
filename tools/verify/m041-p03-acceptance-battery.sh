@@ -115,7 +115,7 @@ sc3_check() {
 
   GH_MOCK_DIR="$mockdir" \
     bash scripts/diagnostics/file-issue.sh \
-      --triage-report "$report" --repo Build-Fractal/orchestrator >/dev/null 2>/dev/null
+      --triage-report "$report" --repo Build-Fractal/orchestrator --yes >/dev/null 2>/dev/null
   local rc=$?
   if [ "$rc" -ne 0 ]; then
     echo "  file-issue.sh exited $rc" >&2

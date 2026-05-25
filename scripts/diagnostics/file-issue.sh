@@ -8,9 +8,14 @@
 #   file-issue.sh --triage-report report.md --title "custom" --labels "bug"
 #
 # Args: --triage-report <path> (required), --repo <owner/name>,
-#       --comment-on <N>, --title <text>, --labels <csv>, -h/--help
+#       --comment-on <N>, --title <text>, --labels <csv>, --yes, -h/--help
 #
-# Exit: 0 on success (including degradation), 1 on usage error.
+# FR-9 confirmation gate: before any GitHub write, the operator confirms.
+#   --yes               skip confirmation, proceed.
+#   interactive TTY     prompt [y/N] before writing.
+#   non-TTY, no --yes   degrade to stdout-only (no write) — prevents deadlock.
+#
+# Exit: 0 on success (including degradation / decline), 1 on usage error.
 # Bash 3.2 compatible (CON-3). No writes to .orchestrator/ (CON-2).
 set -uo pipefail
 
@@ -19,6 +24,7 @@ repo="Build-Fractal/orchestrator"
 comment_on=""
 title=""
 labels="detective-triage"
+assume_yes=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -27,7 +33,8 @@ while [ $# -gt 0 ]; do
     --comment-on)    comment_on="$2"; shift 2 ;;
     --title)         title="$2"; shift 2 ;;
     --labels)        labels="$2"; shift 2 ;;
-    -h|--help)       sed -n '2,18p' "$0"; exit 0 ;;
+    --yes)           assume_yes=1; shift ;;
+    -h|--help)       sed -n '2,20p' "$0"; exit 0 ;;
     *)               echo "ERROR: unknown argument '$1'" >&2; exit 1 ;;
   esac
 done
@@ -61,6 +68,37 @@ json_escape_body() {
 json_escape_str() {
   printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
 }
+
+# --- FR-9 confirmation gate ---
+# Runs before any write (mock or live). Proceeds on --yes; prompts on an
+# interactive TTY; degrades to stdout-only when non-interactive without --yes
+# (prevents deadlock when FR-10 piped input has consumed stdin).
+confirm_or_degrade() {
+  if [ "$assume_yes" = "1" ]; then
+    return 0
+  fi
+  if [ -t 0 ]; then
+    printf 'DETECTIVE: about to %s\n' "$1" >&2
+    printf 'Proceed? [y/N] ' >&2
+    read -r _reply
+    case "$_reply" in
+      y|Y|yes|YES) return 0 ;;
+      *)
+        echo "DETECTIVE: cancelled by operator -- report follows for manual filing" >&2
+        cat "$triage_report"
+        exit 0 ;;
+    esac
+  fi
+  echo "DETECTIVE: non-interactive without --yes -- report follows for manual filing" >&2
+  cat "$triage_report"
+  exit 0
+}
+
+if [ -z "$comment_on" ]; then
+  confirm_or_degrade "create a new issue in ${repo} titled \"${title}\""
+else
+  confirm_or_degrade "comment on issue #${comment_on} in ${repo}"
+fi
 
 # --- Mock path: GH_MOCK_DIR set and non-empty ---
 if [ -n "${GH_MOCK_DIR:-}" ]; then

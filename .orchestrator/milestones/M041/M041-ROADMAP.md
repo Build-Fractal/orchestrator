@@ -34,12 +34,20 @@ updated_at: "2026-05-25T05:35:00Z"
     - Consumes: `scripts/diagnostics/triage-issue.sh` (from P01), `scripts/diagnostics/search-issues.sh` (from P02), `scripts/diagnostics/file-issue.sh` (from P02), `tests/fixtures/detective/gh-mock/` (from P02), `scripts/state/resolve-root.sh` (for `$ORCHESTRATOR_ROOT` prefix comparison in FR-8)
   - Note: P03 shipped only the doctor hook. FR-8's verify/auto/dispatch hooks were deferred to P04 (gap surfaced by post-implementation code review). P03's original boundary map over-claimed verify/auto/dispatch guidance — corrected here.
 
-- [ ] **P04**: Complete FR-8 — auto/dispatch/verify recommendation hooks — "Feeding `auto-loop.sh` an unexpected state emits `RECOMMEND: orchestrator:detective` on stderr; `commands/verify.md` and `commands/dispatch.md` carry detective-recommendation guidance in their Error Handling sections; doctor's hook names the specific failing checks."
+- [x] **P04**: Complete FR-8 — auto/dispatch/verify recommendation hooks — "Feeding `auto-loop.sh` an unexpected state emits `RECOMMEND: orchestrator:detective` on stderr; `commands/verify.md` and `commands/dispatch.md` carry detective-recommendation guidance in their Error Handling sections; doctor's hook names the specific failing checks."
   - Risk: low
   - Depends: P03
   - Boundary Map:
     - Produces: mechanical hook in `scripts/lifecycle/auto-loop.sh` (unexpected-state exit-12 seam), detective-recommendation guidance in `commands/verify.md` + `commands/dispatch.md` Error Handling sections, improved specific-symptom emission in `scripts/diagnostics/run-doctor.sh`, P04 verifiers + phase suite
     - Consumes: `scripts/diagnostics/detective-recommend.sh` (from P03), `scripts/state/resolve-root.sh` (path disambiguation)
+
+- [ ] **P05**: FR-9 confirmation gate — "`file-issue.sh --yes` writes; without `--yes` in a non-interactive context it degrades to stdout-only (no GitHub write); an interactive TTY prompts before writing."
+  - Risk: medium
+  - Depends: P04
+  - Boundary Map:
+    - Produces: confirmation gate in `scripts/diagnostics/file-issue.sh` (`--yes` flag + TTY-detection + prompt/degrade), P05 gate verifiers + phase suite, `--yes` added to the three write-path verifiers (P02 mock/comment + P03 SC-3)
+    - Consumes: `commands/detective.md` (already documents `--yes` + TTY rule — FR-9 contract), triage-report file (from P01)
+  - Note: FR-9 was specced for P02 but the scripts shipped without it (review finding B2). The gate sits before BOTH the mock and live write branches so the mock faithfully simulates the gated real flow — hence the write-path tests must opt in with `--yes`.
 
 ## Cross-Cutting Concerns
 
@@ -50,7 +58,7 @@ updated_at: "2026-05-25T05:35:00Z"
 ## Dependency Graph
 
 ```
-P01 → P02 → P03 → P04
+P01 → P02 → P03 → P04 → P05
 ```
 
 Linear dependency chain. No parallelization opportunities — each phase builds on the prior phase's artifacts.

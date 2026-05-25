@@ -17,7 +17,7 @@ bash "$PROJECT_ROOT/scripts/diagnostics/triage-issue.sh" \
 export GH_MOCK_DIR="$tmpdir"
 
 bash "$PROJECT_ROOT/scripts/diagnostics/file-issue.sh" \
-  --triage-report "$tmpdir/report.md" --comment-on 42 2>/dev/null
+  --triage-report "$tmpdir/report.md" --comment-on 42 --yes 2>/dev/null
 rc=$?
 
 if [ "$rc" -ne 0 ]; then

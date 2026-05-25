@@ -128,11 +128,11 @@ The plan demonstrates a solid understanding of APM's deployment model, particula
 
 ## Referenced Documentation
 
-- `/Users/business-daddy/code/payer-index-mono/apm/docs/src/content/docs/introduction/key-concepts.md` — APM primitives (agents, instructions, skills, context, hooks), context linking, constitution injection
-- `/Users/business-daddy/code/payer-index-mono/apm/docs/src/content/docs/reference/manifest-schema.md` — `apm.yml` schema (name, version, type, target, scripts, dependencies, compilation), lockfile specification
-- `/Users/business-daddy/code/payer-index-mono/apm/docs/src/content/docs/guides/skills.md` — SKILL.md format, skill integration flow, package type detection, sub-skill promotion
-- `/Users/business-daddy/code/payer-index-mono/apm/docs/src/content/docs/guides/compilation.md` — Context optimization engine, compilation targets, constitution injection, directory exclusion, multi-agent output
-- `/Users/business-daddy/code/payer-index-mono/spec-kit-orc/specs/001-orchestrator/plan.md` — Implementation plan (project structure, architecture decisions, disputes)
-- `/Users/business-daddy/code/payer-index-mono/spec-kit-orc/specs/001-orchestrator/data-model.md` — Entity model, state machine, file format specifications
-- `/Users/business-daddy/code/payer-index-mono/spec-kit-orc/specs/001-orchestrator/quickstart.md` — Developer getting-started guide, installation paths
-- `/Users/business-daddy/code/payer-index-mono/spec-kit-orc/specs/001-orchestrator/research.md` — Research decisions R-001 through R-010
+- `<redacted-monorepo>/apm/docs/src/content/docs/introduction/key-concepts.md` — APM primitives (agents, instructions, skills, context, hooks), context linking, constitution injection
+- `<redacted-monorepo>/apm/docs/src/content/docs/reference/manifest-schema.md` — `apm.yml` schema (name, version, type, target, scripts, dependencies, compilation), lockfile specification
+- `<redacted-monorepo>/apm/docs/src/content/docs/guides/skills.md` — SKILL.md format, skill integration flow, package type detection, sub-skill promotion
+- `<redacted-monorepo>/apm/docs/src/content/docs/guides/compilation.md` — Context optimization engine, compilation targets, constitution injection, directory exclusion, multi-agent output
+- `<redacted-monorepo>/spec-kit-orc/specs/001-orchestrator/plan.md` — Implementation plan (project structure, architecture decisions, disputes)
+- `<redacted-monorepo>/spec-kit-orc/specs/001-orchestrator/data-model.md` — Entity model, state machine, file format specifications
+- `<redacted-monorepo>/spec-kit-orc/specs/001-orchestrator/quickstart.md` — Developer getting-started guide, installation paths
+- `<redacted-monorepo>/spec-kit-orc/specs/001-orchestrator/research.md` — Research decisions R-001 through R-010

@@ -90,13 +90,13 @@ The speckit-orchestrator plan demonstrates strong alignment with spec-kit's exte
 
 | Document | Location | Relevance |
 |----------|----------|-----------|
-| Extension API Reference | `/Users/business-daddy/code/payer-index-mono/spec-kit/extensions/EXTENSION-API-REFERENCE.md` | Manifest schema, hook events, config layers, file system layout |
-| Extension Development Guide | `/Users/business-daddy/code/payer-index-mono/spec-kit/extensions/EXTENSION-DEVELOPMENT-GUIDE.md` | Command format, scripts frontmatter, handoffs, config loading, .extensionignore |
-| RFC Extension System | `/Users/business-daddy/code/payer-index-mono/spec-kit/extensions/RFC-EXTENSION-SYSTEM.md` | Hook registration, execution model, design principles |
-| Template: tasks.md | `/Users/business-daddy/code/payer-index-mono/spec-kit/templates/commands/tasks.md` | Hook checking implementation, before_tasks/after_tasks patterns |
-| Template: implement.md | `/Users/business-daddy/code/payer-index-mono/spec-kit/templates/commands/implement.md` | Hook checking, checklist verification, before_implement/after_implement |
-| Template: plan.md | `/Users/business-daddy/code/payer-index-mono/spec-kit/templates/commands/plan.md` | Handoffs frontmatter, agent_scripts, {SCRIPT} placeholder |
-| Template extension.yml | `/Users/business-daddy/code/payer-index-mono/spec-kit/extensions/template/extension.yml` | Reference extension manifest with all fields |
-| Selftest extension.yml | `/Users/business-daddy/code/payer-index-mono/spec-kit/extensions/selftest/extension.yml` | Minimal real extension example |
-| Template command example.md | `/Users/business-daddy/code/payer-index-mono/spec-kit/extensions/template/commands/example.md` | Command file format with $ARGUMENTS, frontmatter, steps |
-| spec-kit README | `/Users/business-daddy/code/payer-index-mono/spec-kit/README.md` | Core workflow, extension vs preset distinction, template resolution stack |
+| Extension API Reference | `<redacted-monorepo>/spec-kit/extensions/EXTENSION-API-REFERENCE.md` | Manifest schema, hook events, config layers, file system layout |
+| Extension Development Guide | `<redacted-monorepo>/spec-kit/extensions/EXTENSION-DEVELOPMENT-GUIDE.md` | Command format, scripts frontmatter, handoffs, config loading, .extensionignore |
+| RFC Extension System | `<redacted-monorepo>/spec-kit/extensions/RFC-EXTENSION-SYSTEM.md` | Hook registration, execution model, design principles |
+| Template: tasks.md | `<redacted-monorepo>/spec-kit/templates/commands/tasks.md` | Hook checking implementation, before_tasks/after_tasks patterns |
+| Template: implement.md | `<redacted-monorepo>/spec-kit/templates/commands/implement.md` | Hook checking, checklist verification, before_implement/after_implement |
+| Template: plan.md | `<redacted-monorepo>/spec-kit/templates/commands/plan.md` | Handoffs frontmatter, agent_scripts, {SCRIPT} placeholder |
+| Template extension.yml | `<redacted-monorepo>/spec-kit/extensions/template/extension.yml` | Reference extension manifest with all fields |
+| Selftest extension.yml | `<redacted-monorepo>/spec-kit/extensions/selftest/extension.yml` | Minimal real extension example |
+| Template command example.md | `<redacted-monorepo>/spec-kit/extensions/template/commands/example.md` | Command file format with $ARGUMENTS, frontmatter, steps |
+| spec-kit README | `<redacted-monorepo>/spec-kit/README.md` | Core workflow, extension vs preset distinction, template resolution stack |

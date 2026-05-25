@@ -17,8 +17,8 @@ extension:
     Autonomous multi-phase orchestration for spec-kit's spec-driven development
     workflow. Adds milestone/phase/task hierarchy, state machine dispatch, crash
     recovery, and knowledge generation.
-  author: clariti-care
-  repository: https://github.com/clariti-care/orchestrator
+  author: Build-Fractal
+  repository: https://github.com/Build-Fractal/orchestrator
   license: MIT
 
 requires:

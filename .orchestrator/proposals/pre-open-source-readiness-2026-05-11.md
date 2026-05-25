@@ -17,11 +17,11 @@
 | 1 | M033 friendly-tester pass | Pending (out of scope) | No — separate deadline 2026-05-19 |
 | 2 | Three `scripts/verify/*.sh` PENDING stubs | NEEDS-OPERATOR-DECISION | No (constitution doesn't revert) — but the enforcement claim degrades the instant the first `v*` tag publishes if no extension is recorded |
 | 3 | Stale-version sweep | FIX-APPLIED (1 safe fix) + PASS (the rest) | No |
-| 4 | Inheritance URL reachability | NEEDS-OPERATOR-DECISION | **Yes** — both URLs are private GitHub repos; public visitors hit 404s |
+| 4 | Inheritance URL reachability | **RESOLVED 2026-05-24** | No — `private upstream repo` references removed; `conversus-oss` going public soon |
 | 5a | README + LICENSE — README | NEEDS-OPERATOR-DECISION (prose rewrites) | Judgment call — README L91 stale claim fix-applied; install-section ordering and stub-disclosure are prose decisions |
 | 5b | README + LICENSE — LICENSE | PASS | No — LICENSE present at repo root |
 
-**Verdict**: do not flip the repo public until Item 4 is resolved (the constitution's Tier 1 inheritance chain is otherwise unverifiable from a public visitor's vantage). Item 2 is operator's choice — neither path blocks the flip but the choice influences which constitutional claim degrades and when. Items 3, 5b are already cleared. Item 5a depends on operator taste for the install section and stub disclosure.
+**Verdict** _(updated 2026-05-24)_: Item 4 is resolved — no remaining public-flip blockers. Item 2 is operator's choice — neither path blocks the flip but the choice influences which constitutional claim degrades and when. Items 3, 5b are already cleared. Item 5a depends on operator taste for the install section and stub disclosure.
 
 ### Operator-decision pass — recorded 2026-05-11
 
@@ -30,7 +30,7 @@ Operator-decision pass run after the audit shipped (single session, all four ope
 | Item | Choice | Action this session |
 |---|---|---|
 | 2 — verifier stubs | **DEFERRED** pending Slater's input on CONFORMANCE shape | None |
-| 4 — inheritance URLs | **DEFERRED** pending Slater's input (clariti-care citations live in the same CONFORMANCE.md Slater merged; rewriting the inheritance chain is the same substantive work as Item 2) | None |
+| 4 — inheritance URLs | **RESOLVED 2026-05-24** — all `private upstream repo` references removed from CONFORMANCE.md; `Build-Fractal/conversus-oss` references retained (repo going public soon); LICENSE copyright updated to Build-Fractal; local filesystem paths (`<redacted-path>/...`) redacted across milestone payloads | Completed |
 | 5a.1 + 5a.2 — README prose | **DEFERRED** (operator: "this makes no sense to me, hold on it" — likely re-engages once Item 2/4 lands, since 5a.2 names the same three stubs) | None |
 | 5a.3 — AGENTS.md | **DEFERRED** (Leave as-is) | None |
 
@@ -113,7 +113,7 @@ NEEDS-OPERATOR-DECISION framing preserved — Slater's input feeds back into a f
 
 | URL | `gh repo view` visibility | Referenced from | Reachable to public visitor? |
 |---|---|---|---|
-| `https://github.com/clariti-care/payer-index-mono/blob/main/build-fractal/CONSTITUTION.md` | **PRIVATE** | `CONFORMANCE.md:7` (Tier 1 source); plus `CONFORMANCE.md:11, 40, 206, 208, 210` cite the same repo for build-fractal namespace governance + conversus suite-admission pathway | **NO** — 404 |
+| _(private upstream repo — references removed 2026-05-24)_ | **PRIVATE** | Formerly `CONFORMANCE.md:7` (Tier 1 source); plus `CONFORMANCE.md:11, 40, 206, 208, 210` — all removed 2026-05-24 | **NO** — 404 |
 | `https://github.com/Build-Fractal/conversus-oss` | **PRIVATE** | `README.md:28` + `README.md:189` (sister project promo); `CHANGELOG.md:126` + `docs/ingesting-arbitrary-specs.md:184,193` + `references/spec-management.md:148` + `references/github-integration.md:330` reference the path `~/Sites/conversus-oss` (local filesystem, not URL) | **NO** — 404 |
 
 **Implication**. A public visitor to the orchestrator repo cannot:
@@ -122,9 +122,9 @@ NEEDS-OPERATOR-DECISION framing preserved — Slater's input feeds back into a f
 
 **Three resolution paths.**
 
-**Option 4A — Host an in-repo snapshot.** Copy the relevant `build-fractal/CONSTITUTION.md` content (pinned to a specific upstream commit SHA) into `references/build-fractal-constitution-snapshot.md` (or similar), update CONFORMANCE.md's cross-references to point at the snapshot, add a one-line provenance note ("snapshot of `clariti-care/payer-index-mono@<sha>:build-fractal/CONSTITUTION.md`, will re-sync when upstream goes public"). Reverses cleanly when the upstream repos go public — replace snapshot with original URL. Estimated effort: 1–2 hours.
+**Option 4A — Host an in-repo snapshot.** Copy the relevant build-fractal constitution content (pinned to a specific upstream commit SHA) into `references/build-fractal-constitution-snapshot.md` (or similar), update CONFORMANCE.md's cross-references to point at the snapshot. Reverses cleanly when the upstream repos go public — replace snapshot with original URL. Estimated effort: 1–2 hours.
 
-**Option 4B — Wait until upstream goes public.** If `clariti-care/payer-index-mono` and `Build-Fractal/conversus-oss` are scheduled for public flips before orchestrator's, defer orchestrator's flip until both upstream repos are public. Zero work in this repo; high coordination cost across the three repos.
+**Option 4B — Wait until upstream goes public.** Defer orchestrator's flip until upstream repos are public. Zero work in this repo; high coordination cost across the three repos.
 
 **Option 4C — Hybrid: snapshot Tier 1 source, defer conversus-OSS link.** Do Option 4A for the load-bearing `CONFORMANCE.md` reference (the inheritance chain is the constitutional dependency); convert the README's `conversus-oss` link to plain text ("sister project; repo URL coming soon") until that repo flips. Lowest blast radius; ships orchestrator public without dragging two other repos along.
 
@@ -136,15 +136,21 @@ Operator decides. This audit makes no choice.
 
 **Additional reachability note (raised, not in the prompt)**: `README.md:80` instructs users to `git clone git@github.com:Build-Fractal/orchestrator.git`. That URL's reachability depends on whether `Build-Fractal/orchestrator` itself is public when orchestrator flips. The audit cannot verify that condition from inside this repo. Flag for operator confirmation.
 
-### Resolved 2026-05-11 — DEFERRED pending Slater's input (BLOCKER for public flip remains open)
+### Resolved 2026-05-11 — DEFERRED pending Slater's input
 
-Operator initial directive (paraphrased): keep `Build-Fractal/conversus-oss` (will go public); the `clariti-care/payer-index-mono` references should not be in the orchestrator repo at all. On clarification that the 7 clariti-care citations live in `CONFORMANCE.md` (L7, L11, L31, L40, L206, L208, L210) — the file Slater merged that declares the Tier 1 inheritance chain — operator chose to **hold Item 4 for Slater too**: removing those citations rewrites the inheritance chain, which is the same substantive CONFORMANCE work that Item 2 defers.
+_Original resolution (2026-05-11): deferred pending Slater's input on the inheritance-chain rewrite._
 
-Conversus-OSS-side scope (the `Build-Fractal/conversus-oss` link in `README.md:28` + `README.md:189` and the `~/Sites/conversus-oss` mentions in `CHANGELOG.md:126` + `docs/ingesting-arbitrary-specs.md:184,193` + `references/spec-management.md:148` + `references/github-integration.md:330`) likewise unchanged — operator stated conversus-oss will go public, so the URL becomes self-clearing when that flip lands; no in-repo edit needed.
+### Resolved 2026-05-24 — COMPLETE (public-flip blocker cleared)
 
-Public-flip blocker therefore **remains open**. Re-engage when Slater can co-decide the inheritance-chain rewrite (Option 4A/4B/4C path or a new shape that drops clariti-care references entirely without breaking the Tier 1 constitutional dependency).
+Operator decision (2026-05-24): remove all `private upstream repo` references entirely — repo will remain private permanently. `Build-Fractal/conversus-oss` references retained as-is — that repo is going public soon.
 
-NEEDS-OPERATOR-DECISION framing preserved.
+Changes made:
+- **CONFORMANCE.md**: all 7 `private upstream repo` URLs removed (L7, L11, L31, L40, L206, L208, L210). Tier 1 inheritance now references the build-fractal Universal Constitution by name, pointing to the local `.orchestrator/memory/constitution.md` as the incorporated form.
+- **LICENSE**: copyright updated from "Clariti Care" to "Build-Fractal".
+- **`specs/001-orchestrator/contracts/extension-manifest.md`**: `author` and `repository` updated to `Build-Fractal`.
+- **Milestone payloads + wiki staged copies**: all `<redacted-monorepo>/` local filesystem paths redacted to `<redacted-monorepo>/` across 17 files.
+
+Public-flip blocker is **cleared**. The remaining Item 2 (verifier stubs) and Item 5a (README prose) are independent judgment calls, not blockers.
 
 ---
 
@@ -296,5 +302,5 @@ All commits authored via `git commit -F <message-file>` per AP-008 shape-guard (
 - Constitution snapshot at audit time: v2.3.0, last amended 2026-05-11 (SHAs `859bfd8c` + `cf4e90ba` + `54c5e935`).
 - CONFORMANCE.md snapshot at audit time: § "Tier 2 XXII — PENDING/ACTIVE verifier-stub cap" comprehensive (L95–128); all three stubs at status=PENDING.
 - M035 closure snapshot: 2026-05-09; `validate-milestone.sh M035` reports 185/185 PASS per CLAUDE.md "Project Status" rollup.
-- `gh repo view` results that establish Item 4: `clariti-care/payer-index-mono` visibility=PRIVATE; `Build-Fractal/conversus-oss` visibility=PRIVATE (queried 2026-05-11 during this audit).
+- `gh repo view` results that establish Item 4: private upstream repo visibility=PRIVATE; `Build-Fractal/conversus-oss` visibility=PRIVATE (queried 2026-05-11 during this audit). Private upstream references removed 2026-05-24.
 - Audit author: Claude (Opus 4.7), invoked from `/Users/brettkellgren/Sites/orchestrator` on 2026-05-11.

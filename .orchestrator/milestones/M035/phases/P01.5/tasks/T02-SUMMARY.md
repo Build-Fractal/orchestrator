@@ -13,7 +13,7 @@ affects:
 key_files:
   - "specs/001-orchestrator/,CLAUDE.md,references/file-formats.md,tests/fixtures/roadmap-sample.md,tests/fixtures/state-complete/M001-ROADMAP.md,tests/fixtures/state-completing/M001-ROADMAP.md,tests/fixtures/state-executing/M001-ROADMAP.md,tests/fixtures/state-replanning/M001-ROADMAP.md,tests/fixtures/state-summarizing/M001-ROADMAP.md,tests/fixtures/state-validating/M001-ROADMAP.md,tests/fixtures/state-verifying/M001-ROADMAP.md,tools/verify/m035-p015-spec-dir-rename.sh"
 key_decisions:
-  - "D-RN-1 informs basename (specs/001-orchestrator matches @build-fractal/orchestrator unscoped name); allowlist-extension-beyond-payload-step-5-regex: P01.5-PLAN.md + T02/T03/T04 PLAN.md files preserved as narrative (analogous to explicitly-excluded P01.5-PLANNING-PAYLOAD.md, all document the rename itself); M015/P04/evidence/clean-clone-shape.txt preserved (archived path snapshot, rewrite would falsify audit); conversus-plan/apm/review.md absolute-path refs swept by substring (specs/... only, /Users/business-daddy/... prefix preserved as historical authoring-context record); verifier-runs-post-commit (git log --follow needs committed new path; pre-commit invocation returns empty)"
+  - "D-RN-1 informs basename (specs/001-orchestrator matches @build-fractal/orchestrator unscoped name); allowlist-extension-beyond-payload-step-5-regex: P01.5-PLAN.md + T02/T03/T04 PLAN.md files preserved as narrative (analogous to explicitly-excluded P01.5-PLANNING-PAYLOAD.md, all document the rename itself); M015/P04/evidence/clean-clone-shape.txt preserved (archived path snapshot, rewrite would falsify audit); conversus-plan/apm/review.md absolute-path refs swept by substring (specs/... only, <redacted-path>/... prefix preserved as historical authoring-context record); verifier-runs-post-commit (git log --follow needs committed new path; pre-commit invocation returns empty)"
 patterns_established:
   - "git-mv-then-substring-sweep-as-atomic-unit (rename + content references one commit, reversible via single git revert); pragmatic-allowlist-extension (when payload exclusion regex does not enumerate every narrative-rename-doc, dispatched task may extend allowlist with documented justification rather than mechanically sweeping rename-narrative files); verifier-post-commit-shape (git log --follow on the new path requires the rename to be committed first; verifier runs after the commit, not before); absolute-path-substring-sweep (when refs carry environment prefixes that document historical authoring context, sweep only the specs/<old>->specs/<new> substring and preserve prefix)"
 drill_down_paths:
@@ -47,7 +47,7 @@ summarizing,validating,verifying}/M001-ROADMAP.md` fixture roadmaps
 **Self-references rewritten inside the renamed dir:**
 `contracts/state-files.md` (2), `conversus-plan/conversus.yml` (5),
 `conversus-plan/apm/review.md` (4 absolute-path refs — the
-`/Users/business-daddy/...` prefix is preserved as a historical
+`<redacted-path>/...` prefix is preserved as a historical
 authoring-environment record, only the `specs/...` substring is
 swapped), `conversus-plan/gh-aw/review.md` (1),
 `conversus-spec/{apm,gh-aw,spec-kit}/review.md` + `revision.md` (1

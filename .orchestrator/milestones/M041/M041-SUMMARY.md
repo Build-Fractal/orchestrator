@@ -5,13 +5,13 @@ id: "M041"
 parent: "041-detective"
 milestone: "M041"
 provides:
-  - "orchestrator:detective command — triages orchestrator-internal issues (NOT user-project bugs), captures a structured 6-section triage report, searches Build-Fractal/orchestrator GitHub Issues for keyword matches, and files/comments with the report under an operator confirmation gate. Five phases: P01 core triage engine (triage-issue.sh + commands/detective.md), P02 GitHub integration + GH_MOCK_DIR offline harness (search-issues.sh + file-issue.sh + tests/fixtures/detective/gh-mock/), P03 doctor recommendation hook + acceptance battery (detective-recommend.sh + run-doctor.sh hook), P04 FR-8 completion (auto-loop.sh unexpected-state hook + verify.md/dispatch.md guidance + doctor specific-symptom emission), P05 FR-9 confirmation gate (--yes / interactive prompt / non-interactive degrade in file-issue.sh)."
+  - "orchestrator:detective command — triages orchestrator-internal issues (NOT user-project bugs), captures a structured 6-section triage report, searches a configurable GitHub repo for keyword matches, and files/comments with the report under an operator confirmation gate. Six phases: P01 core triage engine (triage-issue.sh + commands/detective.md), P02 GitHub integration + GH_MOCK_DIR offline harness (search-issues.sh + file-issue.sh + tests/fixtures/detective/gh-mock/), P03 doctor recommendation hook + acceptance battery (detective-recommend.sh + run-doctor.sh hook), P04 FR-8 completion (auto-loop.sh unexpected-state hook + verify.md/dispatch.md guidance + doctor specific-symptom emission), P05 FR-9 confirmation gate (--yes / interactive prompt / non-interactive degrade in file-issue.sh), P06 deferred follow-ups (detective.repo + detective.match_threshold config keys + meets_threshold field + detective-validate-threshold.sh #Q-1 corpus harness)."
 requires:
   - "scripts/state/resolve-root.sh (orchestrator root resolution + FR-8 path disambiguation); references/file-formats.md (execution-log JSONL schema); gh CLI >=2.0 (optional — graceful degradation when absent); existing commands doctor/verify/auto/dispatch (FR-8 recommendation-hook integration points)"
 affects:
   - "scripts/diagnostics/run-doctor.sh (recommendation hook on check failure); scripts/lifecycle/auto-loop.sh (recommendation hook at unexpected-state seam); commands/verify.md + commands/dispatch.md (Error Handling recommendation guidance); README.md + CLAUDE.md (command count 13→14, new built-in capability)"
 key_files:
-  - "commands/detective.md,scripts/diagnostics/triage-issue.sh,scripts/diagnostics/search-issues.sh,scripts/diagnostics/file-issue.sh,scripts/diagnostics/detective-recommend.sh,scripts/diagnostics/run-doctor.sh,scripts/lifecycle/auto-loop.sh,commands/verify.md,commands/dispatch.md,specs/041-detective/spec.md,tests/fixtures/detective/gh-mock/issue-list-response.json,tests/fixtures/detective/gh-mock/issue-create-response.json,tools/verify/m041-p01-phase-suite.sh,tools/verify/m041-p02-phase-suite.sh,tools/verify/m041-p03-phase-suite.sh,tools/verify/m041-p03-acceptance-battery.sh,tools/verify/m041-p04-phase-suite.sh,tools/verify/m041-p05-phase-suite.sh,.orchestrator/milestones/M041/M041-SUMMARY.md"
+  - "commands/detective.md,scripts/diagnostics/triage-issue.sh,scripts/diagnostics/search-issues.sh,scripts/diagnostics/file-issue.sh,scripts/diagnostics/detective-recommend.sh,scripts/diagnostics/detective-validate-threshold.sh,scripts/diagnostics/run-doctor.sh,scripts/lifecycle/auto-loop.sh,scripts/state/read-config.sh,templates/orchestrator-config-default.yml,commands/verify.md,commands/dispatch.md,specs/041-detective/spec.md,tests/fixtures/detective/gh-mock/issue-list-response.json,tests/fixtures/detective/gh-mock/issue-create-response.json,tools/verify/m041-p01-phase-suite.sh,tools/verify/m041-p02-phase-suite.sh,tools/verify/m041-p03-phase-suite.sh,tools/verify/m041-p03-acceptance-battery.sh,tools/verify/m041-p04-phase-suite.sh,tools/verify/m041-p05-phase-suite.sh,tools/verify/m041-p06-phase-suite.sh,.orchestrator/milestones/M041/M041-SUMMARY.md"
 key_decisions:
   - "FR-1,FR-2,FR-3,FR-4,FR-5,FR-6,FR-7,FR-8,FR-9,FR-10,SC-1,SC-2,SC-3,SC-4,SC-5,SC-6,SC-7,NG-1,NG-2,CON-1,CON-2,CON-3,CON-4,conversus-gate-3-P0-amendments(RISK-02/03/04),RISK-01-false-positive(constitution-has-15-principles-not-7),#Q-1-corpus-validation-advisory,#Q-5-partial-failure-sequence,#Q-6-ORCHESTRATOR_ROOT-prefix-disambiguation,review-B1-through-B8,depth-tracked-json-parser,glob-expansion-disabled,title-json-escape,empty-root-no-false-positive,FR-8-selective-firing-NG-1-discipline,doctor-specific-symptom-B5,FR-9-gate-wraps-mock-and-live"
 patterns_established:
@@ -22,7 +22,7 @@ duration: "single-session spec-to-close (5 phases, ~14 subagent dispatches + dir
 verification_result: "pass"
 completed_at: "2026-05-25T07:00:00Z"
 observability_surfaces:
-  - "tools/verify/m041-p01-phase-suite.sh pass=6 fail=0; m041-p02-phase-suite.sh pass=5 fail=0; m041-p03-acceptance-battery.sh BATTERY: pass=7 skip=0 fail=0 (SC-1..SC-7); m041-p04-phase-suite.sh pass=4 fail=0; m041-p05-phase-suite.sh pass=2 fail=0"
+  - "tools/verify/m041-p01-phase-suite.sh pass=6 fail=0; m041-p02-phase-suite.sh pass=5 fail=0; m041-p03-acceptance-battery.sh BATTERY: pass=7 skip=0 fail=0 (SC-1..SC-7); m041-p04-phase-suite.sh pass=4 fail=0; m041-p05-phase-suite.sh pass=2 fail=0; m041-p06-phase-suite.sh pass=3 fail=0; detective-validate-threshold.sh against live tracker: insufficient corpus (n=0 floor=5)"
 ---
 
 M041 (orchestrator:detective) adds a triage-to-GitHub pipeline for
@@ -40,7 +40,7 @@ is the user-project debugging loop, `orchestrator:doctor` reports health
 symptoms, and detective triages the framework's *own* issues and connects them
 to the tracker.
 
-**Five phases, all green.** Built single-session via the orchestrator's own
+**Six phases, all green.** Built single-session via the orchestrator's own
 workflow (evaluate → specify → roadmap → plan-phase → dispatch), then hardened
 through a high-effort code review whose findings drove four bug fixes (P01–P03
 follow-up) plus two scope-completion phases (P04 FR-8, P05 FR-9).
@@ -73,6 +73,14 @@ follow-up) plus two scope-completion phases (P04 FR-8, P05 FR-9).
   to stdout-only (deadlock-prevention path for consumed piped stdin). Gate
   wraps both mock and live writes; write-path tests opt in with `--yes`. Suite
   `pass=2 fail=0`.
+- **P06 (Deferred follow-ups — config + corpus harness)** — drains the two
+  non-blocking items noted at the original close. `detective.repo` +
+  `detective.match_threshold` config keys (`read-config.sh` + config-default
+  block); repo+threshold resolution (`--flag > config > default`) in
+  `search-issues.sh` and `file-issue.sh`; `meets_threshold` boolean per search
+  result; and `detective-validate-threshold.sh` — the #Q-1 corpus-validation
+  harness that computes the empirical false-positive rate (PASS<20% / WARN
+  20-40% / ESCALATE>40%) or reports `insufficient corpus`. Suite `pass=3 fail=0`.
 
 ## Review-Driven Hardening
 
@@ -107,12 +115,25 @@ at runtime when the LLM runs the full command; the mechanical proxy verified in
 the acceptance battery is that the contract is present and well-formed. SC-7
 moved from SKIP to PASS on that basis.
 
-## Deferred / out of scope
+## Follow-ups (resolved in P06)
 
-- **`#Q-1` match-score corpus validation** — the keyword-overlap threshold
-  must be validated against the real `Build-Fractal/orchestrator` issue corpus
-  before the `--yes` automated path is used unattended (conversus RISK-06
-  advisory, folded into the spec's Open Questions). Advisory, not blocking.
-- **`detective.repo` config-key read** — documented in `detective.md` as an
-  override source; the scripts honor `--repo` but do not yet read the config
-  key. Minor; deferrable until a fork actually needs it.
+Both items deferred at the original close were drained in P06:
+
+- **`#Q-1` match-score corpus validation** — RESOLVED via tooling.
+  `detective-validate-threshold.sh` measures the empirical false-positive rate
+  across distinct issue pairs and emits PASS/WARN/ESCALATE against the spec's
+  targets. The threshold is now configurable (`detective.match_threshold`,
+  default 3, **provisional/unvalidated**). The `Build-Fractal/orchestrator`
+  tracker is empty today (`n=0`), so the harness reports `insufficient corpus`
+  and the spec's `--yes` automation caution remains in force — but the
+  measurement is now a one-command operation the moment the tracker fills.
+- **`detective.repo` config-key read** — RESOLVED. `read-config.sh` carries
+  `detective.repo` (+ `detective.match_threshold`); `search-issues.sh` and
+  `file-issue.sh` resolve `--repo flag > detective.repo config > default`. A
+  fork sets `detective.repo` once in `.orchestrator/config.yml`.
+
+## Remaining (genuinely out of scope)
+
+- Empirical threshold calibration produces a number only once the upstream
+  tracker accumulates ≥ 5 issues — a data dependency, not a code gap. The
+  harness is the mechanism; running it for a real verdict awaits real issues.

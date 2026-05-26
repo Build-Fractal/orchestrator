@@ -31,10 +31,20 @@ echo "<symptom>" | orchestrator:detective [--suggest-fix] [--yes]
 Three-step flow:
 
 1. **Capture** — invoke `scripts/diagnostics/triage-issue.sh` with the operator's flags to generate the structured triage report (six sections: `## Symptom`, `## Environment`, `## Recent Execution Log`, `## Relevant Files`, `## Disk State`, `## Suggested Fix`).
-2. **Search** — invoke `scripts/diagnostics/search-issues.sh` to find matching open issues on the target repo. If the script is missing (ships in P02), skip to step 3 with the full triage report.
-3. **File/Comment** — invoke `scripts/diagnostics/file-issue.sh` to create a new issue or comment on an existing match. If the script is missing (ships in P02), print the triage report to stdout and exit 0.
+2. **Search** — invoke `scripts/diagnostics/search-issues.sh` to find matching open issues on the target repo. Each result carries a `match_score` (keyword-overlap count) and a `meets_threshold` boolean. If the script is missing (ships in P02), skip to step 3 with the full triage report.
+3. **File/Comment** — decide using `meets_threshold` on the top-scored result: if the top hit has `meets_threshold: true`, **comment** on that existing issue (`file-issue.sh --comment-on <N>`); otherwise **create** a new issue. If `search-issues.sh` is unavailable, default to create. If `file-issue.sh` is missing (ships in P02), print the triage report to stdout and exit 0.
 
 When steps 2-3 scripts are not available, detective operates in **local-only mode**: it generates and prints the triage report, which is still valuable for manual filing.
+
+### Match threshold (#Q-1)
+
+`meets_threshold` is `match_score >= detective.match_threshold` (default **3**, configurable in `.orchestrator/config.yml`; override per-run with `search-issues.sh --threshold N`). The default is **provisional and unvalidated** — orchestrator-domain vocabulary ("phase", "milestone", "dispatch", "verify") overlaps across unrelated issues, so a low threshold risks false-positive "matches" that comment on the wrong issue. Before relying on `--yes` in automated/unattended runs, calibrate against the real issue corpus:
+
+```bash
+bash scripts/diagnostics/detective-validate-threshold.sh
+```
+
+It reports the empirical false-positive rate and a verdict (`PASS` < 20% / `WARN` 20-40% / `ESCALATE` > 40%), or `insufficient corpus` when the tracker is too small to validate. Until it reports `PASS`, keep `--yes` for interactive use only.
 
 ## TTY Detection and Non-Interactive Mode
 
@@ -82,10 +92,12 @@ Running detective twice with the same symptom produces two separate timestamped 
 - Detective is for orchestrator-internal issues only. For user-project bugs, use `orchestrator:diagnose`.
 - The `## Suggested Fix` section is always present in the report; `--suggest-fix` controls the heuristic depth, not section presence. Without the flag, the section reads "No simple fix identified -- run with --suggest-fix for heuristic analysis."
 - Piped invocations consume stdin — confirmation gates require `--yes` in non-interactive contexts.
-- The `--repo` flag defaults to `Build-Fractal/orchestrator` (configurable via `detective.repo` in `.orchestrator/config.yml`).
+- Repo resolution is `--repo` flag > `detective.repo` config key > `Build-Fractal/orchestrator` default. Both `search-issues.sh` and `file-issue.sh` honor the config key; forks set `detective.repo` once in `.orchestrator/config.yml`.
 
 ## Referenced Scripts
 
 - `scripts/diagnostics/triage-issue.sh` — triage report engine (P01).
-- `scripts/diagnostics/search-issues.sh` — GitHub issue search (P02).
+- `scripts/diagnostics/search-issues.sh` — GitHub issue search + match scoring (P02; `--threshold` / `meets_threshold` added P06).
 - `scripts/diagnostics/file-issue.sh` — GitHub issue create/comment (P02).
+- `scripts/diagnostics/detective-validate-threshold.sh` — #Q-1 corpus validation for the match threshold (P06).
+- `scripts/diagnostics/detective-recommend.sh` — cross-command recommendation helper (P03).

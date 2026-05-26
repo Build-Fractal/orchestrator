@@ -20,7 +20,7 @@
 set -uo pipefail
 
 triage_report=""
-repo="Build-Fractal/orchestrator"
+repo=""
 comment_on=""
 title=""
 labels="detective-triage"
@@ -38,6 +38,13 @@ while [ $# -gt 0 ]; do
     *)               echo "ERROR: unknown argument '$1'" >&2; exit 1 ;;
   esac
 done
+
+# Resolve repo: explicit --repo flag > config (detective.repo) > default.
+if [ -z "$repo" ]; then
+  _fi_read_config="$(cd "$(dirname "$0")" && pwd)/../state/read-config.sh"
+  repo="$(bash "$_fi_read_config" detective.repo 2>/dev/null || echo "null")"
+  [ "$repo" = "null" ] || [ -z "$repo" ] && repo="Build-Fractal/orchestrator"
+fi
 
 # --- Validate required args ---
 if [ -z "$triage_report" ]; then

@@ -156,6 +156,20 @@ tier_a_plus_prompt_summary_lines: 8          # AD-20 — number of leading lines
 display_thresholds:
   compression_savings_pct: 5.0
 
+# M041 — orchestrator:detective (issue triage → GitHub).
+# repo            target repo for issue search/filing (overridable per-run
+#                 with --repo). Defaults to the orchestrator upstream; forks
+#                 set this to their own owner/name.
+# match_threshold keyword-overlap count at/above which a search hit counts as
+#                 a duplicate "match" (comment) rather than a new issue.
+#                 PROVISIONAL + UNVALIDATED (conversus RISK-06 / spec #Q-1):
+#                 calibrate against the real issue corpus via
+#                 scripts/diagnostics/detective-validate-threshold.sh before
+#                 using --yes in automated/unattended invocations.
+detective:
+  repo: Build-Fractal/orchestrator
+  match_threshold: 3
+
 # M037 — Wiki team-feedback-ready (FR-2).
 # The wiki: namespace is orchestrator-managed. Operator-authored values for
 # any keys NOT enumerated in the framework default are preserved by the

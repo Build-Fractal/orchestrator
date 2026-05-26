@@ -49,6 +49,14 @@ updated_at: "2026-05-25T05:35:00Z"
     - Consumes: `commands/detective.md` (already documents `--yes` + TTY rule — FR-9 contract), triage-report file (from P01)
   - Note: FR-9 was specced for P02 but the scripts shipped without it (review finding B2). The gate sits before BOTH the mock and live write branches so the mock faithfully simulates the gated real flow — hence the write-path tests must opt in with `--yes`.
 
+- [x] **P06**: Deferred follow-ups — config-driven repo + match-threshold + corpus-validation harness — "`detective.repo` and `detective.match_threshold` in `.orchestrator/config.yml` drive search/file behavior; `search-issues.sh --threshold` marks results meeting the bar; a corpus-validation harness reports the empirical false-positive rate (or `insufficient corpus` when the tracker is empty)."
+  - Risk: low
+  - Depends: P05
+  - Boundary Map:
+    - Produces: `detective.repo` + `detective.match_threshold` keys in `read-config.sh` (+ `templates/orchestrator-config-default.yml` block), repo+threshold resolution in `search-issues.sh` (`--threshold` flag + `meets_threshold` field), repo resolution in `file-issue.sh`, `scripts/diagnostics/detective-validate-threshold.sh` (#Q-1 corpus harness), match-threshold decision documented in `commands/detective.md`, P06 verifiers + phase suite
+    - Consumes: `scripts/state/read-config.sh` (nested-key resolution pattern), `scripts/diagnostics/search-issues.sh` + `file-issue.sh` (from P02), `gh` CLI (corpus retrieval, optional)
+  - Note: drains the two non-blocking follow-ups documented at M041 close. The `Build-Fractal/orchestrator` tracker is empty today, so the harness reports `insufficient corpus` and the threshold default stays provisional+unvalidated (conversus RISK-06 / #Q-1) — the `--yes` automation caution in the spec remains in force until a populated corpus lets the harness emit an empirical PASS.
+
 ## Cross-Cutting Concerns
 
 - **Graceful degradation** — P01, P02, P03. P01 establishes the degradation pattern (missing execution-log → empty section, not failure). P02 extends it to GitHub operations (missing `gh` → stdout-only mode with diagnostic). P03 must follow the same pattern for recommendation hooks (missing detective script → no recommendation, not failure).
@@ -80,8 +88,8 @@ Linear dependency chain. No parallelization opportunities — each phase builds 
 
 ## Closure
 
-All five phases complete. Milestone closed — see `M041-SUMMARY.md`. Final verification:
+All six phases complete. Milestone closed — see `M041-SUMMARY.md`. Final verification:
 
-- P01 suite `pass=6 fail=0` · P02 suite `pass=5 fail=0` · P03 acceptance battery `pass=7 skip=0 fail=0` (SC-1..SC-7) · P04 suite `pass=4 fail=0` · P05 suite `pass=2 fail=0`
+- P01 suite `pass=6 fail=0` · P02 suite `pass=5 fail=0` · P03 acceptance battery `pass=7 skip=0 fail=0` (SC-1..SC-7) · P04 suite `pass=4 fail=0` · P05 suite `pass=2 fail=0` · P06 suite `pass=3 fail=0`
 - Spec conversus-gated (Standard, 3 P0 amendments applied); RISK-01 confirmed false-positive (constitution has 15 principles).
-- Open follow-ups (non-blocking): `#Q-1` match-score corpus validation before unattended `--yes`; `detective.repo` config-key read.
+- Both follow-ups deferred at the original close were drained in P06: `detective.repo` config-key read (resolved) and `#Q-1` match-score corpus validation (resolved via `detective-validate-threshold.sh` — reports `insufficient corpus` against today's empty tracker; the `--yes` automation caution stays in force until a populated corpus yields a PASS verdict).

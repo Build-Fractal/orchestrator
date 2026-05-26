@@ -11,16 +11,18 @@
 set -uo pipefail
 
 query=""
-repo="Build-Fractal/orchestrator"
+repo=""
 state="open"
 limit="20"
+threshold=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    --query)  query="$2"; shift 2 ;;
-    --repo)   repo="$2"; shift 2 ;;
-    --state)  state="$2"; shift 2 ;;
-    --limit)  limit="$2"; shift 2 ;;
+    --query)     query="$2"; shift 2 ;;
+    --repo)      repo="$2"; shift 2 ;;
+    --state)     state="$2"; shift 2 ;;
+    --limit)     limit="$2"; shift 2 ;;
+    --threshold) threshold="$2"; shift 2 ;;
     -h|--help) sed -n '2,10p' "$0"; exit 0 ;;
     *) echo "ERROR: unknown argument '$1'" >&2; exit 1 ;;
   esac
@@ -29,6 +31,18 @@ done
 if [ -z "$query" ]; then
   echo "Usage: search-issues.sh --query <text>" >&2
   exit 1
+fi
+
+# Resolve repo + threshold: explicit flag > config (detective.*) > default.
+_si_script_dir="$(cd "$(dirname "$0")" && pwd)"
+_si_read_config="$_si_script_dir/../state/read-config.sh"
+if [ -z "$repo" ]; then
+  repo="$(bash "$_si_read_config" detective.repo 2>/dev/null || echo "null")"
+  [ "$repo" = "null" ] || [ -z "$repo" ] && repo="Build-Fractal/orchestrator"
+fi
+if [ -z "$threshold" ]; then
+  threshold="$(bash "$_si_read_config" detective.match_threshold 2>/dev/null || echo "null")"
+  [ "$threshold" = "null" ] || [ -z "$threshold" ] && threshold="3"
 fi
 
 # --- Fetch issue data (mock or live) ---
@@ -69,7 +83,7 @@ fi
 
 # --- Score and format with jq if available, else line-based fallback ---
 if command -v jq >/dev/null 2>&1 && [ -z "${_SEARCH_ISSUES_NOJQ:-}" ]; then
-  echo "$raw_json" | jq --arg kw "$keywords" '
+  echo "$raw_json" | jq --arg kw "$keywords" --argjson th "$threshold" '
     def lc: ascii_downcase;
     ($kw | split(" ")) as $words |
     [ .[] |
@@ -78,6 +92,7 @@ if command -v jq >/dev/null 2>&1 && [ -z "${_SEARCH_ISSUES_NOJQ:-}" ]; then
         if ($text | contains($w | lc)) then . + 1 else . end
       )) as $score |
       { number: .number, title: .title, match_score: $score,
+        meets_threshold: ($score >= $th),
         labels: [(.labels // [])[] | .name] }
     ] | sort_by(-.match_score)
   '
@@ -107,8 +122,9 @@ else
         case "$searchable" in *"$kw_lower"*) score=$((score + 1)) ;; esac
       done; set +f
       safe_title="$(echo "$cur_title" | sed 's/\\/\\\\/g; s/"/\\"/g')"
+      if [ "$score" -ge "$threshold" ]; then meets="true"; else meets="false"; fi
       issues="${issues}${issues:+
-}${score}|{\"number\":${cur_num},\"title\":\"${safe_title}\",\"match_score\":${score},\"labels\":[${cur_labels}]}"
+}${score}|{\"number\":${cur_num},\"title\":\"${safe_title}\",\"match_score\":${score},\"meets_threshold\":${meets},\"labels\":[${cur_labels}]}"
       cur_num="" cur_title="" cur_body="" cur_labels=""
     fi
   done <<EOF_JSON

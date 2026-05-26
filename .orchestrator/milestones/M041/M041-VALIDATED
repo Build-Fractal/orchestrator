@@ -1,4 +1,5 @@
 M041 (orchestrator:detective) validated 2026-05-25.
-5 phases (P01-P05), all phase suites green.
+6 phases (P01-P06), all phase suites green.
 Acceptance battery SC-1..SC-7: pass=7 skip=0 fail=0.
+P06 drained both deferred follow-ups (detective.repo config read + #Q-1 corpus harness).
 See M041-SUMMARY.md.

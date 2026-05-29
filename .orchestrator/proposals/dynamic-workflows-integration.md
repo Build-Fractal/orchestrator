@@ -7,7 +7,9 @@
 
 ## Status
 
-**RFC capture only.** No implementation queued. The capability-gating contract (§4) can land any time as a standalone PR; the extraction pilot (§5) is demand-driven post-launch. When the arc enters the queue this becomes the input to `orchestrator:specify`.
+**§4 SHIPPED 2026-05-29** (`feat(dispatch): capability-gating contract` — `parallel_subagent_fanout` probe + Capability Registry in `RUNTIME-ASSUMPTIONS.md` + `tests/test-capability-gating.sh` forced-fallback lane, 9/9 green). The conditionality contract is live and standalone; no call sites yet (those arrive with §5).
+
+**§5 + §6 remain RFC capture only** — demand-driven post-launch by design. §5 (extraction pilot) waits on M036 having a live multi-file corpus to run against; §6 waits on §5 reporting its token + crash-survival evidence. When the §5 arc enters the queue this becomes the input to `orchestrator:specify`.
 
 ## TL;DR
 
@@ -102,12 +104,14 @@ If 100% of real users are on CC, the accelerator path is the *only* one ever exe
 - **VIII (No Dead Infra)** — the forced-fallback CI lane stops the deferred multi-runtime promise from rotting.
 - **VI** — the fallback for a durable-checkpointed fan-out is serial-*with-disk-state*, not bare serial.
 
-### §4 deliverable (standalone PR, ~1–2 days)
+### §4 deliverable (standalone PR, ~1–2 days) — ✅ SHIPPED 2026-05-29
 
-1. Add `parallel_subagent_fanout` to `detect-capabilities.sh` with the `agent_tool_available`-style self-check + `ORCHESTRATOR_PARALLEL_FANOUT` override.
-2. Promote the capability list to a declarative registry in `RUNTIME-ASSUMPTIONS.md` (seeds M009).
-3. Add a reference-doc / constitution-adjacent rule: *Claude-only features are accelerators behind a named capability; the default path is the fallback; no vendor names in control flow.* (Natural sibling to `delegation-policy-table.md` + `constitution-amendment-inclusion-criteria.md` — bundle into the same standalone-amendment window.)
-4. Add the forced-fallback CI lane.
+1. ✅ Added `parallel_subagent_fanout` to `detect-capabilities.sh` with the `agent_tool_available`-style self-check + `ORCHESTRATOR_PARALLEL_FANOUT` override (hard-disable `CLAUDE_CODE_DISABLE_WORKFLOWS=1` wins; conservative default false).
+2. ✅ Promoted the capability list to a declarative registry in `RUNTIME-ASSUMPTIONS.md` `## Capability Registry` (seeds M009; rows: `parallel_subagent_fanout`, `git_worktree_isolation`).
+3. ✅ Added the gating rule (default path is the fallback; no vendor names in control flow; conservative defaults) as a subsection of the registry. Natural sibling to `delegation-policy-table.md` + `constitution-amendment-inclusion-criteria.md`.
+4. ✅ Added the forced-fallback lane as `tests/test-capability-gating.sh` (9 assertions) — forces the capability off and asserts the baseline path stays correct (Principle-VIII anti-rot).
+
+**Deferred (noted, not built):** a generic no-vendor-gating lint — too brittle (the `m008-p05` adapter layer legitimately switches on runtime). The rule is documented and the test proves the mechanism; a scoped lint can follow if call-site drift ever appears.
 
 ---
 

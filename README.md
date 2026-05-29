@@ -1,7 +1,7 @@
 # Orchestrator
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-v0.9.2-green.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v0.9.3-green.svg)](./CHANGELOG.md)
 [![Runtime](https://img.shields.io/badge/runtime-Claude%20Code-orange.svg)](./packaging/install/install-claude-code.sh)
 [![Spec-driven](https://img.shields.io/badge/spec--driven-development-purple.svg)](./docs/why-this-exists.md)
 

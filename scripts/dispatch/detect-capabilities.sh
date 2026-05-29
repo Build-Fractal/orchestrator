@@ -10,6 +10,11 @@
 # Capabilities detected:
 #   subagent_dispatch   — can dispatch to sub-agents
 #   agent_tool_available — in-process agent tools (override via SPECKIT_AGENT_TOOL=1)
+#   parallel_subagent_fanout — durable-checkpointed parallel agent orchestration
+#                          (Claude Code dynamic workflows today). Conservative
+#                          default false; override via ORCHESTRATOR_PARALLEL_FANOUT=1;
+#                          CLAUDE_CODE_DISABLE_WORKFLOWS=1 always wins (forces false).
+#                          See references/RUNTIME-ASSUMPTIONS.md "Capability Registry".
 #   shell_execution     — always true (running in bash)
 #   git_available       — git CLI present
 #   git_worktree        — git worktree support
@@ -64,6 +69,26 @@ agent_tool_available=false
 if [[ -n "${SPECKIT_AGENT_TOOL:-}" ]]; then
   agent_tool_available=true
   subagent_dispatch=true
+fi
+
+# parallel_subagent_fanout: durable-checkpointed parallel agent orchestration —
+# the capability behind Claude Code dynamic workflows. Like agent_tool_available,
+# this cannot be reliably probed from a shell script: workflow availability depends
+# on the executing runtime, the Claude Code version (>= 2.1.154), the /config toggle,
+# and the plan tier — none reliably visible here. The conservative default is
+# therefore FALSE, because a false-positive is harmful (a call site would try to
+# launch a workflow that isn't there) while a false-negative is safe (it falls back
+# to the serial path, just slower). The orchestrating agent self-confirms workflows
+# are present and sets ORCHESTRATOR_PARALLEL_FANOUT=1 to opt in. A hard disable
+# (CLAUDE_CODE_DISABLE_WORKFLOWS=1) always wins over the opt-in.
+# See references/RUNTIME-ASSUMPTIONS.md "Capability Registry" for the gating rule.
+parallel_subagent_fanout=false
+if [[ "${CLAUDE_CODE_DISABLE_WORKFLOWS:-}" = "1" ]]; then
+  parallel_subagent_fanout=false
+elif [[ "${ORCHESTRATOR_PARALLEL_FANOUT:-}" = "1" ]]; then
+  parallel_subagent_fanout=true
+elif [[ "${ORCHESTRATOR_PARALLEL_FANOUT:-}" = "0" ]]; then
+  parallel_subagent_fanout=false
 fi
 
 # shell_execution: always true (we're running in bash)
@@ -162,6 +187,7 @@ elif [[ "$FORMAT" = "json" ]]; then
 {
   "subagent_dispatch": $subagent_dispatch,
   "agent_tool_available": $agent_tool_available,
+  "parallel_subagent_fanout": $parallel_subagent_fanout,
   "shell_execution": $shell_execution,
   "git_available": $git_available,
   "git_worktree": $git_worktree,
@@ -178,6 +204,7 @@ EOF
 else
   echo "subagent_dispatch=$subagent_dispatch"
   echo "agent_tool_available=$agent_tool_available"
+  echo "parallel_subagent_fanout=$parallel_subagent_fanout"
   echo "shell_execution=$shell_execution"
   echo "git_available=$git_available"
   echo "git_worktree=$git_worktree"

@@ -11,6 +11,70 @@ runtime exposes its own native model, CLI, or environment surface),
 that divergence is captured here so M009 auditors can confirm each
 case is intentional and verified.
 
+## Capability Registry
+
+This registry is the single source of truth for **runtime capabilities** —
+features the orchestrator may use when present and must degrade gracefully
+without. Each row names one capability, which native primitive provides it per
+runtime (`—` = not available), and the **fallback** the orchestrator uses when
+the capability is absent. M009's runtime-parity audit walks this table: every
+cell is one audit check.
+
+The probe lives in `scripts/dispatch/detect-capabilities.sh`; each capability
+emits a boolean flag in both text and JSON output.
+
+| Capability | claude-code | codex | cursor | Fallback (always correct, may be slower) |
+|------------|-------------|-------|--------|------------------------------------------|
+| `parallel_subagent_fanout` | dynamic workflows (≥ 2.1.154) | — | — | serial dispatch loop + disk checkpoint |
+| `git_worktree_isolation` | `isolation:'worktree'` (workflows) / git CLI | git CLI | git CLI | shared index + `orchestrator.lock` |
+
+New capabilities land here as new rows; new runtime support for an existing
+capability updates that row's cell. A capability may only be claimed for a
+runtime if that runtime's implementation honors the **full** fallback contract
+(e.g. `parallel_subagent_fanout` requires durable per-stage disk checkpointing,
+not just parallelism — see Principle VI).
+
+### The gating rule (load-bearing)
+
+**Gate on capability, never on runtime identity.** Capability-consuming code
+branches on the probe flag, not on the runtime name:
+
+```sh
+# WRONG — couples control flow to a vendor; breaks the moment a second
+# runtime ships an equivalent, and rots the backend-agnostic dispatch contract.
+if [ "$runtime" = "claude-code" ]; then run_workflow; fi
+
+# RIGHT — couples control flow to a capability the runtime may or may not provide.
+if [ "$parallel_subagent_fanout" = "true" ]; then run_workflow_fanout; else run_serial; fi
+```
+
+Three invariants:
+
+1. **The default path is the fallback.** The capability accelerates; it is never
+   a hard dependency. The fallback arm must exist and be correct on its own.
+2. **No vendor names in control flow.** Runtime names appear only in
+   `detect-runtime.sh` (which selects a runtime) and in this registry (which maps
+   capabilities to runtimes) — never in feature call sites. The legitimate
+   runtime-switching adapter layer (`scripts/dispatch/adapters/`, format/runtime
+   adapters) is exempt: it *is* the runtime-selection boundary.
+3. **Conservative defaults.** A capability probe defaults to `false` whenever the
+   true value is not reliably shell-detectable (version, plan tier, host toggle).
+   A false-negative is safe (fall back, slower); a false-positive is harmful
+   (invoke a primitive that isn't there). The orchestrating agent self-confirms
+   and opts in via the documented override — see `parallel_subagent_fanout`'s
+   `ORCHESTRATOR_PARALLEL_FANOUT` env override, modeled on `agent_tool_available`'s
+   `SPECKIT_AGENT_TOOL`.
+
+This rule keeps `local-codex.sh` and future runtimes honest (Principle XVI /
+runtime-agnosticism) and is the mechanism behind the deferred multi-runtime
+promise. To prevent fallback rot (Principle VIII — No Dead Infrastructure), the
+fallback arm must stay continuously exercised: `tests/test-capability-gating.sh`
+forces the capability off and asserts the baseline path, so the serial route
+can't silently break while every real user is on Claude Code.
+
+Rationale + the inner/outer split that motivated this registry:
+`.orchestrator/proposals/dynamic-workflows-integration.md` §4.
+
 ## Compression (M018)
 
 P07 (multi-runtime parity audit) exercised the M018 compression

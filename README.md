@@ -1,80 +1,67 @@
 # Orchestrator
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-v0.9.3-green.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v0.9.2-green.svg)](./CHANGELOG.md)
 [![Runtime](https://img.shields.io/badge/runtime-Claude%20Code-orange.svg)](./packaging/install/install-claude-code.sh)
 [![Spec-driven](https://img.shields.io/badge/spec--driven-development-purple.svg)](./docs/why-this-exists.md)
 
-**Every coding task — small or large — runs against a project-aware knowledge base, fresh-context dispatch, and mechanical verification.**
+**Agents dispatch with only the context they need — your decisions, conventions, and related code — never from zero; and every task passes mechanical verification before it counts as done.**
+
+No context-rebuilding overhead at the start of each task. No self-graded "looks good to me" at the end. The mechanism: a per-project knowledge graph injected into each fresh-context dispatch, plus a 4-tier verification ladder ([definition](references/verification-ladder.md)) that runs before a task closes.
+
+---
+
+## See it in 10 seconds
+
+A one-line task dispatch — the relevant knowledge (MEMs: memory entries in the knowledge graph — decisions, conventions, or summaries) is *shown* being injected, not asserted:
 
 ```
-  ┌──────────┐   ┌──────┐   ┌──────────┐   ┌────────┐
-  │ evaluate │──▶│ plan │──▶│ dispatch │──▶│ verify │
-  └──────────┘   └──────┘   └──────────┘   └────────┘
-        │            │           │              │
-        └────────────┴─────┬─────┴──────────────┘
-                           ▼
-            ┌─────────────────────────────────┐
-            │ .orchestrator/ knowledge graph  │
-            │ MEMs · decisions · summaries    │
-            └─────────────────────────────────┘
-              ▲ injected into every dispatch
+$ /orchestrator-do "fix the broken redirect after sign-up"
+
+[knowledge-inject] 3 MEMs (auth/sign-up-flow, auth/redirects, conv/error-handling)
+[verify] tier-1 file checks ✓  tier-2 commands (npm test, npm run lint) ✓
+[record] execution-log.jsonl appended · 1 task closed
 ```
 
-Most coding agents start each task from zero: no memory of yesterday's decisions, no map of your conventions, no thread to last week's architecture call. Orchestrator changes that. Once your project is onboarded — about a minute for any existing codebase — every task you run, from a one-line typo fix to a multi-month rewrite, executes against a knowledge graph of your decisions, patterns, and prior work.
-
-> **v0.9.3** — in production use, dogfooded daily on its own development. Built on Claude Code (primary); Codex CLI and Cursor adapters exist (formal multi-runtime parity is a post-launch fast-follow). See [CHANGELOG.md](./CHANGELOG.md) for version history.
-
-> **Sister project — [conversus](https://github.com/Build-Fractal/conversus-oss)**: multi-agent deliberation engine. Pits AI agents against each other in structured adversarial review across cooperative / winner-take-all / prisoner's-dilemma / red-blue modes. Both projects stand alone; the orchestrator invokes conversus through a graceful-degradation adapter (`/orchestrator-conversus-gate`) for spec-fidelity gates and pressure-tested artifact review. Same build-fractal suite, same governance discipline, no hard runtime dependency in either direction.
+> **MEM** = a memory entry in the knowledge graph (a decision, convention, or summary). The agent received three relevant MEMs — not the whole codebase. Verification ran mechanically before the task counted as done.
 
 ---
 
-## Why use it
+## Is this for you?
 
-- **Small tasks get sharper.** `/orchestrator-do "rename X to Y across the auth flow"` injects the relevant memories — decisions, conventions, prior context — before dispatch. The agent already knows your patterns.
-- **Large projects get tractable.** Multi-week features decompose into context-window-sized phases with explicit dependencies. Autonomous execution loops `dispatch → verify → record → advance` until done. You walk away.
-- **Verification is mechanical, not vibes.** Every task and phase passes a 4-tier ladder: file checks → command execution → behavioral review → human review. No self-graded pass/fail.
-- **State survives anything.** Everything lives on disk under `.orchestrator/`. Crash mid-execution, kill the terminal, reboot — `/orchestrator-resume` picks up exactly where it left off.
-- **Knowledge compounds.** Every phase emits structured summaries; every decision goes into an append-only register. The next phase is genuinely cheaper than the last.
+Three questions. **Two or more "yes" → the overhead pays off:**
 
----
+1. Will the work span **more than one context window**?
+2. Will you **hand it off or resume it later** (another person, another session, after a crash)?
+3. Do you need **mechanical per-task verification** instead of trusting the agent's self-report?
 
-## When this isn't a fit
-
-The orchestrator earns its overhead when work has structure to capture and continuity to preserve. Some shapes it's the wrong tool for:
-
-- **Exploratory spike work where the product shape isn't known yet.** The orchestrator wants you to author a spec (or have one inferred); that's friction when you're still figuring out what you're building. **Reach for** your runtime's native flow first — `claude` / `cursor` / `codex` directly — and come back once the shape is clear.
-- **Single-session work that fits in your head.** If a task is going to live in one context window and never resurface, the on-disk state-of-truth discipline is overhead without payoff. **Reach for** a one-shot dispatch in your runtime; bring the orchestrator in when the work crosses sessions or hands off between people.
-- **Sandboxed or ephemeral environments.** The orchestrator's *State on Disk is Truth* invariant assumes a persistent project tree with `.orchestrator/`. Notebooks, CI-only runs, web-IDE scratchpads — anywhere files don't persist — break the model. **Reach for** an in-context flow until you have a real working tree.
-- **Pure greenfield ideation without users.** `/orchestrator-ideation` helps structure thinking, but it isn't a substitute for talking to people who'd use what you're building. **Reach for** real user conversation first; bring the orchestrator in when the problem is sharp enough to spec.
-
-These aren't permanent disqualifiers — they're "wrong-time, not wrong-tool" cases. When the work crosses into "multi-session continuity matters" or "I'd lose context if I closed this terminal," the orchestrator becomes the right fit.
+**Otherwise, reach for plain Claude Code first** — for single-context work that fits in one session and never resurfaces, the on-disk discipline is overhead without payoff. See [When this isn't a fit](docs/why-this-exists.md) for the full candor.
 
 ---
 
-## Pick your path
+## What it does
 
-Find the row that matches what you brought. Each path assumes you've [installed](#install) and are sitting in your project directory.
-
-| You have… | Run this | Time | What you get |
-|---|---|---|---|
-| **A one-line task** on any project | `/orchestrator-do "fix the broken redirect after sign-up"` | seconds | Knowledge-injected dispatch; no ceremony |
-| **An existing codebase** (any size) | `/orchestrator-start` → routes to **codebase ingestion** | 1–5 min | 5–15 seed knowledge entries from deterministic structural extraction |
-| **A greenfield project, nothing written yet** | `/orchestrator-start` → routes to **ideation** | 5–10 min | 7-question grilling protocol → vision, scope, users, constraints |
-| **A greenfield project + materials** (briefs, PDFs, decision logs) | `/orchestrator-start` → routes to **materials intake** | 5–15 min | Reconciled SSOT across 4 blocks; only asked about real conflicts |
-| **An existing spec-kit or GSD project** | `/orchestrator-start` → routes to **migration** | 2–5 min | Existing artifacts lifted in, codebase ingested |
-| **A multi-month feature** to ship autonomously | `/orchestrator-start` then `/orchestrator-auto` | hours–days | Full lifecycle: roadmap → phases → dispatch → verify → advance, untouched |
-| **Reference docs to add** (regs, glossaries, training PDFs) | `/orchestrator-extract` then `/orchestrator-ingest-reference` | varies | Tier-0/1/2 extraction into the knowledge graph; dispatched tasks cite the chunks |
-| **A team that needs visibility** | `/orchestrator-wiki-init` (optionally `--deploy --with-giscus`) | 2 min | mkdocs site of milestones, phases, decisions, knowledge — GitHub Pages + commentable |
-| **GitHub Issues / Projects as your tracker** | `/orchestrator-github-init` | 2 min | Orchestrator state projected to Issues / Milestones / Projects v2; opt-in, reversible |
-
-Paths compose. A typical large-project setup: install → `/orchestrator-start` (codebase ingestion) → `/orchestrator-ingest-reference` (regulatory corpus) → `/orchestrator-wiki-init --deploy` (team view) → `/orchestrator-do` and `/orchestrator-auto` from then on.
+| What you get | Evidence / example |
+|---|---|
+| **Small tasks get sharper** | `/orchestrator-do "rename X to Y across the auth flow"` injects the relevant MEMs before dispatch — see the 10-second block above. *(Concrete — try it now.)* |
+| **Verification is mechanical, not vibes** | Every task passes a 4-tier ladder: file checks → command execution → behavioral review → human review. *(Concrete — shown in the dispatch block.)* See [verification-ladder.md](references/verification-ladder.md). |
+| **Large projects get tractable** | Multi-week features decompose into context-window-sized phases; `/orchestrator-auto` loops `dispatch → verify → record → advance` until done. Dogfooded across **41 closed milestones** — audit trail in [`.orchestrator/milestone-summary.md`](./.orchestrator/milestone-summary.md). |
+| **State survives anything** | All state lives on disk under `.orchestrator/` — crash, terminal kill, or reboot, then `/orchestrator-resume` continues exactly where it stopped. Recovery primitives shipped and dogfooded daily; see [state-machine.md](references/state-machine.md). |
+| **Knowledge compounds** | Every phase emits structured summaries; decisions go to an append-only register; the next phase is cheaper than the last. Three-temperature (hot/warm/cold) graph indexed at [`.orchestrator/KNOWLEDGE.md`](./.orchestrator/KNOWLEDGE.md); see [knowledge-management.md](docs/knowledge-management.md). |
 
 ---
 
-## Install
+## Try it with zero commitment
 
-**Today (clone path):**
+Already installed and sitting in a project? One line, no onboarding required:
+
+```bash
+/orchestrator-do "fix the broken redirect after sign-up"
+```
+
+It works without setup, and works *sharper* after `/orchestrator-start` seeds the knowledge graph (about a minute for an existing codebase → 5–15 seed MEMs).
+
+**Not installed yet?** → [Getting Started](docs/getting-started.md) owns the full install walkthrough. The short version:
 
 ```bash
 git clone git@github.com:Build-Fractal/orchestrator.git
@@ -82,171 +69,76 @@ cd orchestrator
 bash packaging/install/install-claude-code.sh --project-dir /path/to/your-project
 ```
 
-> Other runtimes: `install-codex.sh` and `install-cursor.sh` exist with the same flag shape.
-
-**Requirements:** Bash 3.2+ (macOS default), git, jq (optional — JSON parsing fallback exists).
-
-The installer registers `orchestrator:*` skills with your runtime and stages the runtime tree (`scripts/`, `templates/`, `references/`) into your project. Idempotent — re-run any time to update.
+(Requires Bash 3.2+, git, and optionally jq. Codex CLI and Cursor installers exist with the same flags; multi-runtime parity is a demand-driven post-launch fast-follow.)
 
 ---
 
-## Your first command
+## Pick your path
 
-```bash
-cd /path/to/your-project
+Each command below assumes you've [installed](docs/getting-started.md) and are in your project directory.
 
-# 1. Onboard (one-time)
-/orchestrator-start
+| Your intent | Command | Time | What you get |
+|---|---|---|---|
+| One-shot task, any project | `/orchestrator-do "fix the broken redirect after sign-up"` | seconds | Knowledge-injected dispatch; no ceremony |
+| Onboard an existing codebase | `/orchestrator-start` → codebase ingestion | ~1 min | 5–15 seed MEMs via deterministic structural extraction |
+| Start greenfield, nothing written | `/orchestrator-start` → ideation | 5–10 min | 7-question grilling protocol → vision, scope, users, constraints |
+| Greenfield + materials (briefs, PDFs) | `/orchestrator-start` → materials intake | 5–15 min | Reconciled pre-spec; asked only about real conflicts |
+| Ship a multi-month feature autonomously | `/orchestrator-start` then `/orchestrator-auto` | hours–days | Roadmap → phases → dispatch → verify → advance, untouched |
+| Add reference docs (regs, glossaries) | `/orchestrator-extract` then `/orchestrator-ingest-reference` | varies | Tiered extraction into the knowledge graph |
+| Give a team visibility | `/orchestrator-wiki-init` (`--deploy --with-giscus`) | ~2 min | mkdocs site of milestones, phases, decisions — GitHub Pages + commentable |
+| Use GitHub Issues / Projects as tracker | `/orchestrator-github-init` | ~2 min | State projected to Issues / Milestones / Projects v2; opt-in, reversible |
 
-# 2. Use it for any task
-/orchestrator-do "fix the broken redirect after sign-up"
-```
-
-That's the whole loop. `start` runs the right onboarding flow for your project shape ([see Pick your path](#pick-your-path)). `do` then classifies any task you give it and routes to the right depth — fast-path knowledge-injected dispatch for small tasks, the full plan-and-execute chain for larger features.
-
-### What a small task looks like
-
-```
-$ /orchestrator-do "fix the broken redirect after sign-up"
-
-[classifier] tier=A scope=bugfix confidence=0.91
-[knowledge-inject] 3 MEMs (auth/sign-up-flow, auth/redirects, conv/error-handling)
-[dispatch] tier-A degenerate path · ~280 tokens of context
-[execute] edits: src/app/(auth)/sign-up/page.tsx · tests: passing
-[verify] tier-1 file checks ✓  tier-2 commands (npm test, npm run lint) ✓
-[record] execution-log.jsonl appended · 1 task closed
-```
-
-The agent receives only what it needs — three relevant knowledge entries, not the whole codebase summary. Verification runs mechanically before the task counts as done.
+> **Coming from spec-kit?** spec-kit is a **migration source, not a dependency** — the orchestrator runs standalone with zero runtime dependency on it. `/orchestrator-start` → migration lifts your existing artifacts in. Expect a real (small) learning curve; the workflow and file layout differ. → [Migrating from spec-kit](docs/migrating-from-speckit.md).
 
 ---
 
-## Verify your install
+## Mental models in one line each
 
-After `/orchestrator-start` completes, confirm the runtime is wired correctly:
-
-```bash
-/orchestrator-status   # one-screen progress + next-action report
-/orchestrator-context  # runtime profile (resolved root, capabilities, active milestone)
-/orchestrator-doctor   # 12+ health checks (orphans, drift, cost spikes, consistency)
-```
-
-All three are read-only and always safe to run. If any of them flag an issue, the output names the exact file to inspect.
-
----
-
-## Five-command cheat sheet
-
-| Command | When to use |
+| It's not… | The boundary |
 |---|---|
-| `/orchestrator-start` | First time in any project — warm front door, auto-routes onboarding |
-| `/orchestrator-do "..."` | Any task — auto-classifies scope and dispatches with knowledge inject |
-| `/orchestrator-auto` | Autonomous loop — dispatch → verify → record → advance |
-| `/orchestrator-status` | Anytime — read-only progress check |
-| `/orchestrator-resume` | After crash or pause — picks up exactly where it left off |
-
-For larger features the explicit chain is `evaluate → discuss → roadmap → plan-phase → auto → verify → consolidate`. `/orchestrator-do` runs the appropriate subset automatically based on task scope.
+| **plain Claude Code** | Use plain Claude Code first for single-context work. Orchestrator adds knowledge injection + verification for *multi-session, hand-off* work. See [Is this for you?](#is-this-for-you) |
+| **spec-kit** | A migration source, not a dependency or runtime. The orchestrator runs standalone. → [migrating-from-speckit](docs/migrating-from-speckit.md) |
+| **conversus** | An *optional* sister tool (multi-agent adversarial review). The orchestrator works standalone without it; the [`/orchestrator-conversus-gate`](https://github.com/Build-Fractal/conversus-oss) adapter degrades gracefully when it isn't installed. |
 
 ---
 
-## How it works
+## Command cheat sheet
 
-> For the origin story — how the orchestrator went from a spec-kit extension to a standalone project, and what prior failures the constitution codifies — see [Why this exists](docs/why-this-exists.md).
+**Start with these 5 entry points** — they cover most of what you'll do day to day:
 
-1. **Onboard once.** `/orchestrator-start` detects your project shape and seeds the knowledge graph (5–15 MEMs from existing code; ideation flow for greenfield).
-2. **Knowledge inject on every task.** `/orchestrator-do` and `/orchestrator-dispatch` pull relevant MEMs — decisions, conventions, related summaries — into the dispatched context. The agent isn't starting from zero.
-3. **Fresh context per dispatch.** Each task runs in a clean session carrying only what it needs. No scrollback to pollute the next decision.
-4. **Mechanical verification.** A 4-tier ladder runs after every task and phase: file checks → configured commands → behavioral review → optional human gates. Failures stop the loop honestly.
-5. **State on disk.** Everything under `.orchestrator/` — no in-memory state, no database, no daemon. Survives crashes, machine reboots, context resets.
+| Entry point | When to use |
+|---|---|
+| `/orchestrator-start` | First time in any project — warm front door, auto-routes onboarding (greenfield-empty / greenfield-with-materials / existing-codebase / migrating) |
+| `/orchestrator-do "..."` | Any task — classifies scope, routes to Tier A quick-path, Tier A+ middle flow, or defers larger work to `/orchestrator-specify` |
+| `/orchestrator-auto` | Autonomous loop — `dispatch → verify → record → advance` until milestone completes or a blocker surfaces |
+| `/orchestrator-status` | Anytime — read-only one-screen progress + next-action report |
+| `/orchestrator-resume` | After crash or pause — reads `.orchestrator/` state and continues exactly where it stopped |
 
-```
-your-project/
-├── .orchestrator/                 ← all state lives here
-│   ├── config.yml
-│   ├── KNOWLEDGE.md              ← knowledge graph index
-│   ├── DECISIONS.md              ← append-only decision register
-│   ├── execution-log.jsonl
-│   └── milestones/               ← per-milestone artifacts
-│
-├── commands/  scripts/  templates/  references/   ← Orchestrator runtime, staged into your project
-└── (your code, unchanged)
-```
+> **Tier A / A+ / B / C** = task-scope classes, smallest to largest. `/orchestrator-do` picks one automatically; you rarely name them yourself.
+
+**Beyond the entry points**, the orchestrator ships **37 user-facing commands** — planning (`specify`, `roadmap`, `plan-phase`), knowledge (`extract`, `ingest-reference`, `consolidate`), GitHub (`github-init`, `github-sync`, `comments`), diagnostics (`doctor`, `diagnose`, `detective`, `where`, `cost`), wiki, and more. Each lives at [`commands/<name>.md`](./commands/); the full per-feature chain is `evaluate → discuss → roadmap → plan-phase → auto → verify → consolidate`.
 
 ---
 
-## Built-in capabilities
+## Status & credibility
 
-Each of these maps to a journey row in [Pick your path](#pick-your-path) — they aren't optional add-ons, they're first-class surfaces.
+**v0.9.2** (last release, 2026-04-28) — in production use, **dogfooded daily on its own development**. Dozens of milestones closed (latest: M041, `/orchestrator-detective`, 2026-05-25); the launch event (packaging & distribution) shipped 2026-05-09. Work since v0.9.2 is unreleased. Next up is a demand-driven post-launch fast-follow queue (M009 multi-runtime parity; M023 design layer; the M034+M038+M040 paired slot).
 
-- **Wiki publishing** — `/orchestrator-wiki-init` scaffolds an mkdocs wiki that surfaces milestones, phases, decisions, and knowledge entries as a team-shareable site. One-flag GitHub Pages deploy (`--deploy`) and Giscus comments (`--with-giscus`). Polished in M037 for non-author readers.
-- **GitHub native integration** — `/orchestrator-github-init` projects orchestrator state onto GitHub Issues, Milestones, and Projects v2 with marker-bearing bodies. `/orchestrator-comments` classifies inbound comments into workflow actions with a human-gated apply step. Opt-in and reversible — delete `.orchestrator/integrations/github.json` to return to GitHub-free behavior.
-- **Reference corpus ingest** — `/orchestrator-extract` and `/orchestrator-ingest-reference` turn PDFs, Word docs, Excel sheets, and Markdown reference materials (regulatory specs, training docs, glossaries) into queryable knowledge-graph chunks. Three-tier extraction: Tier 0 manifest + binary preservation, Tier 1 deterministic shell adapters (fast, free), Tier 2 LLM-driven structured Markdown under a conversus fidelity gate.
-- **Materials intake** — `/orchestrator-materials-intake` reconciles heterogeneous inputs (Product Brief, Decision Register, MVP Plan, Handoff JSON) into a single pre-spec, surfacing drift and asking only about real conflicts.
-- **Cost observability** — `/orchestrator-cost` gives both predictive per-tier estimates (Quick / Standard / Full) before dispatch and retrospective rollups from the JSONL execution log after. Bash-only, zero LLM tokens — the cost view itself is free.
-- **Adaptive model routing** — Orchestrator auto-routes between Quick / Standard / Full pipelines per task and host capability. Small work doesn't pay big-work overhead; large work doesn't get under-resourced. Shadow-mode default with a programmatic flip-gate when the shadow corpus reaches the configured confidence threshold.
-- **Multi-agent deliberation** (sister-project [conversus](https://github.com/Build-Fractal/conversus-oss) integration) — `/orchestrator-conversus-gate` runs adversarial review of high-stakes artifacts in cooperative, winner-take-all, red-blue, or prisoner's-dilemma modes. Used internally for spec fidelity gates; available for any artifact you want pressure-tested. Conversus is an optional external dependency — the adapter degrades gracefully (emits `SKIPPED:` and proceeds) when the binary isn't on PATH, so this surface is "use it if installed, no-op if not."
-- **Diagnostic doctor** — `/orchestrator-doctor` runs 12+ checks: orphaned artifacts, stale knowledge, scope drift, cost spikes, permissions drift, plan-shape audits, constitution consistency. Emits structured `DOCTOR:<NAME> status=ok|warn|fail` lines for human and machine consumers. When checks fail, doctor recommends `/orchestrator-detective` for structured triage.
-- **Issue triage & GitHub filing** — `/orchestrator-detective` triages orchestrator-internal issues (not user-project bugs). Captures a structured report with diagnostic context, searches `Build-Fractal/orchestrator` GitHub Issues for matches, and files or comments with the triage report — or degrades gracefully to stdout when `gh` isn't available. Distinct from `diagnose` (user-project debugging loop) and `doctor` (health symptoms).
-- **Crash recovery built-in** — Every state derives from disk; nothing in memory. Kill the process, reboot, lose your terminal — `/orchestrator-resume` reads disk state and picks up at the exact next undone step.
+Full audit trail: [`.orchestrator/milestone-summary.md`](./.orchestrator/milestone-summary.md) · engineering changelog: [`CHANGELOG.md`](./CHANGELOG.md).
+
+Governed by 15 constitutional principles ([`.orchestrator/memory/constitution.md`](./.orchestrator/memory/constitution.md)) — e.g. *Evidence Before Claims* (no task closes without fresh verification) and *Knowledge Compounds* (every phase emits docs that make the next cheaper). The full rationale and the prior failures these codify live in [why-this-exists](docs/why-this-exists.md).
 
 ---
 
-## Full command reference
+## Next step
 
-**Onboarding & entry** — `start` (front door) · `init` (lower-level scaffold) · `do "..."` (universal task entry) · `evaluate` (manual scope classification)
+| You are… | Go here |
+|---|---|
+| **Skeptical** — want the "why" before you commit | → [Why this exists](docs/why-this-exists.md) |
+| **Ready to install** and run your first command | → [Getting Started](docs/getting-started.md) |
+| **Coming from spec-kit** with existing artifacts | → [Migrating from spec-kit](docs/migrating-from-speckit.md) |
 
-**Project intake** (called by `start`; available standalone) — `ideation` (greenfield grilling) · `materials-intake` (reconcile briefs / PDFs / decision logs) · `ingest-codebase` (seed knowledge from existing code) · `migrate` (import from GSD / spec-kit) · `constitution` (author project constitution)
-
-**Planning** — `specify` (author feature spec) · `discuss` (capture architectural decisions) · `roadmap` (decompose spec into phases) · `plan-phase` (task decomposition with must-haves)
-
-**Execution** — `dispatch` (manual single task) · `auto` (autonomous loop) · `verify` (re-run mechanical 4-tier verification)
-
-**Knowledge layer** — `extract` (PDF / DOCX / XLSX / Markdown → reference corpus) · `ingest` (chunk a spec into knowledge entries) · `ingest-reference` (reference corpus → knowledge graph) · `consolidate` (compress and archive at milestone end) · `zoom-out` (one-layer-up code map)
-
-**Wiki** — `wiki-init` (mkdocs scaffold + optional GitHub Pages deploy + Giscus comments)
-
-**GitHub integration** — `github-init` (project state → Issues / Milestones / Projects v2) · `github-sync` (reconcile state with GitHub) · `github-status` (sidecar state report) · `comments` (GitHub comments → workflow classifier with human-gated apply)
-
-**Operations** — `status` · `where` (visual milestone → phase → task tree) · `context` (runtime profile) · `resume` (crash recovery) · `doctor` (health diagnostics) · `detective` (triage orchestrator-internal issues → GitHub) · `cost` (predictive + retrospective cost) · `diagnose` (systematic debugging loop) · `update` (refresh runtime)
-
-**Advanced** — `conversus-gate` (multi-agent adversarial deliberation gate) · `customblock-draft` (CLAUDE.md custom block authoring)
-
----
-
-## Documentation
-
-**Start here**
-- **[Getting Started](docs/getting-started.md)** — your first 30 minutes, end-to-end
-- [Migrating from spec-kit](docs/migrating-from-speckit.md) — onboard an existing spec-kit project
-
-**Concepts**
-- [Knowledge Management](docs/knowledge-management.md) — how the knowledge graph compounds
-- [Recipe Authoring](docs/recipe-authoring.md) — customize context-injection per dispatch
-- [Hook Development](docs/hook-development.md) — wire custom quality gates
-
-**Reference**
-- [Architecture](references/architecture.md) · [Engine](references/engine.md) · [State Machine](references/state-machine.md)
-- [Verification Ladder](references/verification-ladder.md) · [File Formats](references/file-formats.md) · [Installation](references/installation.md)
-
----
-
-## Principles
-
-Orchestrator is governed by 7 principles in [`.orchestrator/memory/constitution.md`](./.orchestrator/memory/constitution.md):
-
-1. **Context Minimization** — every decision optimizes for tokens-per-task
-2. **Evidence Before Claims** — no completion without fresh verification
-3. **Design Before Code** — explicit design step before implementation
-4. **Plans Assume Zero Context** — written for an agent with zero prior knowledge
-5. **Fresh Context Per Unit** — each dispatch gets a clean session
-6. **State On Disk Is Truth** — all state recoverable from files
-7. **Knowledge Compounds** — every phase emits structured docs that make the next phase cheaper
-
----
-
-## Status
-
-In production use against this repo's own development. 30+ closed milestones spanning spec management, GitHub integration, knowledge layer, autonomous hardening, adaptive model routing, reference-corpus ingest, wiki distribution, and onboarding experience. Full milestone history in [`.orchestrator/milestone-summary.md`](./.orchestrator/milestone-summary.md). Engineering changelog in [`CHANGELOG.md`](./CHANGELOG.md).
+**See also:** [Knowledge Management](docs/knowledge-management.md) · [Recipe Authoring](docs/recipe-authoring.md) · [Hook Development](docs/hook-development.md) · [Architecture](references/architecture.md) · [Verification Ladder](references/verification-ladder.md) · [State Machine](references/state-machine.md)
 
 ## License
 

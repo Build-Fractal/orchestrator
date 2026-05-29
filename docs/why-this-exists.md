@@ -1,78 +1,82 @@
 # Why this exists
 
-The orchestrator did not start as its own project. It started as an extension to GitHub's [spec-kit](https://github.com/github/spec-kit), grew through two earlier homegrown predecessors, hit a wall every coding agent eventually hits, and only became a separate thing once the wall was unmistakable. This is the story of how it got here and why it looks the way it does.
+**A knowledge graph that travels with the work plus mechanical verification beats markdown hand-off documents that quietly drift from reality.** That sentence is the whole pitch; the rest of this page is the evidence behind it.
 
-## Spec-kit was the right starting point
+> **This is the "should I care?" doc** for a skeptical evaluator deciding whether the orchestrator is worth their time — the motivation and origin story, not the install steps. If you've already decided and want hands-on, skip straight to [Getting Started](getting-started.md). If you're routing yourself, the [README](../README.md#documentation) is the hub.
 
-Spec-driven development — the discipline of writing the spec first, then the plan, then the implementation, in three distinct passes against the same source of truth — predates orchestrator by years. GitHub's spec-kit packaged the discipline into a usable tool: a `/specify` flow that produced `spec.md`, a `/plan` flow that produced `plan.md`, a `/tasks` flow that produced `tasks.md`, and a shared constitution at `.specify/memory/constitution.md` that all three respected.
+## Is this for you?
 
-For single-task work — write a spec, plan it, implement it, ship — spec-kit was excellent. The discipline forced clarity. The artifacts created a paper trail. The constitution gave the assistant a stable point of view to argue against.
+| You are... | Read this if... |
+|---|---|
+| A skeptic | You've watched hand-off docs collapse and want to know why a knowledge graph is different |
+| Evaluating fit | Your work is multi-week / multi-session and no longer fits one context window |
+| Comparing tools | You want the boundary vs. plain Claude Code, spec-kit, and conversus stated plainly |
 
-But spec-kit stopped at the single-task boundary. A spec was one feature. A plan was one feature's plan. The tooling assumed someone would hold the multi-feature context in their head and orchestrate the sequence by hand.
+If your task fits in a single afternoon and a single context window, **use plain Claude Code first** — the orchestrator earns its keep only when work outgrows one session. [Honest limits](#honest-limits) covers exactly when.
 
-For features that fit in a single afternoon and a single context window, that was fine. For features that did not, it was not.
+## The problem
 
-## GSD-1 and GSD-2 — the homegrown predecessors
+You're six weeks into a feature. The plan branched into a dozen interdependent phases, the conversation log holds a million tokens of decisions, and the session that picks up tomorrow starts cold. So you write a hand-off document. It works on the third session and collapses by the tenth: the summary grows longer than the code, the "everything important" payload blows past the context window it was meant to fit inside, and there's no mechanical proof that a "done" task is actually done — just a confident summary that diverged from reality two commits ago.
 
-Before the orchestrator-as-spec-kit-extension existed, two earlier internal tools tried to solve the multi-task problem. They were called GSD ("Get Stuff Done"), versions 1 and 2. They are now of interest only as predecessors — their adapters live on as migration sources (`scripts/migrate/adapters/gsd1.sh`, the SQLite-backed GSD-2 path) — but the lessons they encoded are still here.
+## Why our predecessors failed
 
-GSD-1 was flat-markdown: a `.planning/` directory with `KNOWLEDGE.md`, `DECISIONS.md`, and per-milestone subdirectories. It worked. It also drifted. Without a strict on-disk shape, every project's `.planning/` tree slowly became its own bespoke layout, and the assistant had to re-learn the layout each time. The lesson: structure that an agent has to re-derive every session is structure that does not exist.
+The orchestrator's constitution is not aspirational — every principle is the scar tissue from a specific failure. Two homegrown predecessors, GSD-1 and GSD-2 ("Get Stuff Done"), taught the load-bearing lessons. Their adapters survive only as migration sources (`scripts/migrate/adapters/gsd1.sh` and the SQLite-backed GSD-2 path).
 
-GSD-2 was the over-correction. It moved state into SQLite with a JSON schema layer, on the theory that a real database would enforce structure better than markdown. It did — and the cost was that humans could no longer read the project state without tooling. Crashes left state in a half-written transactional middle. The database file had to be packaged, migrated, and version-locked with the project itself. The lesson: state that humans cannot read on a Sunday afternoon is state that erodes trust.
+| Predecessor | Approach | What broke | Lesson encoded |
+|---|---|---|---|
+| **GSD-1** | Flat markdown in `.planning/` (`KNOWLEDGE.md`, `DECISIONS.md`, per-milestone dirs) | No strict on-disk shape → every project drifted into a bespoke layout the agent had to re-derive each session | Structure an agent must re-derive every session is structure that does not exist |
+| **GSD-2** | State in SQLite + JSON schema layer | Humans could no longer read project state without tooling; crashes left half-written transactions; the DB had to be packaged, migrated, version-locked | State humans can't read on a Sunday with `cat` and `grep` is state that erodes trust |
 
-The orchestrator's seventh constitutional principle — *State On Disk Is Truth* — is the direct codification of both lessons. Every piece of state is a markdown file or a JSONL line at a known path. A human with `cat` and `grep` can fully audit any project. An agent reading the same files reaches the same conclusions. The data layer has no privileged accessor.
+Both lessons collapse into one principle — **State On Disk Is Truth**: every piece of state is a markdown file or a JSONL line at a known path, fully auditable with `cat` and `grep`, with no privileged accessor. (The orchestrator also outgrew GitHub's [spec-kit](https://github.com/github/spec-kit), which it started as an extension of. Spec-kit was excellent for single-feature work but stopped at the single-task boundary; the standalone cutover is covered in [Migrating from spec-kit](migrating-from-speckit.md).)
 
-## The wall every multi-context-window coding agent hits
+## What we built instead
 
-The problem that finally forced orchestrator into its own shape is the one any coding agent hits the moment work outgrows a single session: **each context window is finite, and multi-week features do not fit in one**.
+Seven constitutional principles govern every decision (full text: [`.orchestrator/memory/constitution.md`](../.orchestrator/memory/constitution.md)). Each is the codified reaction to a failure mode:
 
-It is easy to underestimate this. Modern context windows are large. A single window can hold the spec, the plan, the tasks, and the relevant source files for most features people actually build. Until it cannot. Until the feature is six weeks of work, the plan branches into twelve interdependent phases, the conversation log has a million tokens of decisions, and the next session that picks up the work starts cold — without any of the context the previous sessions built up.
+| Principle | The failure that taught it |
+|---|---|
+| **Context Minimization** — optimize each task for the relevant-instructions / total-inherited ratio | The wall: multi-week features don't fit one context window, and hand-off docs grow past the window they're meant to fit in |
+| **Evidence Before Claims** — no task is "done" without fresh verification evidence; "should work" is not evidence | Silent failures where the agent reported success and the human found the regression a week later |
+| **Design Before Code** — every unit gets an explicit design step, however "simple" | Bug fixes that turned into architectural rewrites three commits in |
+| **Plans Assume Zero Context** — task plans must be readable by an agent with zero prior project knowledge | Hand-off docs that only made sense to whoever wrote them |
+| **Fresh Context Per Unit** — each dispatch starts in a clean session | Sessions polluting each other, producing decisions nobody could trace |
+| **State On Disk Is Truth** — all state recoverable from files; no in-memory cache, no database | GSD-1's drift and GSD-2's opacity (above) |
+| **Knowledge Compounds** — every phase emits structured summaries so the next phase is genuinely cheaper than the last | Projects that ran twenty milestones and ended up no smarter than they started |
 
-The intuitive response is to write better hand-off documents. Summarize what was decided. Append the running log. Re-load the assistant with everything important. This works on the third session. It collapses by the tenth. The hand-off document becomes a parallel codebase to maintain. The summary becomes longer than the code. The "everything important" payload grows past the context window it was supposed to fit into.
+Two things make this more than a values statement:
 
-Orchestrator's first principle — *Context Minimization* — is the response to this collapse. The optimization target is explicit:
+- **A knowledge graph, not a hand-off file.** A three-temperature model (hot / warm / cold) over individual detail files, an append-only decisions register, and a scoped graph, indexed at `.orchestrator/KNOWLEDGE.md`. The agent dispatched to fix the auth flow receives the few entries relevant to auth — *knowledge injection* — not the project's entire history. See [Knowledge Management](knowledge-management.md).
+- **Mechanical verification, not vibes.** A 4-tier ladder every task must clear before it counts as done: (1) static file/content checks → (2) command execution (tests/lint) → (3) behavioral / spec-compliance review → (4) human review (UAT). Enforcement is mechanical: verification scripts check the principles by number rather than trusting a summary.
 
-```
-Context_Efficiency = Relevant_Instructions / Total_Instructions_Inherited
-```
+## Proof it works
 
-Every architectural decision is judged against this ratio. Distribute knowledge hierarchically (closest context wins, broad context lives at the root). Use fresh sessions per task (no accumulated transcript garbage). Produce structured summaries as the hand-off shape (not raw conversation logs). The agent dispatched to fix a typo in the auth flow receives the three knowledge entries relevant to the auth flow — not the project's entire history.
+The orchestrator's last release is **v0.9.2** (2026-04-28), in production use and **dogfooded daily on its own development** — it uses its own `/orchestrator-*` workflow to build itself.
 
-This is what *orchestration* means in this project's name. Not "orchestrating agents" in the multi-agent-system sense — orchestrating *context*. Deciding what the dispatched agent sees, when it sees it, and what it should ignore, so that the work it produces is sharp instead of generic.
+| Claim | Evidence |
+|---|---|
+| Closed milestones, dogfooded end-to-end | Dozens of milestones closed across the project's history; the per-milestone audit trail lives in [`.orchestrator/milestone-summary.md`](../.orchestrator/milestone-summary.md) |
+| Most recent close | M041 (`orchestrator:detective`) closed 2026-05-25 |
+| Shipped to users | Launch event shipped 2026-05-09 (M035, packaging & distribution) |
+| Surface area | A full command set under `commands/`, output templates under `templates/`, and reference docs under `references/` — each browsable on disk |
 
-## The M015 standalone cutover
+These are on-disk facts you can verify yourself, not marketing — every closed milestone leaves its own directory under `.orchestrator/milestones/`, and the narrative roll-up lives in `.orchestrator/milestone-summary.md`.
 
-For most of its life, the orchestrator lived inside spec-kit as an extension. Commands were registered as `speckit.orchestrator.*`. State lived at `.specify/orchestrator/`. The constitution lived at `.specify/memory/constitution.md`. Removing spec-kit removed the orchestrator.
+## Honest limits
 
-This was friction. Every time spec-kit released a new version with a different extension manifest shape, the orchestrator had to chase the change. Every user who wanted the orchestrator had to install spec-kit first, then layer the extension on top, then learn which commands were spec-kit's and which were the extension's. The orchestrator's identity was tied to a project it did not own.
+The theory is clean; the candor is that not every project needs it.
 
-In April 2026, with v0.9.0, the M015 milestone cut the dependency. Four phases, nineteen functional requirements, all PASS:
+- **Small, single-context work?** Use plain Claude Code directly. The orchestrator's structure is overhead until work outgrows one session — that's the boundary, and it's deliberate.
+- **spec-kit is a migration source, not a dependency.** The orchestrator is standalone with zero runtime dependency on spec-kit. If you have a spec-kit project, see [Migrating from spec-kit](migrating-from-speckit.md).
+- **conversus is optional.** It's a sister multi-agent deliberation engine invoked through a graceful-degradation adapter for adversarial review; the orchestrator works fully standalone when it isn't installed.
+- **Runtime breadth is still narrowing.** Claude Code is the primary, production runtime; Codex CLI and Cursor are post-launch fast-follows tracked under M009.
 
-- **P01** hard-deleted the spec-kit host: `extension.yml`, the nine `.claude/commands/speckit.*.md` files, the `.specify/scripts/` and `.specify/templates/` trees. No compatibility shim. Either spec-kit was a runtime dependency or it was not; half-removal was the worst of both.
-- **P02** migrated state from `.specify/orchestrator/` to `.orchestrator/` at the repo root. The constitution moved to `.orchestrator/memory/constitution.md`. The state-root resolver dropped from five rules to four — the bridge rule between the old and new layout was deleted outright.
-- **P03** reframed the five primary docs (`README.md`, `CLAUDE.md`, `references/architecture.md`, `references/installation.md`, `docs/getting-started.md`) as standalone, with thirteen wider doc surfaces swept. The new `docs/migrating-from-speckit.md` reframed spec-kit from "the host" to "a migration source."
-- **P04** captured four evidence streams: all eight test suites PASS, the doctor clean, the spec-kit migration adapter producing a valid `.orchestrator/` from a fixture, a clean-clone shape probe finding zero extension-host artifacts.
+**Cheapest way to disprove the skepticism:** onboard once and run a single one-shot task. `/orchestrator-do "your task"` classifies and dispatches in one move — zero commitment, and you'll see the knowledge-injected dispatch block for yourself.
 
-The orchestrator became its own project. Spec-kit became one of three migration sources the orchestrator can read on first contact, alongside GSD-1 and GSD-2.
+## Ready to try it?
 
-## The constitution as opinionated codification of prior failure
+**Next: [Getting Started](getting-started.md)** — install in ~30 seconds, onboard your project with `/orchestrator-start`, and run your first task end-to-end.
 
-The constitution at `.orchestrator/memory/constitution.md` is seven principles long. None of them are aspirational. Each one is the codified reaction to a specific past failure mode:
-
-1. **Context Minimization** — every architectural decision MUST optimize for minimizing the context each individual task consumes. *The lesson from the multi-context-window wall.*
-2. **Evidence Before Claims** — no task is marked complete without fresh verification evidence. "Should work" is NOT evidence. *The lesson from every silent failure where the assistant reported success and the human discovered the regression a week later.*
-3. **Design Before Code** — every piece of work goes through an explicit design step, no matter how "simple." *The lesson from the bug fixes that turned into architectural rewrites three commits in.*
-4. **Plans Assume Zero Context** — task plans must be readable by an agent with zero prior knowledge of the project. *The lesson from hand-off documents that only made sense to the person who wrote them.*
-5. **Fresh Context Per Unit** — each dispatch starts in a clean session. *The lesson from sessions that polluted each other and produced decisions nobody could trace.*
-6. **State On Disk Is Truth** — all state recoverable from files, no in-memory cache, no database. *The lesson from GSD-1's drift and GSD-2's opacity.*
-7. **Knowledge Compounds** — every phase emits structured summaries; the next phase is genuinely cheaper than the last. *The lesson from projects that ran twenty milestones and ended up no smarter than they started.*
-
-Constitutions are easy to write and hard to enforce. The orchestrator's enforcement is mechanical, not advisory: command definitions reference the principles by number; verification scripts check them; every dispatched task receives the constitution in its context bundle so the agent doing the work can be argued back against the principle when it drifts.
-
-## Where this leaves you
-
-If you are reading this, you probably have a project that is either too large for a single context window today or about to be. You have probably tried hand-off documents. You have probably watched them collapse.
-
-The orchestrator is one opinionated response. It encodes the assumption that context is scarce, that state belongs on disk where humans and agents can both read it, that verification is mechanical rather than vibes-based, and that knowledge worth keeping is knowledge worth structuring. It is not the only response. It is the one this project found durable enough to ship.
-
-When you reach for `/orchestrator-start`, you are not picking up a tool that was designed in the abstract. You are picking up the residue of two homegrown predecessors, a spec-kit extension that outgrew its host, and a wall that every team building anything substantial with a coding agent will eventually hit.
+See also:
+- [README](../README.md#documentation) — the routing hub for every reader intent
+- [Migrating from spec-kit](migrating-from-speckit.md) — if you're coming from a spec-kit project
+- [`.orchestrator/milestone-summary.md`](../.orchestrator/milestone-summary.md) — the full audit trail behind the proof claims

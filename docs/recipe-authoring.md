@@ -1,48 +1,53 @@
 # Recipe Authoring Guide
 
-> Step-by-step guide for creating and customizing context recipes.
-> Follow this guide to control what context your dispatched tasks receive.
+**A context recipe is a YAML file that controls exactly what context an agent receives when the orchestrator dispatches a task — and the whole workflow is copy the default, edit it, test it.**
 
-> Audience: users
+> Audience: users · Role: reference (deep guide)
 
-## Overview
+## TL;DR
 
-A **context recipe** is a YAML file that controls what information goes into the dispatch payload -- the document that an agent receives when executing a task. Every time the orchestrator dispatches a task, it reads a recipe and assembles the payload accordingly: which sections to include, in what order, how to compress them if the payload is too large, and what metadata to show in the manifest header.
+- A **context recipe** declares which sections go into a dispatch **payload** (the document a fresh agent reads to execute one task), in what order, how to compress them if too large, and what the manifest header shows.
+- The default recipe at [`templates/context-recipe.yaml`](../templates/context-recipe.yaml) already includes every section with sensible defaults. **Most projects never touch it.**
+- To customize: `cp` the default to a milestone/phase/task directory, edit it, then test with `build-context.sh --recipe ...`. The orchestrator auto-resolves the most specific recipe at dispatch time.
 
-Out of the box, the orchestrator ships a default recipe at `templates/context-recipe.yaml` that includes all available sections with sensible priorities and compression steps. Most projects never need to touch it. You would customize a recipe when:
+**Prerequisites / assumes you know:** the orchestrator is installed and a project is initialized — see [Getting Started](getting-started.md). Recipes are resolved **relative to an existing milestone/phase/task directory tree** under `.orchestrator/milestones/`. If you don't have one yet, run `/orchestrator-start` (warm front door) or `/orchestrator-do "<task>"` (one-shot entry) to create the structure first; this guide assumes those directories already exist. Terms like *dispatch*, *Quick/Standard/Full intensity*, and `.orchestrator/` state are defined in [Getting Started](getting-started.md).
 
-- A phase needs different context than the default (e.g., a documentation phase that does not need knowledge entries).
-- A specific task needs extra context (e.g., a migration task that needs the full feature spec).
-- You want to reduce payload size for simple tasks to save tokens.
-- You want to protect additional sections from compression (e.g., ensuring decisions are never dropped).
+## Section index
 
-Recipes are resolved hierarchically: the orchestrator checks for a `context-recipe.yaml` at the task, phase, milestone, and default levels, using the most specific one it finds. This means you can override the recipe for a single task without affecting anything else.
+| Jump to | What it covers |
+|---------|----------------|
+| [Quick start](#quick-start) | The three-step copy-edit-test loop |
+| [When you'd customize](#when-youd-customize-a-recipe) | Four reasons, each with a concrete trigger |
+| [Section configuration](#section-configuration) | Adding, removing, reprioritizing, reordering sections |
+| [Source types reference](#source-types-reference) | The six source types + custom files |
+| [Cache hints explained](#cache-hints-explained) | static / semi-static / dynamic, defined up front |
+| [Compression configuration](#compression-configuration) | Step types + the `drop_lowest_confidence` algorithm |
+| [Manifest configuration](#manifest-configuration) | What the payload header shows and why |
+| [Common patterns](#common-patterns) | Three copy-paste recipe templates |
+| [Troubleshooting](#troubleshooting) | Symptom → cause → fix |
+| [See also](#see-also) | Canonical references |
 
 ---
 
-## Quick Start
+## Quick start
 
-The fastest way to create a custom recipe is to copy the default and modify it.
+The fastest way to create a custom recipe is to copy the default, edit it, and test it. (Paths below are repo-relative; run them from your project root.)
 
 **1. Copy the default recipe to the level you want to override.**
 
-For a phase-level override:
-
 ```bash
+# Phase-level override
 cp templates/context-recipe.yaml \
    .orchestrator/milestones/M001/phases/P02/context-recipe.yaml
-```
 
-For a milestone-level override:
-
-```bash
+# Milestone-level override
 cp templates/context-recipe.yaml \
    .orchestrator/milestones/M001/context-recipe.yaml
 ```
 
-**2. Edit the copy.** Remove sections you do not need, change priorities, or adjust compression. See the sections below for details on each option.
+**2. Edit the copy.** Remove sections you do not need, change priorities, adjust compression. Each option is detailed in the sections below.
 
-**3. Test the recipe** before relying on it for real dispatches:
+**3. Test before relying on it.** The `--recipe` flag points the assembler at any file directly:
 
 ```bash
 scripts/dispatch/build-context.sh \
@@ -50,15 +55,36 @@ scripts/dispatch/build-context.sh \
   --recipe .orchestrator/milestones/M001/phases/P02/context-recipe.yaml
 ```
 
-**4. Done.** The orchestrator automatically resolves the most specific recipe at dispatch time. Once your file is in place, future dispatches for that phase (or milestone, or task) will use it.
+**Done.** Once the file is in place, the orchestrator automatically resolves the most specific recipe for future dispatches of that phase/milestone/task — no further wiring needed. (See [resolution order](#how-recipes-resolve) for how "most specific" is decided.)
 
 ---
 
-## Section Configuration
+## When you'd customize a recipe
 
-The `sections:` block in a recipe declares which sections appear in the dispatch payload. Each section has a name (the YAML key) and five fields: `source`, `priority`, `order`, `filter`, and `cache_hint`.
+Reach for a custom recipe only when one of these triggers fires. If none apply, the default is fine.
 
-Here is one section from the default recipe:
+| Reason | Concrete trigger — customize when… | What you'd change |
+|--------|------------------------------------|-------------------|
+| **A phase needs different context** | …you're planning a docs-only or refactor phase where knowledge entries are noise but upstream summaries matter. | Drop `knowledge`, raise `upstream` priority. Place at phase level. |
+| **A single task needs extra context** | …one migration/integration task must read the full feature spec or an API reference the rest of the phase doesn't. | Add a [custom file source](#custom-file-sources). Place at task level. |
+| **You want a smaller payload (save tokens)** | …a phase has many trivial, self-contained tasks (write a test from a signature, render a template) and you're paying for context they ignore. | Use the [minimal recipe](#minimal-recipe-lightweight-tasks); disable compression. |
+| **You want to protect sections from being dropped** | …compression keeps dropping `decisions` or `knowledge` on a complex task and the agent loses critical history. | Add the section name to [`protected_sections`](#protected-sections) and/or set `priority: required`. |
+
+---
+
+## Section configuration
+
+The `sections:` block declares which sections appear in the payload. Each section is a YAML key (any lowercase string with underscores) plus **five required fields**.
+
+| Field | Values | Purpose |
+|-------|--------|---------|
+| `source` | see [Source types](#source-types-reference) | Where the content comes from. |
+| `priority` | `required` · `compressible` · `optional` | How the section behaves under [compression](#priority-and-compression). |
+| `order` | integer (lower = earlier) | Position in the assembled payload. |
+| `filter` | `none` · `scope` · `staleness` · `confidence` | Which content-filter runs on the source before assembly. |
+| `cache_hint` | `static` · `semi-static` · `dynamic` | Prompt-cache boundary hint — see [Cache hints](#cache-hints-explained). |
+
+One section from the default recipe:
 
 ```yaml
 sections:
@@ -70,16 +96,13 @@ sections:
     cache_hint: static
 ```
 
-### Adding a Section
+### Adding a section
 
-To add a section, insert a new entry under `sections:` with all five required fields. The section name (the YAML key) can be any lowercase string with underscores.
-
-Example -- adding a custom section that includes a style guide stored at the milestone root:
+Insert a new entry under `sections:` with all five fields. For custom content, use a `.md` filename as the `source`; the file must exist at the milestone root (`.orchestrator/milestones/{M}/`).
 
 ```yaml
 sections:
   # ... existing sections ...
-
   style_guide:
     source: STYLE-GUIDE.md
     priority: optional
@@ -88,11 +111,9 @@ sections:
     cache_hint: static
 ```
 
-The `source` field determines where the content comes from. For custom sections, use a `file` source (a `.md` filename). The file must exist at the milestone directory root (`.orchestrator/milestones/{M}/`).
+### Removing a section
 
-### Removing a Section
-
-Delete the entire section entry from the `sections:` block. For example, to remove the `constraints` section, delete these lines:
+Delete the entire section entry from the `sections:` block. For example, removing `constraints`:
 
 ```yaml
   constraints:
@@ -103,19 +124,17 @@ Delete the entire section entry from the `sections:` block. For example, to remo
     cache_hint: static
 ```
 
-If you remove a section that is referenced by a compression step (e.g., removing `knowledge` when a `drop_lowest_confidence` step targets it), the compression step will have no effect. You can remove the step too for clarity, but it is not required.
+If a [compression step](#compression-configuration) targets a section you removed (e.g. a `drop_lowest_confidence` step on `knowledge`), the step simply has no effect. Removing the step too is tidier but optional.
 
-### Changing Priority
+### Priority and compression
 
-The `priority` field controls how the section behaves during compression:
+`priority` controls what compression may do to a section when the payload exceeds budget:
 
-| Priority | Behavior |
-|----------|----------|
-| `required` | Never dropped or modified during compression. Use for sections the agent absolutely needs. |
-| `compressible` | May be summarized or have entries removed, but not dropped entirely. Use for useful-but-shrinkable context. |
-| `optional` | First to be dropped when the payload exceeds the token budget. Use for nice-to-have context. |
-
-To change a section's priority, edit the `priority` field:
+| Priority | Behavior | Use for |
+|----------|----------|---------|
+| `required` | Never dropped or modified. | Context the agent absolutely needs. |
+| `compressible` | May be summarized or have entries removed, but never dropped whole. | Useful-but-shrinkable context. |
+| `optional` | First to be dropped when over budget. | Nice-to-have context. |
 
 ```yaml
   decisions:
@@ -126,17 +145,17 @@ To change a section's priority, edit the `priority` field:
     cache_hint: static
 ```
 
-Sections listed in the `compression.protected_sections` field are also exempt from compression regardless of their `priority` value. If you upgrade a section to `required`, consider adding it to `protected_sections` as well.
+Sections in [`compression.protected_sections`](#protected-sections) are exempt from compression regardless of `priority`. If you upgrade a section to `required`, consider adding it to `protected_sections` as well.
 
-### Changing Order
+### Order
 
-The `order` field controls the position of the section in the assembled payload. Lower values appear earlier. Changing order is purely cosmetic to the agent -- it does not affect compression or filtering -- but placing stable context early and dynamic context late improves prompt cache hit rates.
+`order` sets the section's position in the payload (lower appears earlier). It does **not** affect compression or filtering — but placing stable context early and dynamic context late improves prompt-cache hit rates.
 
-Guidelines:
-
-- **1-20**: Static, cacheable content (knowledge, decisions). Place early for maximum cache reuse.
-- **30-40**: Semi-static content (scope, constraints). Changes per phase but not per task.
-- **50-70**: Dynamic content (upstream summaries, task plan, state). Changes every dispatch.
+| Order range | Content kind | Cache hint |
+|-------------|--------------|------------|
+| 1–20 | Static, cacheable (knowledge, decisions) | `static` — place early for reuse |
+| 30–45 | Semi-static (scope, constraints, spec_context, reference) | `semi-static` |
+| 50–70 | Dynamic (upstream summaries, task plan, state) | `dynamic` |
 
 ```yaml
   upstream:
@@ -149,104 +168,35 @@ Guidelines:
 
 ---
 
-## Source Types
+## Source types reference
 
-The `source` field tells the assembly engine how to resolve the section's content. Six source types are available.
+The `source` field tells the assembly engine how to resolve a section's content. The default recipe ships nine sections across these source types.
 
-### `computed`
+| `source` value | Resolves to | Filter applied | Notes |
+|----------------|-------------|----------------|-------|
+| `computed` | Programmatically generated content | — | Currently the `state` section (milestone/phase/task/tier coordinates). |
+| `KNOWLEDGE.md` | Knowledge entries file at milestone root | `scope` | Scope-filters to the current phase + its dependencies, does 1-hop graph traversal for related entries, deduplicates. **Name collision — see below.** |
+| `DECISIONS.md` | Architectural decisions register at milestone root | `staleness` | Scope-filtered against the phase's dependency chain. |
+| `phase_summaries` | Concatenated upstream (dependency) phase summaries | `none` | Reads the phase's `depends` field from the roadmap. Emits "No upstream summaries available." when there are none. |
+| `phase_plan` | Goal, Demo, Must-Haves from the current phase plan | `none` | Provides phase-level scope for the task. |
+| `task_plan` | Full contents of the current task plan | `none` | The primary instruction document — everything the agent needs to execute. |
+| `template` | Predefined template + env-var substitution | `none` | Currently the `constraints` section: verification criteria, duration/dispatch budgets, enforcement mode. |
+| `spec_context` | Scope-filtered spec chunks (story/requirement/etc.) | `scope` | `priority: compressible`, `order: 35`. |
+| `reference` | Task-scoped reference-corpus chunks (M036) | `scope` | `priority: optional`, `order: 45`; token budget governed by the `reference:` block (default 4000) — see [the default recipe](../templates/context-recipe.yaml). |
+| *any other `.md`* | Custom file at milestone root | per `filter` | See [custom file sources](#custom-file-sources). |
 
-Generates content programmatically at assembly time. Currently supports the **state** section, which emits the State Context block (milestone, phase, task, tier coordinates).
+### Disambiguating the `KNOWLEDGE.md` name collision
 
-```yaml
-  state:
-    source: computed
-    priority: required
-    order: 60
-    filter: none
-    cache_hint: dynamic
-```
+The string `KNOWLEDGE.md` is used in two unrelated places — don't conflate them:
 
-### `KNOWLEDGE.md` (file -- knowledge)
+- **As a `source` value in a recipe** (`source: KNOWLEDGE.md`) it names the **knowledge source type** — the per-milestone knowledge-entries file read into the payload's Knowledge section.
+- **`.orchestrator/KNOWLEDGE.md` at the project root** is the **knowledge-graph index** for the whole project — the consolidated hot/warm/cold map. That index is **not** the file a recipe section reads; recipe sources resolve relative to the milestone root (`.orchestrator/milestones/{M}/`), not the project root.
 
-Resolves to the knowledge entries file at the milestone root. The engine runs scope filtering (only entries relevant to the current phase and its dependencies), 1-hop graph traversal for related entries, and deduplication.
-
-```yaml
-  knowledge:
-    source: KNOWLEDGE.md
-    priority: compressible
-    order: 10
-    filter: scope
-    cache_hint: static
-```
-
-### `DECISIONS.md` (file -- decisions)
-
-Resolves to the architectural decisions register at the milestone root. The engine runs scope filtering against the current phase's dependency chain.
-
-```yaml
-  decisions:
-    source: DECISIONS.md
-    priority: compressible
-    order: 20
-    filter: staleness
-    cache_hint: static
-```
-
-### `phase_summaries`
-
-Concatenates summaries from upstream (dependency) phases. The engine reads the current phase's `depends` field from the roadmap and includes each dependency phase's summary file. If no upstream dependencies exist, emits "No upstream summaries available."
-
-```yaml
-  upstream:
-    source: phase_summaries
-    priority: compressible
-    order: 50
-    filter: none
-    cache_hint: dynamic
-```
-
-### `phase_plan`
-
-Extracts the Goal, Demo, and Must-Haves sections from the current phase's plan file. Provides the phase-level scope for the task.
-
-```yaml
-  scope:
-    source: phase_plan
-    priority: required
-    order: 40
-    filter: none
-    cache_hint: semi-static
-```
-
-### `task_plan`
-
-Includes the full contents of the current task's plan file. This is the primary instruction document for the agent -- it contains everything the agent needs to execute the task.
-
-```yaml
-  task_plan:
-    source: task_plan
-    priority: required
-    order: 60
-    filter: none
-    cache_hint: dynamic
-```
-
-### `template`
-
-Generates content from a predefined template with environment variable substitution. Currently supports the **constraints** section, which emits verification criteria, duration budget, dispatch budget, and budget enforcement mode.
-
-```yaml
-  constraints:
-    source: template
-    priority: optional
-    order: 30
-    filter: none
-    cache_hint: static
-```
+In short: the recipe `source: KNOWLEDGE.md` is a *section input*; the root `KNOWLEDGE.md` is the *project index*. They share a filename, nothing else.
 
 ### Custom file sources
 
-Any other `.md` filename as a `source` value is read directly from the milestone directory root. This is how you include project-specific context files:
+Any other `.md` filename as a `source` is read directly from the milestone root. This is how you inject project-specific context:
 
 ```yaml
   api_reference:
@@ -261,40 +211,50 @@ The file must exist at `.orchestrator/milestones/{M}/API-REFERENCE.md`.
 
 ---
 
-## Per-Phase Overrides
+## Cache hints explained
 
-Recipes follow a most-specific-wins resolution order. When the engine assembles a payload for a task, it searches for `context-recipe.yaml` at four locations:
+`cache_hint` declares how often a section's content changes, so the assembler can order stable content first and improve prompt-cache reuse across dispatches. Define these once here; the examples and the [order table](#order) reference them.
 
-1. **Task directory** -- `.orchestrator/milestones/{M}/phases/{P}/tasks/context-recipe.yaml`
-2. **Phase directory** -- `.orchestrator/milestones/{M}/phases/{P}/context-recipe.yaml`
-3. **Milestone directory** -- `.orchestrator/milestones/{M}/context-recipe.yaml`
-4. **Default** -- `templates/context-recipe.yaml`
+| Cache hint | Changes… | Examples |
+|------------|----------|----------|
+| `static` | Rarely — stable across a whole milestone | `knowledge`, `decisions`, `constraints` |
+| `semi-static` | Per phase, but not per task | `scope`, `spec_context`, `reference` |
+| `dynamic` | Every dispatch | `task_plan`, `upstream`, `state` |
 
-The first file found wins. The engine does not merge recipes -- the winning recipe is used in its entirety.
+The hint is advisory for cache-boundary placement; it does not change which content is included or compressed.
+
+### How recipes resolve
+
+The engine searches for `context-recipe.yaml` at four locations, **most-specific-wins**, and uses the first one found **in its entirety** (recipes are never merged):
+
+| Precedence | Location |
+|------------|----------|
+| 1 (highest) | Task dir — `.orchestrator/milestones/{M}/phases/{P}/tasks/context-recipe.yaml` |
+| 2 | Phase dir — `.orchestrator/milestones/{M}/phases/{P}/context-recipe.yaml` |
+| 3 | Milestone dir — `.orchestrator/milestones/{M}/context-recipe.yaml` |
+| 4 (default) | `templates/context-recipe.yaml` |
 
 **When to use each level:**
 
-- **Task-level**: One-off tasks with unusual context needs. Example: a migration task that needs no knowledge entries but needs the full feature spec as a custom file source.
-- **Phase-level**: An entire phase has different context needs. Example: a documentation phase where upstream summaries matter more than knowledge entries.
-- **Milestone-level**: The whole milestone has non-standard requirements. Example: a refactoring milestone that needs decisions but not constraints.
+- **Task** — one-off tasks with unusual needs (a migration task needing the full spec as a custom file source).
+- **Phase** — an entire phase differs (a docs phase prioritizing upstream summaries over knowledge).
+- **Milestone** — the whole milestone is non-standard (a refactor needing decisions but not constraints).
 
-**CLI override**: The `--recipe` flag on `build-context.sh` bypasses resolution entirely. Useful for testing before placing a recipe file:
+**CLI override** — `--recipe` bypasses resolution entirely, ideal for testing before placing a file:
 
 ```bash
 scripts/dispatch/build-context.sh \
   .orchestrator M001 P02 T01 \
-  --recipe /path/to/experimental-recipe.yaml
+  --recipe /path/to/your-project/experimental-recipe.yaml
 ```
 
 ---
 
-## Compression Configuration
+## Compression configuration
 
-When an assembled payload exceeds the token budget (default: 30,000 tokens), the compression engine applies graduated steps in declaration order until the payload fits. The `compression:` block in the recipe controls this behavior.
+When an assembled payload exceeds the **token budget** (default 30,000 tokens; derived from the selected model's `context_budget` in routing config — see [Routing Reference](../references/routing.md)), the compression engine applies graduated steps **in declaration order** until the payload fits. The `compression:` block controls this.
 
-### How graduated compression works
-
-The engine processes compression steps sequentially. After each step, it re-estimates the token count. If the payload fits within the budget, remaining steps are skipped. If all steps execute and the payload still exceeds the budget, it is dispatched as-is with a warning.
+**How graduated compression works:** after each step the engine re-estimates tokens. If the payload now fits, remaining steps are skipped. If all steps run and it still exceeds budget, it is dispatched as-is with a warning.
 
 ```yaml
 compression:
@@ -318,25 +278,25 @@ compression:
 
 ### Step types
 
-**`drop_optional`** -- Removes all sections with `priority: optional`. In the default recipe, this drops the `constraints` section. No additional fields needed.
+| `type` | What it does | Fields |
+|--------|--------------|--------|
+| `drop_optional` | Removes all sections with `priority: optional` (in the default, that drops `constraints` and `reference`). | none |
+| `summarize` | Truncates each `###` subsection of the target to `max_words`; overflow becomes `[...truncated...]`. | `target_sections` (substring match against section names), `max_words` |
+| `drop_lowest_confidence` | Removes individual knowledge entries, lowest confidence first, until the payload fits. | `target_sections` (substring match), `min_confidence` (**see algorithm note**) |
 
-**`summarize`** -- Truncates each subsection of the target to a maximum word count. Content beyond the limit is replaced with `[...truncated...]`.
+### The `drop_lowest_confidence` algorithm
 
-Fields:
-- `target_sections` -- substring match against section names (e.g., `upstream`)
-- `max_words` -- maximum words per `###` subsection
+This step is more subtle than it looks — read this before tuning `min_confidence`:
 
-**`drop_lowest_confidence`** -- Removes individual knowledge entries below a confidence threshold, starting with the lowest confidence first.
-
-Fields:
-- `target_sections` -- substring match against section names (e.g., `knowledge`)
-- `min_confidence` -- confidence threshold below which entries are eligible for removal
+1. The target section (e.g. `knowledge`) is split into individual entries on `---` frontmatter boundaries; each entry's `confidence:` value is read (defaulting to `0.90` if absent).
+2. Entries are sorted by confidence **ascending** (lowest first).
+3. The engine removes entries **one at a time**, re-checking the budget after each removal, and **stops the moment the payload fits** — it does *not* drop all sub-threshold entries in a batch.
+4. **Tie-breaking:** entries with equal confidence are removed in original entry order (the sort is stable on the entry index), so the earliest-declared of a tied group goes first.
+5. **`min_confidence` is currently inert.** It is accepted for recipe-schema compatibility but is **not** enforced as a drop threshold — the engine drops purely "until under budget" regardless of the value. (This preserves byte-for-byte parity with the pre-refactor default; a threshold-guarded variant is a future change.) **Practical consequence:** do not rely on `min_confidence: 0.5` to *protect* entries at or above 0.5 — a large payload can still drop high-confidence entries. To truly protect knowledge, set `priority: required` and add it to `protected_sections`.
 
 ### Protected sections
 
-The `protected_sections` field is a comma-separated list of section names that are exempt from all compression steps. Protected sections are never dropped, summarized, or modified regardless of their `priority` value.
-
-The default protects `task_plan`, `scope`, and `state`. To protect additional sections, add them to the list:
+`protected_sections` is a comma-separated list of section names exempt from **all** compression steps — never dropped, summarized, or modified, regardless of `priority`. The default protects `task_plan,scope,state`. Add more as needed:
 
 ```yaml
   protected_sections: task_plan,scope,state,decisions,knowledge
@@ -344,7 +304,7 @@ The default protects `task_plan`, `scope`, and `state`. To protect additional se
 
 ### Disabling compression
 
-Set `enabled: false` to skip compression entirely. The payload is dispatched at whatever size it assembles to. Useful for minimal recipes where you know the payload will be small.
+Set `enabled: false` to skip compression entirely — the payload dispatches at whatever size it assembles to. Useful for minimal recipes where the payload is known to be small.
 
 ```yaml
 compression:
@@ -353,13 +313,13 @@ compression:
 
 ### Fallback behavior
 
-If no recipe file is found or the compression block is empty, the engine falls back to a hardcoded 3-step sequence matching the default recipe: drop optional sections, summarize upstream to 200 words per subsection, and drop lowest-confidence knowledge entries.
+If no recipe is found or the `compression` block is empty, the engine falls back to a hardcoded 3-step sequence matching the default recipe: `drop_optional` → `summarize upstream` (200 words/subsection) → `drop_lowest_confidence` on knowledge.
 
 ---
 
-## Manifest Configuration
+## Manifest configuration
 
-The manifest is a metadata header prepended to every assembled payload. It provides a table of contents with line ranges, estimated token counts, and priorities for each section. The `manifest:` block controls what the manifest includes.
+The **manifest** is a metadata header prepended to every payload: a table of contents with line ranges, estimated token counts, and a priority label per section. It exists so the agent can locate sections precisely (line numbers are absolute, so agents can cite ranges in their output) and so you can audit what compression did. It is a *header for the receiving agent and for debugging* — agents read it as part of the payload. The `manifest:` block controls its contents.
 
 ```yaml
 manifest:
@@ -369,12 +329,12 @@ manifest:
   include_compression_applied: true
 ```
 
-| Field | Default | What it controls |
-|-------|---------|-----------------|
-| `enabled` | `true` | Whether the manifest header is included at all. |
+| Field | Default | Controls |
+|-------|---------|----------|
+| `enabled` | `true` | Whether the header is included at all. |
 | `include_token_count` | `true` | Per-section and total estimated token counts. |
 | `include_section_list` | `true` | The section table with line ranges and priorities. |
-| `include_compression_applied` | `true` | Notes about which compression steps were applied. |
+| `include_compression_applied` | `true` | Notes about which compression steps ran. |
 
 Example manifest output:
 
@@ -391,15 +351,15 @@ Example manifest output:
 | **Total** | | **~4450** | |
 ```
 
-Line numbers are absolute, so agents can reference specific ranges in their output.
+The **Priority** column uses the manifest's display labels (distinct from the recipe `priority` field): `required` for protected/required sections, `filtered` for scope/staleness-filtered sources (`knowledge`, `decisions`, `spec_context`, `reference`), and `optional` for droppable sections. Compressed subsections additionally carry an inline `<!-- compressed:tier2 ... -->` marker in the body.
 
 ---
 
-## Common Patterns
+## Common patterns
 
-### Minimal Recipe (lightweight tasks)
+### Minimal recipe (lightweight tasks)
 
-For simple tasks that only need the task plan and state coordinates. Produces a small payload with no compression needed.
+Just the task plan and state coordinates — a small payload, no compression.
 
 ```yaml
 sections:
@@ -426,11 +386,11 @@ manifest:
   include_compression_applied: false
 ```
 
-**When to use**: tasks that are self-contained and do not need project history, upstream context, or knowledge entries. Examples: writing a test for a function whose signature is in the task plan, creating a configuration file from a template.
+**When to use:** self-contained tasks needing no project history, upstream context, or knowledge — e.g. writing a test for a function whose signature is in the task plan, or rendering a config file from a template.
 
-### Heavy-Context Recipe (complex tasks)
+### Heavy-context recipe (complex tasks)
 
-For tasks that need full project context with relaxed compression thresholds. Protects knowledge and decisions from being dropped.
+Full project context with relaxed compression, protecting knowledge and decisions from being dropped.
 
 ```yaml
 sections:
@@ -493,11 +453,11 @@ compression:
   protected_sections: task_plan,scope,state,knowledge,decisions
 ```
 
-**When to use**: tasks that integrate across multiple phases or depend on architectural decisions. Examples: implementing an API that must match interfaces from a prior phase, writing integration tests that span multiple subsystems.
+**When to use:** tasks integrating across phases or depending on architectural decisions — e.g. implementing an API that must match a prior phase's interfaces, or integration tests spanning subsystems.
 
-### Phase-Specific Override
+### Phase-specific override
 
-For an entire phase that has different context needs than the default. This example is for a documentation phase that emphasizes upstream summaries and drops knowledge entries.
+An entire phase with different needs than the default. This example is a documentation phase that emphasizes upstream summaries and drops knowledge entries.
 
 ```yaml
 sections:
@@ -543,57 +503,36 @@ manifest:
   include_compression_applied: true
 ```
 
-Place this file at `.orchestrator/milestones/{M}/phases/{P}/context-recipe.yaml` and all tasks in that phase will use it.
+Place this at `.orchestrator/milestones/{M}/phases/{P}/context-recipe.yaml` and every task in that phase uses it.
 
 ---
 
 ## Troubleshooting
 
-### Section does not appear in the payload
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| Section does not appear in the payload | Section missing from the `sections:` block. | Add the entry with all five fields (`source`, `priority`, `order`, `filter`, `cache_hint`). |
+| Section appears but is empty | Source file/content missing at the expected location. | **File sources:** ensure the `.md` exists at the milestone root. **`phase_summaries`:** ensure upstream phases have summary files (written after phase completion). **`phase_plan`/`task_plan`:** ensure the phase/task has been planned (plan file must exist). |
+| Compression drops a section you need | Section has `priority: optional` and a `drop_optional` step runs. | Change `priority` to `compressible`/`required`, or add the name to `protected_sections`. |
+| High-confidence knowledge still gets dropped | `min_confidence` is **inert** — `drop_lowest_confidence` drops until under budget regardless of threshold (see [algorithm](#the-drop_lowest_confidence-algorithm)). | Set the section to `priority: required` and add it to `protected_sections`. Tightening `min_confidence` alone won't protect it. |
+| YAML parse error | Malformed recipe — parser requires strict 2-space indentation, up to 3 nesting levels. | Section fields = 4 spaces (2 levels); compression step fields = 6 spaces (3 levels). No tabs. |
+| Recipe override not taking effect | File misnamed or misplaced. | Filename must be exactly `context-recipe.yaml`, at the correct level (task/phase/milestone dir). Test with `--recipe`. |
+| Token estimate unexpectedly high | Large knowledge base or verbose upstream summaries inflating the payload. | Lower `max_words` on `summarize`, set verbose sections to `priority: optional`, or tighten budget. |
+| Protected section still modified | Name in `protected_sections` doesn't match the section key. | Match exactly — `task_plan`, not `task-plan` or `taskplan`. |
 
-- **Cause**: the section is missing from the recipe's `sections:` block.
-- **Fix**: add the section entry with all five required fields (`source`, `priority`, `order`, `filter`, `cache_hint`).
-
-### Section appears but has no content
-
-- **Cause**: the source file does not exist at the expected location.
-- **Fix for file sources**: ensure the `.md` file exists at the milestone directory root (`.orchestrator/milestones/{M}/`).
-- **Fix for `phase_summaries`**: ensure upstream phases have summary files written. Summaries are generated after phase completion.
-- **Fix for `phase_plan` / `task_plan`**: ensure the phase or task has been planned (the plan file must exist).
-
-### Compression drops a section you need
-
-- **Cause**: the section has `priority: optional` and a `drop_optional` compression step is configured.
-- **Fix**: change the section's `priority` to `compressible` or `required`, or add the section name to `protected_sections`.
-
-### YAML parse error
-
-- **Cause**: the recipe YAML is malformed. The parser requires strict 2-space indentation and max 2 levels of nesting.
-- **Fix**: ensure all section fields are indented with exactly 4 spaces (2 levels: 2 for section name + 2 for field). Compression step fields use 6 spaces (3 levels). Do not use tabs.
-
-### Recipe override not taking effect
-
-- **Cause**: the file is not named `context-recipe.yaml` or is not placed in the correct directory.
-- **Fix**: verify the filename is exactly `context-recipe.yaml` and the file is at the correct level in the hierarchy (task, phase, or milestone directory). Use the `--recipe` flag to test the file directly.
-
-### Token estimate is unexpectedly high
-
-- **Cause**: a large knowledge base or verbose upstream summaries are inflating the payload.
-- **Fix**: tighten compression by lowering `max_words` on the `summarize` step, raising `min_confidence` on the `drop_lowest_confidence` step, or setting verbose sections to `priority: optional`.
-
-### Protected section is still being modified
-
-- **Cause**: the section name in `protected_sections` does not match the section key in the `sections:` block.
-- **Fix**: ensure the names match exactly. For example, if your section is keyed as `task_plan`, use `task_plan` in the protected list (not `task-plan` or `taskplan`).
+**Manifest priority labels** (the values shown in the manifest's Priority column): `required` = protected/never-touched; `filtered` = scope/staleness-filtered sources (`knowledge`, `decisions`, `spec_context`, `reference`); `optional` = eligible for `drop_optional`. A `compressed:tier2` marker in the body indicates a section was head-dropped during tier-2 compression.
 
 ---
 
-## Cross-References
+## See also
 
-- [Recipes Reference](../references/recipes.md) -- full reference for section schemas, source types, compression step types, and resolution order
-- [Routing Reference](../references/routing.md) -- model tier selection, fallback chains, and budget controls
-- [File Formats Reference](../references/file-formats.md) -- state file schemas for all orchestrator artifacts
-- [Getting Started](getting-started.md) -- installation and first-run guide
+- [Recipes Reference](../references/recipes.md) — full section schemas, source types, compression step types, resolution order
+- [Routing Reference](../references/routing.md) — model tier selection, `context_budget`, fallback chains
+- [File Formats Reference](../references/file-formats.md) — state-file schemas for all orchestrator artifacts
+- [Getting Started](getting-started.md) — installation and first-run guide
+
+**Source of truth on disk:**
+
 - Default recipe: [`templates/context-recipe.yaml`](../templates/context-recipe.yaml)
 - Recipe parser: [`scripts/lib/recipe-parser.sh`](../scripts/lib/recipe-parser.sh)
 - Context assembler: [`scripts/dispatch/build-context.sh`](../scripts/dispatch/build-context.sh)

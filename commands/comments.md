@@ -69,6 +69,12 @@ Lists comments routed to the human-triage bucket (ambiguous comments whose
 conversus verdict was low-confidence per spec AS-5/AS-8). Each entry shows
 source URL, conversus verdict, and remediation hint.
 
+**Corpus-exhaustion gate (M042).** When triage would draft a clarifying
+question back to the operator/SME (rather than route the comment to a workflow
+action), pass that question through `orchestrator:corpus-gate` first — the
+project's own corpus often already answers it. See `commands/corpus-gate.md`
+(`gate --checkpoint comments …`). The gate respects `corpus_exhaustion.enabled`.
+
 ### reclassify
 
 `orchestrator:comments reclassify <comment-url>`

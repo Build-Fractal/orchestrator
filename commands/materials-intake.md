@@ -129,6 +129,14 @@ that the detector output names exactly those 5.
 
 ## Output
 
+**Corpus-exhaustion gate (M042).** When reconciliation surfaces conflict
+questions for the operator (the `conflicts.md` branch below), run those
+questions through the gate before presenting them so the operator is not asked
+what the existing corpus already answers:
+
+- `bash scripts/dispatch/adapters/tool/corpus-gate.sh gate --checkpoint materials-intake --generated-at <iso> <conflict-questions-file> <project-dir>/.orchestrator/intake/<timestamp>/corpus-exhaustion-intake.md`
+- Exit `2` (BLOCK): the artifact cites where a conflict is already resolved in the corpus — resolve it from the cited source instead of asking. Exit `0` (PASS / SKIPPED): present the surviving conflicts. Respects `corpus_exhaustion.enabled`; see `commands/corpus-gate.md`.
+
 - `<project-dir>/.orchestrator/intake/<timestamp>/reconciled-pre-spec.md`
   — the byte-deterministic reconciled pre-spec consumed by
   `orchestrator:specify --description`.

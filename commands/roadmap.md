@@ -110,6 +110,14 @@ Before writing the roadmap, validate its consistency. Record all results in the 
 
 ## Output
 
+**Corpus-exhaustion gate (M042) — before writing.** If the roadmap carries
+operator-facing open questions (in an `## Open Questions` section or inline
+phase notes), run them through the gate first so the roadmap does not surface
+questions the corpus already answers:
+
+- `bash scripts/dispatch/adapters/tool/corpus-gate.sh gate --checkpoint roadmap --generated-at <iso> <open-questions-file> <milestone-dir>/gates/corpus-exhaustion-roadmap.md`
+- Exit `2` (BLOCK): read the cited answers, resolve those questions in the roadmap, re-run until PASS. Exit `0` (PASS / SKIPPED): proceed. Respects `corpus_exhaustion.enabled`; see `commands/corpus-gate.md`.
+
 Write the roadmap to the milestone directory:
 
 1. **Create the roadmap file** at `<milestone-dir>/M###-ROADMAP.md` using the `templates/roadmap.md` template.

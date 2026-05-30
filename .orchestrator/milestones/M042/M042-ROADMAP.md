@@ -19,7 +19,7 @@ updated_at: "2026-05-30T00:00:00Z"
     - Produces: `scripts/knowledge/corpus-exhaustion-sweep.sh` (term extraction + grep sweep + artifact emission), `scripts/dispatch/adapters/tool/corpus-gate.sh` (check/gate/parse-verdict, exit-code contract), `templates/corpus-exhaustion-artifact.md` (artifact template), `templates/corpus-store-manifest.yml` (bundled default manifest), `corpus_exhaustion.*` keys in `scripts/state/read-config.sh` + `templates/orchestrator-config-default.yml` block, `commands/corpus-gate.md` (command doc), `packaging/skills/orchestrator-corpus-gate.md` (skill discovery), `tests/fixtures/corpus-gate/**`, `tools/verify/m042-p01-acceptance-battery.sh`
     - Consumes: `scripts/dispatch/adapters/tool/conversus.sh` (exit-code contract + adapter shape template), `scripts/state/read-config.sh` (nested-key resolution pattern — the `detective.*` block is the template), `scripts/engine/intensity-gate.sh` (intensity-tier read), `.orchestrator/DECISIONS.md` + `knowledge/KNOWLEDGE-INDEX.md` + `.orchestrator/memory/constitution.md` (default-manifest stores)
 
-- [ ] **P02**: Caller pre-finalize hooks + doctor bypass lint — "Each of `discuss`, `comments`, `materials-intake`, `specify`, `plan-phase`, `roadmap` documents and invokes the gate before finalizing a human-facing question packet/plan; `run-doctor.sh` emits `DOCTOR:CORPUS_EXHAUSTION status=warn` against a fixture with a missing sidecar and `status=ok` when present; the P02 suite passes (SC-7, SC-8)."
+- [x] **P02**: Caller pre-finalize hooks + doctor bypass lint — "Each of `discuss`, `comments`, `materials-intake`, `specify`, `plan-phase`, `roadmap` documents and invokes the gate before finalizing a human-facing question packet/plan; `run-doctor.sh` emits `DOCTOR:CORPUS_EXHAUSTION status=warn` against a fixture with an unresolved BLOCK artifact and `status=ok` otherwise; the P02 suite passes (SC-7, SC-8)." — **closed 2026-05-30**, acceptance battery `pass=10 skip=0 fail=0`.
   - Risk: medium
   - Depends: P01
   - Boundary Map:
@@ -82,7 +82,14 @@ P01 shipped the deterministic floor. On disk:
 - `commands/corpus-gate.md` + `packaging/skills/orchestrator-corpus-gate.md`.
 - `tests/fixtures/corpus-gate/**` + `tools/verify/m042-p01-acceptance-battery.sh` (SC-1..SC-6, `pass=8 skip=0 fail=0`).
 
-**Next**: P02 (caller pre-finalize hooks into discuss / comments / materials-intake / specify / plan-phase / roadmap + the `DOCTOR:CORPUS_EXHAUSTION` bypass lint). P03 (LLM judge) + P04 (telemetry) remain deferred pending the #Q-1 M040 absorption decision. The milestone stays open — no `M042-VALIDATED` marker until the shippable P01+P02 scope closes.
+**P02 follow-on (also 2026-05-30)** wired the gate into the six question-emitting commands and added the doctor lint:
+
+- Full pre-finalize gate steps in `commands/discuss.md` (Finalize Context), `commands/specify.md` (Pass 3 → Open Questions), `commands/roadmap.md` (pre-write), `commands/plan-phase.md` (pre-write), `commands/materials-intake.md` (conflict-question branch). Each maps gate exit `2` (BLOCK) to a read-the-citations-then-disposition pause; exit `0` proceeds.
+- Lighter pointer in `commands/comments.md` — its question-emission is conditional/rare (it classifies *inbound* comments), so it gets a "route drafted clarifying questions through the gate" note rather than a forced seam.
+- `scripts/diagnostics/check-corpus-exhaustion.sh` + a `run_check` registration in `scripts/diagnostics/run-doctor.sh` (advisory). Low-noise design: `DOCTOR:CORPUS_EXHAUSTION status=warn` only when an artifact is left in an unresolved `BLOCK` state; `status=ok` otherwise (zero artifacts → ok). FR-11/SC-8 refined from "missing sidecar" to "unresolved BLOCK" (the precise mechanical proxy; missing-sidecar detection needs a should-be-gated registry, deferred).
+- `tools/verify/m042-p02-acceptance-battery.sh` (SC-7 ×6 + SC-8 ×3 + shape): `pass=10 skip=0 fail=0`.
+
+**Shippable scope (P01 + P02) is complete.** A `M042-VALIDATED` marker + `M042-SUMMARY.md` can be written to close the milestone at this scope; P03 (LLM judge) + P04 (telemetry) remain deferred pending the #Q-1 M040 absorption decision.
 
 ## Scope Note
 

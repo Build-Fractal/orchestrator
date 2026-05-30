@@ -264,6 +264,14 @@ This list is used by `scripts/verify/check-scope.sh` (from T01) for scope enforc
 
 ## Output
 
+**Corpus-exhaustion gate (M042) — before writing.** If the phase plan embeds
+open questions destined for the operator/SME (in must-haves or an open-questions
+note), run them through the gate so the plan does not carry questions the corpus
+already answers:
+
+- `bash scripts/dispatch/adapters/tool/corpus-gate.sh gate --checkpoint plan-phase --generated-at <iso> <open-questions-file> <milestone-dir>/phases/P##/gates/corpus-exhaustion-plan.md`
+- Exit `2` (BLOCK): read the cited answers, resolve or drop those questions in the plan, re-run until PASS. Exit `0` (PASS / SKIPPED): proceed. Respects `corpus_exhaustion.enabled`; see `commands/corpus-gate.md`.
+
 Write the plan files to the phase directory:
 
 1. **Write the phase plan** to `<milestone-dir>/phases/P##/P##-PLAN.md`.

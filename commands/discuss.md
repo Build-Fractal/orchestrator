@@ -129,10 +129,14 @@ When the developer indicates the context is complete:
 
 1. Read the context draft from `<milestone-dir>/<M###>-CONTEXT.md`
 2. Verify that at least one section has non-placeholder content (the developer should have provided some input)
-3. Update the frontmatter:
+3. **Corpus-exhaustion gate (M042 — search before you ask).** If `## Open Questions` carries any unresolved questions destined for the operator/SME, run them through the gate before finalizing:
+   - Write the open questions, one per line, to a scratch file.
+   - `bash scripts/dispatch/adapters/tool/corpus-gate.sh gate --checkpoint discuss --generated-at <iso> <questions-file> <milestone-dir>/gates/corpus-exhaustion-discuss-<date>.md`
+   - Exit `0` (PASS / SKIPPED): proceed to finalize. Exit `2` (BLOCK): the artifact lists questions already answerable from the corpus — read the cited locations, drop the answered ones from `## Open Questions` (recording the found answer), keep the genuinely-open ones, then re-run until PASS. Do **not** finalize a draft whose open questions the corpus already answers.
+4. Update the frontmatter:
    - Change `status: draft` → `status: finalized`
    - Set `finalized_at` to the current ISO-8601 timestamp
-4. Write the updated file
+5. Write the updated file
 
 This transitions the state machine from `discussing` to `planning` — `derive-phase.sh` will no longer match the discussing rule (rule 2) because the context file now has `status: finalized`.
 

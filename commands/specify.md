@@ -126,6 +126,18 @@ Then the adapter runs per intensity:
 
 The adapter resolves to the OSS conversus build (`~/Sites/conversus-oss`) by default (M026); set `CONVERSUS_EDITION=paid` to flip to the paid build for paid-only presets. See `commands/conversus-gate.md` for the full resolver and edition-aware diagnostics.
 
+### Corpus-exhaustion gate (M042)
+
+Before the spec leaves authoring, run its `## Open Questions` through the
+corpus-exhaustion gate so the spec does not ship questions the project's own
+knowledge already answers (search before you ask):
+
+- Write the open questions one per line to a scratch file.
+- `bash scripts/dispatch/adapters/tool/corpus-gate.sh gate --checkpoint specify --generated-at <iso> <open-questions-file> specs/<NNN>-<slug>/conversus/corpus-exhaustion-specify.md`
+- Exit `2` (BLOCK): the artifact cites where each flagged question is already answered — fold the answer into the spec body, drop the question, then re-run until PASS. Exit `0` (PASS / SKIPPED): proceed.
+
+This composes with the Pass 3 conversus gate (a distinct concern: conversus checks spec quality; the corpus-gate checks whether the open questions are already answered). The gate respects `corpus_exhaustion.enabled` and degrades gracefully when disabled. See `commands/corpus-gate.md`.
+
 ### Observability
 
 At the end of the run:

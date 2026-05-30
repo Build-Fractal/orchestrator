@@ -133,7 +133,7 @@ As a maintainer, I want the gate to emit a telemetry record per run (questions c
 - **FR-8**: Graceful degradation — when `corpus_exhaustion.enabled: false`, or the manifest is absent, the gate emits `SKIPPED:` and exits `0`; it never hard-blocks a project that has not opted in (Principle XI fail-open). A `--strict` flag / `CORPUS_GATE_STRICT=1` flips degradation off for callers that require the gate. *(P01)*
 - **FR-9**: Intensity scaling — the sweep reads the active intensity tier; `quick` runs grep-only (no judge even when P03 ships), `standard`/`full` enable the judge in P03. The intensity floor is configurable (`corpus_exhaustion.intensity_floor`). *(P01 wires the read; P03 wires the judge.)*
 - **FR-10**: Pre-finalize hooks — `discuss`, `comments`, `materials-intake`, `specify`, `plan-phase`, and `roadmap` document and invoke the gate before finalizing any human-facing question packet or plan, mapping BLOCK to a pause-for-disposition. *(P02)*
-- **FR-11**: A `DOCTOR:CORPUS_EXHAUSTION` doctor check flags finalized gated artifacts that carry no corpus-exhaustion sidecar (`warn`, not `fail` — operator decides). *(P02)*
+- **FR-11**: A `DOCTOR:CORPUS_EXHAUSTION` doctor check surfaces corpus-exhaustion artifacts left in an unresolved `BLOCK` state — a gate ran, found un-dispositioned hits, and the packet/plan was never resolved to PASS (`warn`, not `fail` — operator decides). Zero-noise on projects with no artifacts. *(P02)* — Note: detecting a finalized packet that should have had a sidecar but doesn't requires a "should-be-gated" registry; deferred (the unresolved-`BLOCK` signal is the precise, low-noise mechanical proxy that ships in P02).
 - **FR-12**: A batched LLM judge upgrades `HITS` → `ANSWERED`/`PARTIAL`/`MENTIONS` and auto-resolves `ANSWERED` (drop) / `PARTIAL` (rewrite to residual), batching one call per packet (not N sub-agents at `standard`; `full` adds a per-question pass + an adversarial "which store did we NOT search?" pass). *(P03, deferred)*
 - **FR-13**: Auto-promotion of an `ANSWERED` finding into a DR/memory is **default-off**; when enabled it routes the suggestion through the `comments` apply queue rather than writing the record directly. *(P03, deferred)*
 - **FR-14**: The gate emits a `corpus_exhaustion` telemetry record per run over the M019 JSONL stream. *(P04, deferred)*
@@ -153,7 +153,7 @@ As a maintainer, I want the gate to emit a telemetry record per run (questions c
 - **SC-5**: `parse-verdict` emits `verdict=PASS|BLOCK` from an existing artifact. *(P01)*
 - **SC-6**: All P01 scripts are Bash 3.2-compatible and pass the repo shape-guard (no AP-00x forbidden shapes). *(P01)*
 - **SC-7**: Each wired command's finalization section documents the pre-finalize gate and its BLOCK handling. *(P02)*
-- **SC-8**: The doctor check emits `DOCTOR:CORPUS_EXHAUSTION status=warn` against a fixture with a missing sidecar and `status=ok` when present. *(P02)*
+- **SC-8**: The doctor check emits `DOCTOR:CORPUS_EXHAUSTION status=warn` against a fixture containing an unresolved `BLOCK` artifact and `status=ok` when only `PASS` artifacts (or none) are present. *(P02)*
 - **SC-9**: With a stubbed judge at `full` intensity, a `HITS` row whose cited content answers the question is upgraded to `ANSWERED` and dropped from the surviving-questions output. *(P03)*
 
 ## Constraints

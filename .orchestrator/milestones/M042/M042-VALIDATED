@@ -1,0 +1,8 @@
+M042 (corpus-exhaustion gate) validated 2026-05-30 at P01+P02 shippable scope.
+P01 acceptance battery SC-1..SC-6: pass=8 skip=0 fail=0.
+P02 acceptance battery SC-7..SC-8 (+shape): pass=10 skip=0 fail=0.
+Deterministic search-before-ask gate (orchestrator:corpus-gate) + 6-command
+pre-finalize wiring + DOCTOR:CORPUS_EXHAUSTION advisory lint, all on disk.
+P03 (LLM judge) + P04 (telemetry) deferred to a future demand-driven slice
+pending the #Q-1 M040 absorption decision — forward-pointed in M042-ROADMAP.md.
+See M042-SUMMARY.md.

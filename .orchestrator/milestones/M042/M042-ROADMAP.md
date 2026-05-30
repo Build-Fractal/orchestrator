@@ -26,20 +26,17 @@ updated_at: "2026-05-30T00:00:00Z"
     - Produces: pre-finalize gate step in `commands/discuss.md`, `commands/comments.md`, `commands/materials-intake.md` (+ `scripts/lifecycle/materials-intake.sh` seam), `commands/specify.md`, `commands/plan-phase.md`, `commands/roadmap.md`; `scripts/diagnostics/check-corpus-exhaustion.sh` (doctor lint); P02 verifiers + phase suite
     - Consumes: `scripts/dispatch/adapters/tool/corpus-gate.sh` (from P01), the artifact contract (from P01), `scripts/diagnostics/run-doctor.sh` (doctor check auto-discovery convention)
 
-- [ ] **P03**: Batched LLM semantic judge + auto-resolve (deferred; demand-driven) — "With `corpus_exhaustion.intensity_floor: full` and a stubbed judge, a `HITS` row whose cited content answers the question is upgraded to `ANSWERED` and dropped from the surviving-questions output, with the answer + citation recorded; `PARTIAL` rewrites the question to its residual; SC-9 passes."
-  - Risk: medium
-  - Depends: P02
-  - Boundary Map:
-    - Produces: `scripts/knowledge/lib/corpus-exhaustion-judge.sh` (batched judge wrapping the Tier-2 LLM call pattern), `templates/corpus-exhaustion-judge-prompt.md`, judge-routing + auto-resolve in the sweep engine (intensity-gated), default-off `ANSWERED`→DR promotion routed through the `comments` apply queue, P03 suite
-    - Consumes: `scripts/knowledge/lib/extract-tier-2-llm.sh` (batched-LLM invocation precedent), `scripts/dispatch/adapters/tool/conversus.sh` (cooperative-deliberation shape for the adversarial which-store pass), the artifact contract (from P01)
-  - Note: carries the unresolved #Q-1 M040 absorption decision. Do NOT build before the M034/M038/M040 decision-packet-family absorption decision is taken at queue-entry — the two-agent-sweep + human-gated-apply plumbing is shared and likely belongs in a common primitive.
+_(P03 and P04 are intentionally NOT in the active phase checklist — they are deferred to a future demand-driven slice. See "Deferred Phases" below. Keeping them out of `## Phases` lets `find-active-milestone.sh` return `NONE` at M042 closure rather than auto-targeting an open milestone — the M036b paper-cut, fixed here via the same Option A.)_
 
-- [ ] **P04**: Gate telemetry (deferred; demand-driven) — "A completed gate run appends a `corpus_exhaustion` JSONL record (checkpoint, questions_total, hits, clean, caveat, and P03 answered/partial/irreducible) to the execution-log stream; a rollup reports auto-answered vs reached-human."
-  - Risk: low
-  - Depends: P03
-  - Boundary Map:
-    - Produces: `corpus_exhaustion` event-type emission in the sweep engine, rollup surface, P04 suite
-    - Consumes: M019 Tier 1 JSONL emitter, the artifact contract (from P01)
+## Deferred Phases (future demand-driven slice — not part of M042 closure)
+
+These were roadmapped at evaluation but are **not built** in the M042 P01+P02 closure. They ship demand-driven, gated on the #Q-1 M040 absorption decision (the two-agent-sweep + PASS|BLOCK + human-gated-apply plumbing overlaps M040's decision-contradiction gate and likely belongs in a shared primitive — resolve at the M034/M038/M040 decision-packet-family queue-entry).
+
+- **P03 — Batched LLM semantic judge + auto-resolve.** Demo: with `corpus_exhaustion.intensity_floor: full` and a stubbed judge, a `HITS` row whose cited content answers the question is upgraded to `ANSWERED` and dropped from the surviving-questions output (answer + citation recorded); `PARTIAL` rewrites the question to its residual; SC-9 passes.
+  - Produces: `scripts/knowledge/lib/corpus-exhaustion-judge.sh` (batched judge wrapping the Tier-2 LLM call pattern), `templates/corpus-exhaustion-judge-prompt.md`, judge-routing + auto-resolve in the sweep engine (intensity-gated), default-off `ANSWERED`→DR promotion routed through the `comments` apply queue.
+  - Consumes: `scripts/knowledge/lib/extract-tier-2-llm.sh`, `scripts/dispatch/adapters/tool/conversus.sh` (adversarial which-store pass), the artifact contract (P01).
+- **P04 — Gate telemetry.** Demo: a completed gate run appends a `corpus_exhaustion` JSONL record (checkpoint, questions_total, hits, clean, caveat, and P03 answered/partial/irreducible) to the execution-log stream; a rollup reports auto-answered vs reached-human.
+  - Produces: `corpus_exhaustion` event-type emission + rollup surface. Consumes: M019 Tier 1 JSONL emitter, the artifact contract (P01).
 
 ## Cross-Cutting Concerns
 

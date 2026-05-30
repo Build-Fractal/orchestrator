@@ -1,0 +1,56 @@
+# Corpus-Exhaustion Store Manifest (M042) — bundled default.
+#
+# The corpus-exhaustion gate (scripts/knowledge/corpus-exhaustion-sweep.sh)
+# sweeps these stores for every candidate question before it reaches a human.
+# This is the DEFAULT manifest shipped with the orchestrator. Projects override
+# it by setting `corpus_exhaustion.store_manifest_path` in .orchestrator/config.yml
+# to a project-local copy — never hardcode store paths (CON-2). Add the stores
+# your project actually keeps (SME-reply drafts, Slack exports, handoff docs)
+# via their own entries.
+#
+# Each store entry:
+#   label     short identifier shown in hit citations and the caveat line.
+#   glob      repo-root-relative path or shell glob (single-level `*` only —
+#             no `**`). A directory is searched recursively (grep -r). A glob
+#             that matches nothing is skipped; if `required: true`, that skip
+#             is surfaced as IRREDUCIBLE-WITH-CAVEAT (CON-3 — never silent).
+#   required  true  → if this store resolves to zero files, every otherwise-CLEAN
+#                     question is downgraded to IRREDUCIBLE-WITH-CAVEAT.
+#             false → an absent store is legitimate empty space, not a caveat.
+#
+# Stores must be greppable text. Binary indexes (e.g. knowledge.db) are NOT
+# listed here — they are covered by their companion text index
+# (knowledge/KNOWLEDGE-INDEX.md). This keeps the P01 sweep deterministic and
+# dependency-free; the P03 judge layer adds semantic search.
+
+stores:
+  - label: decisions
+    glob: .orchestrator/DECISIONS.md
+    required: true
+  - label: decisions-dir
+    glob: .orchestrator/decisions/*.md
+    required: false
+  - label: constitution
+    glob: .orchestrator/memory/constitution.md
+    required: true
+  - label: knowledge-index
+    glob: knowledge/KNOWLEDGE-INDEX.md
+    required: false
+  - label: knowledge-md
+    glob: .orchestrator/KNOWLEDGE.md
+    required: false
+  - label: knowledge-entries
+    glob: knowledge/*/*.md
+    required: false
+  - label: reference-corpus
+    glob: knowledge/reference
+    required: false
+  - label: memory-index
+    glob: .orchestrator/memory/MEMORY.md
+    required: false
+  - label: milestone-summaries
+    glob: .orchestrator/milestones/*/*-SUMMARY.md
+    required: false
+  - label: spec-sources
+    glob: .orchestrator/spec
+    required: false

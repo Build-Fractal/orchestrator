@@ -1,0 +1,8 @@
+# M042 corpus-gate test manifest — all required stores present.
+stores:
+  - label: decisions
+    glob: tests/fixtures/corpus-gate/corpus/decisions.md
+    required: true
+  - label: constitution
+    glob: tests/fixtures/corpus-gate/corpus/constitution.md
+    required: true

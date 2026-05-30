@@ -1,0 +1,8 @@
+# M042 corpus-gate test manifest — a required store is unreachable (CON-3 caveat).
+stores:
+  - label: decisions
+    glob: tests/fixtures/corpus-gate/corpus/decisions.md
+    required: true
+  - label: missing-required
+    glob: tests/fixtures/corpus-gate/corpus/DOES-NOT-EXIST-EVER.md
+    required: true

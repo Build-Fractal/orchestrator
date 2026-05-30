@@ -170,6 +170,28 @@ detective:
   repo: Build-Fractal/orchestrator
   match_threshold: 3
 
+# M042 — Corpus-exhaustion gate (search-before-ask).
+# Before any question reaches an operator/SME and before a plan/spec/roadmap
+# finalizes, the gate (scripts/dispatch/adapters/tool/corpus-gate.sh) sweeps
+# the project's knowledge stores for each candidate question and refuses to
+# pass while any question has un-dispositioned corpus hits (read-before-ask).
+#
+# enabled            true (default) | false. Opt-OUT, not opt-in: a null/absent
+#                    value is treated as enabled. Set false to disable the gate
+#                    project-wide (every caller emits SKIPPED + proceeds).
+# store_manifest_path .orchestrator-relative (or absolute) path to a project
+#                    store manifest. null → the bundled default
+#                    (templates/corpus-store-manifest.yml). Copy the bundled
+#                    manifest and add project-specific stores (SME-reply drafts,
+#                    Slack exports, handoff docs) — never hardcode store paths.
+# intensity_floor    quick | standard | full. P01 runs deterministic grep at
+#                    every tier; the P03 LLM judge engages at/above this floor
+#                    (quick stays grep-only).
+corpus_exhaustion:
+  enabled: true
+  store_manifest_path: null
+  intensity_floor: standard
+
 # M037 — Wiki team-feedback-ready (FR-2).
 # The wiki: namespace is orchestrator-managed. Operator-authored values for
 # any keys NOT enumerated in the framework default are preserved by the

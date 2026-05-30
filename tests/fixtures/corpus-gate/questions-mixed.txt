@@ -1,0 +1,3 @@
+# Q1 hits the fixture corpus (frobnication); Q2 is genuinely absent (gibberish).
+[Q1] Does the project require frobnication of widgets?
+[Q2] What is the xyzzyplugh quuxbar greeblezotch frobble?

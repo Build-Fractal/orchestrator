@@ -1,0 +1,3 @@
+# Q1 dispositioned as kept (genuinely open); Q2 clean. Expect top verdict PASS.
+[Q1] Does the project require frobnication of widgets?  @disposition=kept reason: still genuinely open
+[Q2] What is the xyzzyplugh quuxbar greeblezotch frobble?

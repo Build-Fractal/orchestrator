@@ -1,5 +1,6 @@
 # >>> orchestrator:recent-changes >>>
 - 041-detective: orchestrator:detective — a new command that triages issues with the orchestrator
+- 042-corpus-exhaustion-gate: orchestrator:corpus-gate — search-before-ask gate; P01 (deterministic sweep + PASS|BLOCK adapter) shipped, P02 (caller hooks + doctor lint) next, P03/P04 deferred
 # <<< orchestrator:recent-changes <<<
 # CLAUDE.md — orchestrator
 

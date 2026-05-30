@@ -14,7 +14,7 @@
 set -euo pipefail
 
 # Valid config keys
-VALID_KEYS="default_tier verification_commands context_verbosity git_isolation dispatch_budget duration_budget budget_enforcement session_weight_limit auto_proceed efficiency_footer predictive_cost_surface anomaly_cost_multiplier anomaly_retry_threshold anomaly_pass_rate_threshold anomaly_check_enabled compression.efficiency_footer.enabled compression.regression_floor model_routing_regression.pass_rate_threshold model_routing_regression.min_class_sample display_thresholds.compression_savings_pct update_source detective.repo detective.match_threshold"
+VALID_KEYS="default_tier verification_commands context_verbosity git_isolation dispatch_budget duration_budget budget_enforcement session_weight_limit auto_proceed efficiency_footer predictive_cost_surface anomaly_cost_multiplier anomaly_retry_threshold anomaly_pass_rate_threshold anomaly_check_enabled compression.efficiency_footer.enabled compression.regression_floor model_routing_regression.pass_rate_threshold model_routing_regression.min_class_sample display_thresholds.compression_savings_pct update_source detective.repo detective.match_threshold corpus_exhaustion.enabled corpus_exhaustion.store_manifest_path corpus_exhaustion.intensity_floor"
 
 # Defaults for file paths
 DEFAULTS_FILE=""
@@ -267,6 +267,53 @@ if [[ "$KEY" = "detective.repo" ]] || [[ "$KEY" = "detective.match_threshold" ]]
   done
   if [[ -n "$_det_val" ]]; then
     echo "$_det_val"
+  else
+    echo "null"
+  fi
+  exit 0
+fi
+
+# M042/P01 — corpus_exhaustion.* nested keys (enabled, store_manifest_path,
+# intensity_floor) live under the `corpus_exhaustion:` block in
+# `.orchestrator/config.yml` and the defaults template. Same nested-block walker
+# convention as detective.* / display_thresholds.* above; project config wins,
+# then defaults template, then "null" so the consumer applies its built-in
+# fallback (Principle XI fail-open — the gate treats null enabled as opt-out,
+# i.e. enabled).
+if [[ "$KEY" = "corpus_exhaustion.enabled" ]] || [[ "$KEY" = "corpus_exhaustion.store_manifest_path" ]] || [[ "$KEY" = "corpus_exhaustion.intensity_floor" ]]; then
+  _CE_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  _CE_PROJECT_ROOT="$(cd "$_CE_SCRIPT_DIR/../.." && pwd)"
+  _CE_CFG="$_CE_PROJECT_ROOT/.orchestrator/config.yml"
+  _CE_DEFAULTS="$_CE_PROJECT_ROOT/templates/orchestrator-config-default.yml"
+  _ce_val=""
+  for _ce_file in "$_CE_CFG" "$_CE_DEFAULTS"; do
+    if [[ -f "$_ce_file" ]]; then
+      sub_key="${KEY#corpus_exhaustion.}"
+      _ce_val="$(awk -v sk="$sub_key" '
+        BEGIN { in_block = 0 }
+        /^corpus_exhaustion:/              { in_block = 1; next }
+        in_block && /^[a-zA-Z_]/           { exit }
+        in_block && /^[[:space:]]+[a-z_]+:/ {
+          line = $0
+          sub(/^[[:space:]]+/, "", line)
+          split(line, kv, ":")
+          if (kv[1] == sk) {
+            val = substr(line, index(line, ":") + 1)
+            sub(/#.*$/, "", val)
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "", val)
+            gsub(/^"|"$/, "", val)
+            print val
+            exit
+          }
+        }
+      ' "$_ce_file" 2>/dev/null || true)"
+      if [[ -n "$_ce_val" ]]; then
+        break
+      fi
+    fi
+  done
+  if [[ -n "$_ce_val" ]]; then
+    echo "$_ce_val"
   else
     echo "null"
   fi

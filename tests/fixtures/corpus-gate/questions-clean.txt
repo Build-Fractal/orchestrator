@@ -1,0 +1,2 @@
+# Single genuinely-absent question — used for the CAVEAT test.
+[Q1] What is the xyzzyplugh quuxbar greeblezotch frobble?

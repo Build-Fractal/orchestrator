@@ -6,6 +6,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This pr
 
 ## [Unreleased]
 
+## [0.9.3] — 2026-05-31
+
+### Added — first public distribution + corpus-exhaustion gate
+
+- **First public release across all channels** — npm (`@build-fractal/orchestrator`), Homebrew (`build-fractal/orchestrator`), and curl-pipe-bash, with cosign-signed release artifacts + `SHA256SUMS`. `orchestrator:update` auto-detects the install channel and dispatches to the right one. Operator runbook at `references/RELEASING.md`.
+- **M042 — corpus-exhaustion gate** (`orchestrator:corpus-gate`): a deterministic search-before-ask gate that sweeps the project's knowledge stores for each candidate operator/SME question and refuses to finalize while any question is already answerable from the corpus (read-before-ask). Wired as a pre-finalize step into `discuss` / `specify` / `roadmap` / `plan-phase` / `materials-intake` / `comments`, plus a `DOCTOR:CORPUS_EXHAUSTION` advisory lint. P03 (LLM semantic judge) + P04 (telemetry) deferred.
+- `scripts/util/bump-version.sh` — single-source version sync (`VERSION` + `package.json` + `packaging/bundle/manifest.yml`) with a `--check` drift guard; now the release SOP per `references/RELEASING.md`.
+
+### Changed
+
+- Canonical version synchronized to **0.9.3** across `VERSION`, `package.json`, and `packaging/bundle/manifest.yml` (resolves prior drift: package.json `0.9.2` / manifest `0.3.0-dev`).
+- README install section now leads with npm / curl / Homebrew for outside users; clone install is documented as the development/latest-unreleased path.
+
 ### Fixed (PBJ-2026-05-08 — milestone-title ID-discovery + strip miss `M{numeric}-{suffix}` shape)
 
 - `scripts/wiki/wiki-milestone-titles.sh` ID-collection regex (line 213, the per-subdir loop) now accepts a third alt branch `^M[0-9]+[a-z]*-[A-Za-z0-9-]+$` for `M2a-min` / `M2a-polish` / `M2b-min` / `M2b-polish` shape. The pre-fix two-branch form (`^M[0-9]+[a-z]*$` + `^M-[A-Za-z0-9-]+$`) silently dropped the numeric-with-suffix shape at this discovery step, before `resolve_one()` ever saw the ID. Surfaced 2026-05-08 in the PBJ project after Stage 1 of the V1 reframe replan introduced four `M2a-min`/`M2a-polish`/`M2b-min`/`M2b-polish` peer-milestone subdirs and the wiki nav rendered them with bare IDs.

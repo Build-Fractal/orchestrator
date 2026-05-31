@@ -61,15 +61,34 @@ Already installed and sitting in a project? One line, no onboarding required:
 
 It works without setup, and works *sharper* after `/orchestrator-start` seeds the knowledge graph (about a minute for an existing codebase → 5–15 seed MEMs).
 
-**Not installed yet?** → [Getting Started](docs/getting-started.md) owns the full install walkthrough. The short version:
+**Not installed yet?** → [Getting Started](docs/getting-started.md) owns the full walkthrough. Pick a channel:
 
 ```bash
-git clone git@github.com:Build-Fractal/orchestrator.git
-cd orchestrator
-bash packaging/install/install-claude-code.sh --project-dir /path/to/your-project
+# npm (recommended) — installs globally, runs the Claude Code installer for you
+npm install -g @build-fractal/orchestrator
+
+# curl | bash — no npm required; downloads the signed release tarball
+curl -fsSL https://github.com/Build-Fractal/orchestrator/releases/latest/download/install.sh | bash
+
+# Homebrew
+brew install build-fractal/orchestrator/orchestrator
+
+# From source (development / latest unreleased)
+git clone https://github.com/Build-Fractal/orchestrator.git
+cd orchestrator && bash packaging/install/install-claude-code.sh --project-dir /path/to/your-project
 ```
 
-(Requires Bash 3.2+, git, and optionally jq. Codex CLI and Cursor installers exist with the same flags; multi-runtime parity is a demand-driven post-launch fast-follow.)
+Then, in any project: `orchestrator init` (or the `/orchestrator-init` skill in Claude Code).
+
+**Updating** is one line, and `orchestrator:update` auto-detects how you installed:
+
+```bash
+npm update -g @build-fractal/orchestrator   # npm / curl installs
+brew upgrade orchestrator                    # Homebrew installs
+/orchestrator-update                         # from inside any project (dispatches to the right channel)
+```
+
+(Requires Bash 3.2+, git, and optionally jq. macOS + Linux; Windows is fail-closed by design. Codex CLI and Cursor installers exist with the same flags; multi-runtime parity is a demand-driven post-launch fast-follow.)
 
 ---
 

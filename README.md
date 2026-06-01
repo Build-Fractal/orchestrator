@@ -78,7 +78,7 @@ git clone https://github.com/Build-Fractal/orchestrator.git
 cd orchestrator && bash packaging/install/install-claude-code.sh --project-dir /path/to/your-project
 ```
 
-Then, in any project: `orchestrator init` (or the `/orchestrator-init` skill in Claude Code).
+Installing registers the `/orchestrator-*` skills globally in Claude Code. Then, **in your project, open Claude Code and run `/orchestrator-start`** — the warm onboarding front door (or `/orchestrator-init` for the bare scaffold). The `orchestrator` binary itself is just `--version` / `--help`; the real surface is the Claude Code skills.
 
 **Updating** is one line, and `orchestrator:update` auto-detects how you installed:
 
@@ -141,7 +141,7 @@ Each command below assumes you've [installed](docs/getting-started.md) and are i
 
 ## Status & credibility
 
-**v0.9.2** (last release, 2026-04-28) — in production use, **dogfooded daily on its own development**. Dozens of milestones closed (latest: M041, `/orchestrator-detective`, 2026-05-25); the launch event (packaging & distribution) shipped 2026-05-09. Work since v0.9.2 is unreleased. Next up is a demand-driven post-launch fast-follow queue (M009 multi-runtime parity; M023 design layer; the M034+M038+M040 paired slot).
+**v0.9.3** — the first release published to npm / Homebrew / curl, in production use and **dogfooded daily on its own development**. Dozens of milestones closed (latest: M042 `/orchestrator-corpus-gate`, 2026-05-30; M041 `/orchestrator-detective`, 2026-05-25); the packaging & distribution launch event shipped 2026-05-09. Next up is a demand-driven post-launch fast-follow queue (M009 multi-runtime parity; M023 design layer; the M034+M038+M040 paired slot).
 
 Full audit trail: [`.orchestrator/milestone-summary.md`](./.orchestrator/milestone-summary.md) · engineering changelog: [`CHANGELOG.md`](./CHANGELOG.md).
 
@@ -156,6 +156,8 @@ Governed by 15 constitutional principles ([`.orchestrator/memory/constitution.md
 | **Skeptical** — want the "why" before you commit | → [Why this exists](docs/why-this-exists.md) |
 | **Ready to install** and run your first command | → [Getting Started](docs/getting-started.md) |
 | **Coming from spec-kit** with existing artifacts | → [Migrating from spec-kit](docs/migrating-from-speckit.md) |
+
+**Want to contribute?** → [CONTRIBUTING.md](CONTRIBUTING.md) (dev setup, tests, conventions). Maintainers cutting a release → [Releasing](references/RELEASING.md).
 
 **See also:** [Knowledge Management](docs/knowledge-management.md) · [Recipe Authoring](docs/recipe-authoring.md) · [Hook Development](docs/hook-development.md) · [Architecture](references/architecture.md) · [Verification Ladder](references/verification-ladder.md) · [State Machine](references/state-machine.md)
 

@@ -1,24 +1,23 @@
 # Getting Started
 
-**From `git clone` to your first verified task in about 10 minutes.** Install the orchestrator into your project, onboard with one warm conversational command, then dispatch a real task that runs against your project's accumulated knowledge.
+**From install to your first verified task in about 10 minutes.** Install the orchestrator, onboard your project with one warm conversational command, then dispatch a real task that runs against your project's accumulated knowledge.
 
 ## TL;DR
 
 ```bash
-# 1. Get the orchestrator
-git clone git@github.com:Build-Fractal/orchestrator.git && cd orchestrator
+# 1. Install the orchestrator (pick one channel)
+npm install -g @build-fractal/orchestrator
+#   or:  brew install build-fractal/orchestrator/orchestrator
+#   or:  curl -fsSL https://github.com/Build-Fractal/orchestrator/releases/latest/download/install.sh | bash
 
-# 2. Install into your project (Claude Code)
-bash packaging/install/install-claude-code.sh --project-dir /path/to/your-project
-
-# 3. In your project, onboard with the warm front door
+# 2. In your project, open Claude Code and onboard with the warm front door
 /orchestrator-start
 
-# 4. Run your first task
+# 3. Run your first task
 /orchestrator-do "your task here"
 ```
 
-Steps 1–2 run from the orchestrator clone; steps 3–4 run inside your own project from Claude Code. Each step is expanded below.
+Step 1 installs the tool and registers the `/orchestrator-*` skills into Claude Code (globally, in `~/.claude`); steps 2–3 run inside your own project from Claude Code. Each step is expanded below — including the from-source path if you'd rather clone.
 
 > **Is this for you?** The orchestrator makes every coding task — a one-line tweak or a multi-month rewrite — execute against a project-aware knowledge base, so dispatched agents never start from zero. If you only need single-context work, plain Claude Code is the right tool first; reach for the orchestrator when tasks span multiple contexts or you want accumulated project knowledge injected automatically. See [why-this-exists](why-this-exists.md) if you want the motivation before installing.
 
@@ -31,47 +30,29 @@ Steps 1–2 run from the orchestrator clone; steps 3–4 run inside your own pro
 | Claude Code | Yes (primary runtime) | `claude --version` |
 | git | Yes | `git --version` |
 | Bash >= 3.2 | Yes (macOS default) | `bash --version` |
+| Node.js >= 14 | Only for the npm install channel | `node --version` |
 | jq | Optional (JSON parsing in some scripts) | `jq --version` |
 
 Codex CLI and Cursor are post-launch fast-follows (tracked under M009); Claude Code is the supported runtime at launch.
 
 ---
 
-## Step 0: Get the orchestrator
+## Step 1: Install
 
-The installer runs from a clone of the orchestrator repo. Clone it first:
+Pick a channel. Each one puts the `orchestrator` binary on your PATH and registers the `/orchestrator-*` skills into Claude Code (globally, in `~/.claude/`).
 
-```bash
-git clone git@github.com:Build-Fractal/orchestrator.git
-cd orchestrator
-```
+| Channel | Command | Notes |
+|---------|---------|-------|
+| **npm** (recommended) | `npm install -g @build-fractal/orchestrator` | Runs the Claude Code installer for you. Install **from inside your project directory** to wire that project automatically. |
+| **Homebrew** | `brew install build-fractal/orchestrator/orchestrator` | Taps `build-fractal/orchestrator` + installs. |
+| **curl \| bash** | `curl -fsSL https://github.com/Build-Fractal/orchestrator/releases/latest/download/install.sh \| bash` | No npm required; downloads the signed release tarball (verify with cosign — see [Installation](../references/installation.md#verifying-integrity)). |
+| **From source** | `git clone https://github.com/Build-Fractal/orchestrator.git`<br>`cd orchestrator && bash packaging/install/install-claude-code.sh --project-dir /path/to/your-project` | Development / latest unreleased. The Codex and Cursor installers (`install-codex.sh`, `install-cursor.sh`) share the same flags. |
 
-Everything in Step 1 runs from inside this clone. (`scripts/`, `templates/`, and `references/` are staged from here into your own project.)
+The orchestrator binary itself is intentionally minimal — `orchestrator --version` / `--help` only. **The real command surface is the Claude Code skills** (`/orchestrator-*`), which is why onboarding (Step 2) happens inside Claude Code, not from the shell.
 
----
+**Wiring a project.** Installing registers skills globally; the per-project runtime tree (`scripts/`, `templates/`, `references/`) is staged into each project you onboard (commands invoke helpers via project-relative paths, so the tree must live there). The npm channel stages it automatically when you install from inside the project; otherwise `/orchestrator-start` / `/orchestrator-init` (Step 2) stages it, or you re-run `install-claude-code.sh --project-dir <path>` directly. Installed files are recorded in `.orchestrator/installed-files.txt` for a clean uninstall. Installer flags (`--dry-run`, `--mode copy|symlink`, `--force`) and the full autonomy/update reference live in [Installation](../references/installation.md).
 
-## Step 1: Install into your project
-
-Pick the installer for your runtime. All three share the same flags. Replace `/path/to/your-project` with your project's absolute path.
-
-| Runtime | Command |
-|---------|---------|
-| Claude Code (primary) | `bash packaging/install/install-claude-code.sh --project-dir /path/to/your-project` |
-| Codex CLI | `bash packaging/install/install-codex.sh --project-dir /path/to/your-project` |
-| Cursor | `bash packaging/install/install-cursor.sh --project-dir /path/to/your-project` |
-
-Shared flags:
-
-| Flag | Effect |
-|------|--------|
-| `--project-dir PATH` | Target project root (defaults to `$PWD`). |
-| `--dry-run` | Print `would_write=<path>` lines, write nothing. Run this first to preview. |
-| `--mode copy\|symlink` | `copy` stages a real copy of the runtime tree (default); `symlink` links it for fast dogfooding. |
-| `--force` | Overwrite existing hook config and orchestrator config. |
-
-The installer registers the `orchestrator:*` skills/commands into your runtime and stages the runtime tree into your project (commands invoke helpers via project-relative paths, so the tree must live there). Installed files are recorded in `.orchestrator/installed-files.txt` for a clean uninstall.
-
-> A curl-pipe-bash installer is also available at `packaging/install/install.sh`. For the full reference (autonomy configuration, updating), see [Installation](../references/installation.md).
+> **Updating later:** `npm update -g @build-fractal/orchestrator`, `brew upgrade orchestrator`, or `/orchestrator-update` from inside a project (it auto-detects your install channel). See [Releasing](../references/RELEASING.md) for how releases are cut.
 
 ---
 

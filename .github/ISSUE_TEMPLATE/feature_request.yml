@@ -1,0 +1,49 @@
+name: Feature request
+description: Suggest a capability or improvement.
+title: "[Feature] "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea. The orchestrator is demand-driven — concrete use cases
+        and the friction you hit help us prioritize. Larger ideas may be captured as a
+        proposal under `.orchestrator/proposals/` before becoming a milestone.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / motivation
+      description: What are you trying to do, and where does the orchestrator get in the way today?
+      placeholder: "When I ..., I have to ... because ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you like it to do? A command, flag, behavior change, etc.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds you've tried or other approaches you weighed.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Rough scope (your guess)
+      options:
+        - Small (a flag / a doc / a single script)
+        - Medium (a new command or a multi-step behavior)
+        - Large (a milestone-sized capability)
+        - Not sure
+    validations:
+      required: false

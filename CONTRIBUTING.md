@@ -87,9 +87,11 @@ Milestones live under `.orchestrator/milestones/M###/` (evaluation, roadmap, pha
 
 ## Code of conduct
 
-Be respectful and constructive. We follow the spirit of the
-[Contributor Covenant](https://www.contributor-covenant.org/version/2/1/code_of_conduct/);
-report unacceptable behavior via a GitHub issue or to the maintainers.
+Be respectful and constructive. This project follows the
+[Contributor Covenant](https://www.contributor-covenant.org/version/2/1/code_of_conduct/) —
+see [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) for the policy and how to report
+an incident privately. Security issues go through [`SECURITY.md`](SECURITY.md),
+not the public issue tracker.
 
 ## License
 

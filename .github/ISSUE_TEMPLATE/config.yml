@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & usage help
+    url: https://github.com/Build-Fractal/orchestrator/discussions
+    about: Ask how-to questions and share usage in Discussions (not the issue tracker).
+  - name: Getting started
+    url: https://github.com/Build-Fractal/orchestrator/blob/main/docs/getting-started.md
+    about: Install, onboard a project, and run your first task.
+  - name: Report a security issue
+    url: https://github.com/Build-Fractal/orchestrator/security/advisories/new
+    about: Disclose vulnerabilities privately — please don't open a public issue.

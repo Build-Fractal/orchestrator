@@ -116,8 +116,10 @@ cp -R "$FIXTURE/." "$TMP_FIX2/"
 ( cd "$TMP_FIX2" && git init -q && \
   git remote add origin https://github.com/fixture-owner/m032-fresh-project-fixture.git )
 
-# Snapshot pre-run file count to assert no-write-on-fail.
-before_count=$(find "$TMP_FIX2" -maxdepth 2 -type f | wc -l | tr -d ' ')
+# No-write-on-fail is asserted per-dir against the fixture baseline below
+# (the fixture itself seeds e.g. scripts/wiki/wiki-deploy.sh, so an absolute
+# count!=0 check would false-positive on pre-existing fixture content rather
+# than an install leak).
 
 M032_FORCE_WINDOWS=1 HOME="$TMP_HOME" bash "$INSTALLER" \
     --asset-mode-override symlink --project-dir "$TMP_FIX2" \
@@ -148,12 +150,15 @@ for dir in commands scripts references templates; do
         exit 1
     fi
     if [ -d "$TMP_FIX2/$dir" ]; then
-        # A populated dir under FORCE_WINDOWS proves the handler did NOT
-        # fail-closed before writing. Empty dir is tolerated only if
-        # truly empty (no files inside).
-        cnt=$(find "$TMP_FIX2/$dir" -type f | wc -l | tr -d ' ')
-        if [ "$cnt" != "0" ]; then
-            emit_fail "FR-3:windows-no-write-on-fail-violation:$dir-has-$cnt-files"
+        # A dir with MORE files than the fixture baseline proves the handler
+        # did NOT fail-closed before writing. Files seeded by the fixture
+        # itself (e.g. scripts/wiki/wiki-deploy.sh) are not an install leak,
+        # so compare against the baseline rather than an absolute zero.
+        after=$(find "$TMP_FIX2/$dir" -type f | wc -l | tr -d ' ')
+        base=0
+        [ -d "$FIXTURE/$dir" ] && base=$(find "$FIXTURE/$dir" -type f | wc -l | tr -d ' ')
+        if [ "$after" != "$base" ]; then
+            emit_fail "FR-3:windows-no-write-on-fail-violation:$dir-added-$((after - base))-files"
             exit 1
         fi
     fi

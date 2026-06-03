@@ -35,9 +35,15 @@
 # CON-4 byte-identical invariant means: the project_assets:-driven installer
 # produces the same output as the pre-M032 RUNTIME_DIRS bulk-copy would today,
 # not the same output as a frozen historical snapshot.
-commands/ file_count=37
-scripts/ file_count=1178
-references/ file_count=36
-templates/ file_count=53
+# Refreshed 2026-06-03 post-M041 (orchestrator:detective) + M042
+# (orchestrator:corpus-gate) close: commands +2 (detective.md, corpus-gate.md),
+# scripts +19, references +4, templates +5 against the 2026-05-10 capture —
+# the sibling-milestone growth the refresh policy above anticipates. Re-captured
+# at HEAD via `bash packaging/install/install-claude-code.sh --project-dir <tmp>`
+# then `find <dir> -type f | wc -l` per runtime dir.
+commands/ file_count=39
+scripts/ file_count=1197
+references/ file_count=40
+templates/ file_count=58
 # Total post-refresh RUNTIME_DIRS file count:
-total file_count=1304
+total file_count=1334

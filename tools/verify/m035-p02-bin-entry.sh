@@ -45,5 +45,21 @@ else
   fail=$((fail + 1))
 fi
 
+# Regression guard (v0.9.4): every package manager installs the bin as a
+# SYMLINK (npm node_modules/.bin, Homebrew bin/). The bin must resolve its
+# own real path to locate package.json — invoking through a symlink must
+# still emit the version. Caught a 0.9.3 defect where $0 was not deref'd.
+SYMLINK_TMP="$(mktemp -d)"
+ln -s "$BIN" "$SYMLINK_TMP/orchestrator"
+SYMLINK_VERSION="$("$SYMLINK_TMP/orchestrator" --version 2>/dev/null || true)"
+rm -rf "$SYMLINK_TMP"
+if [ "$SYMLINK_VERSION" = "$PKG_VERSION" ] && [ -n "$SYMLINK_VERSION" ]; then
+  echo "PASS: bin --version works through a symlink ($SYMLINK_VERSION)"
+  pass=$((pass + 1))
+else
+  echo "FAIL: bin --version through symlink='$SYMLINK_VERSION' != '$PKG_VERSION'"
+  fail=$((fail + 1))
+fi
+
 echo "BATTERY: pass=$pass fail=$fail"
 [ "$fail" -eq 0 ]

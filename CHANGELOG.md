@@ -6,6 +6,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This pr
 
 ## [Unreleased]
 
+## [0.9.4] — 2026-06-02
+
+### Fixed — `orchestrator` binary failed when invoked through a symlink
+
+- **`bin/orchestrator` now resolves its own real path before locating `package.json`.** Every package manager installs the entry point as a symlink (npm `node_modules/.bin/orchestrator`, Homebrew `bin/`), so `$0` pointed at the link and the bin looked for `package.json` one directory above `.bin/` — where none exists — making `orchestrator --version` / `--help` fail for every published install of 0.9.3 with `FAIL: package.json not found`. The bin now walks the symlink chain (`readlink` without `-f`, BSD/macOS + Bash 3.2 safe). 0.9.3 stays on npm (immutable) but is superseded; install 0.9.4+.
+- `tools/verify/m035-p02-bin-entry.sh` gains a symlink-invocation regression check so the pre-publish gate exercises the bin the way users actually reach it, not just in-place.
+
 ## [0.9.3] — 2026-05-31
 
 ### Added — first public distribution + corpus-exhaustion gate

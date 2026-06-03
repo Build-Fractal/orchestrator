@@ -12,8 +12,21 @@
 
 set -u
 
-# Resolve the package.json beside the bin directory.
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Resolve the package.json beside the bin directory. Package managers
+# (npm/npx node_modules/.bin, Homebrew bin/) install this entry point as a
+# SYMLINK, so $0 points at the link, not the real file. Walk the symlink
+# chain to find the true bin/ dir — readlink WITHOUT -f for BSD/macOS +
+# Bash 3.2 portability (GNU readlink -f is not available on macOS).
+SOURCE="$0"
+while [ -h "$SOURCE" ]; do
+  link_dir="$(cd "$(dirname "$SOURCE")" && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  case "$SOURCE" in
+    /*) ;;                            # absolute target — use as-is
+    *) SOURCE="$link_dir/$SOURCE" ;;  # relative target — resolve vs link dir
+  esac
+done
+SCRIPT_DIR="$(cd "$(dirname "$SOURCE")" && pwd)"
 PKG_JSON="$SCRIPT_DIR/../package.json"
 
 read_version() {

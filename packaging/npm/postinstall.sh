@@ -39,6 +39,41 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 INSTALLER="$REPO_ROOT/packaging/install/install-claude-code.sh"
 
+# --- 2a. Global install short-circuit (npm install -g) ------------
+#
+# `npm install -g` sets npm_config_global=true for lifecycle scripts. A
+# global install must NOT stage the runtime payload into the directory npm
+# happened to be invoked from (INIT_CWD) — that is almost never a project
+# root, and the pre-2026-06 code wrongly delegated `--project-dir $INIT_CWD`,
+# dumping commands/scripts/... into the user's cwd AND hard-failing on the
+# deliberately-unbundled wiki/ source. The correct behavior: register skills
+# + wire hooks machine-wide (so /orchestrator-* is available everywhere) and
+# leave per-project staging to /orchestrator-init. Delegate with
+# --skip-project-assets.
+if [ "${npm_config_global:-false}" = "true" ]; then
+  if [ "${DRY_RUN:-0}" = "1" ]; then
+    echo "would_invoke=$INSTALLER --skip-project-assets"
+    echo "would_check=~/.claude/ runtime presence"
+    echo "global_install=true"
+    exit 0
+  fi
+  if [ ! -d "$HOME/.claude" ]; then
+    echo "runtime_unavailable=true" >&2
+    echo "ADVISORY: @build-fractal/orchestrator installed globally, but Claude" >&2
+    echo "          Code is not detected at \$HOME/.claude. Install it" >&2
+    echo "          (https://claude.com/claude-code), then run /orchestrator-init" >&2
+    echo "          inside any Claude Code project to register skills." >&2
+    exit 0
+  fi
+  if [ ! -x "$INSTALLER" ]; then
+    echo "FAIL: installer not found or not executable at $INSTALLER" >&2
+    exit 1
+  fi
+  echo "delegating=$INSTALLER --skip-project-assets (global install)"
+  "$INSTALLER" --skip-project-assets
+  exit $?
+fi
+
 # --- 3. Resolve INIT_CWD (npm convention) -------------------------
 
 # npm sets INIT_CWD to the directory `npm install` was run from.

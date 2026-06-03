@@ -57,6 +57,12 @@ FORCE=0
 VERBOSE=0
 UNINSTALL=0
 REPAIR=0
+# Skip the §4.5 project-asset staging stage (register skills + wire hooks
+# only). Used by the npm postinstall for global installs (`npm install -g`),
+# where there is no project to stage into and dumping the runtime payload
+# into the invocation cwd would be wrong. Skill registration (§2) and hook
+# wiring still run so `/orchestrator-*` commands become available machine-wide.
+SKIP_PROJECT_ASSETS=0
 # Asset-staging mode override (M035 P01 T01). Both --mode (user-facing)
 # and --asset-mode-override (TEST-ONLY backward-compat alias) route here.
 # Allowed values: `copy` or `symlink`. Empty default means manifest mode
@@ -87,6 +93,8 @@ while [ $# -gt 0 ]; do
       UNINSTALL=1; shift ;;
     --repair)
       REPAIR=1; shift ;;
+    --skip-project-assets)
+      SKIP_PROJECT_ASSETS=1; shift ;;
     # M035 P01 T01: --mode is the user-facing surface; routes to the same
     # ASSET_MODE_OVERRIDE variable as the TEST-ONLY --asset-mode-override
     # alias below (preserved for M032 P01 acceptance-script compatibility).
@@ -597,6 +605,13 @@ manifest_file="$PROJECT_DIR/.orchestrator/installed-files.txt"
 runtime_staged=0
 project_assets_targets=""
 
+# --skip-project-assets (global npm install): register skills + hooks only,
+# stage nothing into a project. The body below is intentionally left at its
+# original indentation to keep this guard a minimal, reviewable diff.
+if [ "${SKIP_PROJECT_ASSETS:-0}" = "1" ]; then
+  echo "skipped=project-asset staging (--skip-project-assets)"
+else
+
 # First pass: collect the project-assets target list (needed by collision check
 # for the bootstrapping oracle's "in the project_assets target list" check).
 #
@@ -633,6 +648,15 @@ while IFS= read -r tuple; do
   src_rel=$(printf '%s\n' "$tuple" | awk -F'\t' '{for(i=1;i<=NF;i++){if($i ~ /^source=/){sub(/^source=/, "", $i); print $i}}}')
   tgt_rel=$(printf '%s\n' "$tuple" | awk -F'\t' '{for(i=1;i<=NF;i++){if($i ~ /^target=/){sub(/^target=/, "", $i); print $i}}}')
   mode_val=$(printf '%s\n' "$tuple" | awk -F'\t' '{for(i=1;i<=NF;i++){if($i ~ /^mode=/){sub(/^mode=/, "", $i); print $i}}}')
+
+  # Wiki is staged on-demand by wiki-init.sh (orchestrator:wiki-init), never
+  # at base install: it is intentionally absent from the distributed tarball
+  # (tools/verify/m035-p02-npm-pack-contents.sh asserts check_absent "wiki"),
+  # so staging it here would fail on every package-manager install. Skip the
+  # entry before the missing-source check; the manifest keeps it for wiki-init.
+  case "${tgt_rel%/}" in
+    wiki) continue ;;
+  esac
 
   # --asset-mode-override (TEST-ONLY) takes precedence over manifest mode.
   [ -n "${ASSET_MODE_OVERRIDE:-}" ] && mode_val="$ASSET_MODE_OVERRIDE"
@@ -730,6 +754,8 @@ if [ "$DRY_RUN" = "0" ]; then
   rm -f "$_manifest_tmp"
   echo "staged=$runtime_staged files manifest=$manifest_file"
 fi
+
+fi  # end --skip-project-assets guard
 
 # --- 5. Summary line ---
 echo "SUMMARY: runtime=claude-code skills_installed=${skills_installed} agents_installed=${agents_installed} hooks_wired=${hooks_wired} hooks_staged=${hooks_staged} config_written=${config_written} runtime_staged=${runtime_staged} dry_run=${DRY_RUN}"

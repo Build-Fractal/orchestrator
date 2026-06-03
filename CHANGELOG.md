@@ -6,6 +6,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This pr
 
 ## [Unreleased]
 
+## [0.9.5] — 2026-06-03
+
+### Fixed — `npm install -g` failed for users with Claude Code installed
+
+- **Global installs no longer try to stage the runtime payload into the invocation directory.** `npm install -g @build-fractal/orchestrator` (the documented primary install) ran the project installer with `--project-dir $INIT_CWD`, which (a) dumped `commands/`, `scripts/`, … into whatever directory npm happened to be invoked from and (b) hard-failed at `FAIL: project_assets source missing: …/wiki` because `wiki/` is deliberately excluded from the distributed tarball. The npm postinstall now detects `npm_config_global=true` and delegates with the new `install-claude-code.sh --skip-project-assets` flag: it registers `/orchestrator-*` skills + wires hooks machine-wide, and leaves per-project staging to `/orchestrator-init`. Affected every user with Claude Code present (`~/.claude`), i.e. the whole audience.
+- **Base install no longer attempts to stage `wiki/`.** Wiki is opt-in via `/orchestrator-wiki-init` and is intentionally absent from the npm/Homebrew/curl tarball (`tools/verify/m035-p02-npm-pack-contents.sh` asserts it). The installer's project-asset stage now skips the `wiki/` entry instead of failing on the missing source; the manifest still carries the entry for `wiki-init.sh` to consume. This also stops downstream projects from receiving the orchestrator's own internal docs.
+- `tools/verify/m035-p02-install-staging-flow.sh` — new regression guard covering all three behaviors (base install skips wiki content + still stages core assets; `--skip-project-assets` stages nothing; global postinstall short-circuits to register-only).
+
 ## [0.9.4] — 2026-06-02
 
 ### Fixed — `orchestrator` binary failed when invoked through a symlink

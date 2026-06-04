@@ -6,6 +6,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This pr
 
 ## [Unreleased]
 
+## [0.9.7] — 2026-06-04
+
+### Changed — adoption polish
+
+- **Stopped advertising the private `conversus-oss` repo to outside users.** The README link and the install-time advisory (`scripts/lib/conversus-detect.sh`, shown only when conversus is not detected) pointed at `github.com/Build-Fractal/conversus-oss`, which is private — a 404 link and a failing `pip install git+https://…` for anyone outside the org. Both now say "optional, released separately, not required — deliberation gates skip gracefully," with no dead URL. Behavior was already correct (install never depends on conversus; gates fail open with `SKIPPED` + exit 0 by default).
+- README version badge + Status section refreshed to the current release (were stale at v0.9.3).
+
+### Internal
+
+- Fixed three pre-existing acceptance-test false-negatives unrelated to shipped behavior (none are in the npm tarball or release CI): `m032` golden file-counts re-captured post-M041/M042; `m032` symlink-mode no-write-on-fail check now compares against the fixture baseline instead of an absolute zero; `m026` resolver-rewrite check made case-insensitive.
+
 ## [0.9.6] — 2026-06-03
 
 ### Fixed — `/orchestrator-update` silently flipped git/dogfood installs to npm

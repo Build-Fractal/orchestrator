@@ -103,6 +103,26 @@ resolve_update_source() {
     esac
   fi
 
+  # 2a-bis: git-source provenance. install-meta.txt has no explicit channel
+  # field; `runtime=` above is always the runtime type (claude-code), not the
+  # channel, so a source-repo install matches no case there. Detect git from
+  # the provenance signal that IS recorded: commit_sha is populated only when
+  # the install's source_root is a git working tree (REPO_ROOT/.git exists);
+  # npm/homebrew installs extract into a package dir with no .git, so it is
+  # empty. Without this, every git-origin project falls through to 2b and is
+  # silently captured as npm once @build-fractal/orchestrator is published
+  # globally — flipping dogfood projects off their local tree onto the
+  # registry build. An explicit `update_source:` in config (Path 1) still wins.
+  if [ -z "$detected" ] && [ -f "$meta" ]; then
+    csha="$(grep -E '^commit_sha=' "$meta" 2>/dev/null \
+      | head -1 | sed -E 's/^commit_sha=//')"
+    src_root="$(grep -E '^source_root=' "$meta" 2>/dev/null \
+      | head -1 | sed -E 's/^source_root=//')"
+    if [ -n "$csha" ] || { [ -n "$src_root" ] && [ -d "$src_root/.git" ]; }; then
+      detected="git"
+    fi
+  fi
+
   # 2b: npm global presence.
   if [ -z "$detected" ]; then
     if command -v npm >/dev/null 2>&1; then

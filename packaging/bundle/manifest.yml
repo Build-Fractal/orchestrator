@@ -21,7 +21,7 @@ schema_version: "1.0"
 # .orchestrator/proposals/m035-bundle-hygiene-pre-publish-filter.md.
 type: bundle-manifest
 name: "orchestrator"
-version: "0.9.5"
+version: "0.9.6"
 description: "Autonomous multi-phase orchestration skills for Claude Code, Codex, and Cursor"
 skill_spec: "packaging/SKILL.md"
 skills:

@@ -123,6 +123,26 @@ On a `v*` tag push, `release.yml` runs three jobs (M035 P02–P05):
 Secrets are structurally scoped to the tag-triggered jobs only; the PR-validation
 job asserts they are absent (M035 CON-6).
 
+### 6. Post-release dev bump (version-distinguishability convention)
+
+Immediately after the release workflow goes green, bump `main` to the **next
+patch with a `-dev` suffix** so the local working tree always reads *ahead* of
+the last published tag. Without this, `VERSION` stays at the just-released
+`X.Y.Z` while `main` accumulates unreleased commits — making a local checkout
+indistinguishable from the registry build by version string alone (you'd have
+to compare git SHAs to tell them apart, which has bitten dogfood updates).
+
+```bash
+bash scripts/util/bump-version.sh X.Y.(Z+1)-dev   # e.g. after v0.9.6 -> 0.9.7-dev
+git add VERSION package.json packaging/bundle/manifest.yml
+git commit -F <msg-file>                            # "chore: bump to X.Y.(Z+1)-dev post-release"
+git push origin main
+```
+
+The `-dev` build is never published (no tag is cut for it); the next real
+release re-bumps to a clean `X.Y.(Z+1)` in step 2. `bump-version.sh` accepts the
+prerelease suffix and keeps all three version sources in sync.
+
 ---
 
 ## First-release smoke tests (MOS-3 / MOS-4)

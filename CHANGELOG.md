@@ -6,6 +6,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This pr
 
 ## [Unreleased]
 
+## [0.9.6] — 2026-06-03
+
+### Fixed — `/orchestrator-update` silently flipped git/dogfood installs to npm
+
+- **The update channel resolver now detects a git-source install from its provenance**, instead of falling through to npm-global-presence. `resolve_update_source` (`scripts/lifecycle/run-update.sh`) read `install-meta.txt`'s `runtime=` field as if it encoded the install channel, but `runtime=` always holds the runtime *type* (`claude-code`). So every git/source-repo install matched no channel case and fell through to the npm-global-presence probe — which, once `@build-fractal/orchestrator` was published to npm, silently captured those projects as `npm` and persisted it, flipping dogfood projects off their local source tree onto the registry build. The resolver now reads the provenance signal already recorded — a populated `commit_sha=` (set only when `source_root` is a git working tree) — ahead of the npm probe. An explicit `update_source:` in config still wins; npm/Homebrew detection is unchanged. Surfaced by a downstream LakeLedger update run.
+- `tools/verify/m035-p06-git-provenance-detection.sh` — regression guard (git-provenance resolves git even with the npm package present; npm installs still resolve npm).
+
+### Changed
+
+- Adopted a post-release dev-version convention: immediately after tagging `vX.Y.Z`, `main` bumps to `X.Y.(Z+1)-dev` so the local working tree always reads ahead of the last published tag — closing the "is this registry-X.Y.Z or local-X.Y.Z-plus-commits?" ambiguity that previously required inspecting git SHAs. Documented in `references/RELEASING.md`.
+
 ## [0.9.5] — 2026-06-03
 
 ### Fixed — `npm install -g` failed for users with Claude Code installed

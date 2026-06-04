@@ -44,9 +44,11 @@ done
 
 # The M011-era 4-step resolver block in commands/conversus-gate.md ended at "user-local convention".
 # Confirm the rewrite by asserting the new "user-local OSS default" or "user-local paid escape hatch"
-# phrasing is present.
+# phrasing is present. Case-insensitive: the phrase legitimately appears capitalized as a table-cell
+# label ("User-local OSS default") in docs/ingesting-arbitrary-specs.md — the assertion's intent is
+# "rewrite happened", not "exact case", so a capitalized cell label is still a pass.
 gate_doc="${REPO_ROOT}/commands/conversus-gate.md"
-if grep -qE 'user-local OSS default|user-local paid escape hatch' "$gate_doc"; then
+if grep -qiE 'user-local OSS default|user-local paid escape hatch' "$gate_doc"; then
   _pass "commands/conversus-gate.md: M011-era resolver block rewritten"
 else
   _fail "commands/conversus-gate.md: original 'user-local convention' resolver block not rewritten"
@@ -54,7 +56,7 @@ fi
 
 # Same check for docs/ingesting-arbitrary-specs.md.
 ingest_doc="${REPO_ROOT}/docs/ingesting-arbitrary-specs.md"
-if grep -qE 'user-local OSS default|user-local paid escape hatch' "$ingest_doc"; then
+if grep -qiE 'user-local OSS default|user-local paid escape hatch' "$ingest_doc"; then
   _pass "docs/ingesting-arbitrary-specs.md: resolver block rewritten"
 else
   _fail "docs/ingesting-arbitrary-specs.md: resolver block not rewritten"

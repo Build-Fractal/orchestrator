@@ -117,7 +117,7 @@ Each command below assumes you've [installed](docs/getting-started.md) and are i
 |---|---|
 | **plain Claude Code** | Use plain Claude Code first for single-context work. Orchestrator adds knowledge injection + verification for *multi-session, hand-off* work. See [Is this for you?](#is-this-for-you) |
 | **spec-kit** | A migration source, not a dependency or runtime. The orchestrator runs standalone. → [migrating-from-speckit](docs/migrating-from-speckit.md) |
-| **conversus** | An *optional* sister tool (multi-agent adversarial review). The orchestrator works standalone without it; the [`/orchestrator-conversus-gate`](https://github.com/Build-Fractal/conversus-oss) adapter degrades gracefully when it isn't installed. |
+| **conversus** | An *optional* sister tool (multi-agent adversarial review), released separately and **not required**. The orchestrator works standalone without it; the `/orchestrator-conversus-gate` adapter degrades gracefully — deliberation gates are skipped — when it isn't installed. |
 
 ---
 

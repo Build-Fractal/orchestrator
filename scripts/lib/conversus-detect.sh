@@ -37,6 +37,7 @@ emit_conversus_note() {
     echo "Detected conversus at ${_cv_path}; deliberation gates available via /orchestrator-conversus-gate."
   else
     echo "Optional sister project: conversus enables multi-agent deliberation gates via /orchestrator-conversus-gate."
-    echo "  Install: pip install git+https://github.com/Build-Fractal/conversus-oss.git"
+    echo "  Not required — the orchestrator runs fully without it; deliberation gates are skipped until it is installed."
+    echo "  conversus is released separately (public availability pending)."
   fi
 }

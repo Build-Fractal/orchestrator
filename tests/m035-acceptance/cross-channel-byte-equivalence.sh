@@ -141,10 +141,12 @@ else
   # Extract the npm-channel tarball into a fixture Cellar layout
   # mirroring brew's /opt/homebrew/Cellar/orchestrator/<version>/
   # structure. The npm pack tarball extracts into a top-level
-  # "package/" dir per npm convention; the formula's def install
-  # block (T01) does `prefix.install Dir["package/*"]` to flatten,
-  # so the staged Cellar layout puts package/* contents directly
-  # under <Cellar>/<version>/.
+  # "package/" dir per npm convention; Homebrew STRIPS that single
+  # leading dir on unpack, so the formula's def install block does
+  # `prefix.install Dir["*"]` against the stripped root. This test
+  # controls its own extraction (no strip) and therefore flattens
+  # package/* by hand to reproduce the same staged Cellar layout —
+  # package contents directly under <Cellar>/<version>/.
   # Use POSIX [[:space:]] rather than \s — BSD sed (macOS) doesn't
   # recognize \s and silently no-ops the substitution, leaving
   # PKG_VERSION as the entire matched line. Surfaced after T03 dispatch.

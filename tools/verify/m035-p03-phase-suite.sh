@@ -10,6 +10,7 @@ skip=0
 
 VERIFIERS=" \
   tools/verify/m035-p03-formula-template-shape.sh \
+  tools/verify/m035-p03-formula-install-glob.sh \
   tools/verify/m035-p03-render-formula-shape.sh \
   tools/verify/m035-p03-release-workflow-homebrew-job.sh \
   tools/verify/m035-p03-release-workflow-con6-homebrew.sh \

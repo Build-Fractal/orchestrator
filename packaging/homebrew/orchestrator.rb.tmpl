@@ -29,10 +29,14 @@ class Orchestrator < Formula
   license "MIT"
 
   def install
-    # The npm pack tarball extracts into a top-level "package/"
-    # directory per npm's tarball convention. Stage its contents
-    # (NOT the wrapping "package/" dir) into the formula prefix.
-    prefix.install Dir["package/*"]
+    # The npm pack tarball wraps everything in a single top-level
+    # "package/" dir. Homebrew STRIPS that single leading dir on unpack
+    # (its standard tar-trim behavior), so def install runs with the
+    # package CONTENTS already at the staging root — a "package/*" glob
+    # would match nothing. Stage the contents directly.
+    # (Regression-guarded by tools/verify/m035-p03-formula-install-glob.sh;
+    #  the "package/*" form shipped broken in v0.9.8 — bin-less Cellar.)
+    prefix.install Dir["*"]
 
     # Wire bin/orchestrator onto PATH via Homebrew's bin symlink.
     bin.install_symlink prefix/"bin/orchestrator"

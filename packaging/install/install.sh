@@ -157,11 +157,12 @@ fi
 
 # --- Extract tarball ---
 # The npm pack tarball wraps content in a top-level package/ dir.
-# Flatten: extract package/* directly into $STAGED_DIR (mirrors
-# the homebrew formula's `prefix.install Dir["package/*"]` shape
-# and the npm-channel `lib/node_modules/<scope>/<name>/` shape —
-# cross-channel byte-equivalence requires identical post-extract
-# tree shape).
+# Flatten: extract package/* directly into $STAGED_DIR. This installer
+# controls its own extraction, so it flattens package/ explicitly; the
+# homebrew formula relies on brew stripping the leading package/ dir and
+# then does `prefix.install Dir["*"]`. Both yield the same post-extract
+# tree shape as the npm-channel `lib/node_modules/<scope>/<name>/` —
+# cross-channel byte-equivalence requires identical post-extract trees.
 tar -xzf "$TARBALL_PATH" -C "$STAGED_DIR" >/dev/null 2>&1 \
   || { echo "FAIL: tar extract failed for $TARBALL_PATH" >&2; exit 1; }
 if [ -d "$STAGED_DIR/package" ]; then

@@ -1,0 +1,18 @@
+{
+  "_seed_meta": {
+    "endpoint": "POST /accounts/<account_id>/access/apps (token lacks Access: Apps and Policies — Edit scope)",
+    "provenance": "doc-derived",
+    "p04_forward_pointer": "P04 live-deploy pass MUST capture the exact HTTP status + errors[].code + errors[].message Cloudflare returns when a token missing the Access: Apps and Policies — Edit scope attempts the create. Reconstructed below from documented + community-reported authz errors (HTTP 403 with code 9109 'Unauthorized to access requested resource', or code 10000 'Authentication error'); the precise code is [unconfirmed-P04].",
+    "note": "Synthetic-from-docs. The distinguishing signal vs zero-trust-not-enabled is HTTP 403 + the authz error code namespace (9109/10000), which differs from the access.api.error.* not-onboarded envelope. See cloudflare-api-findings.md #Q-6."
+  },
+  "_http_status": "403",
+  "success": false,
+  "errors": [
+    {
+      "code": 9109,
+      "message": "[unconfirmed-P04] Unauthorized to access requested resource. The API token is missing the 'Access: Apps and Policies — Edit' permission. Add the scope to the token in the Cloudflare dashboard (My Profile > API Tokens) and store it as the CLOUDFLARE_API_TOKEN repo secret."
+    }
+  ],
+  "messages": [],
+  "result": null
+}

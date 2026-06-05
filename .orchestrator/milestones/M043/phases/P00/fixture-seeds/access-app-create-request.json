@@ -1,0 +1,18 @@
+{
+  "_seed_meta": {
+    "endpoint": "POST /accounts/<account_id>/access/apps",
+    "provenance": "doc-derived",
+    "p04_forward_pointer": "P04 live-deploy pass confirms the real Access-app create body + 200 response (including the assigned app uid) against a live Cloudflare account with Zero Trust enabled.",
+    "note": "Synthetic-from-docs. self_hosted_domains intentionally carries BOTH the apex and the wildcard form (SC-3 assertion seed). Placeholder <name> is substituted by cloudflare-access-setup.sh."
+  },
+  "name": "<name> wiki (Access-gated)",
+  "type": "self_hosted",
+  "session_duration": "24h",
+  "self_hosted_domains": [
+    "<name>.pages.dev",
+    "*.<name>.pages.dev"
+  ],
+  "app_launcher_visible": false,
+  "allowed_idps": [],
+  "auto_redirect_to_identity": false
+}

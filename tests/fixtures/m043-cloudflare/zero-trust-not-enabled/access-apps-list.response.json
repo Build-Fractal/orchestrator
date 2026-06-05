@@ -1,0 +1,12 @@
+{
+  "_http_status": "400",
+  "success": false,
+  "errors": [
+    {
+      "code": 12130,
+      "message": "[unconfirmed-P04] access.api.error.invalid_request: Cloudflare Zero Trust is not enabled for this account. Complete the one-time Zero Trust onboarding in the Cloudflare dashboard (Zero Trust > Settings) before provisioning Access applications via the API."
+    }
+  ],
+  "messages": [],
+  "result": null
+}

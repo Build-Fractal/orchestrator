@@ -123,6 +123,20 @@ Check for conditions that may block progress:
 1. Read `execution-log.jsonl` entries for the current phase.
 2. If the same task ID appears in two consecutive dispatch entries without a summary file created between them, report: "⚠ Task {T##} dispatched twice without completion. Possible stuck condition."
 
+## Wiki Deploy Exposure Warning (M043 / FR-10)
+
+Surface the fallback-only GitHub-Pages footgun warning. Run:
+
+    bash scripts/diagnostics/check-wiki-pages-exposure.sh --mode status --root "$PROJECT_DIR"
+
+The emitter is fallback-only per AD-2: it prints a warning block ONLY when the
+repo is private AND `wiki.deploy_target` is `github-pages` (with an "ignore if
+Enterprise Cloud" note); it prints nothing on every other combination and never
+runs a GitHub-plan probe. If the script emits any output, surface it verbatim as
+a warning callout in the status report; if it is silent, render nothing for this
+section. The check is read-only and advisory — it never changes the milestone
+state or the recommended next action.
+
 ## Execution History
 
 Read the execution log to provide operational context:

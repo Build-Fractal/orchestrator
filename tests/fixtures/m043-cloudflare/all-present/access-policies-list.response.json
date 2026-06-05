@@ -1,0 +1,9 @@
+{
+  "_http_status": "200",
+  "success": true,
+  "errors": [],
+  "messages": [],
+  "result": [
+    { "id": "pol-uid-fixture-0001", "decision": "allow", "name": "Allow <allowed_email_domains>" }
+  ]
+}

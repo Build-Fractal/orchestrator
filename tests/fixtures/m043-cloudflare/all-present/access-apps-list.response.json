@@ -1,0 +1,15 @@
+{
+  "_http_status": "200",
+  "success": true,
+  "errors": [],
+  "messages": [],
+  "result": [
+    {
+      "id": "app-uid-fixture-0001",
+      "name": "<name> wiki (Access-gated)",
+      "type": "self_hosted",
+      "domain": "<name>.pages.dev",
+      "self_hosted_domains": ["<name>.pages.dev", "*.<name>.pages.dev"]
+    }
+  ]
+}

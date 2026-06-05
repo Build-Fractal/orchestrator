@@ -1,0 +1,18 @@
+{
+  "_seed_meta": {
+    "endpoint": "POST /accounts/<account_id>/access/apps (Zero Trust / Access not yet enabled on the account)",
+    "provenance": "doc-derived",
+    "p04_forward_pointer": "P04 live-deploy pass MUST capture the exact HTTP status + errors[].code + errors[].message Cloudflare returns when POSTing an Access-app create on an account that has never completed the one-time Zero Trust dashboard onboarding. Fields tagged [unconfirmed-P04] below are reconstructed from community reports (access.api.error.* namespace, e.g. 12130) and the documented {success,errors,messages,result} envelope, not a live capture.",
+    "note": "Synthetic-from-docs. The load-bearing distinguishing signal is the access.api.error.* code namespace + the not-onboarded message text, which differs from the missing-scope 403/9109 authz envelope. See cloudflare-api-findings.md #Q-6."
+  },
+  "_http_status": "[unconfirmed-P04] 400 (invalid-request / not-onboarded; community reports 4xx in the access.api.error namespace, distinct from the 403 authz envelope)",
+  "success": false,
+  "errors": [
+    {
+      "code": 12130,
+      "message": "[unconfirmed-P04] access.api.error.invalid_request: Cloudflare Zero Trust is not enabled for this account. Complete the one-time Zero Trust onboarding in the Cloudflare dashboard (Zero Trust > Settings) before provisioning Access applications via the API."
+    }
+  ],
+  "messages": [],
+  "result": null
+}

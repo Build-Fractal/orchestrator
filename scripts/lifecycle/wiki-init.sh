@@ -621,6 +621,37 @@ PAGES_WORKFLOW_EOF
   echo "wiki-init: emitted $PAGES_WF_TARGET (build_type=workflow scaffold per FR-19)"
 }
 
+# M043 FR-2/FR-3 — emit the Cloudflare Pages + Access deploy workflow from
+# templates/wiki-cloudflare-deploy.yml.tmpl when deploy_target=cloudflare-access.
+# CON-3 no-clobber on a pre-existing operator workflow. __PROJECT_NAME__ is
+# substituted from wiki.cloudflare.project_name (fallback: repo name).
+emit_cloudflare_workflow() {
+  CF_WF_TARGET="$PROJECT_DIR/.github/workflows/wiki-cloudflare.yml"
+  if [ -f "$CF_WF_TARGET" ]; then
+    echo "wiki-init: .github/workflows/wiki-cloudflare.yml already present at $CF_WF_TARGET — preserving operator-authored workflow (CON-3)" >&2
+    return 0
+  fi
+  CF_TMPL="$REPO_ROOT/templates/wiki-cloudflare-deploy.yml.tmpl"
+  if [ ! -f "$CF_TMPL" ]; then
+    echo "FAIL: wiki-init: deploy_target=cloudflare-access but template missing: $CF_TMPL" >&2
+    return 1
+  fi
+  CF_PROJECT="$(awk '
+    BEGIN{w=0;c=0}
+    /^wiki:[[:space:]]*$/ {w=1;next}
+    w && /^[^[:space:]]/ {exit}
+    w && /^[[:space:]][[:space:]]cloudflare:[[:space:]]*$/ {c=1;next}
+    w && c && /^[[:space:]][[:space:]][^[:space:]]/ {c=0}
+    w && c && /^[[:space:]][[:space:]][[:space:]][[:space:]]project_name:/ {
+      line=$0; sub(/^[[:space:]]*project_name:[[:space:]]*/,"",line); sub(/[[:space:]]*#.*$/,"",line); gsub(/"/,"",line); gsub(/[[:space:]]/,"",line); print line; exit
+    }
+  ' "$PROJECT_DIR/.orchestrator/config.yml" 2>/dev/null || true)"
+  [ -n "$CF_PROJECT" ] || CF_PROJECT="${REPO:-wiki}"
+  mkdir -p "$(dirname "$CF_WF_TARGET")"
+  sed "s/__PROJECT_NAME__/$CF_PROJECT/g" "$CF_TMPL" > "$CF_WF_TARGET"
+  echo "wiki-init: emitted $CF_WF_TARGET (deploy_target=cloudflare-access, project_name=$CF_PROJECT)"
+}
+
 # ---- FR-19 (M037/P02/T02) — flip Pages config to build_type=workflow -----
 # After the workflow file is emitted, set the repo's Pages build_type to
 # workflow so the deploy-pages action can publish. Idempotent — flipping
@@ -652,8 +683,13 @@ flip_pages_build_type() {
 # The workflow file emit honors CON-3 (no-clobber on pre-existing path);
 # the build_type flip is gated on gh availability/auth and surfaces a
 # manual-fallback diagnostic on either skip path.
-emit_pages_workflow
-flip_pages_build_type
+M043_DEPLOY_TARGET="$(bash "$REPO_ROOT/scripts/wiki/resolve-deploy-target.sh" "$PROJECT_DIR" 2>/dev/null || echo github-pages)"
+if [ "$M043_DEPLOY_TARGET" = "cloudflare-access" ]; then
+  emit_cloudflare_workflow
+else
+  emit_pages_workflow
+  flip_pages_build_type
+fi
 
 # FR-15 path-convention stub: author wiki/glossary.md if absent.
 #
@@ -1103,6 +1139,29 @@ fi
 # with the default scope OR with --with-giscus (does NOT depend on
 # --with-giscus having run).
 if [ "$WITH_DEPLOY" = "1" ]; then
+  # M043 FR-4 — deploy_target branch. cloudflare-access provisions Cloudflare
+  # (Pages project + Access app + allow policy) via cloudflare-access-setup.sh
+  # IN PLACE OF the four-step GitHub-Pages config sequence below. The setup
+  # script is the M043 P02 deliverable (concurrent phase); guard on absence.
+  M043_DEPLOY_TARGET="$(bash "$REPO_ROOT/scripts/wiki/resolve-deploy-target.sh" "$PROJECT_DIR" 2>/dev/null || echo github-pages)"
+  if [ "$M043_DEPLOY_TARGET" = "cloudflare-access" ]; then
+    CF_SETUP="$PROJECT_DIR/scripts/wiki/cloudflare-access-setup.sh"
+    [ -f "$CF_SETUP" ] || CF_SETUP="$REPO_ROOT/scripts/wiki/cloudflare-access-setup.sh"
+    if [ ! -f "$CF_SETUP" ]; then
+      echo "FAIL: wiki-init: --deploy cloudflare-access: cloudflare-access-setup.sh not found (M043 P02 deliverable). Install the provisioner or provision Cloudflare manually, then re-run." >&2
+      exit 14
+    fi
+    set +e
+    bash "$CF_SETUP" --project-dir "$PROJECT_DIR"
+    cf_rc=$?
+    set -e
+    if [ "$cf_rc" -ne 0 ]; then
+      echo "FAIL: wiki-init: --deploy cloudflare-access: cloudflare-access-setup.sh exited $cf_rc" >&2
+      exit 14
+    fi
+    echo "wiki-init: --deploy cloudflare-access: provisioning complete. Push to main to trigger .github/workflows/wiki-cloudflare.yml"
+    exit 0
+  fi
   # JSONL log path: <PROJECT_DIR>/.orchestrator/execution-log.jsonl
   # (initialized via mkdir -p .orchestrator/ if absent).
   LOG_DIR="$PROJECT_DIR/.orchestrator"

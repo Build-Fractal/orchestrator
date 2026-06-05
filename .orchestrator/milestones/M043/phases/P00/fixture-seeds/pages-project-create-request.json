@@ -1,0 +1,10 @@
+{
+  "_seed_meta": {
+    "endpoint": "POST /accounts/<account_id>/pages/projects",
+    "provenance": "doc-derived",
+    "p04_forward_pointer": "P04 live-deploy pass confirms the real create-request body + 200 response shape against a live Cloudflare account.",
+    "note": "Synthetic-from-docs. Placeholders <account_id>/<name> are substituted by cloudflare-access-setup.sh at runtime; never commit a real account id."
+  },
+  "name": "<name>",
+  "production_branch": "main"
+}

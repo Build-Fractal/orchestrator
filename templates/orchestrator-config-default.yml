@@ -227,3 +227,34 @@ wiki:
   code_prefixes: []             # e.g. [AN, BG, OD]
   spec_paths: []                # e.g. [spec/<plan>.md]
 
+  # --- M043 — Wiki deploy target (FR-1) ---
+  # deploy_target selects where the emitted CI workflow + `wiki-init.sh
+  # --deploy` publish the wiki. Exactly two values (no general multi-cloud
+  # abstraction — see spec Non-Goals):
+  #   github-pages (default) — emits .github/workflows/pages.yml, publishes
+  #     via actions/deploy-pages. NOTE: a *private* Pages site is GitHub
+  #     Enterprise-Cloud-only; on Free/Pro/Team the site is PUBLIC, or 422s
+  #     on deploy while the build stays green (see references/installation.md).
+  #     status/doctor warn on the (private repo + github-pages) tuple.
+  #   cloudflare-access — emits .github/workflows/wiki-cloudflare.yml, deploys
+  #     via `npx --yes wrangler@4 pages deploy` to Cloudflare Pages fronted by
+  #     Cloudflare Access (SSO / one-time-PIN). Plan-independent private wiki;
+  #     requires a one-time Cloudflare Zero Trust enablement + provisioning
+  #     via scripts/wiki/cloudflare-access-setup.sh.
+  deploy_target: github-pages
+
+  # cloudflare: inputs for deploy_target: cloudflare-access. Uncomment + fill
+  # when using the Cloudflare target. project_name is the Cloudflare Pages
+  # project (the site is <project_name>.pages.dev). The account id is read
+  # from the CLOUDFLARE_ACCOUNT_ID repo secret at deploy time, not stored
+  # here. allowed_email_domains gates the Access allow policy.
+  # CON-7 CAVEAT: allowed_email_domains is a LIST and the M037 yaml-merge
+  # primitive has a known list-element preservation gap, so edits to it must
+  # be re-applied by re-running cloudflare-access-setup.sh, NOT by editing
+  # config and relying on `orchestrator:update` merge — a silently emptied
+  # domain list locks every user out of the wiki.
+  # cloudflare:
+  #   project_name: my-wiki
+  #   allowed_email_domains:
+  #     - example.com
+

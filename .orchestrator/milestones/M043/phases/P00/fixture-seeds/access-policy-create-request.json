@@ -1,0 +1,19 @@
+{
+  "_seed_meta": {
+    "endpoint": "POST /accounts/<account_id>/access/apps/<app_uid>/policies",
+    "provenance": "doc-derived",
+    "p04_forward_pointer": "P04 live-deploy pass confirms the real allow-policy create body + 200 response (including the assigned policy uid) against a live Cloudflare account.",
+    "note": "Synthetic-from-docs. <app_uid> is the uid returned by the Access-app create call. <allowed_email_domains> is a comma/space list expanded by cloudflare-access-setup.sh into one include rule per domain (CON-7: re-run the setup script to change this list, do not rely on yaml-merge)."
+  },
+  "name": "Allow <allowed_email_domains>",
+  "decision": "allow",
+  "include": [
+    {
+      "email_domain": {
+        "domain": "<allowed_email_domains>"
+      }
+    }
+  ],
+  "require": [],
+  "exclude": []
+}

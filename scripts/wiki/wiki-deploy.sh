@@ -268,6 +268,20 @@ if [ "$DRY_RUN" -eq 1 ]; then
   exit 0
 fi
 
+# M043 FR-5 — target-aware workflow URL. The four pre-deploy gates above run
+# identically for both targets; only the printed workflow file differs.
+M043_DEPLOY_TARGET="$(bash "$(dirname "$0")/resolve-deploy-target.sh" "$ROOT" 2>/dev/null || echo github-pages)"
+if [ "$M043_DEPLOY_TARGET" = "cloudflare-access" ]; then
+  printf 'OK: pre-deploy gates PASS (identical across targets). Push to main to trigger workflow deploy:\n'
+  printf '    git push origin main\n'
+  printf '\n'
+  if [ -n "${OWNER:-}" ] && [ -n "${REPO:-}" ]; then
+    printf 'Workflow run: https://github.com/%s/%s/actions/workflows/wiki-cloudflare.yml\n' "$OWNER" "$REPO"
+  else
+    printf 'Workflow run: https://github.com/<owner>/<repo>/actions/workflows/wiki-cloudflare.yml (set OWNER/REPO env vars for repo-specific URL)\n'
+  fi
+  exit 0
+fi
 printf 'OK: pre-deploy gates PASS. Push to main to trigger workflow deploy:\n'
 printf '    git push origin main\n'
 printf '\n'

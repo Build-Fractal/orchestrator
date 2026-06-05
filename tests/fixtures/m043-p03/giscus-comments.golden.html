@@ -1,0 +1,82 @@
+{#
+  M012/P03/T01 — Giscus comments partial (Material theme override).
+
+  MkDocs Material discovers this file at `partials/comments.html` under the
+  directory named by `theme.custom_dir` (see wiki/mkdocs.yml). Anything
+  rendered here is emitted at the bottom of every page, below the main
+  content and above the footer. This is the AD-3-compliant injection point:
+  canonical `.orchestrator/**.md` bodies are read unchanged via the
+  include-markdown plugin; the comment surface is appended by the theme at
+  render time — no body-copy, no per-page authoring, no duplication.
+
+  Config values arrive from `config.extra.giscus.*` (wiki/mkdocs.yml), which
+  are `!ENV`-interpolated so production IDs live in the operator's env, not
+  in git. A missing env var defaults to "" and is caught loudly by the
+  pre-build gate landed in T02 (scripts/diagnostics/wiki-giscus-config-check.sh).
+#}
+{#
+  M032/P03/T01 — FR-7: dual-template interpolation surface.
+
+  Each data-* attribute carries TWO interpolation forms:
+
+    {{giscus_repo}}                  — M032 placeholder, sed-substituted by
+                                       wiki-init.sh --with-giscus from the
+                                       output of giscus-ids-from-gh.sh.
+    {{ config.extra.giscus.repo }}   — Jinja+!ENV interpolation, resolved at
+                                       mkdocs build time from mkdocs.yml's
+                                       extra.giscus.* !ENV [GISCUS_*, ""] block.
+
+  Bundle-staged copies carry both unrendered. wiki-init.sh --with-giscus
+  rewrites the M032 placeholder; mkdocs build then resolves the Jinja form
+  (which may be empty for projects that drive Giscus IDs entirely through
+  the M032 path). The orchestrator-repo-local copy uses the Jinja+!ENV path
+  (no --with-giscus run against the orchestrator itself) — the M032
+  placeholders resolve to the empty string at mkdocs build.
+#}
+{% if page and page.meta and page.meta.comments == false %}
+  {# Per-page opt-out: set `comments: false` in a page's YAML frontmatter
+     to suppress Giscus on that page. Used nowhere in P03; reserved for
+     future (e.g., an archive index that shouldn't collect comments). #}
+{% else %}
+  {# M037 P03 (P3.2) — file-feedback affordance.
+
+     Pitches the comments + feedback flow to readers who arrived via a
+     deep-linked page and may not realize feedback is captured per-page.
+     Renders only when repo_url is configured (skipped on local-only
+     wikis where there's nowhere to file feedback). #}
+  {% if config.repo_url %}
+    <aside class="md-pbj-feedback" aria-label="File feedback"
+           style="margin: 2rem 0 1rem 0; padding: 0.75rem 1rem;
+                  border-left: 0.2rem solid var(--md-accent-fg-color);
+                  background: var(--md-code-bg-color); font-size: 0.85rem;">
+      <strong>Spot something off on this page?</strong>
+      Drop a comment below, or
+      <a href="{{ config.repo_url }}/discussions/new?category=feedback"
+         rel="external nofollow noopener">open a feedback discussion</a>.
+      Page-level comments thread directly under this URL.
+    </aside>
+  {% endif %}
+  <h2 id="__comments">Comments</h2>
+  <script
+    src="https://giscus.app/client.js"
+    data-repo="{{giscus_repo}}{{ config.extra.giscus.repo }}"
+    data-repo-id="{{giscus_repo_id}}{{ config.extra.giscus.repo_id }}"
+    data-category="{{giscus_category}}{{ config.extra.giscus.category }}"
+    data-category-id="{{giscus_category_id}}{{ config.extra.giscus.category_id }}"
+    data-mapping="{{ config.extra.giscus.mapping }}"
+    data-strict="1"
+    data-reactions-enabled="1"
+    data-emit-metadata="0"
+    data-input-position="top"
+    data-theme="preferred_color_scheme"
+    data-lang="en"
+    data-loading="lazy"
+    crossorigin="anonymous"
+    async
+  ></script>
+  <noscript>
+    Please enable JavaScript to view the
+    <a href="https://github.com/{{ config.extra.giscus.repo }}/discussions"
+       rel="external nofollow noopener">comments powered by Giscus</a>.
+  </noscript>
+{% endif %}

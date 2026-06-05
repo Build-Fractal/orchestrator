@@ -1,0 +1,5 @@
+{"timestamp":"2026-06-05T01:40:11Z","unitId":"M043/P02/T01","milestone":"M043","phase":"P02","task":"T01","tier":"standard","outcome":"success","dispatch_method":"subagent","attempt":1,"verification_result":"pass","duration_s":156}
+{"timestamp":"2026-06-05T01:43:21Z","unitId":"M043/P02/T02","milestone":"M043","phase":"P02","task":"T02","tier":"standard","outcome":"success","dispatch_method":"subagent","attempt":1,"verification_result":"pass","duration_s":146}
+{"timestamp":"2026-06-05T01:45:09Z","unitId":"M043/P02/T03","milestone":"M043","phase":"P02","task":"T03","tier":"standard","outcome":"success","dispatch_method":"subagent","attempt":1,"verification_result":"pass","duration_s":74}
+{"timestamp":"2026-06-05T01:46:03Z","unitId":"M043/P02/P02","milestone":"M043","phase":"P02","task":"P02","tier":"standard","outcome":"success","dispatch_method":"sequential","attempt":1,"verification_result":"pass","duration_s":0}
+{"timestamp":"2026-06-05T01:53:26Z","unitId":"M043/P02/P02","milestone":"M043","phase":"P02","task":"P02","tier":"full","outcome":"success","dispatch_method":"sequential","attempt":1,"verification_result":"pass","duration_s":0}

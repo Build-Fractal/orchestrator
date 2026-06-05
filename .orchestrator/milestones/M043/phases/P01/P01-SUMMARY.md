@@ -1,0 +1,44 @@
+---
+schema_version: "1.0"
+type: phase-summary
+id: "P01"
+parent: "M043"
+milestone: "M043"
+provides:
+  - "wiki.deploy_target config schema (FR-1) + scripts/wiki/resolve-deploy-target.sh shared resolver,templates/wiki-cloudflare-deploy.yml.tmpl (Cloudflare Pages+Access deploy workflow: pages.yml-identical build steps + FR-3a pre-deploy Access health check + npx wrangler@4 deploy) and tools/verify/m043-p01-wrangler-lint.sh (SC-2 + SC-10 lint),wiki-init.sh deploy_target branching at both emit (FR-2 emit_cloudflare_workflow -> wiki-cloudflare.yml,CON-3 no-clobber) and --deploy (FR-4 cloudflare-access-setup.sh invocation + not-found exit-14 guard); byte-stability golden + CON-4 verifier,FR-5 target-aware workflow-URL branch in scripts/wiki/wiki-deploy.sh (cloudflare-access prints wiki-cloudflare.yml URL + identical-across-targets line; github-pages output preserved byte-for-byte per CON-4); tools/verify/m043-p01-wiki-deploy-url.sh; tools/verify/m043-p01-phase-suite.sh aggregator over all four P01 gates"
+requires:
+  - "P00"
+affects:
+  - "P03,P04"
+key_files:
+  - "templates/orchestrator-config-default.yml,scripts/wiki/resolve-deploy-target.sh,tools/verify/m043-p01-config-and-resolver.sh,templates/wiki-cloudflare-deploy.yml.tmpl,tools/verify/m043-p01-wrangler-lint.sh,scripts/lifecycle/wiki-init.sh,tests/fixtures/m043-p01/pages-workflow.golden.yml,tools/verify/m043-p01-wiki-init-branch.sh,scripts/wiki/wiki-deploy.sh,tools/verify/m043-p01-wiki-deploy-url.sh,tools/verify/m043-p01-phase-suite.sh"
+key_decisions:
+  - "resolver default=github-pages on absent key; exit 2 on unknown value (spec edge case); no read-config.sh change (consumer-root-correct helper instead)"
+patterns_established:
+  - "explicit-project-root config resolver avoids read-config.sh framework-root coupling,FR-3a fail-closed pre-deploy Access health check (CON-6 every-CI-deploy site),byte-stability golden diff proves CON-4 github-pages emit unchanged,phase-suite aggregator over all P01 gates"
+drill_down_paths:
+  - ".orchestrator/milestones/M043/phases/P01/tasks/T01-config-and-resolver-SUMMARY.md, .orchestrator/milestones/M043/phases/P01/tasks/T02-cloudflare-template-and-lint-SUMMARY.md, .orchestrator/milestones/M043/phases/P01/tasks/T03-wiki-init-branch-SUMMARY.md, .orchestrator/milestones/M043/phases/P01/tasks/T04-wiki-deploy-url-and-suite-SUMMARY.md"
+duration: "85m"
+verification_result: "pass"
+completed_at: "2026-06-05T00:52:42Z"
+observability_surfaces:
+  - "tools/verify/m043-p01-phase-suite.sh (pass=4 fail=0)"
+---
+
+P01 delivers the Cloudflare-access wiki-deploy target switch and CI workflow, with the github-pages path held byte-identical to pre-M043. Closed verify-pass under autonomous dispatch (scope: P01-only per operator, halting before P02).
+
+Shipped (4 tasks, T01→T04):
+- T01 — FR-1 `wiki.deploy_target` enum (default github-pages) + commented `cloudflare:` sub-block (CON-7 caveat) in config-default.yml; `scripts/wiki/resolve-deploy-target.sh` shared resolver (github-pages on absent key, exit 2 on unknown value per the spec edge case). Deliberately NOT a read-config.sh change — its nested handlers hardcode the framework repo root, wrong for a consumer PROJECT_DIR; the helper takes an explicit project root.
+- T02 — `templates/wiki-cloudflare-deploy.yml.tmpl`: build steps identical to pages.yml (CON-1), the FR-3a pre-deploy Access health-check step (fail-closed on non-200 / app-absent / policy-absent), deploy via `npx --yes wrangler@4` (CON-2). `m043-p01-wrangler-lint.sh` enforces SC-2 (no cloudflare/wrangler-action) + SC-10 (health-check precedes deploy, lines 62 < 93).
+- T03 — wiki-init.sh branches deploy_target at emit (FR-2 emit_cloudflare_workflow → wiki-cloudflare.yml, CON-3 no-clobber) and --deploy (FR-4 cloudflare-access-setup.sh invocation + not-found exit-14 guard, since that script is P02's concurrent deliverable). CON-4 byte-stability proven by a golden diff of the pristine pages.yml heredoc — all three edit anchors matched first try; emit_pages_workflow body untouched.
+- T04 — FR-5 target-aware workflow-URL branch in wiki-deploy.sh (cloudflare-access prints wiki-cloudflare.yml URL; github-pages output preserved byte-for-byte); `m043-p01-phase-suite.sh` aggregator (pass=4 fail=0).
+
+CON-6 (the milestone's load-bearing two-site exposure guard): the FR-3a every-CI-deploy health check is in place and fail-closed; provisioning-time enforcement is P02's job. Neither weakened.
+
+Two issues caught and resolved during the run (both surfaced by dispatched-agent flags, not silently absorbed):
+1. Plan self-contradiction — the T02 template's deploy-step comment contained the literal `cloudflare/wrangler-action` that the SC-2 lint forbids. Resolved by rephrasing the comment (deliverable), not weakening the lint.
+2. Latent runtime bug introduced by the T04 plan — wiki-deploy.sh runs under `set -u` and does NOT define `REPO_ROOT` (only `ROOT`); the plan's verbatim cloudflare branch referenced `$REPO_ROOT`, which would be an unbound-variable fatal on the cloudflare-access path (defeating the `|| echo github-pages` fallback). The grep-only verifiers could not catch a runtime-expansion bug. Fixed on disk to `$(dirname "$0")/resolve-deploy-target.sh` (the proven idiom at line ~96) and the T04 plan corrected to prevent reintroduction.
+
+Verification: Tier 1 check-must-haves 43/0 (after correcting two over-estimated min-line thresholds in the plan to match the verbatim verifier sizes — 21/22 lines); boundary-map SKIP (prose-form Produces); Tier 2 framework SKIP (no configured commands) with the project-owned phase suite green (pass=4 fail=0); Tier 3 substantive judgment confirmed FR-3a fail-closed ordering, CON-4 byte-stability, and the FR-5 fix. Tier 4 n/a.
+
+Carried forward: FR-3a probe logic is doc-derived (P00 Mode B) and the cloudflare-access end-to-end wiki-deploy run is not exercisable without a live remote — both are P04 live-validation items, consistent with the milestone's deferred-validation posture. P02 (provisioner) remains the second CON-6 enforcement site and is unblocked.

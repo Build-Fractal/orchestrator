@@ -12,35 +12,35 @@ updated_at: "2026-06-04"
 
 ## Phases
 
-- [ ] **P00**: Cloudflare API characterization spike — "A findings note pins the FR-3a health-check probe mechanism and the FR-9 diagnostic shape from real Cloudflare API behavior."
+- [x] **P00**: Cloudflare API characterization spike — "A findings note pins the FR-3a health-check probe mechanism and the FR-9 diagnostic shape from real Cloudflare API behavior."
   - Risk: high
   - Depends: none
   - Boundary Map:
     - Produces: `.orchestrator/milestones/M043/phases/P00/cloudflare-api-findings.md` (resolves #Q-5-sub: does the Access "Apps and Policies — Edit" scope grant read access sufficient for an existence check → FR-3a probe = authenticated-with-existing-token vs. unauthenticated-redirect-fallback; resolves #Q-6: HTTP status / error-code / body-field for Zero-Trust-not-enabled vs. token-missing-scope → FR-9 one-vs-combined diagnostic; captures the apex+wildcard create-call payloads + Zero-Trust-not-enabled + missing-scope responses as the seed for P02's recorded-API fixtures)
     - Consumes: none
 
-- [ ] **P01**: Target switch + Cloudflare deploy workflow (US-1) — "Setting `wiki.deploy_target: cloudflare-access` makes `wiki-init.sh` emit `wiki-cloudflare.yml` (with a pre-deploy Access health check) instead of `pages.yml`; the `github-pages` path stays byte-identical."
+- [x] **P01**: Target switch + Cloudflare deploy workflow (US-1) — "Setting `wiki.deploy_target: cloudflare-access` makes `wiki-init.sh` emit `wiki-cloudflare.yml` (with a pre-deploy Access health check) instead of `pages.yml`; the `github-pages` path stays byte-identical."
   - Risk: high
   - Depends: P00
   - Boundary Map:
     - Produces: `templates/orchestrator-config-default.yml` (`wiki.deploy_target` enum default `github-pages` + commented `wiki.cloudflare:` sub-block — FR-1); `templates/wiki-cloudflare-deploy.yml.tmpl` (build steps identical to `pages.yml`, FR-3a pre-deploy Access health-check step using the existing Edit-scope token per AD-1, deploy via `npx --yes wrangler@4` — FR-3/FR-3a); `scripts/lifecycle/wiki-init.sh` (`deploy_target` branch in `emit_pages_workflow` + `--deploy` — FR-2/FR-4, CON-3 no-clobber, CON-4 github-pages byte-stable); `scripts/wiki/wiki-deploy.sh` (target-aware workflow-URL print — FR-5); a template lint asserting `npx --yes wrangler@4` / no `cloudflare/wrangler-action` / health-check-precedes-deploy ordering (SC-2/SC-10)
     - Consumes: `cloudflare-api-findings.md` (FR-3a probe mechanism) from P00
 
-- [ ] **P02**: Idempotent Cloudflare provisioner (US-2) — "`cloudflare-access-setup.sh` provisions Pages project → Access app (apex+wildcard) → allow policy in that order, is a no-op on re-run, and fails loudly with an actionable diagnostic when Zero Trust is off."
+- [x] **P02**: Idempotent Cloudflare provisioner (US-2) — "`cloudflare-access-setup.sh` provisions Pages project → Access app (apex+wildcard) → allow policy in that order, is a no-op on re-run, and fails loudly with an actionable diagnostic when Zero Trust is off."
   - Risk: high
   - Depends: P00
   - Boundary Map:
     - Produces: `scripts/wiki/cloudflare-access-setup.sh` (idempotent provisioner, access-before-deploy ordering per CON-6/FR-8, Zero-Trust + scope diagnostics per FR-9, Bash 3.2 — FR-6/FR-7/FR-8/FR-9); recorded-API fixtures under `tests/fixtures/m043-cloudflare/` (clean-account create-order, all-present idempotency, zero-trust-not-enabled, missing-scope — SC-3/SC-4/SC-5)
     - Consumes: `cloudflare-api-findings.md` (FR-9 error-envelope + seed fixture payloads) from P00
 
-- [ ] **P03**: Docs + fallback-only footgun warning (US-3) — "`orchestrator:status`/`doctor` warn on every private-repo + `github-pages` config (with an 'ignore if Enterprise' note), and `installation.md` documents both the GitHub-Pages and the symmetric Cloudflare entitlement-lapse failure modes."
+- [x] **P03**: Docs + fallback-only footgun warning (US-3) — "`orchestrator:status`/`doctor` warn on every private-repo + `github-pages` config (with an 'ignore if Enterprise' note), and `installation.md` documents both the GitHub-Pages and the symmetric Cloudflare entitlement-lapse failure modes."
   - Risk: medium
   - Depends: P01, P02
   - Boundary Map:
     - Produces: `references/installation.md` (Enterprise-only-private-Pages pitfall + build-green/deploy-422 mode + symmetric Cloudflare-lapse docs + token scopes + Zero-Trust prereq + custom-domain note — FR-11); fallback-only warning in `scripts/diagnostics/run-doctor.sh` + the `orchestrator:status` surface (fire on private + `github-pages`, "ignore if Enterprise Cloud" note, no plan-detection — FR-10/AD-2); FR-10 single-branch fixture matrix (SC-6); giscus unchanged assertion on the Cloudflare build (`overrides/partials/comments.html` byte-stable — FR-12/SC-8)
     - Consumes: `wiki.deploy_target` config key (P01); `cloudflare-access-setup.sh` surface for docs (P02)
 
-- [ ] **P04**: Live / friendly-tester validation (US-4) — "A recruited tester provisions a real Cloudflare account end-to-end and records the `302 → cloudflareaccess.com` redirect on the live URL, a green CI run, and a working giscus comment."
+- [x] **P04**: Live / friendly-tester validation (US-4) — "A recruited tester provisions a real Cloudflare account end-to-end and records the `302 → cloudflareaccess.com` redirect on the live URL, a green CI run, and a working giscus comment." _(closed at shippable scope 2026-06-05 under the signed deferred-validation note `tests/m043-acceptance/live-deploy/evidence/2026-06-04-deferred-validation.md`; live pass forward-pointed to `tests/m043-acceptance/live-deploy/protocol.md` per FR-13 / SC-9)_
   - Risk: low
   - Depends: P01, P02, P03
   - Boundary Map:

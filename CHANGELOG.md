@@ -6,6 +6,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This pr
 
 ## [Unreleased]
 
+## [0.9.8] — 2026-06-05
+
+### Added — Cloudflare Pages + Access as a first-class wiki-deploy target (M043)
+
+- **`wiki.deploy_target: cloudflare-access` deploys a private wiki gated by Cloudflare Access instead of GitHub Pages.** Setting the key makes `wiki-init.sh` emit `.github/workflows/wiki-cloudflare.yml` (build steps identical to the GitHub-Pages workflow, plus an FR-3a pre-deploy Access health check, deploying via `npx --yes wrangler@4 pages deploy`) instead of `pages.yml`. The default `github-pages` path is held **byte-identical** to pre-M043. Fixes the private-Pages footgun surfaced by a live downstream incident (2026-06-04): a private GitHub-Pages wiki builds green but serves ungated.
+- **`scripts/wiki/cloudflare-access-setup.sh` — idempotent provisioner.** Creates the Pages project → Access app (apex + wildcard `*.<name>.pages.dev`) → allow policy in that order, is a no-op on re-run, and fails loudly with an actionable diagnostic distinguishing "Zero Trust not enabled" (HTTP 400 / code 12130) from "token missing scope" (HTTP 403 / code 9109).
+- **Fallback-only footgun warning** on `orchestrator:doctor` and `orchestrator:status`: fires on the (private repo + `github-pages`) configuration regardless of plan, with an "ignore if you are on GitHub Enterprise Cloud" note. Advisory only — never flips doctor health.
+- **`references/installation.md` § Wiki Deploy Targets** documents the GitHub-Pages Enterprise-only-private pitfall, the symmetric Cloudflare entitlement-lapse failure mode, the Cloudflare recipe, and the required token scopes (`Pages — Edit` + `Access: Apps and Policies — Edit` + `Account Settings — Read`, no extra Read scope) + Zero Trust prerequisite. giscus comments are unchanged across deploy targets.
+
+The US-4 live-deploy validation (a real Cloudflare account end-to-end: the `302 → cloudflareaccess.com` gate, a green CI run, a working giscus comment) ships as a documented friendly-tester protocol (`tests/m043-acceptance/live-deploy/`) and is forward-pointed under a signed deferred-validation note per the milestone's FR-13 / SC-9 — M043 closed at shippable scope (`validate-milestone.sh M043` PASS 62/62).
+
 ## [0.9.7] — 2026-06-04
 
 ### Changed — adoption polish

@@ -30,16 +30,21 @@ class Orchestrator < Formula
 
   def install
     # The npm pack tarball wraps everything in a single top-level
-    # "package/" dir. Homebrew STRIPS that single leading dir on unpack
-    # (its standard tar-trim behavior), so def install runs with the
-    # package CONTENTS already at the staging root — a "package/*" glob
-    # would match nothing. Stage the contents directly.
+    # "package/" dir, which Homebrew STRIPS on unpack (tar-trim), so the
+    # package CONTENTS sit at the staging root — a "package/*" glob would
+    # match nothing. Stage the whole tree into libexec (NOT prefix): the
+    # bin entry point resolves package.json + sibling dirs relative to its
+    # own real location, so the tree must stay together; and the symlink
+    # target must differ from the install dir — symlinking
+    # prefix/bin/orchestrator onto itself empties it. Symlink just the
+    # entry point onto PATH.
     # (Regression-guarded by tools/verify/m035-p03-formula-install-glob.sh;
-    #  the "package/*" form shipped broken in v0.9.8 — bin-less Cellar.)
-    prefix.install Dir["*"]
+    #  BOTH the "package/*" glob and the prefix-self-symlink forms shipped
+    #  broken in v0.9.8 — bin-less Cellar.)
+    libexec.install Dir["*"]
 
     # Wire bin/orchestrator onto PATH via Homebrew's bin symlink.
-    bin.install_symlink prefix/"bin/orchestrator"
+    bin.install_symlink libexec/"bin/orchestrator"
   end
 
   test do

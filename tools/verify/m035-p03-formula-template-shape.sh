@@ -13,7 +13,7 @@ else
   pass=$((pass + 1))
   for needle in 'class Orchestrator < Formula' '__VERSION__' \
     '__URL__' '__SHA256__' 'bin.install_symlink' 'license "MIT"' \
-    'def install' 'prefix.install'; do
+    'def install' 'libexec.install'; do
     if grep -qF "$needle" "$TMPL"; then
       pass=$((pass + 1))
     else

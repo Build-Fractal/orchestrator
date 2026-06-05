@@ -145,9 +145,9 @@ prerelease suffix and keeps all three version sources in sync.
 
 ---
 
-## First-release smoke tests (MOS-3 / MOS-4)
+## Channel smoke tests (MOS-3 / MOS-4)
 
-Run these once the workflow is green to confirm each public channel actually works:
+Run these after the workflow is green to confirm each public channel actually works:
 
 ```bash
 # npm (MOS-2 path)
@@ -160,6 +160,17 @@ brew install orchestrator && orchestrator --version
 # curl | bash (MOS-4)
 curl -fsSL https://github.com/Build-Fractal/orchestrator/releases/latest/download/install.sh | bash
 ```
+
+> **MOS-3 status (exercised 2026-06-05, v0.9.8).** The Homebrew channel was
+> smoke-tested for the first time at v0.9.8 and found broken — a two-part formula
+> bug (the `Dir["package/*"]` glob matched nothing after brew strips the tarball's
+> leading `package/` dir, and `prefix.install` + a self-referential
+> `bin.install_symlink` emptied `bin/`). Both are fixed (stage into `libexec`,
+> symlink the entry point) and now **guarded in CI**: `pr-validate` runs
+> `tools/verify/m035-p03-formula-install-glob.sh`, which packs the tarball,
+> replicates brew's unpack-and-strip, and asserts the on-PATH binary resolves —
+> no `brew` needed. A real `brew install` is still the gold-standard manual check,
+> but the formula can no longer ship binary-less without the CI gate failing first.
 
 Then verify a consumer can update (see `commands/update.md` dispatch table):
 `npm update -g @build-fractal/orchestrator`, `brew upgrade orchestrator`, or

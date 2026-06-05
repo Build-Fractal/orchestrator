@@ -73,6 +73,16 @@ jobs:
       - name: Run cross-channel byte-equivalence (npm-channel arm)
         run: bash tests/m035-acceptance/cross-channel-byte-equivalence.sh
 
+      # MOS-3: Homebrew formula install correctness. Packs the tarball,
+      # replicates brew's unpack-and-strip, simulates the formula's
+      # install + bin-symlink steps, and asserts the on-PATH entry point
+      # resolves to an executable. Guards the two-part bug that shipped a
+      # binary-less Cellar in v0.9.8 (package/* glob + prefix self-symlink).
+      # Pure npm-pack + shell — no `brew` needed, so it runs on the ubuntu
+      # runner. Was the missing pre-release gate that let v0.9.8 ship broken.
+      - name: Verify Homebrew formula install glob (MOS-3)
+        run: bash tools/verify/m035-p03-formula-install-glob.sh
+
       - name: Verify npm pack contents (T05)
         run: |
           if [ -x tools/verify/m035-p02-npm-pack-contents.sh ]; then

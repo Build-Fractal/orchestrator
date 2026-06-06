@@ -1,5 +1,7 @@
 # Proposal: M034 — Interactive Review Gates
 
+**Demand signal arrived 2026-06-06** — a real Cursor dogfooder who wants interactive review gates (conversus open-sourcing imminently) is the "second downstream consumer" this brief waited for. Consolidation scope folding in M009-FR6 (Cursor MCP renderer) + conversus producer: `.orchestrator/proposals/interactive-review-gates-consolidation.md`. Read that before running `orchestrator:specify` — it resolves the M034 ↔ M009-FR6 collision (Finding D) and pins the conversus-OSS dependency.
+
 **Captured**: 2026-04-28 during lakeledger M066/P01 dogfooding session
 **Shape**: Milestone (2 phases — schema first, gate second; P01 ships value standalone)
 **Predecessors**: M014 (review-queue convention — `commands/comments.md` CON-5/SC-5 human-gated apply pattern), M016/M021/M028 (autonomous-run shape guards), M027 (cost+quality observability — informs walkthrough cost), M030 (adaptive model selection — routes the walkthrough agent), M033 P04 (materials-intake interactive reconciliation — UX precedent)

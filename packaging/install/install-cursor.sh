@@ -4,10 +4,12 @@
 # Delegates all runtime-specific work to the P05 adapter:
 #   scripts/dispatch/adapters/runtime/cursor.sh
 #
-# Cursor is project-scoped (not HOME-scoped): it writes rules under
-# <project-dir>/.cursor/rules/ and has no lifecycle-hook API. Consequently:
+# Cursor is project-scoped (not HOME-scoped): it writes commands/rules under
+# <project-dir>/.cursor/. Cursor Hooks v1.7+ DO provide a lifecycle-hook API
+# (M009 FR-3), so hook wiring is real. Consequently:
 #   * --project-dir PATH is REQUIRED (vs optional for claude-code/codex).
-#   * Hook wiring is a no-op; the installer reports hooks_wired=0.
+#   * Hook wiring writes <project>/.cursor/hooks.json (beforeShellExecution ->
+#     the staged shape-guard wrapper) and reports hooks_wired=1.
 #
 # Responsibilities beyond the adapter:
 #   * Invoke --probe (via --project-dir), fail fast if unavailable.
@@ -224,6 +226,16 @@ if [ "$UNINSTALL" = "1" ]; then
     echo "WARN: manifest $manifest_file missing; refusing to guess removal" >&2
   fi
 
+  # M009 FR-5: remove the managed git pre-commit hook (only if it carries our
+  # marker; operator-owned hooks are preserved). Never alters the exit status.
+  if [ "$DRY_RUN" = "1" ]; then
+    bash "$REPO_ROOT/scripts/lifecycle/install-git-pre-commit.sh" \
+      --project-dir "$PROJECT_DIR" --uninstall --dry-run || true
+  else
+    bash "$REPO_ROOT/scripts/lifecycle/install-git-pre-commit.sh" \
+      --project-dir "$PROJECT_DIR" --uninstall || true
+  fi
+
   echo "UNINSTALLED: runtime-removed=${runtime_removed} config-removed=${config_removed}"
   exit 0
 fi
@@ -273,17 +285,54 @@ else
   [ -z "$skills_installed" ] && skills_installed=0
 fi
 
-# --- 3. Hook wiring: no-op for cursor. Emit the advisory fragment. ---
-# Cursor has no lifecycle-hook API; the adapter's --hook-config returns a
-# rules-only integration notice. We display it but write nothing.
-log "capturing hook-config (advisory only; cursor has no hook target)"
-hook_txt="$(bash "$ADAPTER" --hook-config 2>/dev/null)"
+# --- 3. Hook wiring: write .cursor/hooks.json (M009 FR-3). ---
+# Cursor Hooks v1.7+ DO provide a lifecycle-hook API (verified live: headless
+# cursor-agent honors beforeShellExecution and blocks on deny). The adapter's
+# --hook-config now emits a real hooks.json wiring beforeShellExecution to the
+# staged shape-guard wrapper. We write it to <project>/.cursor/hooks.json.
+#
+# Non-clobbering: if hooks.json already exists and does NOT reference our
+# guard, we preserve the operator's file and WARN (hooks_wired=0) rather than
+# overwrite — merging arbitrary operator hooks is out of Tier-A scope. An
+# existing file that already references our guard is rewritten idempotently.
+log "wiring beforeShellExecution hook via adapter --hook-config"
+hooks_json="$(bash "$ADAPTER" --hook-config --project-dir "$PROJECT_DIR" 2>/dev/null)"
 hooks_wired=0
-if [ -n "$hook_txt" ]; then
-  # Surface the advisory to stdout so operators see runtime=cursor hooks_supported=false.
-  echo "hook_config_advisory<<<"
-  printf '%s\n' "$hook_txt"
-  echo ">>>"
+hooks_file="$PROJECT_DIR/.cursor/hooks.json"
+guard_marker="cursor-before-shell-shape-guard.sh"
+if [ -z "$hooks_json" ]; then
+  echo "WARN: adapter --hook-config produced no hooks.json; skipping hook wiring" >&2
+elif [ -f "$hooks_file" ] && ! grep -q "$guard_marker" "$hooks_file" 2>/dev/null; then
+  echo "WARN: $hooks_file exists and is operator-owned (no orchestrator guard); preserving it, hooks_wired=0" >&2
+elif [ "$DRY_RUN" = "1" ]; then
+  echo "would_write=$hooks_file"
+  hooks_wired=1
+else
+  mkdir -p "$PROJECT_DIR/.cursor"
+  printf '%s\n' "$hooks_json" > "$hooks_file"
+  echo "wrote=$hooks_file"
+  hooks_wired=1
+fi
+
+# --- 3.5 Wire the git pre-commit hook (M009 FR-5). ---
+# Cursor has no CC-style PreToolUse-on-bash event, so the before-commit
+# lifecycle gate is wired as an actual git .git/hooks/pre-commit. The helper
+# is clobber-safe (preserves operator-owned hooks), skips non-git projects,
+# and never fails the install (|| true). The generated hook fails OPEN and
+# only propagates before-commit.sh's exit code (today a no-op), so it cannot
+# block ordinary commits. pre_commit_wired is parsed back for the summary.
+log "wiring git pre-commit hook via install-git-pre-commit.sh"
+pre_commit_wired=0
+if [ "$DRY_RUN" = "1" ]; then
+  pc_out="$(bash "$REPO_ROOT/scripts/lifecycle/install-git-pre-commit.sh" \
+    --project-dir "$PROJECT_DIR" --dry-run 2>&1)" || true
+  printf '%s\n' "$pc_out"
+  printf '%s\n' "$pc_out" | grep -q '^would_write=' && pre_commit_wired=1
+else
+  pc_out="$(bash "$REPO_ROOT/scripts/lifecycle/install-git-pre-commit.sh" \
+    --project-dir "$PROJECT_DIR" 2>&1)" || true
+  printf '%s\n' "$pc_out"
+  printf '%s\n' "$pc_out" | grep -q '^wrote=.*pre_commit_wired=1' && pre_commit_wired=1
 fi
 
 # --- 4. Stage orchestrator config into project state root ---
@@ -543,7 +592,7 @@ if [ "$DRY_RUN" = "0" ]; then
 fi
 
 # --- 5. Summary line ---
-echo "SUMMARY: runtime=cursor skills_installed=${skills_installed} hooks_wired=${hooks_wired} config_written=${config_written} runtime_staged=${runtime_staged} dry_run=${DRY_RUN}"
+echo "SUMMARY: runtime=cursor skills_installed=${skills_installed} hooks_wired=${hooks_wired} pre_commit_wired=${pre_commit_wired} config_written=${config_written} runtime_staged=${runtime_staged} dry_run=${DRY_RUN}"
 
 # --- 6. Optional sister-project hint (purely informational; never alters exit) ---
 # shellcheck disable=SC1091

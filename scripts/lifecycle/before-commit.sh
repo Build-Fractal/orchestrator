@@ -17,6 +17,16 @@
 # the post-install hooks dir does not 404 when Claude Code's hook
 # runner spawns this command.
 #
+# M009 FR-5 (2026-06-06): this script is ALSO consumed as a git
+# `.git/hooks/pre-commit` gate under the Cursor install path (wired by
+# scripts/lifecycle/install-git-pre-commit.sh, which propagates this
+# script's exit code). Cursor has no CC-style PreToolUse-on-bash event,
+# so the git pre-commit is the runtime-appropriate before-commit gate.
+# CONSEQUENCE: if real verification is ever wired in here, it MUST stay
+# milestone-aware and fail OPEN (exit 0) outside an active milestone /
+# in an ordinary consumer repo — a non-zero exit here will block EVERY
+# commit in every Cursor consumer repo via the pre-commit hook.
+#
 # Bash 3.2 compatible. No assoc-arrays, no array-from-stdin builtins.
 # AD-19 single-script-file flat shape. AP-009 clean (no compound
 # chains exceeding 2 connectors).

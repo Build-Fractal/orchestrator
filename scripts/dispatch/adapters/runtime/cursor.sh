@@ -89,7 +89,17 @@ fi
 if [[ "$MODE" = "probe" ]]; then
   available="false"
   reason="no-cursor-signals"
-  if [[ -n "${PROJECT_DIR:-}" ]] && [[ -d "${PROJECT_DIR}/.cursor" ]]; then
+  if [[ "${CURSOR_AGENT:-}" = "1" ]]; then
+    # Strongest signal: cursor-agent (headless CLI) exports CURSOR_AGENT=1 to
+    # every shell it spawns (verified live 2026-06-06, M009). The older IDE
+    # signals below do NOT cover the headless runtime — this branch closes
+    # that gap.
+    available="true"
+    reason="CURSOR_AGENT-env-set"
+  elif [[ "${CURSOR_INVOKED_AS:-}" = "cursor-agent" ]]; then
+    available="true"
+    reason="CURSOR_INVOKED_AS-cursor-agent"
+  elif [[ -n "${PROJECT_DIR:-}" ]] && [[ -d "${PROJECT_DIR}/.cursor" ]]; then
     available="true"
     reason="project-cursor-directory"
   elif [[ -n "${CURSOR_TRACE_ID:-}" ]]; then
@@ -171,15 +181,38 @@ fi
 # --- Hook-config mode ---
 
 if [[ "$MODE" = "hook-config" ]]; then
-  # Cursor has no lifecycle-hook API; emit a minimal fragment that
-  # advertises rules-only integration. Shape mirrors codex.sh so
-  # downstream tooling can key off `runtime = "..."`.
+  # Cursor Hooks v1.7+ DO provide a lifecycle-hook API (corrected M009 FR-3,
+  # verified live 2026-06-06: headless cursor-agent honors
+  # `.cursor/hooks.json` beforeShellExecution and blocks on deny). Emit a real
+  # hooks.json document wiring beforeShellExecution -> the orchestrator's
+  # Cursor shape-guard wrapper, so install-cursor.sh can write it verbatim to
+  # <project>/.cursor/hooks.json.
+  #
+  # The wrapper path resolves to the staged copy under the project's scripts/
+  # tree (installers stage scripts/ intact, so the wrapper + its sibling
+  # shape-classifier travel together). When --project-dir is given we emit an
+  # absolute path (the form proven in the live probe); otherwise a
+  # project-relative path as a portable default.
+  if [[ -n "${PROJECT_DIR:-}" ]] && [[ "${PROJECT_DIR}" != "/" ]]; then
+    guard_path="${PROJECT_DIR}/scripts/hooks/cursor-before-shell-shape-guard.sh"
+  else
+    guard_path="./scripts/hooks/cursor-before-shell-shape-guard.sh"
+  fi
+  # failClosed:false is deliberate (diverges from the M009 brief's
+  # failClosed:true): the shape-guard is a shape-CORRECTOR, not a security
+  # boundary, and the wrapper fails OPEN on infra errors — matching the
+  # established Claude-Code guard philosophy (M028 Finding A). A failClosed
+  # guard would deny ALL shell commands if the hook script broke, bricking
+  # autonomous runs.
   cat <<EOF
-# cursor hook-config
-runtime = "cursor"
-hooks_supported = "false"
-hook_count = "0"
-note = "Cursor uses rule-based integration; no lifecycle hooks."
+{
+  "version": 1,
+  "hooks": {
+    "beforeShellExecution": [
+      { "command": "${guard_path}", "failClosed": false }
+    ]
+  }
+}
 EOF
   exit 0
 fi

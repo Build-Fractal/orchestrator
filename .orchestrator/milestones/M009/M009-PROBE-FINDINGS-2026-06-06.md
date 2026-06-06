@@ -264,3 +264,52 @@ probe de-risks the architecture; it does not itself ship the server.
 **MCP elicitation `action` values** (MCP spec, confirmed in the capability):
 `accept` (with `content`), `decline` (explicit no), `cancel` (dismissed).
 Headless → `decline`.
+
+---
+
+## Addendum (c) 2026-06-06 — FR-3 SHIPPED: beforeShellExecution shape-guard
+
+Verified live that headless `cursor-agent` honors `.cursor/hooks.json`
+`beforeShellExecution`, then shipped the safety-veto port.
+
+**Hook input contract** (golden: `probe-fixtures/cursor-hook-input.json`):
+top-level `{"command":"<shell cmd>","hook_event_name":"beforeShellExecution",
+"cwd":...,"model":...,"sandbox":...,"cursor_version":...,"workspace_roots":[...],
+"user_email":...,"transcript_path":...}`. **Differs from Claude Code** (CC nests
+the command at `tool_input.command`).
+
+**Hook output contract:** emit `{"permission":"allow"|"deny"|"ask"}` (optional
+`agentMessage`/`userMessage`). Live findings:
+- A `deny` BLOCKS the command (the chain never ran — file MISSING).
+- **To surface the hook's message to the agent, exit 2** (JSON-only + exit 0
+  blocks but shows Cursor's generic "blocked by a hook" text). With exit 2,
+  Cursor relays the hook stdout — so the agent sees the full
+  `REJECT: <class> — use scripts/util/<wrapper> …` diagnostic and can
+  self-correct. (Verbatim parity with `pre-bash-shape-guard.sh`, which also
+  exits 2 + writes the REJECT line.)
+
+**Shipped:**
+- `scripts/hooks/cursor-before-shell-shape-guard.sh` — reads Cursor's stdin,
+  reuses the SAME `scripts/verify/lib/shape-classifier.sh`, translates
+  `allow`/`reject:`/`rewrite:` to Cursor's permission contract. `rewrite:`
+  classes become deny-with-suggested-form (Cursor can't rewrite in place).
+- `cursor.sh --hook-config` now emits a real `hooks.json` (was
+  `hooks_supported="false"`); `--probe` now detects `CURSOR_AGENT` /
+  `CURSOR_INVOKED_AS` (closing the headless-runtime gap from Addendum (a)).
+- `install-cursor.sh` writes `<project>/.cursor/hooks.json` (idempotent,
+  non-clobbering of operator hooks) and reports `hooks_wired=1`.
+- m008-p06 verifier flipped `hooks_wired=0` → `=1` + hooks.json assertions.
+- Hermetic suite `tests/test-cursor-shape-guard-hook.sh` (18/18).
+
+**Live end-to-end demo:** with the wrapper wired via `.cursor/hooks.json`, a
+headless `cursor-agent` told to run `mkdir -p a && touch a/x && echo done >
+chain-ran.txt` was **blocked** by the real shape-classifier (compound-chain-gt2);
+`chain-ran.txt` never created; the agent received the `run-probe.sh` remedy.
+
+**`failClosed` decision (deliberate divergence from the brief):** the emitted
+hooks.json sets `failClosed:false` and the wrapper fails OPEN on infra errors
+(missing classifier → allow). Rationale: the shape-guard is a shape-CORRECTOR,
+not a security boundary; CC's guard fails open by design (M028 Finding A), and
+a failClosed guard would deny ALL shell commands if the hook script broke,
+bricking autonomous runs. Recorded here as an explicit, reasoned departure from
+the brief's `failClosed:true` suggestion.

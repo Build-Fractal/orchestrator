@@ -118,11 +118,28 @@ if [ -f "$FIXTURE_HOME/.codex/config.toml" ]; then
   exit 1
 fi
 
-# Summary must declare hooks_wired=0.
-grep -q 'hooks_wired=0' "$REAL_OUT"
+# M009 FR-3: Cursor Hooks v1.7+ are real, so the installer now wires
+# beforeShellExecution. Summary must declare hooks_wired=1 and the
+# .cursor/hooks.json must reference the staged shape-guard wrapper.
+grep -q 'hooks_wired=1' "$REAL_OUT"
 if [ $? -ne 0 ]; then
-  echo "FAIL: cursor SUMMARY should declare hooks_wired=0" >&2
+  echo "FAIL: cursor SUMMARY should declare hooks_wired=1 (M009 FR-3)" >&2
   cat "$REAL_OUT" >&2
+  exit 1
+fi
+if [ ! -f "$FIXTURE_PROJ/.cursor/hooks.json" ]; then
+  echo "FAIL: .cursor/hooks.json not written (M009 FR-3)" >&2
+  exit 1
+fi
+grep -q 'beforeShellExecution' "$FIXTURE_PROJ/.cursor/hooks.json"
+if [ $? -ne 0 ]; then
+  echo "FAIL: .cursor/hooks.json missing beforeShellExecution wiring" >&2
+  cat "$FIXTURE_PROJ/.cursor/hooks.json" >&2
+  exit 1
+fi
+grep -q 'cursor-before-shell-shape-guard.sh' "$FIXTURE_PROJ/.cursor/hooks.json"
+if [ $? -ne 0 ]; then
+  echo "FAIL: .cursor/hooks.json does not reference the shape-guard wrapper" >&2
   exit 1
 fi
 

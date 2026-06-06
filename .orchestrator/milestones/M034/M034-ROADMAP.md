@@ -18,7 +18,7 @@ updated_at: "2026-06-06"
   - Boundary Map:
     - Produces: `M034-P00-ADDENDUM.md` (PC-1 `write-decisions.sh` calling-convention spec — recommended stdin-JSON of the FR-1 entry array; PC-2 CC execution-context determination resolving Case A non-spawned vs Case B `claude -p`, citing `scripts/dispatch/adapters/backend/cc.sh`; #Q-1 supersede decision); captured-packet fixture from lakeledger M066/P01 (8-decision structure + walkthrough transcript)
     - Consumes: `specs/044-interactive-review-gates/spec.md` (FR-1 schema shape, PC-1/PC-2 acceptance criteria); `scripts/dispatch/adapters/backend/cc.sh` + `scripts/dispatch/dispatch-interface.sh` (read-only, for the PC-2 determination)
-- [ ] **P01**: Decision-packet schema + writer + conversus producer + surfacing — "A task declaring decision_packet: true emits a schema-valid *-DECISIONS.md (optionally enriched from a conversus gate-result), and status/doctor report the unreviewed-decision count." (US1, US5)
+- [x] **P01**: Decision-packet schema + writer + conversus producer + surfacing — "A task declaring decision_packet: true emits a schema-valid *-DECISIONS.md (optionally enriched from a conversus gate-result), and status/doctor report the unreviewed-decision count." (US1, US5) *(closed 2026-06-06: templates/decisions-packet.md + CON-4 SSOT + write-decisions.sh (PC-1 stdin-JSON, #Q-1 supersede chain) + decisions-from-conversus.sh (FR-11/12 strict) + FR-4 status/doctor surfacing; PC-3/4/5 forward-specified in M034-P01-ADDENDUM.md for P02; phase-suite PASS 4/4 + addendum; check-must-haves all PASS)*
   - Risk: medium
   - Depends: P00
   - Boundary Map:

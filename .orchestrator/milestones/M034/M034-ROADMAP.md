@@ -12,7 +12,7 @@ updated_at: "2026-06-06"
 
 ## Phases
 
-- [ ] **P00**: Empirical baseline + P0 pre-planning addendum — "Replaying the lakeledger M066/P01 walkthrough produces a captured decision-packet field-set, and the P0 addendum resolves the write-decisions.sh calling convention and the CC interactive-vs-headless execution context before any code is written."
+- [x] **P00**: Empirical baseline + P0 pre-planning addendum — "Replaying the lakeledger M066/P01 walkthrough produces a captured decision-packet field-set, and the P0 addendum resolves the write-decisions.sh calling convention and the CC interactive-vs-headless execution context before any code is written." *(closed 2026-06-06: PC-1 stdin-JSON, PC-2 Case A / RISK-5 cleared, #Q-1 append-with-supersede-chain; verifier PASS)*
   - Risk: high
   - Depends: none
   - Boundary Map:

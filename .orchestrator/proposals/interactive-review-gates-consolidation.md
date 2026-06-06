@@ -3,6 +3,8 @@
 **Captured:** 2026-06-06
 **Status:** scoping input for `orchestrator:specify` — NOT yet a committed milestone
 **Trigger:** a real Cursor dogfooder who *will* use interactive review gates, with conversus open-sourcing imminently. This is the "second downstream consumer" demand signal M034's brief waited for (`M034-interactive-review-gates.md` §"Why post-launch", §Sequencing).
+
+> **RESOLVED 2026-06-06 (operator):** the dogfooder runs Cursor and will test in **both interactive and headless mode**. This settles §6 Q1 (the single biggest scope lever): **all three renderers are in scope, and P03 (the Cursor MCP review-gate server, FR-6) is load-bearing — not conditional.** The full four-phase shape applies. The conversus-OSS prerequisite (§4) is on the critical path: the dogfooder must `pipx install conversus-oss` + `conversus login anthropic` (→ `CONVERSUS_PROVIDER=claude-code` auto-set on OAuth) or gates silently SKIP.
 **Inputs:** `.orchestrator/proposals/M034-interactive-review-gates.md`, `.orchestrator/proposals/M009-cursor-support.md` (Tier-B FR-6), `.orchestrator/milestones/M009/M009-PROBE-FINDINGS-2026-06-06.md` (Q1 / Addendum (b)), conversus adapter `scripts/dispatch/adapters/tool/conversus.sh`.
 
 ---
@@ -69,7 +71,7 @@ Author **one milestone** ("interactive review gates"), phased:
 | **P00** | Empirical baseline | M034 brief already prescribes replaying lakeledger M066/P01 as the fixture. ADD: a conversus-gate-result → decision-packet mapping fixture, and a Cursor-interactive elicitation transcript fixture. |
 | **P01** | **Decision-packet schema** (shared contract) + writer | M034 P01 verbatim: `templates/decisions-packet.md` (versioned frontmatter), `scripts/knowledge/write-decisions.sh`, `severity: warn\|block`, named-constant thresholds. **+ conversus producer adapter**: map `gate-result.md` (verdict/disputes/rationale/`final.md` link) into packet entries. Ships standalone value (audit + `doctor`/`status` surfacing) even with no walkthrough. |
 | **P02** | **Interactive walkthrough stage** routed via `dispatch-interface.sh` + REVIEW.md + SIGNOFF integration + `auto`-mode policies + boundary-translation packet type (M034 Finding E) | Renderers: CC `AskUserQuestion` + **headless fallback `QUESTIONS.md`** (covers autonomous CC *and* autonomous Cursor — Q1). This is the full M034 value and works for the dogfooder if they run headless. |
-| **P03 (conditional)** | **Cursor MCP review-gate server (M009 FR-6)** — native elicitation renderer for *interactive* Cursor | Only if the dogfooder runs interactive IDE/TUI sessions (see §3). The orchestrator-owned stdio MCP server exposing review gates via `elicitation/create`, registered in `.cursor/mcp.json`. Architecture de-risked by Q1. |
+| **P03 (IN SCOPE)** | **Cursor MCP review-gate server (M009 FR-6)** — native elicitation renderer for *interactive* Cursor | Load-bearing: the dogfooder tests interactive IDE/TUI (resolved 2026-06-06). The orchestrator-owned stdio MCP server exposing review gates via `elicitation/create`, registered in `.cursor/mcp.json`. Architecture de-risked by Q1. |
 
 **Deferred / cheap add-ons (not in this milestone unless asked):**
 - **M009 FR-7 (Cursor cost model):** keep deferred. No USD in `cursor-agent` JSON → a hand-maintained rate card against a beta product. Keep the Tier-A `estimated_cost_usd:null` + `pricing_warning` degrade.
@@ -77,7 +79,7 @@ Author **one milestone** ("interactive review gates"), phased:
 
 ## 6. Open questions for `orchestrator:specify`
 
-1. **Dogfooder runtime mode?** Interactive Cursor IDE/TUI (→ P03 MCP server is load-bearing) vs headless `cursor-agent` (→ P03 deferrable; P02 fallback suffices). **Single biggest scope lever.**
+1. ~~**Dogfooder runtime mode?**~~ **RESOLVED 2026-06-06: both interactive and headless → P03 (Cursor MCP server) is in scope.**
 2. **conversus as default producer or opt-in?** Recommend opt-in per gate (`producer: conversus` in plan frontmatter) — preserves M034's "load-bearing, opt-in" framing and avoids forcing a conversus dependency on every gate.
 3. **`--strict` conversus by default in gated phases?** Recommend yes (or loud SKIPPED-in-packet) to kill the silent-skip hazard (§4).
 4. **Milestone identity:** does this *become* M034 (absorbing M009-FR6/FR-8), or a new milestone that closes M034 + the M009-Tier-B FR-6/FR-8 line items? Recommend: author as M034 and explicitly mark M009 FR-6/FR-8 as satisfied-by-M034 in the M009 brief, leaving M009 FR-7 as the lone deferred Cursor item.

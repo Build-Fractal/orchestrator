@@ -1,6 +1,6 @@
 # M009 — Cursor Support (Multi-Runtime Parity Audit)
 
-**Status:** proposal brief (not a committed milestone — promote via `orchestrator:specify` when scheduled)
+**Status:** proposal brief — **Tier-A SHIPPED 2026-06-06** on branch `m009-cursor-tier-a` (hand-built per §8 of the probe-findings recommendation, not yet a committed milestone). **Tier-B remains demand-driven** — promote via `orchestrator:specify` when a real Cursor user arrives. See the *Build status* addendum at the foot of this file.
 **Authored:** 2026-06-06
 **Supersedes/absorbs:** the M009 placeholder referenced across the roadmap; absorption candidate for `.orchestrator/proposals/M0xx-out-of-tree-runtime-footprint.md` (it already plans to touch Cursor cache/instruction conventions)
 **Source research:** a 2026-06-06 capability audit of *current* (mid-2026) Cursor against the orchestrator's three load-bearing runtime needs (dispatch, hooks, interactive). Findings + source URLs are inlined in §3 and §9.
@@ -120,3 +120,24 @@ These are encoded in the codebase today and are now false:
 ---
 
 *Promotion path:* run `orchestrator:specify` on this brief to author the M009 spec, then `evaluate → roadmap → plan-phase`. Tier A is the minimal shippable slice; Tier B is the full parity milestone.
+
+---
+
+## Build status (addendum, updated 2026-06-06)
+
+**Tier-A is COMPLETE** on branch `m009-cursor-tier-a` (9 commits ahead of main). Hand-built per the probe-findings §8 recommendation rather than via `orchestrator:specify`, because the brief was already a high-quality spec and the live probe validated the single biggest unknown (the invocation shape). Authoritative record: `.orchestrator/milestones/M009/M009-PROBE-FINDINGS-2026-06-06.md`.
+
+Shipped + live-validated:
+- **FR-1** `cursor-agent` dispatch backend (`scripts/dispatch/adapters/backend/cursor-agent.sh`) — validated invocation, pure-bash watchdog (no `timeout` on macOS), two-mode failure handling, auth-precondition probe, runtime-aware auto-default keyed off `CURSOR_AGENT=1`.
+- **FR-2** JSON result parse + byte-exact golden success fixture.
+- **FR-3** `beforeShellExecution` shape-guard port (`scripts/hooks/cursor-before-shell-shape-guard.sh`, reuses the shared classifier) + real `.cursor/hooks.json` wiring (`hooks_wired=1`), live-demoed block.
+- **FR-4** native command surface — `.cursor/commands/orchestrator-*.md` + always-on `.cursor/rules/orchestrator.md`.
+- **FR-5** before-commit gate wired as a git `pre-commit` (`scripts/lifecycle/install-git-pre-commit.sh`) — clobber-safe, non-git skip, `core.hooksPath`-aware, fails OPEN, `--dry-run`/`--uninstall`. Safe because `before-commit.sh` is an `exit 0` no-op today.
+- **FR-9** RUNTIME-ASSUMPTIONS Cursor divergence rows (`RA-M009-CURSOR-01/02/03`).
+- **Q1 RESOLVED** — headless cursor-agent honors MCP elicitation at the protocol level but auto-declines (no UI), mapping cleanly onto auto-mode gate policy. De-risks the FR-6 architecture.
+
+Tests: `tests/test-cursor-agent-adapter.sh` 29/29, `tests/test-cursor-shape-guard-hook.sh` 24/24, `scripts/verify/m009-fr5-cursor-pre-commit-hermetic.sh` 15/15, `m008-p05`/`m008-p06` hermetic verifiers green.
+
+Known gap (not a Tier-A blocker): a **real** §3 mode-2 runtime-error golden (exit 0 + `is_error:true`) could not be synthesized across 6 live trigger classes — cursor-agent absorbs controllable errors into mode 1 or success. Capture opportunistically during dogfooding or under Tier-B.
+
+**Tier-B (FR-6 MCP review-gate server / FR-7 cost model + rate card / FR-8 byte-parity audit)** is the next slice and should go through `orchestrator:specify` as a committed milestone — gated on a real Cursor user arriving (the project's demand-driven post-launch posture). Q1 already de-risked the FR-6 architecture; §10 of the probe-findings lists the brief corrections to fold into that spec (default model `composer-2.5-fast`, `--trust` required, native `-w/--worktree`, no file-diff fields in JSON, two-mode failures, no `timeout` on macOS, auth precondition).

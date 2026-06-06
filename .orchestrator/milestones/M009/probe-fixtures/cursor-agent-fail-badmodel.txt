@@ -1,0 +1,16 @@
+# Failure mode: invalid --model (preflight/arg-validation error)
+# Captured 2026-06-06 from: cursor-agent -p --force --trust --output-format json \
+#   --model this-model-does-not-exist-xyz --workspace <ws> "say hello"
+#
+# EXIT CODE: 1   (non-zero)
+# STDOUT:    (empty — NO JSON emitted, despite --output-format json)
+# STDERR:    plaintext error (below), NOT JSON
+#
+# Adapter implication: preflight/arg failures do NOT come back as
+# error-in-JSON. The adapter must branch on the process exit code FIRST,
+# treat non-empty stderr as the error payload, and only attempt JSON
+# parsing on the success (exit 0) path. (Contrast: a *runtime* error is
+# expected to surface as is_error:true / subtype!="success" INSIDE the
+# JSON on exit 0 — see findings note Q2 — so both checks are required.)
+
+Cannot use this model: this-model-does-not-exist-xyz. Available models: auto, gpt-5.3-codex-low, [...full model roster truncated...]

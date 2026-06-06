@@ -174,3 +174,40 @@ Adapter-specific additions vs. the codex template:
 - Failures are **two-mode** (exit-code vs in-JSON) — the brief's Q2 ("non-zero exit OR error-in-JSON") is answered as **both, depending on failure class** (§3).
 - The `-p` hang did **not** reproduce on `2026.06.04`, but **no `timeout` binary on macOS** → adapter must carry its own watchdog (§4).
 - Auth is a genuine precondition (login OR `CURSOR_API_KEY`) — fold into `--probe` (§7).
+
+---
+
+## Addendum 2026-06-06 — runtime env signals + auto-default
+
+A follow-up probe (`cursor-agent ... "env | sort > env-dump.txt"`) captured the
+environment `cursor-agent` exports to every shell it spawns:
+
+```
+CURSOR_AGENT=1
+CURSOR_INVOKED_AS=cursor-agent
+NODE_COMPILE_CACHE=/Users/.../Library/Caches/cursor-compile-cache
+```
+
+(An `AI_AGENT=claude-code_...` value also appeared — but that was *leaked from
+the parent Claude Code shell that launched the probe*, NOT a Cursor signal.
+Don't key off `AI_AGENT`.)
+
+**`CURSOR_AGENT=1` is the canonical, reliable runtime signal.** It is present
+whenever the orchestrator runs *under* `cursor-agent`, which is exactly the
+condition under which the cursor backend should auto-select as default.
+
+**Adapter consequence (shipped):** the `--probe` "enabled" decision is now:
+`ORCHESTRATOR_CURSOR_ENABLE=1` (force on) / `=0` (force off) / unset →
+auto-enable iff `_cursor_runtime_active` (`CURSOR_AGENT=1` |
+`CURSOR_INVOKED_AS=cursor-agent` | `CURSOR_TRACE_ID` | `CURSOR_SESSION_ID` |
+`CURSOR_USER`). A bare `.cursor/` dir is deliberately NOT a signal (a CC user
+can have one). Net: a real Cursor session gets the backend with zero env
+fiddling; a CC machine never auto-selects it. The default-hijack guard (risk 6)
+holds because none of these signals are set on a CC machine.
+
+**New stale assumption found:** `scripts/dispatch/adapters/runtime/cursor.sh`
+`--probe` checks `CURSOR_TRACE_ID` / `CURSOR_SESSION_ID` / `CURSOR_USER` (IDE
+signals) but **not** `CURSOR_AGENT` — so it likely does **not** detect the
+headless `cursor-agent` runtime at all. Fold a `CURSOR_AGENT=1` signal into
+that adapter's probe when the FR-4 registration/runtime-correction work lands
+(brief §10). Tracked here so the two probes stay consistent.

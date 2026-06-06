@@ -81,15 +81,21 @@ STUB_PATH="$STUB_BIN:/usr/bin:/bin"
 # PATH with NO cursor-agent anywhere (for the no-binary probe assertion).
 NOBIN_PATH="/usr/bin:/bin"
 
+# CLEAN strips every "enable" signal (explicit env + Cursor runtime vars) so
+# the not-opted-in / no-hijack assertions hold even when this suite runs
+# inside a real Cursor session (where CURSOR_AGENT=1 would legitimately
+# auto-enable the backend).
+CLEAN="env -u ORCHESTRATOR_CURSOR_ENABLE -u CURSOR_AGENT -u CURSOR_INVOKED_AS -u CURSOR_TRACE_ID -u CURSOR_SESSION_ID -u CURSOR_USER"
+
 run_adapter() { PATH="$STUB_PATH" CURSOR_STUB_JSON_FILE="$GOLDEN_JSON" bash "$ADAPTER" "$@"; }
 
 # --- 0. Preconditions ------------------------------------------------------
 if [ -f "$ADAPTER" ]; then pass "adapter file exists"; else fail "adapter file exists"; fi
 if [ -f "$GOLDEN_JSON" ]; then pass "golden success fixture exists"; else fail "golden success fixture exists"; fi
 
-# --- 1. Probe: not opted in (binary present via stub, but opt-in unset) ----
-out="$(PATH="$STUB_PATH" ORCHESTRATOR_CURSOR_ENABLE= bash "$ADAPTER" --probe)"
-echo "$out" | grep -q '^available=false'        && pass "probe: not-opted-in => available=false" || fail "probe: not-opted-in => available=false (got: $out)"
+# --- 1. Probe: not enabled (binary present, but no opt-in, no Cursor runtime) -
+out="$($CLEAN PATH="$STUB_PATH" bash "$ADAPTER" --probe)"
+echo "$out" | grep -q '^available=false'        && pass "probe: not-enabled => available=false" || fail "probe: not-enabled => available=false (got: $out)"
 echo "$out" | grep -q '^reason=not-opted-in'    && pass "probe: not-opted-in reason" || fail "probe: not-opted-in reason (got: $out)"
 echo "$out" | grep -q '^backend=cursor-agent'   && pass "probe: backend=cursor-agent" || fail "probe: backend label (got: $out)"
 
@@ -99,9 +105,19 @@ echo "$out" | grep -q '^available=false'              && pass "probe: opted-in, 
 echo "$out" | grep -q '^reason=cursor-agent-not-on-path' && pass "probe: no-binary reason" || fail "probe: no-binary reason (got: $out)"
 
 # --- 3. Probe: opted in + binary + authed (stub) => available --------------
-out="$(PATH="$STUB_PATH" ORCHESTRATOR_CURSOR_ENABLE=1 bash "$ADAPTER" --probe)"
+out="$($CLEAN PATH="$STUB_PATH" ORCHESTRATOR_CURSOR_ENABLE=1 bash "$ADAPTER" --probe)"
 echo "$out" | grep -q '^available=true'                 && pass "probe: opted-in+authed => available=true" || fail "probe: opted-in available=true (got: $out)"
 echo "$out" | grep -q '^reason=opted-in-and-authenticated' && pass "probe: opted-in reason" || fail "probe: opted-in reason (got: $out)"
+
+# --- 3b. Probe: under Cursor runtime (CURSOR_AGENT=1) auto-enables ----------
+out="$($CLEAN PATH="$STUB_PATH" CURSOR_AGENT=1 bash "$ADAPTER" --probe)"
+echo "$out" | grep -q '^available=true'                    && pass "probe: cursor-runtime => available=true" || fail "probe: cursor-runtime available (got: $out)"
+echo "$out" | grep -q '^reason=cursor-runtime-and-authenticated' && pass "probe: cursor-runtime reason" || fail "probe: cursor-runtime reason (got: $out)"
+
+# --- 3c. Probe: force-disable (env=0) overrides Cursor runtime -------------
+out="$($CLEAN PATH="$STUB_PATH" CURSOR_AGENT=1 ORCHESTRATOR_CURSOR_ENABLE=0 bash "$ADAPTER" --probe)"
+echo "$out" | grep -q '^available=false'    && pass "probe: env=0 force-disable under runtime => available=false" || fail "probe: force-disable (got: $out)"
+echo "$out" | grep -q '^reason=force-disabled' && pass "probe: force-disable reason" || fail "probe: force-disable reason (got: $out)"
 
 # --- 4. Registry discovers cursor-agent ------------------------------------
 list="$(bash "$REGISTRY" --list)"
@@ -109,7 +125,7 @@ echo "$list" | grep -qx 'cursor-agent' && pass "registry --list includes cursor-
 
 # --- 5. NO default-backend hijack without opt-in ---------------------------
 # Even with the stub on PATH, default must NOT be cursor-agent when opt-in unset.
-summary="$(PATH="$STUB_PATH" ORCHESTRATOR_CURSOR_ENABLE= bash "$REGISTRY")"
+summary="$($CLEAN PATH="$STUB_PATH" bash "$REGISTRY")"
 default="$(echo "$summary" | grep '^default_backend=' | cut -d= -f2)"
 [ "$default" != "cursor-agent" ] && pass "no default hijack without opt-in (default=$default)" || fail "cursor-agent hijacked default without opt-in"
 echo "$summary" | grep -q 'backends_discovered=.*cursor-agent' && pass "registry still discovers cursor-agent" || fail "registry discovers cursor-agent"

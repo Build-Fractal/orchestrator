@@ -12,13 +12,24 @@
 # registry default_backend on a machine where Claude Code is the intended
 # runtime (cursor-agent.sh sorts alphabetically BEFORE local-agent.sh, so
 # an unconditionally-available probe would win the default slot), the probe
-# reports available=true ONLY under an explicit opt-in:
-#   ORCHESTRATOR_CURSOR_ENABLE=1   (auto-default opt-in), AND
-#   cursor-agent on PATH, AND
-#   authenticated (cursor-agent logged in OR CURSOR_API_KEY set).
+# reports available=true only when ENABLED *and* usable. "Enabled" is:
+#   - ORCHESTRATOR_CURSOR_ENABLE=1            -> force on, OR
+#   - running under the Cursor runtime         -> auto on, OR
+#   - (ORCHESTRATOR_CURSOR_ENABLE=0            -> force off, overrides runtime)
+# Cursor-runtime detection uses the env signals cursor-agent itself exports
+# to every shell it spawns (verified live 2026-06-06): CURSOR_AGENT=1 /
+# CURSOR_INVOKED_AS=cursor-agent — plus the IDE signals the runtime adapter
+# already recognizes (CURSOR_TRACE_ID / CURSOR_SESSION_ID / CURSOR_USER).
+# A bare `.cursor/` project dir is deliberately NOT a signal: a Claude-Code
+# user can have one, and it would wrongly flip the dispatch default.
+# "Usable" additionally requires cursor-agent on PATH AND authenticated
+# (cursor-agent logged in OR CURSOR_API_KEY set).
+#
+# Net effect: a real Cursor session auto-selects this backend with no env
+# fiddling; a Claude-Code machine never does (no Cursor signals present).
 # Explicit selection via `dispatch-interface.sh --backend cursor-agent`
 # bypasses the probe entirely (the interface resolves the adapter file by
-# name), so the opt-in gate never blocks deliberate use — it only governs
+# name), so neither gate ever blocks deliberate use — they only govern
 # whether Cursor becomes the *auto-selected* default.
 #
 # Normal mode runs the validated invocation under a pure-bash watchdog
@@ -71,6 +82,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# --- Runtime helper: are we running under the Cursor runtime? ---
+# Strong signals cursor-agent exports to spawned shells (verified live
+# 2026-06-06) + the IDE signals the runtime adapter recognizes. A bare
+# .cursor/ dir is intentionally excluded (a Claude-Code user can have one).
+_cursor_runtime_active() {
+  if [ "${CURSOR_AGENT:-}" = "1" ] \
+     || [ "${CURSOR_INVOKED_AS:-}" = "cursor-agent" ] \
+     || [ -n "${CURSOR_TRACE_ID:-}" ] \
+     || [ -n "${CURSOR_SESSION_ID:-}" ] \
+     || [ -n "${CURSOR_USER:-}" ]; then
+    return 0
+  fi
+  return 1
+}
+
 # --- Auth helper: logged-in OR CURSOR_API_KEY present ---
 _cursor_authed() {
   if [ -n "${CURSOR_API_KEY:-}" ]; then
@@ -90,15 +116,31 @@ _cursor_authed() {
 if [[ "$MODE" = "probe" ]]; then
   available="false"
   reason="not-opted-in"
-  if [ "${ORCHESTRATOR_CURSOR_ENABLE:-0}" != "1" ]; then
-    reason="not-opted-in"            # set ORCHESTRATOR_CURSOR_ENABLE=1 to auto-default
+
+  # Resolve the "enabled" decision: explicit env wins (1=on, 0=off); when
+  # unset, auto-enable iff under the Cursor runtime.
+  enabled=0
+  enable_reason="not-opted-in"   # set ORCHESTRATOR_CURSOR_ENABLE=1 or run under Cursor
+  case "${ORCHESTRATOR_CURSOR_ENABLE:-}" in
+    1)
+      enabled=1; enable_reason="opted-in" ;;
+    0)
+      enabled=0; enable_reason="force-disabled" ;;
+    *)
+      if _cursor_runtime_active; then
+        enabled=1; enable_reason="cursor-runtime"
+      fi ;;
+  esac
+
+  if [ "$enabled" != "1" ]; then
+    reason="$enable_reason"
   elif ! command -v cursor-agent >/dev/null 2>&1; then
     reason="cursor-agent-not-on-path"
   elif ! _cursor_authed; then
     reason="cursor-agent-not-authenticated"
   else
     available="true"
-    reason="opted-in-and-authenticated"
+    reason="${enable_reason}-and-authenticated"
   fi
   echo "available=${available}"
   echo "backend=cursor-agent"

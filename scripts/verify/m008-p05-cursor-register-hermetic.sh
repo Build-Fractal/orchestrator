@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Verifies cursor.sh --register writes orchestrator-*.md rules into
-# a hermetic PROJECT_DIR fixture's .cursor/rules/ directory.
+# Verifies cursor.sh --register writes (M009 FR-4 split):
+#   - invocable commands -> .cursor/commands/orchestrator-*.md
+#   - an always-on rule  -> .cursor/rules/orchestrator.md
+# into a hermetic PROJECT_DIR fixture, and never touches HOME.
 set -u
 
 ADAPTER="scripts/dispatch/adapters/runtime/cursor.sh"
@@ -24,23 +26,34 @@ if [[ $rc -ne 0 ]]; then
   exit 1
 fi
 
-target_dir="$project_dir/.cursor/rules"
-if [[ ! -d "$target_dir" ]]; then
-  echo "FAIL: $target_dir was not created"
+# FR-4: invocable commands land in .cursor/commands/orchestrator-*.md
+commands_dir="$project_dir/.cursor/commands"
+if [[ ! -d "$commands_dir" ]]; then
+  echo "FAIL: $commands_dir was not created"
   exit 1
 fi
-
-count="$(find "$target_dir" -type f -name 'orchestrator-*.md' 2>/dev/null | wc -l | tr -d ' ')"
+count="$(find "$commands_dir" -type f -name 'orchestrator-*.md' 2>/dev/null | wc -l | tr -d ' ')"
 if [[ "$count" = "0" ]]; then
-  echo "FAIL: no orchestrator-*.md files written into $target_dir"
+  echo "FAIL: no orchestrator-*.md files written into $commands_dir"
   exit 1
 fi
 
-# Also assert HOME fixture was not written to.
+# FR-4: the always-on rule lands at .cursor/rules/orchestrator.md.
+rule_file="$project_dir/.cursor/rules/orchestrator.md"
+if [[ ! -f "$rule_file" ]]; then
+  echo "FAIL: always-on rule $rule_file was not created"
+  exit 1
+fi
+if ! grep -q 'alwaysApply: true' "$rule_file"; then
+  echo "FAIL: $rule_file missing alwaysApply frontmatter"
+  exit 1
+fi
+
+# Also assert HOME fixture was not written to (hermetic guard preserved).
 home_count="$(find "$home_fix" -type f 2>/dev/null | wc -l | tr -d ' ')"
 if [[ "$home_count" != "0" ]]; then
   echo "FAIL: cursor.sh wrote $home_count files into HOME (should only write to project-dir)"
   exit 1
 fi
 
-echo "PASS: cursor.sh --register wrote $count orchestrator-*.md files into hermetic .cursor/rules/"
+echo "PASS: cursor.sh --register wrote $count commands + always-on rule into hermetic .cursor/ (HOME untouched)"

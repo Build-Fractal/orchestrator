@@ -157,7 +157,7 @@ Adapter-specific additions vs. the codex template:
 1. ✅ **DONE** — Q1 MCP-elicitation probe (§5 / Addendum (b)): native gates viable; headless auto-declines into auto-mode policy.
 2. ✅ **DONE** — hand-built `scripts/dispatch/adapters/backend/cursor-agent.sh` (§1 + §7) with the §4 watchdog and §3 two-mode failure handling, plus runtime-aware auto-default (Addendum (a)). Validated end-to-end live.
 3. ✅ **DONE (stubbed)** — thin acceptance suite `tests/test-cursor-agent-adapter.sh` (29/29). Still pending: a **real** runtime-failure golden fixture (§3 mode 2) from a live cursor-agent error (currently only stubbed).
-4. **TODO (still Tier-A)** — correct the stale assertions (brief §10): `cursor.sh` `hooks_supported`/`--hook-config`, `install-cursor.sh` `hooks_wired=0`, the rules-only registration, AND the runtime-adapter `CURSOR_AGENT` detection gap (Addendum (a)). Stage these together so nothing downstream silently disagrees (risk 6). This is FR-3/FR-4.
+4. ✅ **DONE** — stale-assertion corrections (brief §10): FR-3 (`--hook-config` real hooks.json + `install-cursor.sh` `hooks_wired=1` + the shape-guard wrapper + `CURSOR_AGENT` probe) in Addendum (c); FR-4 (`--register` splits commands → `.cursor/commands/` + always-on rule → `.cursor/rules/`) in Addendum (d). m008-p05/p06 verifiers updated; tests green.
 5. **TODO (Tier-B, via `orchestrator:specify`)** — the orchestrator MCP review-gate server (FR-6) now that Q1 confirms the architecture; cost model (FR-7); byte-parity audit (FR-8).
 
 ---
@@ -313,3 +313,46 @@ not a security boundary; CC's guard fails open by design (M028 Finding A), and
 a failClosed guard would deny ALL shell commands if the hook script broke,
 bricking autonomous runs. Recorded here as an explicit, reasoned departure from
 the brief's `failClosed:true` suggestion.
+
+---
+
+## Addendum (d) 2026-06-06 — FR-4 SHIPPED: native command surface
+
+Corrected the "integration is rules-only / no skills equivalent" stale
+assumption (false since Cursor `.cursor/commands/` v1.6).
+
+`cursor.sh --register` now splits to the Cursor-native surfaces:
+- **Invocable commands** → `.cursor/commands/orchestrator-<cmd>.md` (one per
+  `commands/*.md`, README excluded). These are the true analog of Claude Code
+  slash skills — invoked on demand as `/orchestrator-<cmd>`, not always-loaded.
+- **Always-on operating instructions** → `.cursor/rules/orchestrator.md`, an
+  `alwaysApply: true` rule that declares the project orchestrator-managed,
+  notes the beforeShellExecution shape-guard, and lists the command index.
+
+This replaces the pre-FR-4 behavior that dumped every command's full body into
+`.cursor/rules/` (always loaded — context-heavy and not how Cursor models
+invocable commands). Emit shape: `registered=true count=<N>` + `rules=1`
+(count = command files; the two-line emit preserves install-cursor.sh's
+`count=` parse).
+
+Verifiers updated: m008-p05 (register hermetic) now asserts the commands dir +
+always-on rule + the preserved HOME-hermetic guard; m008-p06 (install hermetic)
+asserts `.cursor/commands/` + the rule. Hermetic suite
+`tests/test-cursor-shape-guard-hook.sh` extended to 24/24.
+
+**Not done (deliberate Tier-A scope):** an `AGENTS.md` at project root (the
+brief's "+ AGENTS.md"). Writing/merging a project-root AGENTS.md risks
+clobbering operator content and needs a merge strategy — deferred. The
+`.cursor/rules/orchestrator.md` always-on rule covers the always-loaded
+operating-instructions need for now.
+
+---
+
+## §10 stale-assumption status (updated 2026-06-06)
+
+1. "Cursor has no lifecycle-hook API" — ✅ CORRECTED (FR-3, Addendum (c)).
+2. "Integration is rules-only / no skills equivalent" — ✅ CORRECTED (FR-4, Addendum (d)).
+3. "Cursor cannot be a dispatch backend" — ✅ CORRECTED (cursor-agent.sh adapter).
+4. "No native mid-run structured-question primitive" — ✅ CLARIFIED (Q1 / Addendum (b)): MCP elicitation exists; headless auto-declines.
+5. RUNTIME-ASSUMPTIONS scopes Cursor parity as compression-only — ⚠️ STILL OPEN: FR-9 divergence rows (`RA-M009-CURSOR-01/02/03`) not yet added to `references/RUNTIME-ASSUMPTIONS.md`. Tracked for a follow-up.
+6. `local-codex.sh` invocation is an unvalidated placeholder — unchanged (out of M009 scope; noted for M008/M010).

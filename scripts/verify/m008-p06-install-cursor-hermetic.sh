@@ -97,10 +97,14 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-# Cursor writes rules under project-dir.
-if [ ! -d "$FIXTURE_PROJ/.cursor/rules" ]; then
-  echo "FAIL: .cursor/rules dir not created under project-dir" >&2
+# Cursor writes invocable commands + an always-on rule under project-dir (FR-4).
+if [ ! -d "$FIXTURE_PROJ/.cursor/commands" ]; then
+  echo "FAIL: .cursor/commands dir not created under project-dir (M009 FR-4)" >&2
   ls -la "$FIXTURE_PROJ/.cursor" >&2 2>/dev/null || true
+  exit 1
+fi
+if [ ! -f "$FIXTURE_PROJ/.cursor/rules/orchestrator.md" ]; then
+  echo "FAIL: .cursor/rules/orchestrator.md always-on rule not created (M009 FR-4)" >&2
   exit 1
 fi
 if [ ! -f "$FIXTURE_PROJ/.orchestrator/config.yml" ]; then
@@ -143,9 +147,9 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-skill_count="$(ls "$FIXTURE_PROJ/.cursor/rules/" 2>/dev/null | wc -l | tr -d ' ')"
+skill_count="$(find "$FIXTURE_PROJ/.cursor/commands" -type f -name 'orchestrator-*.md' 2>/dev/null | wc -l | tr -d ' ')"
 if [ "$skill_count" -lt 1 ]; then
-  echo "FAIL: no rules registered under project-dir" >&2
+  echo "FAIL: no orchestrator commands registered under .cursor/commands/" >&2
   exit 1
 fi
 

@@ -17,12 +17,16 @@
 #       - $CURSOR_USER environment variable set
 #
 #   --register [--dry-run]
-#     Installs orchestrator commands as project-level Cursor rule files
-#     under $PROJECT_DIR/.cursor/rules/orchestrator-<cmd>.md, one per
-#     commands/*.md in the repo root (excluding README.md per MEM008).
+#     M009 FR-4 split registration to the Cursor-native surfaces:
+#       - invocable commands -> $PROJECT_DIR/.cursor/commands/orchestrator-<cmd>.md
+#         (one per commands/*.md in the repo root, excluding README.md per
+#         MEM008; the true analog of Claude Code slash skills, since v1.6)
+#       - always-on operating instructions -> $PROJECT_DIR/.cursor/rules/
+#         orchestrator.md (alwaysApply rule: orchestrator-managed declaration
+#         + generated command index)
 #     With --dry-run: emits `would_write=<path>` lines and writes nothing.
-#     Without --dry-run: mkdir -p "$PROJECT_DIR/.cursor/rules" and copy,
-#     then emit `registered=true count=<N>`.
+#     Without --dry-run: writes both surfaces, then emits
+#     `registered=true count=<N>` + `rules=1` (count = command files).
 #
 #     Cursor scopes rules per-project (not HOME-scoped like Claude Code
 #     or Codex CLI). `--project-dir <path>` overrides $PWD for hermetic
@@ -38,10 +42,12 @@
 #     lifecycle-hook API comparable to Claude Code or Codex CLI, so this
 #     adapter advertises rules-only integration. No python3/jq dependency.
 #
-# Cursor conventions (cf. claude-code.sh, codex.sh):
-#   - .cursor/rules/ is the per-project rules directory.
-#   - No user-level ~/.cursor/skills/ equivalent exists.
-#   - No lifecycle hooks; integration is via rules the agent reads.
+# Cursor conventions (cf. claude-code.sh, codex.sh), corrected M009:
+#   - .cursor/commands/ holds invocable slash commands (v1.6+).
+#   - .cursor/rules/ holds always-on rules the agent reads.
+#   - .cursor/hooks.json provides lifecycle hooks (v1.7+) — beforeShellExecution
+#     is wired to the orchestrator shape-guard (FR-3).
+#   - Registration is per-project (no user-level ~/.cursor/skills/ equivalent).
 #
 # Bash 3.2 compatible. No associative arrays, no mapfile/readarray.
 
@@ -147,34 +153,81 @@ if [[ "$MODE" = "register" ]]; then
     exit 3
   fi
 
-  target_dir="$PROJECT_DIR/.cursor/rules"
+  # M009 FR-4: split registration to the Cursor-native surfaces.
+  #   - Invocable commands -> .cursor/commands/orchestrator-<cmd>.md
+  #     (true analog of Claude Code slash skills, since Cursor v1.6). These
+  #     are invoked on demand as /orchestrator-<cmd>.
+  #   - Always-on operating instructions -> .cursor/rules/orchestrator.md
+  #     (an alwaysApply rule that declares the project orchestrator-managed
+  #     and lists the available commands). This replaces the pre-FR-4 behavior
+  #     that dumped every command's full body into .cursor/rules/ (always
+  #     loaded — context-heavy and not how Cursor models invocable commands).
+  commands_target="$PROJECT_DIR/.cursor/commands"
+  rules_target="$PROJECT_DIR/.cursor/rules"
+  rule_file="${rules_target}/orchestrator.md"
 
-  count=0
-  if [[ "$DRY_RUN" = "1" ]]; then
-    # Dry-run: list what would be written, write nothing.
-    for src in "$commands_dir"/*.md; do
-      [[ -f "$src" ]] || continue
-      base="$(basename "$src")"
-      [[ "$base" = "README.md" ]] && continue
-      stem="${base%.md}"
-      echo "would_write=${target_dir}/orchestrator-${stem}.md"
-      count=$((count + 1))
-    done
-    echo "dry_run=true count=${count}"
-    exit 0
-  fi
-
-  # Real register: mkdir target dir + copy each command.
-  mkdir -p "$target_dir"
+  # Build the command-name list (sorted by glob order) for both the dry-run
+  # listing and the always-on rule body.
+  cmd_count=0
+  cmd_names=""
   for src in "$commands_dir"/*.md; do
     [[ -f "$src" ]] || continue
     base="$(basename "$src")"
     [[ "$base" = "README.md" ]] && continue
     stem="${base%.md}"
-    cp "$src" "${target_dir}/orchestrator-${stem}.md"
-    count=$((count + 1))
+    cmd_names="${cmd_names}${stem}\n"
+    cmd_count=$((cmd_count + 1))
   done
-  echo "registered=true count=${count}"
+
+  if [[ "$DRY_RUN" = "1" ]]; then
+    # Dry-run: list what would be written, write nothing.
+    printf '%b' "$cmd_names" | while IFS= read -r stem; do
+      [ -z "$stem" ] && continue
+      echo "would_write=${commands_target}/orchestrator-${stem}.md"
+    done
+    echo "would_write=${rule_file}"
+    echo "dry_run=true count=${cmd_count}"
+    echo "rules=1"
+    exit 0
+  fi
+
+  # Real register: commands -> .cursor/commands/, always-on rule -> .cursor/rules/.
+  mkdir -p "$commands_target" "$rules_target"
+  for src in "$commands_dir"/*.md; do
+    [[ -f "$src" ]] || continue
+    base="$(basename "$src")"
+    [[ "$base" = "README.md" ]] && continue
+    stem="${base%.md}"
+    cp "$src" "${commands_target}/orchestrator-${stem}.md"
+  done
+
+  # Always-on rule: alwaysApply frontmatter + a generated command index.
+  {
+    echo "---"
+    echo "alwaysApply: true"
+    echo "description: Orchestrator operating model and command index (auto-generated)."
+    echo "---"
+    echo ""
+    echo "# Orchestrator (orchestrator-managed project)"
+    echo ""
+    echo "This project is managed by the orchestrator. Multi-phase work flows"
+    echo "through the \`/orchestrator-*\` commands below (invoke them as Cursor"
+    echo "slash commands; their full definitions live in \`.cursor/commands/\`)."
+    echo ""
+    echo "Shell commands are shape-guarded by \`.cursor/hooks.json\`"
+    echo "(beforeShellExecution): compound chains, heredoc-with-expansion, and"
+    echo "other flagged shapes are denied with a pointer to the correct wrapper."
+    echo ""
+    echo "## Available commands"
+    echo ""
+    printf '%b' "$cmd_names" | while IFS= read -r stem; do
+      [ -z "$stem" ] && continue
+      echo "- \`/orchestrator-${stem}\`"
+    done
+  } > "$rule_file"
+
+  echo "registered=true count=${cmd_count}"
+  echo "rules=1"
   exit 0
 fi
 

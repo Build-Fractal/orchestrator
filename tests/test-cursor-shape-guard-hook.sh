@@ -77,6 +77,20 @@ pr="$(env -u CURSOR_TRACE_ID -u CURSOR_SESSION_ID -u CURSOR_USER CURSOR_AGENT=1 
 echo "$pr" | grep -q '^available=true' && pass "probe: CURSOR_AGENT=1 => available" || fail "probe: CURSOR_AGENT (got: $pr)"
 echo "$pr" | grep -q 'CURSOR_AGENT' && pass "probe: reason names CURSOR_AGENT" || fail "probe: reason (got: $pr)"
 
+# --- 8. FR-4: --register splits commands vs always-on rule -----------------
+reg_proj="$WORK/regproj"
+reg_home="$WORK/reghome"
+mkdir -p "$reg_proj" "$reg_home"
+reg_out="$(env -u CURSOR_AGENT HOME="$reg_home" bash "$ADAPTER" --register --project-dir "$reg_proj" 2>&1)"
+echo "$reg_out" | grep -q '^registered=true' && pass "register: reports registered=true" || fail "register: registered (got: $reg_out)"
+echo "$reg_out" | grep -q '^rules=1' && pass "register: reports rules=1" || fail "register: rules=1"
+ccount="$(find "$reg_proj/.cursor/commands" -type f -name 'orchestrator-*.md' 2>/dev/null | wc -l | tr -d ' ')"
+[ "${ccount:-0}" -ge 1 ] && pass "register: commands land in .cursor/commands/ ($ccount)" || fail "register: commands dir"
+[ -f "$reg_proj/.cursor/rules/orchestrator.md" ] && pass "register: always-on rule at .cursor/rules/orchestrator.md" || fail "register: rule file"
+grep -q 'alwaysApply: true' "$reg_proj/.cursor/rules/orchestrator.md" 2>/dev/null && pass "register: rule has alwaysApply frontmatter" || fail "register: alwaysApply"
+hcount="$(find "$reg_home" -type f 2>/dev/null | wc -l | tr -d ' ')"
+[ "${hcount:-1}" = "0" ] && pass "register: HOME untouched (hermetic guard)" || fail "register: HOME touched ($hcount files)"
+
 echo
 echo "BATTERY: pass=${PASS_COUNT} fail=${FAIL_COUNT}"
 [ "$FAIL_COUNT" -eq 0 ] || exit 1

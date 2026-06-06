@@ -354,5 +354,5 @@ operating-instructions need for now.
 2. "Integration is rules-only / no skills equivalent" — ✅ CORRECTED (FR-4, Addendum (d)).
 3. "Cursor cannot be a dispatch backend" — ✅ CORRECTED (cursor-agent.sh adapter).
 4. "No native mid-run structured-question primitive" — ✅ CLARIFIED (Q1 / Addendum (b)): MCP elicitation exists; headless auto-declines.
-5. RUNTIME-ASSUMPTIONS scopes Cursor parity as compression-only — ⚠️ STILL OPEN: FR-9 divergence rows (`RA-M009-CURSOR-01/02/03`) not yet added to `references/RUNTIME-ASSUMPTIONS.md`. Tracked for a follow-up.
+5. RUNTIME-ASSUMPTIONS scopes Cursor parity as compression-only — ✅ CORRECTED (FR-9): added the `## Cursor dispatch, hooks & interactive (M009)` section with rows `RA-M009-CURSOR-01` (auth required / no air-gap), `-02` (headless cost/pricing TBD), `-03` (headless elicitation declines) to `references/RUNTIME-ASSUMPTIONS.md`.
 6. `local-codex.sh` invocation is an unvalidated placeholder — unchanged (out of M009 scope; noted for M008/M010).

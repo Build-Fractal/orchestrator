@@ -58,6 +58,33 @@ will assign real audit-row IDs at audit time. The verifier asserts the
 column header exists and at least one RA-M018-NN row is present, not
 specific row IDs.
 
+## Cursor dispatch, hooks & interactive (M009)
+
+The Cursor runtime gained first-class dispatch (`cursor-agent` headless
+CLI), lifecycle hooks (Cursor Hooks v1.7+), and MCP elicitation since the
+codebase's original ~April-2026 Cursor assumptions were written. The
+Tier-A slice (M009 FR-1…FR-4) ships against the `cursor-agent` CLI,
+validated live 2026-06-06 (see
+`.orchestrator/milestones/M009/M009-PROBE-FINDINGS-2026-06-06.md`). The
+divergences below are intentional and apply only under `ORCH_BACKEND=cursor`
+(or auto-selected when running under the Cursor runtime, `CURSOR_AGENT=1`).
+
+### Divergences
+
+| ID | Surface | Divergence | Rationale | M009 Audit Row |
+|----|---------|------------|-----------|-----------------|
+| RA-M009-CURSOR-01 | Auth required for local dispatch | `cursor-agent` requires authentication (`cursor-agent login` OR `CURSOR_API_KEY`) even for local headless runs. There is no air-gapped Cursor dispatch; the `cursor-agent.sh` adapter `--probe` reports unavailable when unauthenticated, and normal mode emits a `status:"failure"` dispatch-result. | `CURSOR_API_KEY`/login is a hard precondition of the Cursor CLI, outside the orchestrator's control. Unlike `claude-code`'s in-process Agent tool or a fully-local Codex run, Cursor always round-trips to its backend. Documented so auditors confirm the unauthenticated-failure path is graceful, not a hang. | M009-RP-CURSOR-01 (auth-required-no-airgap) |
+| RA-M009-CURSOR-02 | Per-task cost / pricing | `cursor-agent --output-format json` reports token `usage` (input/output/cacheRead/cacheWrite) but NO USD cost; per-model Cursor pricing + subscription-tier gating are undocumented. The dispatch-result surfaces token usage; `dispatch-interface.sh` cost rollup applies a rate card or degrades to `estimated_cost_usd:null` + `pricing_warning`. | Cursor bills against the account, not per-call in the JSON. A `cursor:` rate-card row + tier-gating confirmation is deferred to Tier-B FR-7. Documented so cost surfaces under Cursor are known-degraded, not silently wrong. | M009-RP-CURSOR-02 (headless-cost-pricing-tbd) |
+| RA-M009-CURSOR-03 | Interactive review gate in headless | Native MCP elicitation (`elicitation/create`) is supported by Cursor (capability `{"elicitation":{"form":{}}}`), but headless `cursor-agent -p` auto-returns `{"action":"decline"}` — there is no interactive surface. Review gates render natively in interactive Cursor; in headless/autonomous runs they resolve to `decline`, which maps onto the orchestrator's auto-mode gate policy (`defer`/`accept-with-audit`/`block`). | Verified live 2026-06-06 (M009 Q1 / findings Addendum (b)): decline is instant, deterministic, no hang. The Tier-B orchestrator MCP review-gate server (FR-6) consumes this; until then, autonomous review gates degrade to file-hand-off / auto-mode policy. | M009-RP-CURSOR-03 (headless-elicitation-declines) |
+
+### M009 audit handoff
+
+These rows use placeholder audit IDs (`M009-RP-CURSOR-01..03`); the
+Tier-B parity audit (FR-8) assigns real IDs and runs the
+`compression-runtime-parity` corpus under `ORCH_BACKEND=cursor` to assert
+SHA-256 byte-equality + Tier-3 routing parity, alongside the M018 rows
+above.
+
 ## Shape-Guard Carve-Outs (M021 / M028)
 
 The active PreToolUse Bash shape-guard

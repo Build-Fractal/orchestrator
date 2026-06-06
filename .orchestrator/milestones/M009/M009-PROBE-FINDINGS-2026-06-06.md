@@ -88,6 +88,38 @@ So **preflight / argument-validation failures are NOT error-in-JSON** — they a
 
 (Not yet captured: a real *runtime* failure's exact exit code + JSON shape. Recommend capturing one during adapter build — e.g. a deliberately impossible task or a revoked-permission scenario — to pin mode #2's golden fixture.)
 
+> **Update 2026-06-06 (mode-2 capture attempt — NOT synthesizable on demand).**
+> A dedicated timeboxed live probe (`cursor-agent 2026.06.04`, logged in) ran
+> **6 distinct trigger classes** trying to force exit 0 + `is_error:true`:
+> read-only `--mode ask`/`--mode plan` + a forced write; an impossible
+> tool call (`definitely_not_a_real_tool_xyz`); an empty prompt; a
+> deprecated/unentitled model name (`claude-3-opus`); and a ~900KB
+> context-overflow prompt. **None produced mode 2.** cursor-agent is robust:
+> it absorbs every *controllable* error into one of the two ALREADY-captured
+> modes —
+> - **mode 1** (exit≠0 + stderr, no JSON): invalid model, empty prompt
+>   (`Error: No prompt provided for print mode`), **and unentitled/deprecated
+>   model** (new: golden `probe-fixtures/cursor-agent-fail-unentitled-model.txt`
+>   — entitlement failures are mode 1, not mode 2; exit 1).
+> - **success** (exit 0, `subtype:"success"`): tool-not-found, read-only-mode
+>   violations, impossible tool calls all return success-with-prose (golden:
+>   `probe-fixtures/cursor-agent-toolerror-absorbed-success.json` — the agent
+>   reports the `Tool not found: …` error in its prose `result` field, NOT as
+>   `is_error`). (The ~900KB prompt hit OS `E2BIG` / exit 126 at `exec` time —
+>   an arg-length limit, not a model error; a real overflow would need stdin.)
+>
+> **Verdict:** mode 2 (`is_error:true` / `subtype != success` at exit 0) is
+> reserved for genuine *internal* runtime failures — API errors, `error_max_turns`
+> (no CLI flag exposes a turn cap), `error_during_execution` — which cannot be
+> conjured on demand. The adapter's mode-2 branch (cursor-agent.sh §304) and its
+> stubbed acceptance assertion remain the faithful contract test: the stub JSON
+> `{"type":"result","subtype":"error","is_error":true,...}` matches the
+> claude-agent-SDK result-message shape cursor-agent emits. **A real mode-2
+> golden should be captured opportunistically** if a runtime error occurs
+> naturally during dogfooding, or under Tier-B where the MCP/dispatch harness can
+> inject one. Not a Tier-A blocker — the two real failure classes that *do* occur
+> in practice are both captured.
+
 ---
 
 ## 4. Risk 1 — `-p` headless hang
@@ -166,6 +198,8 @@ Adapter-specific additions vs. the codex template:
 
 - `probe-fixtures/cursor-agent-success.json` — golden SUCCESS result (byte-exact).
 - `probe-fixtures/cursor-agent-fail-badmodel.txt` — preflight-failure capture (exit 1 + stderr).
+- `probe-fixtures/cursor-agent-fail-unentitled-model.txt` — mode-1 capture for a deprecated/unentitled model name (exit 1; entitlement failures are mode 1, 2026-06-06).
+- `probe-fixtures/cursor-agent-toolerror-absorbed-success.json` — NEGATIVE golden: an impossible tool call absorbed as `subtype:success` with the error in the prose `result` (proves tool errors do NOT trigger mode 2, 2026-06-06).
 - `/tmp/cursor-probe.sh` — success probe + reusable pure-bash watchdog.
 - `/tmp/cursor-probe-fail.sh` — failure-semantics probe.
 - Raw success stdout: `/tmp/cursor-probe-stdout.json`.
@@ -368,18 +402,31 @@ rule), FR-9 (RUNTIME-ASSUMPTIONS rows). Plus runtime-aware auto-default and the
 Q1 elicitation resolution. Tests: `test-cursor-agent-adapter.sh` 29/29,
 `test-cursor-shape-guard-hook.sh` 24/24; m008-p05/p06 verifiers updated + green.
 
-**Remaining Tier-A (NOT done — start fresh):**
-- **FR-5 — before-commit git hook.** Wire `scripts/lifecycle/before-commit.sh`
-  as a git `pre-commit` in the Cursor install path. **Deliberately deferred to
-  a fresh context**: this is the riskiest remaining item — a careless wiring
-  blocks *every commit* in the consumer repo. Needs: (a) reading
-  `before-commit.sh`'s exit semantics (does it hard-fail outside an active
-  milestone? it must NOT block ordinary commits), (b) a clobber-guard for an
-  existing `.git/hooks/pre-commit`, (c) non-git-repo + `--dry-run` + uninstall
-  handling, (d) a hermetic verifier. It is NOT de-risked by any live probe.
-- **Real runtime-failure golden fixture (§3 mode 2).** Capture a live
-  cursor-agent runtime error (exit 0 + `is_error:true`) — currently only
-  stubbed in the acceptance suite.
+**Tier-A — COMPLETE (2026-06-06, 2nd session):**
+- ✅ **FR-5 — before-commit git hook (SHIPPED).** `before-commit.sh`'s exit
+  semantics confirmed first: it is an unconditional `exit 0` no-op (and is
+  shaped as a CC PreToolUse hook, not git-pre-commit), so wiring it as a git
+  `pre-commit` is inherently SAFE — it cannot block an ordinary commit. New
+  `scripts/lifecycle/install-git-pre-commit.sh`: clobber-guard (preserves an
+  operator-owned `pre-commit`), non-git skip (note + exit 0, never fails the
+  install), honors `core.hooksPath`, `--dry-run` + `--uninstall`, emits an
+  executable hook carrying the `ORCHESTRATOR_MANAGED_PRE_COMMIT` marker that
+  **fails OPEN** (missing gate → exit 0) and only propagates `before-commit.sh`'s
+  exit code. Wired into `install-cursor.sh` (Stage 3.5, `|| true`; `--uninstall`
+  removal; `pre_commit_wired=` in SUMMARY). Header note added to
+  `before-commit.sh` so a future author wiring real verification keeps it
+  milestone-aware + fail-open. Hermetic verifier
+  `scripts/verify/m009-fr5-cursor-pre-commit-hermetic.sh` (15/15) covers every
+  path incl. a real `git commit` end-to-end. Commit `de47fbd9`.
+- ⚠️ **Real runtime-failure golden fixture (§3 mode 2) — ATTEMPTED LIVE, not
+  synthesizable.** 6 trigger classes probed against live `cursor-agent`; none
+  produced exit 0 + `is_error:true` (see §3 Update 2026-06-06). cursor-agent
+  absorbs all controllable errors into mode 1 or success; mode 2 is reserved
+  for un-summonable internal failures. Two new byte-real evidence fixtures saved
+  (unentitled-model mode-1; tool-error-absorbed-success negative golden). The
+  adapter's mode-2 branch + SDK-shape stub remain the faithful contract test.
+  Recommend capturing a real mode-2 opportunistically during dogfooding or under
+  Tier-B. **Not a Tier-A blocker.**
 
 **Tier-B (via `orchestrator:specify`):** FR-6 orchestrator MCP review-gate
 server (architecture de-risked by Q1), FR-7 cost model + `cursor:` rate card,

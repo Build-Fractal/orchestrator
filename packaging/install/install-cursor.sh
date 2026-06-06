@@ -226,6 +226,16 @@ if [ "$UNINSTALL" = "1" ]; then
     echo "WARN: manifest $manifest_file missing; refusing to guess removal" >&2
   fi
 
+  # M009 FR-5: remove the managed git pre-commit hook (only if it carries our
+  # marker; operator-owned hooks are preserved). Never alters the exit status.
+  if [ "$DRY_RUN" = "1" ]; then
+    bash "$REPO_ROOT/scripts/lifecycle/install-git-pre-commit.sh" \
+      --project-dir "$PROJECT_DIR" --uninstall --dry-run || true
+  else
+    bash "$REPO_ROOT/scripts/lifecycle/install-git-pre-commit.sh" \
+      --project-dir "$PROJECT_DIR" --uninstall || true
+  fi
+
   echo "UNINSTALLED: runtime-removed=${runtime_removed} config-removed=${config_removed}"
   exit 0
 fi
@@ -302,6 +312,27 @@ else
   printf '%s\n' "$hooks_json" > "$hooks_file"
   echo "wrote=$hooks_file"
   hooks_wired=1
+fi
+
+# --- 3.5 Wire the git pre-commit hook (M009 FR-5). ---
+# Cursor has no CC-style PreToolUse-on-bash event, so the before-commit
+# lifecycle gate is wired as an actual git .git/hooks/pre-commit. The helper
+# is clobber-safe (preserves operator-owned hooks), skips non-git projects,
+# and never fails the install (|| true). The generated hook fails OPEN and
+# only propagates before-commit.sh's exit code (today a no-op), so it cannot
+# block ordinary commits. pre_commit_wired is parsed back for the summary.
+log "wiring git pre-commit hook via install-git-pre-commit.sh"
+pre_commit_wired=0
+if [ "$DRY_RUN" = "1" ]; then
+  pc_out="$(bash "$REPO_ROOT/scripts/lifecycle/install-git-pre-commit.sh" \
+    --project-dir "$PROJECT_DIR" --dry-run 2>&1)" || true
+  printf '%s\n' "$pc_out"
+  printf '%s\n' "$pc_out" | grep -q '^would_write=' && pre_commit_wired=1
+else
+  pc_out="$(bash "$REPO_ROOT/scripts/lifecycle/install-git-pre-commit.sh" \
+    --project-dir "$PROJECT_DIR" 2>&1)" || true
+  printf '%s\n' "$pc_out"
+  printf '%s\n' "$pc_out" | grep -q '^wrote=.*pre_commit_wired=1' && pre_commit_wired=1
 fi
 
 # --- 4. Stage orchestrator config into project state root ---
@@ -561,7 +592,7 @@ if [ "$DRY_RUN" = "0" ]; then
 fi
 
 # --- 5. Summary line ---
-echo "SUMMARY: runtime=cursor skills_installed=${skills_installed} hooks_wired=${hooks_wired} config_written=${config_written} runtime_staged=${runtime_staged} dry_run=${DRY_RUN}"
+echo "SUMMARY: runtime=cursor skills_installed=${skills_installed} hooks_wired=${hooks_wired} pre_commit_wired=${pre_commit_wired} config_written=${config_written} runtime_staged=${runtime_staged} dry_run=${DRY_RUN}"
 
 # --- 6. Optional sister-project hint (purely informational; never alters exit) ---
 # shellcheck disable=SC1091

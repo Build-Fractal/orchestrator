@@ -356,3 +356,35 @@ operating-instructions need for now.
 4. "No native mid-run structured-question primitive" — ✅ CLARIFIED (Q1 / Addendum (b)): MCP elicitation exists; headless auto-declines.
 5. RUNTIME-ASSUMPTIONS scopes Cursor parity as compression-only — ✅ CORRECTED (FR-9): added the `## Cursor dispatch, hooks & interactive (M009)` section with rows `RA-M009-CURSOR-01` (auth required / no air-gap), `-02` (headless cost/pricing TBD), `-03` (headless elicitation declines) to `references/RUNTIME-ASSUMPTIONS.md`.
 6. `local-codex.sh` invocation is an unvalidated placeholder — unchanged (out of M009 scope; noted for M008/M010).
+
+---
+
+## Tier-A status + remaining work (handoff, 2026-06-06)
+
+**Shipped + live-validated this session** (branch `m009-cursor-tier-a`, 6 commits):
+FR-1 (dispatch adapter), FR-2 (JSON parse + golden fixture), FR-3 (shape-guard
+on `beforeShellExecution`, live-demoed block), FR-4 (commands/ + always-on
+rule), FR-9 (RUNTIME-ASSUMPTIONS rows). Plus runtime-aware auto-default and the
+Q1 elicitation resolution. Tests: `test-cursor-agent-adapter.sh` 29/29,
+`test-cursor-shape-guard-hook.sh` 24/24; m008-p05/p06 verifiers updated + green.
+
+**Remaining Tier-A (NOT done — start fresh):**
+- **FR-5 — before-commit git hook.** Wire `scripts/lifecycle/before-commit.sh`
+  as a git `pre-commit` in the Cursor install path. **Deliberately deferred to
+  a fresh context**: this is the riskiest remaining item — a careless wiring
+  blocks *every commit* in the consumer repo. Needs: (a) reading
+  `before-commit.sh`'s exit semantics (does it hard-fail outside an active
+  milestone? it must NOT block ordinary commits), (b) a clobber-guard for an
+  existing `.git/hooks/pre-commit`, (c) non-git-repo + `--dry-run` + uninstall
+  handling, (d) a hermetic verifier. It is NOT de-risked by any live probe.
+- **Real runtime-failure golden fixture (§3 mode 2).** Capture a live
+  cursor-agent runtime error (exit 0 + `is_error:true`) — currently only
+  stubbed in the acceptance suite.
+
+**Tier-B (via `orchestrator:specify`):** FR-6 orchestrator MCP review-gate
+server (architecture de-risked by Q1), FR-7 cost model + `cursor:` rate card,
+FR-8 byte-parity audit under `ORCH_BACKEND=cursor`.
+
+**Context-rot note:** the session that produced this was long; FR-5 was stopped
+*before* implementation specifically to avoid a context-fatigued mistake in
+commit-blocking machinery. Treat the above as the authoritative next-step list.

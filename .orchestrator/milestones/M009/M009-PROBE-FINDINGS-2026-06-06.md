@@ -3,7 +3,7 @@
 **Date:** 2026-06-06
 **Probe operator:** orchestrator dogfood session (CC)
 **Brief:** `.orchestrator/proposals/M009-cursor-support.md` §9 (first step before any code)
-**Status:** ✅ probe SUCCEEDED — Tier-A unknowns de-risked; Tier-B crux (Q1) partially open (needs a dedicated MCP probe)
+**Status:** ✅ probe SUCCEEDED — Tier-A unknowns de-risked; **Q1 (Tier-B elicitation crux) RESOLVED live** (see Addendum (b))
 **Environment:** macOS (darwin 24.6.0), `cursor-agent 2026.06.04-5fd875e`, logged in as `bkellgren@gmail.com` (browser login, no `CURSOR_API_KEY`)
 
 ---
@@ -100,9 +100,14 @@ Reusable watchdog implementation: `/tmp/cursor-probe.sh` (this session's probe).
 
 ---
 
-## 5. Q1 — MCP elicitation in headless (Tier-B crux — PARTIALLY OPEN)
+## 5. Q1 — MCP elicitation in headless (Tier-B crux — ✅ RESOLVED, see Addendum (b))
 
-**Not resolved by this probe** — and honestly cannot be without standing up an MCP server, which is a Tier-B-sized task, not part of the 30-min Tier-A probe.
+> **Update:** Q1 was resolved live later the same day by standing up a minimal
+> MCP server. **Headless cursor-agent supports elicitation but auto-declines
+> it** (no UI), with no hang. See **Addendum (b)** for the full result and the
+> FR-6 design consequence. The text below was the pre-resolution analysis.
+
+**Not resolved by the initial probe** — and could not be without standing up an MCP server, which is a Tier-B-sized task, not part of the 30-min Tier-A probe.
 
 What was captured (MCP wiring surface, via `cursor-agent mcp --help`):
 - MCP servers configured in `.cursor/mcp.json` or `~/.cursor/mcp.json`.
@@ -149,11 +154,11 @@ Adapter-specific additions vs. the codex template:
 **Hand-build the Tier-A slice** rather than immediately running `orchestrator:specify`. Rationale: the brief is already a high-quality spec, the invocation is now *validated* (the single biggest unknown), the adapter is a contained near-copy of `local-codex.sh`, and Tier A delivers a concrete dogfoodable outcome ("a Cursor user runs a full autonomous milestone end-to-end"). Promote to a formal milestone via `orchestrator:specify` when ready to commit to **Tier B** (MCP elicitation server + cost model + byte-parity audit), where the scope genuinely warrants spec→roadmap→plan rigor and where Q1 must be resolved first.
 
 **Immediate next actions (in order):**
-1. (optional, ~1–2 hr) Run the **Q1 MCP-elicitation probe** (§5) — it gates whether Tier-A review gates can ever be native or are permanently file-hand-off. Cheap insurance before building.
-2. Hand-build `scripts/dispatch/adapters/backend/cursor-agent.sh` from §1 + §7, with the §4 watchdog and §3 failure handling.
-3. Capture a **runtime-failure** golden fixture (§3 mode 2) during the build.
-4. Thin acceptance suite: probe test, stubbed `cursor-agent` emitting `cursor-agent-success.json` → assert conforming `dispatch-result.md`, backend-registry discovery assertion.
-5. Correct the stale assertions (brief §10): `cursor.sh` `hooks_supported`, `install-cursor.sh` `hooks_wired`, and the rules-only registration — but stage these behind the same milestone so nothing downstream silently disagrees (risk 6).
+1. ✅ **DONE** — Q1 MCP-elicitation probe (§5 / Addendum (b)): native gates viable; headless auto-declines into auto-mode policy.
+2. ✅ **DONE** — hand-built `scripts/dispatch/adapters/backend/cursor-agent.sh` (§1 + §7) with the §4 watchdog and §3 two-mode failure handling, plus runtime-aware auto-default (Addendum (a)). Validated end-to-end live.
+3. ✅ **DONE (stubbed)** — thin acceptance suite `tests/test-cursor-agent-adapter.sh` (29/29). Still pending: a **real** runtime-failure golden fixture (§3 mode 2) from a live cursor-agent error (currently only stubbed).
+4. **TODO (still Tier-A)** — correct the stale assertions (brief §10): `cursor.sh` `hooks_supported`/`--hook-config`, `install-cursor.sh` `hooks_wired=0`, the rules-only registration, AND the runtime-adapter `CURSOR_AGENT` detection gap (Addendum (a)). Stage these together so nothing downstream silently disagrees (risk 6). This is FR-3/FR-4.
+5. **TODO (Tier-B, via `orchestrator:specify`)** — the orchestrator MCP review-gate server (FR-6) now that Q1 confirms the architecture; cost model (FR-7); byte-parity audit (FR-8).
 
 ---
 
@@ -211,3 +216,51 @@ signals) but **not** `CURSOR_AGENT` — so it likely does **not** detect the
 headless `cursor-agent` runtime at all. Fold a `CURSOR_AGENT=1` signal into
 that adapter's probe when the FR-4 registration/runtime-correction work lands
 (brief §10). Tracked here so the two probes stay consistent.
+
+---
+
+## Addendum (b) 2026-06-06 — Q1 RESOLVED: MCP elicitation in headless mode
+
+Built a minimal stdio MCP server (`probe-harness/mcp-elicit-server.py`),
+registered it via `.cursor/mcp.json`, and drove a headless
+`cursor-agent -p --force --trust --approve-mcps` run told to call an
+`ask_user` tool that issues `elicitation/create`. Golden capture:
+`probe-fixtures/mcp-elicitation-headless.log`.
+
+**Results (definitive):**
+1. **Headless cursor-agent SUPPORTS elicitation.** Its `initialize` request
+   declared `clientInfo:{"name":"Cursor","version":"1.0.0"}` and
+   `capabilities:{"elicitation":{"form":{}}}`. Negotiated protocolVersion
+   `2025-11-25`. The full MCP handshake (initialize → initialized → tools/list
+   → tools/call → server→client elicitation/create → response) completed.
+2. **In headless/`-p` mode the elicitation auto-DECLINES.** The client answered
+   `elicitation/create` **instantly** with `{"action":"decline"}` — there is no
+   interactive surface to render a form. **No hang, no error, no deadlock**
+   (this retires the hang half of risk 2). Agent exited 0 in 8s and faithfully
+   reported the decline.
+
+**Design consequence — native review gates ARE viable (FR-6 path):**
+- **Interactive Cursor (IDE/TUI):** the `{"elicitation":{"form":{}}}` capability
+  means a real form renders → `action:accept` with content. Native
+  AskUserQuestion works for human-in-the-loop sessions.
+- **Headless / autonomous Cursor:** elicitation deterministically returns
+  `action:decline`. This maps cleanly onto the orchestrator's existing
+  **auto-mode gate policy** (Q5): treat `action` ∈ {`decline`,`cancel`} as
+  "no human response available → apply the plan-declared `defer` /
+  `accept-with-audit` / `block` policy." No special hang-handling, no mandatory
+  file-hand-off fallback — though file-hand-off remains a valid belt-and-braces
+  default for Tier A before the MCP server exists.
+
+**Q1 verdict:** headless honors elicitation at the protocol level but cannot
+render it (auto-declines). So FR-6's orchestrator MCP server is the right
+shape: expose review gates via `elicitation/create`; interactive sessions get
+native prompts, autonomous sessions get a clean deterministic decline that the
+auto-mode policy consumes. **Q5 is answered by the same finding.**
+
+**Scope note:** FR-6 (the orchestrator's own MCP review-gate server) is
+Tier-B / milestone-sized and should go through `orchestrator:specify`. This
+probe de-risks the architecture; it does not itself ship the server.
+
+**MCP elicitation `action` values** (MCP spec, confirmed in the capability):
+`accept` (with `content`), `decline` (explicit no), `cancel` (dismissed).
+Headless → `decline`.

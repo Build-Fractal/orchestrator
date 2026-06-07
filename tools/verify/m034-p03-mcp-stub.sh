@@ -3,7 +3,9 @@
 #
 # Hermetic stubbed-transport verifier for scripts/lifecycle/review-gate-mcp-server.sh.
 # Drives the server by piping a recorded newline-delimited JSON-RPC message
-# stream into its stdin (the SC-6 "stubbed transport"), in an isolated scratch
+# stream into its stdin (the SC-6 "stubbed transport") and injecting the client
+# responses to the server's server->client `elicitation/create` requests, in an
+# isolated scratch
 # dir so REVIEW.md/SIGNOFF.md/CONTINUE/QUESTIONS files land in scratch and NEVER
 # in the real .orchestrator/milestones/M034/ tree. ORCH_EVENT_LOG and
 # ORCH_MCP_ELICIT_TIMEOUT keep the run hermetic + no-hang.

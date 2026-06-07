@@ -67,6 +67,34 @@ REVIEW.md entry (mirror `_populate_signoff` in `interactive-review.sh`:
 `signed_at`). The gate is satisfied only once SIGNOFF.md is on disk (CON-5/SC-5 —
 the stage NEVER silently skips).
 
+## Cursor-MCP renderer path (interactive-cursor, FR-10)
+
+When `dispatch-interface.sh --probe-renderer` resolves `renderer=interactive-cursor`
+(cursor-agent advertises `capabilities.elicitation.form` AND `ORCH_HEADLESS`
+unset), `interactive-review.sh` emits the same render-descriptor it emits for
+interactive-cc, naming `interactive-cursor`. The orchestrating agent in the Cursor
+context (cursor-agent) renders the walkthrough by calling the orchestrator-owned
+MCP review-gate server (`scripts/lifecycle/review-gate-mcp-server.sh`), registered
+in `.cursor/mcp.json`:
+
+1. The agent calls the server's `review_gate` tool with the descriptor's
+   `gate_id` / `packet` / `milestone` / `phase` (+ optional `policy`).
+2. For each active decision (packet order, via `read-decisions.sh active-ids`) the
+   server issues a server→client `elicitation/create` request carrying the
+   decision's concrete-impact framing; interactive Cursor renders a native form.
+3. On `action:accept` (per decision) the server collects the responses into the
+   recorded-response fixture shape and delegates to
+   `interactive-review.sh --test-responses` — so the Cursor accept path writes
+   REVIEW.md / SIGNOFF.md **byte-identically** to the CC path.
+4. On `action:decline` / `cancel` (headless Cursor auto-declines, M009 Addendum
+   (b)) or no response within the bounded read, the server maps onto the declared
+   auto-mode policy via the headless `interactive-review.sh` path — no hang.
+5. If the client's `initialize` capabilities lack `elicitation` (older Cursor),
+   the server degrades to the `QUESTIONS.md` hand-off rather than erroring.
+
+The server is PURE transport: it issues elicitation and bridges responses, but
+NEVER writes review artifacts itself (AD-1 single producer — `interactive-review.sh`).
+
 ## boundary_translation heuristic (advisory, #Q-6)
 
 v1 emits `boundary_translation` packet entries ONLY when an authoring stage sets

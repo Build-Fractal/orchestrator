@@ -1,5 +1,7 @@
 # Paper-cut: Doctor — knowledge-graph gap-surface check
 
+> **Reconciled into M044/FR-15 (2026-06-07).** M044 shipped the single consolidated `DOCTOR:KNOWLEDGE_ACTIVATION` doctor surface (`scripts/diagnostics/check-knowledge-activation.sh`) covering three *activation* symptoms (0-mem-on-mature / vestigial-index / runtime-memory-divergence). The negative-space `KNOWLEDGE_GAP` density check described below is a **distinct 4th symptom**; if it ships, it MUST land as an additional symptom under that same `DOCTOR:KNOWLEDGE_ACTIVATION` check — **never as a parallel doctor surface** (M044 CON-5: one knowledge-activation surface). Do not add a second `DOCTOR:KNOWLEDGE_*` check.
+
 **Captured**: 2026-05-10
 **Shape**: Single PR (~0.5–1 day). One new `doctor` check; no new commands; no schema changes.
 **Predecessors**: M020 (knowledge-graph layer — `KNOWLEDGE-INDEX.md`, MEM frontmatter), M027 (cost+quality observability — doctor framework hosts the new check)

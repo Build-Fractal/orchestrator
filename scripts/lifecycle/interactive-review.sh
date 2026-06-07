@@ -141,9 +141,16 @@ _ensure_review_header() {
 }
 
 # Append (>>) one review block. Field bodies via quoted printf '%s' (RISK-1).
-#   _append_review_block <review_file> <index> <id> <action> <rationale> <override_value>
+#   _append_review_block <review_file> <index> <id> <action> <rationale> <override_value> [gate_kind]
+# The optional 7th arg `gate_kind`: when it equals `confirm-the-bridge` (a
+# boundary_translation entry, M034 T05 / FR-13), emit a `- **gate_kind**:`
+# line so the audit trail distinguishes a bridge-confirmation from an ordinary
+# decision; when the action is `na` on such an entry, also emit
+# `- **acknowledged_not_applicable**: true` (the FR-13 "operator can mark N/A"
+# edge case — recorded in REVIEW.md, still counts reviewed via `reviewed: <id>`).
 _append_review_block() {
   rf="$1"; idx="$2"; rid="$3"; raction="$4"; rrationale="$5"; rvalue="$6"
+  rgate_kind="${7:-}"
   riso=$(_iso_now)
   {
     printf '\n'
@@ -156,6 +163,12 @@ _append_review_block() {
     fi
     if [ "$raction" = "override" ] && [ -n "$rvalue" ]; then
       printf -- '- **override_value**: %s\n' "$rvalue"
+    fi
+    if [ "$rgate_kind" = "confirm-the-bridge" ]; then
+      printf -- '- **gate_kind**: confirm-the-bridge\n'
+    fi
+    if [ "$raction" = "na" ]; then
+      printf -- '- **acknowledged_not_applicable**: true\n'
     fi
     printf 'reviewed: %s\n' "$rid"
   } >> "$rf"
@@ -239,8 +252,15 @@ _run_test_responses() {
       exit 1
     fi
 
+    # gate_kind: a boundary_translation entry surfaces as confirm-the-bridge
+    # (FR-13 / T05). Ordinary decisions pass an empty gate_kind.
+    gate_kind=""
+    if [ "$(_packet_field "$PACKET" "$id" type)" = "boundary_translation" ]; then
+      gate_kind="confirm-the-bridge"
+    fi
+
     n=$((n + 1))
-    _append_review_block "$REVIEW_OUT" "$n" "$id" "$action" "$rationale" "$value"
+    _append_review_block "$REVIEW_OUT" "$n" "$id" "$action" "$rationale" "$value" "$gate_kind"
   done
 
   _populate_signoff "$SIGNOFF_OUT" "$n" "${ORCH_REVIEWER:-operator}"

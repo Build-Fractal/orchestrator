@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # scripts/lifecycle/interactive-review.sh — M034 P02 (FR-5 interactive_review stage spine).
 #
-# The `interactive_review` lifecycle stage: the first-class review stage that
-# sits between artifact authoring and SIGNOFF.md population. Consumes a
+# The `interactive_review` lifecycle stage, invoked for phases that declare
+# `review_gates: [...]` in their plan frontmatter: the first-class review stage
+# that sits between artifact authoring and SIGNOFF.md population. Consumes a
 # *-DECISIONS.md packet (P01), walks its active (non-superseded) decisions in
 # packet order, records one REVIEW.md block per operator response (append-only
 # audit trail, FR-7), and populates the sibling SIGNOFF.md from the terminal

@@ -368,7 +368,7 @@ _rsj_last_verify_result() {
     fi
     local result
     result=$(grep -E '^overall_result:' "$latest" 2>/dev/null | head -1 \
-            | sed -E 's/^overall_result:[[:space:]]*//' \
+            | sed -E -e 's/^overall_result:[[:space:]]*//' \
                   -e 's/[[:space:]]*$//' \
                   -e 's/^"(.*)"$/\1/') || true
     case "$result" in

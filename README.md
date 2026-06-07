@@ -81,9 +81,9 @@ cd orchestrator && bash packaging/install/install-claude-code.sh --project-dir /
 
 Installing registers the `/orchestrator-*` skills globally in Claude Code. Then, **in your project, open Claude Code and run `/orchestrator-start`** — the warm onboarding front door (or `/orchestrator-init` for the bare scaffold). The `orchestrator` binary itself is just `--version` / `--help`; the real surface is the Claude Code skills.
 
-> ### 🟣 On Cursor? (early, Tier-A)
+> ### 🟣 On Cursor? Two commands.
 >
-> Cursor has **native, working support** — the same `/orchestrator-*` commands, no compromise on the core loop. You get slash commands under `.cursor/commands/`, an always-on operating rule, the safety shape-guard wired into Cursor's `beforeShellExecution` hook, a git pre-commit gate, and a `cursor-agent` dispatch backend for autonomous runs. Install it **per-project** (Cursor is project-scoped):
+> Cursor gets the **same `/orchestrator-*` commands and the same core loop** — knowledge inject, dispatch, verification, and native interactive review gates (via Cursor's MCP elicitation). It installs **per-project** (Cursor keeps everything under `<project>/.cursor/`), so there's no npm step — just clone the repo and point the installer at your project:
 >
 > ```bash
 > git clone https://github.com/Build-Fractal/orchestrator.git
@@ -91,9 +91,9 @@ Installing registers the `/orchestrator-*` skills globally in Claude Code. Then,
 > bash packaging/install/install-cursor.sh --project-dir /path/to/your-project
 > ```
 >
-> Then **open that project in Cursor and run `/orchestrator-start`** — exact same first step as Claude Code. The in-IDE slash commands work as-is; autonomous (`cursor-agent`) dispatch additionally needs the `cursor-agent` CLI on your PATH and `CURSOR_API_KEY` set.
+> Then **open your project in Cursor and run `/orchestrator-start`** — the exact same first step as Claude Code. That single install lays down the slash commands (`.cursor/commands/`), an always-on rule (`.cursor/rules/`), the safety shape-guard (`.cursor/hooks.json`), and the review-gate server (`.cursor/mcp.json`).
 >
-> **Honest scope:** Tier-A is real, tested support, *not* a stub — but it's **early, and you're a dogfooder.** The IDE command surface and autonomous dispatch are live today; richer extras (interactive in-IDE review gates, per-run cost accounting) are Tier-B and ship when demand arrives. If anything feels off, **[tell us](#hit-a-snag-tell-us) — your reports are what move Cursor from Tier-A to full parity.**
+> **Good to know:** the install needs only `bash` + `git` — *not* an API key. The `cursor-agent` CLI + `CURSOR_API_KEY` are only needed for **autonomous** runs (`/orchestrator-auto`); the in-IDE commands work without them. Per-run **cost figures aren't wired for Cursor yet** (they report as not-available, never wrong). → [Full Cursor walkthrough](docs/getting-started.md#on-cursor)
 
 **Updating** is one line, and `orchestrator:update` auto-detects how you installed:
 
@@ -103,7 +103,7 @@ brew upgrade orchestrator                    # Homebrew installs
 /orchestrator-update                         # from inside any project (dispatches to the right channel)
 ```
 
-(Requires Bash 3.2+, git, and optionally jq. macOS + Linux; Windows is fail-closed by design. **Claude Code** is the primary runtime; **Cursor** has native early (Tier-A) support — see the callout above. A Codex CLI installer exists with the same flags; full byte-parity across runtimes is a demand-driven fast-follow.)
+(Requires Bash 3.2+, git, and optionally jq. macOS + Linux; Windows is fail-closed by design. **Claude Code** and **Cursor** are both supported — see the Cursor callout above. A Codex CLI installer exists with the same flags.)
 
 ---
 
@@ -157,7 +157,7 @@ Each command below assumes you've [installed](docs/getting-started.md) and are i
 
 ## Status & credibility
 
-**v0.10.1** — published across npm / Homebrew / curl, in production use and **dogfooded daily on its own development**. Dozens of milestones closed (latest: M044 knowledge-activation reliability, 2026-06-07; M034 interactive review gates, 2026-06-06; M043 Cloudflare Pages + Access wiki-deploy target, 2026-06-05; M042 `/orchestrator-corpus-gate`, 2026-05-30; M041 `/orchestrator-detective`, 2026-05-25); the packaging & distribution launch event shipped 2026-05-09. **Cursor support landed at Tier-A (M009, 2026-06-06)** — native commands + dispatch backend + hooks, now in early dogfooding. Next up is a demand-driven post-launch fast-follow queue (M009 Tier-B full Cursor parity; M023 design layer; the M038+M040 paired slot).
+**v0.10.1** — published across npm / Homebrew / curl, in production use and **dogfooded daily on its own development**. Dozens of milestones closed (latest: M044 knowledge-activation reliability, 2026-06-07; M034 interactive review gates, 2026-06-06; M043 Cloudflare Pages + Access wiki-deploy target, 2026-06-05; M042 `/orchestrator-corpus-gate`, 2026-05-30; M041 `/orchestrator-detective`, 2026-05-25); the packaging & distribution launch event shipped 2026-05-09. **Cursor is a supported runtime (M009 + M034, 2026-06-06)** — native commands, dispatch backend, hooks, and interactive review gates. Next up is a demand-driven post-launch fast-follow queue (Cursor cost accounting; M023 design layer; the M038+M040 paired slot).
 
 Full audit trail: [`.orchestrator/milestone-summary.md`](./.orchestrator/milestone-summary.md) · engineering changelog: [`CHANGELOG.md`](./CHANGELOG.md).
 
@@ -167,7 +167,7 @@ Governed by 15 constitutional principles ([`.orchestrator/memory/constitution.md
 
 ## Hit a snag? Tell us
 
-**Especially if you're on Cursor** — you're early, and your reports are what shape the support. Reporting takes about 30 seconds:
+Reporting takes about 30 seconds, and it genuinely shapes what ships next — on **Claude Code or Cursor**:
 
 | What | Where |
 |---|---|
@@ -191,7 +191,7 @@ That's it. No reproduction wizardry required — a one-paragraph "I ran X, expec
 |---|---|
 | **Skeptical** — want the "why" before you commit | → [Why this exists](docs/why-this-exists.md) |
 | **Ready to install** (Claude Code or Cursor) | → [Getting Started](docs/getting-started.md) |
-| **On Cursor** and want the full setup | → [Getting Started → Cursor](docs/getting-started.md#on-cursor-early-tier-a) |
+| **On Cursor** and want the full setup | → [Getting Started → Cursor](docs/getting-started.md#on-cursor) |
 | **Coming from spec-kit** with existing artifacts | → [Migrating from spec-kit](docs/migrating-from-speckit.md) |
 
 **Want to contribute?** → [CONTRIBUTING.md](CONTRIBUTING.md) (dev setup, tests, conventions). Maintainers cutting a release → [Releasing](references/RELEASING.md).

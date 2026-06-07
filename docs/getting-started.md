@@ -19,7 +19,7 @@ npm install -g @build-fractal/orchestrator
 
 Step 1 installs the tool and registers the `/orchestrator-*` skills into Claude Code (globally, in `~/.claude`); steps 2–3 run inside your own project from Claude Code. Each step is expanded below — including the from-source path if you'd rather clone.
 
-> **On Cursor?** One different install command (it's project-scoped), then **steps 2–3 are identical**. → [On Cursor (early, Tier-A)](#on-cursor-early-tier-a)
+> **On Cursor?** One different install command (it's project-scoped), then **steps 2–3 are identical**. → [On Cursor](#on-cursor)
 
 > **Is this for you?** The orchestrator makes every coding task — a one-line tweak or a multi-month rewrite — execute against a project-aware knowledge base, so dispatched agents never start from zero. If you only need single-context work, plain Claude Code is the right tool first; reach for the orchestrator when tasks span multiple contexts or you want accumulated project knowledge injected automatically. See [why-this-exists](why-this-exists.md) if you want the motivation before installing.
 
@@ -36,11 +36,18 @@ Step 1 installs the tool and registers the `/orchestrator-*` skills into Claude 
 | `cursor-agent` CLI + `CURSOR_API_KEY` | Only for autonomous dispatch on Cursor | `cursor-agent --version` |
 | jq | Optional (JSON parsing in some scripts) | `jq --version` |
 
-**Two runtimes are supported today.** **Claude Code** is the primary runtime. **Cursor** has native **early (Tier-A)** support — same `/orchestrator-*` commands, a real dispatch backend, and safety hooks ([jump to the Cursor setup](#on-cursor-early-tier-a)). Codex CLI has an installer too; full byte-parity across runtimes is a demand-driven fast-follow.
+**Two runtimes, same workflow.** **Claude Code** and **Cursor** are both first-class — identical `/orchestrator-*` commands, knowledge inject, verification, and review gates. They differ only in **how you install** (Step 1): Claude Code installs globally via a package manager; Cursor installs per-project ([jump to the Cursor setup](#on-cursor)). Steps 2–3 are identical on either. A Codex CLI installer exists too.
 
 ---
 
 ## Step 1: Install
+
+**Pick your runtime — the install differs, then Steps 2–3 are identical:**
+
+- **Claude Code** → install globally via a package manager (below).
+- **Cursor** → install per-project with one command ([jump to On Cursor](#on-cursor)).
+
+### Claude Code
 
 Pick a channel. Each one puts the `orchestrator` binary on your PATH and registers the `/orchestrator-*` skills into Claude Code (globally, in `~/.claude/`).
 
@@ -57,41 +64,41 @@ The orchestrator binary itself is intentionally minimal — `orchestrator --vers
 
 > **Updating later:** `npm update -g @build-fractal/orchestrator`, `brew upgrade orchestrator`, or `/orchestrator-update` from inside a project (it auto-detects your install channel). See [Releasing](../references/RELEASING.md) for how releases are cut.
 
-### On Cursor (early, Tier-A)
+### On Cursor
 
-Using Cursor instead of Claude Code? You're a **welcome early dogfooder** — Cursor support is real, tested **Tier-A** (not a stub), and your feedback is what moves it toward full parity. Setup is one command, and **Step 2 and Step 3 below are identical** — the same `/orchestrator-start` and `/orchestrator-do "..."`.
-
-**1. Install per-project.** Cursor is project-scoped (it writes under `<project>/.cursor/`), so unlike the global Claude Code install you point the installer at your project:
+Cursor gets the **same `/orchestrator-*` commands and the same workflow** as Claude Code. It installs **per-project** (Cursor keeps everything under `<project>/.cursor/`), so there's no npm/Homebrew step — clone the repo once and point the installer at your project:
 
 ```bash
+# Needs only bash + git — no API key.
 git clone https://github.com/Build-Fractal/orchestrator.git
 cd orchestrator
-bash packaging/install/install-cursor.sh --project-dir /path/to/your-project
+bash packaging/install/install-cursor.sh --project-dir /absolute/path/to/your-project
 ```
 
-This stages, into your project's `.cursor/`:
+That single command stages, into your project:
 
-| What you get | Where | Notes |
-|---|---|---|
-| Native `/orchestrator-*` slash commands | `.cursor/commands/orchestrator-*.md` | The same command surface as Claude Code |
-| Always-on operating rule | `.cursor/rules/orchestrator.md` | Keeps the agent acting on your project's conventions |
-| Safety shape-guard | `.cursor/hooks.json` → `beforeShellExecution` | Blocks unsafe shell shapes before they run |
-| git pre-commit gate | project git hooks | Clobber-safe; fails open; skips cleanly in non-git dirs |
-| `cursor-agent` dispatch backend | runtime adapter | Fresh-context autonomous dispatch (see below) |
+| What you get | Where |
+|---|---|
+| Native `/orchestrator-*` slash commands | `.cursor/commands/orchestrator-*.md` |
+| Always-on operating rule | `.cursor/rules/orchestrator.md` |
+| Safety shape-guard (blocks unsafe shell before it runs) | `.cursor/hooks.json` → `beforeShellExecution` |
+| Interactive review-gate renderer (MCP elicitation) | `.cursor/mcp.json` |
+| git pre-commit gate (clobber-safe; skips in non-git dirs) | project git hooks |
+| Framework runtime (`scripts/` `templates/` `references/`) + default `.orchestrator/config.yml` | project root |
 
-**2. Open the project in Cursor and run `/orchestrator-start`** — exactly like Claude Code. The in-IDE slash commands work as soon as the install finishes.
+**Then open your project in Cursor and run `/orchestrator-start`** — exactly like Claude Code. Steps 2 and 3 below are identical. (Prefer detected config over the default? Use `bash scripts/lifecycle/init-project.sh --project-dir <path> --runtime cursor` instead — same install plus capability detection and a graph rebuild.)
 
-**3. For autonomous runs** (`/orchestrator-auto`, headless dispatch), the orchestrator shells out to the `cursor-agent` CLI, which needs:
+**Two things to know on Cursor:**
 
-```bash
-cursor-agent --version          # the CLI must be on your PATH
-export CURSOR_API_KEY=...        # required even for local runs
-export CURSOR_AGENT=1            # opt the dispatcher into the cursor-agent backend
-```
+1. **Autonomous runs need `cursor-agent` + an API key.** The in-IDE slash commands work with just the install above. For `/orchestrator-auto` / headless dispatch, the orchestrator shells out to the `cursor-agent` CLI:
+   ```bash
+   cursor-agent --version          # the CLI must be on your PATH
+   export CURSOR_API_KEY=...        # Cursor always round-trips to its backend
+   export CURSOR_AGENT=1            # opt the dispatcher into the cursor-agent backend
+   ```
+2. **Per-run cost figures aren't wired for Cursor yet** — `cursor-agent` reports token usage but no USD cost, so cost surfaces report *not-available* (never a wrong number). Everything else — onboarding, knowledge inject, dispatch, verification, and review gates — works the same as Claude Code.
 
-The interactive in-IDE slash commands do **not** need `CURSOR_API_KEY` — only the autonomous dispatch backend does.
-
-**Honest Tier-A scope.** Live and tested today: the native command surface, the dispatch backend, the shape-guard hook, and the pre-commit gate. **Not yet** (Tier-B, demand-driven): interactive in-IDE review gates (the MCP renderer) and per-run cost accounting. None of that blocks the core loop — onboarding, knowledge inject, dispatch, and verification all work. **Found a rough edge? → [Reporting issues](#reporting-issues-please-do).**
+Hit a rough edge? → [Reporting issues](#reporting-issues-please-do).
 
 ---
 
@@ -252,7 +259,7 @@ Gates are entirely opt-in — `decision_packet` and `review_gates` are never glo
 
 ## Reporting issues (please do!)
 
-The fastest way to improve the orchestrator — **especially on Cursor, where you're an early dogfooder** — is to tell us when something snags. It takes about 30 seconds and there's no wrong report.
+The fastest way to improve the orchestrator — on **Claude Code or Cursor** — is to tell us when something snags. It takes about 30 seconds and there's no wrong report.
 
 | What | Where |
 |---|---|

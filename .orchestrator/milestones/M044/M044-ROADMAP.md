@@ -12,7 +12,7 @@ updated_at: "2026-06-07T01:08:32Z"
 
 ## Phases
 
-- [ ] **P01**: Fail-loud floor — canonical path resolver + index-free consumer fallback + observability — "With an empty/missing/stale index over a populated raw corpus, `build-context.sh` injects relevant entries via deterministic grep, stamps a provenance header, and emits a degradation WARNING; a 0-MEM inject on a mature project warns; `orchestrator:doctor` reports one consolidated 3-symptom knowledge-activation check."
+- [x] **P01**: Fail-loud floor — canonical path resolver + index-free consumer fallback + observability — "With an empty/missing/stale index over a populated raw corpus, `build-context.sh` injects relevant entries via deterministic grep, stamps a provenance header, and emits a degradation WARNING; a 0-MEM inject on a mature project warns; `orchestrator:doctor` reports one consolidated 3-symptom knowledge-activation check."
   - Risk: high
   - Depends: none
   - Boundary Map:

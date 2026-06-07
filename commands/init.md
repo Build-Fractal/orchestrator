@@ -72,8 +72,16 @@ The init pipeline has four phases: **detect -> probe -> generate -> verify**.
 - Invoke the matching installer from `packaging/install/install-<runtime>.sh`
   to register the 12 orchestrator skills into the runtime's skill discovery
   location. The installer handles hook wiring and config staging.
+- **Wire the knowledge graph (cloned-project onboarding).** After the runtime
+  tree is staged, if a committed corpus is present (`knowledge/**/MEM*.md`) but
+  the generated, gitignored `knowledge.db` is missing or stale, rebuild it via
+  `scripts/knowledge/rebuild-index.sh`. This makes a single `init` enough to make
+  a freshly-cloned project's graph live. Idempotent: a silent no-op on a
+  greenfield project (no corpus), a cheap refresh when the DB is stale, and
+  non-fatal — the M044 fail-loud activation floor covers a transient miss.
 - Emit a final `SUMMARY:` line with `project_type=`, `runtime=`,
-  `instruction_file=`, `config_file=`, `skills_installed=`, `next_step=`.
+  `instruction_file=`, `config_file=`, `skills_installed=`,
+  `knowledge_graph=none|fresh|rebuilt|rebuild-failed`, `next_step=`.
 
 ### Wiki integration via `--with-wiki [--with-giscus] [--deploy]` (FR-11 / MIT-011)
 

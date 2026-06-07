@@ -114,6 +114,7 @@ Each command below assumes you've [installed](docs/getting-started.md) and are i
 | Your intent | Command | Time | What you get |
 |---|---|---|---|
 | One-shot task, any project | `/orchestrator-do "fix the broken redirect after sign-up"` | seconds | Knowledge-injected dispatch; no ceremony |
+| **Join a repo a teammate already set up** (git clone) | install, then `/orchestrator-init` | seconds | Re-stages the runtime + **rebuilds the gitignored knowledge graph**; `/orchestrator-doctor` to confirm. [Details](docs/getting-started.md#joining-a-project-that-already-uses-orchestrator-git-clone) |
 | Onboard an existing codebase | `/orchestrator-start` → codebase ingestion | ~1 min | 5–15 seed MEMs via deterministic structural extraction |
 | Start greenfield, nothing written | `/orchestrator-start` → ideation | 5–10 min | 7-question grilling protocol → vision, scope, users, constraints |
 | Greenfield + materials (briefs, PDFs) | `/orchestrator-start` → materials intake | 5–15 min | Reconciled pre-spec; asked only about real conflicts |

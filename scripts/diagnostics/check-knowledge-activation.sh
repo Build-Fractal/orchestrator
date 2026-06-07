@@ -15,6 +15,11 @@
 #   3. runtime-memory-divergence — decisions landed in an execution log's `note`
 #                               fields while DECISIONS.md is empty/absent (the
 #                               two-store divergence behind 0-MEM injects) -> warn.
+#   4. stale-graph-db         — a real corpus (≥1 MEM/SPEC/REF under knowledge/)
+#                               exists but knowledge.db is missing or stale (the
+#                               cloned-project case — the DB is gitignored). The
+#                               fix is rebuild-index.sh, which orchestrator:init
+#                               now runs automatically -> warn.
 #
 # Emits: per-symptom detail lines + `DOCTOR:KNOWLEDGE_ACTIVATION status=ok|warn|fail symptoms=<csv|none>`
 # File-based detection only (no SQL). Deterministic (fixed symptom order, no
@@ -99,16 +104,40 @@ if [ "$decisions_rows" -eq 0 ]; then
   fi
 fi
 
+# --- Symptom 4: missing/stale graph DB (cloned-project onboarding case) ---
+# knowledge.db is a generated artifact (gitignored), so a fresh clone has the
+# committed corpus but no DB until it is rebuilt. Graph-mode queries degrade
+# until then. Read-only diagnosis only — the fix is `rebuild-index.sh` (which
+# `orchestrator:init` now runs automatically). Fires only when a real corpus
+# exists (≥1 MEM/SPEC/REF detail file under knowledge/), so a greenfield or
+# index-only project never trips it.
+sym_graphdb=0
+KNOWLEDGE_DIR="$PROJECT_ROOT/knowledge"
+GRAPH_DB="$PROJECT_ROOT/knowledge.db"
+if [ -d "$KNOWLEDGE_DIR" ]; then
+  corpus_hit="$(find "$KNOWLEDGE_DIR" -name 'MEM*.md' -o -name 'SPEC-*.md' -o -name 'REF-*.md' 2>/dev/null | head -1)"
+  if [ -n "$corpus_hit" ]; then
+    if [ ! -f "$GRAPH_DB" ]; then
+      sym_graphdb=1
+      echo "GAP: knowledge corpus present but knowledge.db is missing (fresh clone?) — run: bash scripts/knowledge/rebuild-index.sh  (orchestrator:init does this automatically)"
+    elif [ -n "$(find "$KNOWLEDGE_DIR" -name '*.md' -newer "$GRAPH_DB" -print 2>/dev/null | head -1)" ]; then
+      sym_graphdb=1
+      echo "GAP: knowledge.db is stale (older than a knowledge entry) — run: bash scripts/knowledge/rebuild-index.sh"
+    fi
+  fi
+fi
+
 # --- Aggregate (fixed symptom order) ---
 symptoms=""
 if [ "$sym_zeromem" -eq 1 ]; then symptoms="${symptoms}${symptoms:+,}0-mem-on-mature"; fi
 if [ "$sym_vestigial" -eq 1 ]; then symptoms="${symptoms}${symptoms:+,}vestigial-index"; fi
 if [ "$sym_runtime" -eq 1 ]; then symptoms="${symptoms}${symptoms:+,}runtime-memory-divergence"; fi
+if [ "$sym_graphdb" -eq 1 ]; then symptoms="${symptoms}${symptoms:+,}stale-graph-db"; fi
 
 status="ok"
 if [ "$sym_zeromem" -eq 1 ]; then
   status="fail"
-elif [ "$sym_vestigial" -eq 1 ] || [ "$sym_runtime" -eq 1 ]; then
+elif [ "$sym_vestigial" -eq 1 ] || [ "$sym_runtime" -eq 1 ] || [ "$sym_graphdb" -eq 1 ]; then
   status="warn"
 fi
 

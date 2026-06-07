@@ -480,10 +480,38 @@ _run_resume() {
   exit 0
 }
 
-# >>> T06 fills this: interactive-cc render-descriptor (FR-6, Case A). <<<
+# --- _emit_interactive_descriptor (FR-6, Case A). ----------------------------
+# The interactive-cc / interactive-cursor path: emit a render-descriptor on
+# stdout (a coordination boundary mirroring local-agent.sh) and exit 0. This
+# script NEVER calls AskUserQuestion / elicitation from bash (CON-7 / AD-3) —
+# the orchestrating AGENT issues the question primitive in-process (Case A) and
+# writes REVIEW.md directly per references/interactive-review-renderer.md.
+#   $1 = renderer name (interactive-cc | interactive-cursor).
 _emit_interactive_descriptor() {
-  echo "interactive-review: interactive renderer descriptor not yet implemented (M034/P02/T06)" >&2
-  exit 22
+  _renderer_name="$1"
+  cat <<EOF
+---
+schema_version: "1.0"
+type: "interactive-review-descriptor"
+renderer: "${_renderer_name}"
+gate_id: "${GATE_ID}"
+packet: "${PACKET}"
+review_out: "${REVIEW_OUT}"
+signoff_out: "${SIGNOFF_OUT}"
+---
+
+# Interactive Review — orchestrating-agent action required
+
+Render the decision packet at ${PACKET} interactively per
+references/interactive-review-renderer.md: surface each active decision via
+the runtime question primitive (AskUserQuestion for interactive-cc; Cursor MCP
+elicitation for interactive-cursor, P03), append one REVIEW.md block per
+response to ${REVIEW_OUT}, and populate ${SIGNOFF_OUT} from the terminal entry.
+
+Renderer: ${_renderer_name} (Case A — agent issues the question primitive in-process)
+Reference: references/interactive-review-renderer.md
+EOF
+  exit 0
 }
 
 # --- Dispatch skeleton. ------------------------------------------------------

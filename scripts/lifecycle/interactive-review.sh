@@ -1,0 +1,273 @@
+#!/usr/bin/env bash
+# scripts/lifecycle/interactive-review.sh — M034 P02 (FR-5 interactive_review stage spine).
+#
+# The `interactive_review` lifecycle stage: the first-class review stage that
+# sits between artifact authoring and SIGNOFF.md population. Consumes a
+# *-DECISIONS.md packet (P01), walks its active (non-superseded) decisions in
+# packet order, records one REVIEW.md block per operator response (append-only
+# audit trail, FR-7), and populates the sibling SIGNOFF.md from the terminal
+# review block.
+#
+# FR-5 contract: the stage ALWAYS writes REVIEW.md + SIGNOFF.md on the
+# non-interactive paths; it NEVER silently skips (CON-5/SC-5). A gate reached
+# with its packet absent fails CLOSED (exit 3) rather than passing.
+#
+# Case A split (CON-7 renderer routing — selection routes ONLY through
+# dispatch-interface.sh --probe-renderer; this script NEVER calls
+# AskUserQuestion / elicitation directly from bash):
+#   - interactive-cc / interactive-cursor: the orchestrating AGENT drives the
+#     walkthrough and writes REVIEW.md directly (this script emits a render
+#     descriptor — T06).
+#   - test-responses / headless / auto: THIS script writes REVIEW.md +
+#     SIGNOFF.md deterministically.
+#
+# CON-1: bash 3.2 / POSIX-sh single file — no declare -A, no ${var,,}, no
+# process substitution. Pipes / awk / $() / jq permitted in the body.
+# RISK-1: field bodies (rationale, override_value) are written via quoted
+# printf '%s' — never eval, never unquoted re-expansion.
+#
+# jq is REQUIRED (same posture as write-decisions.sh).
+
+set -u
+
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+REPO_ROOT=$(cd "$SCRIPT_DIR/../.." && pwd)
+
+# shellcheck source=scripts/knowledge/lib/decisions-constants.sh
+. "$SCRIPT_DIR/../knowledge/lib/decisions-constants.sh"
+
+READER="$REPO_ROOT/scripts/knowledge/read-decisions.sh"
+DISPATCH_IFACE="$REPO_ROOT/scripts/dispatch/dispatch-interface.sh"
+
+# --- jq-required guard. -----------------------------------------------------
+if ! command -v jq >/dev/null 2>&1; then
+  echo "ERROR: interactive-review.sh requires jq (structured fixture parse). Install jq and retry." >&2
+  exit 1
+fi
+
+# --- Arg parse (--field=value, mirroring write-decisions.sh). ----------------
+MILESTONE=""
+PHASE=""
+GATE_ID=""
+PACKET=""
+POLICY="$DECISIONS_POLICY_DEFAULT"
+TEST_RESPONSES=""
+RESUME_FILE=""
+REVIEW_OUT=""
+SIGNOFF_OUT=""
+
+for arg in "$@"; do
+  case "$arg" in
+    --milestone=*)      MILESTONE="${arg#*=}" ;;
+    --phase=*)          PHASE="${arg#*=}" ;;
+    --gate-id=*)        GATE_ID="${arg#*=}" ;;
+    --packet=*)         PACKET="${arg#*=}" ;;
+    --policy=*)         POLICY="${arg#*=}" ;;
+    --test-responses=*) TEST_RESPONSES="${arg#*=}" ;;
+    --resume=*)         RESUME_FILE="${arg#*=}" ;;
+    --review-out=*)     REVIEW_OUT="${arg#*=}" ;;
+    --signoff-out=*)    SIGNOFF_OUT="${arg#*=}" ;;
+    *)
+      echo "ERROR: interactive-review: unrecognized argument '$arg'. Use --milestone= / --phase= / --gate-id= / --packet= / --policy= / --test-responses= / --resume= / --review-out= / --signoff-out=." >&2
+      exit 1
+      ;;
+  esac
+done
+
+# --- Derive REVIEW_OUT / SIGNOFF_OUT defaults from the packet path. ----------
+if [ -z "$REVIEW_OUT" ]; then
+  REVIEW_OUT="${PACKET%-DECISIONS.md}-REVIEW.md"
+fi
+if [ -z "$SIGNOFF_OUT" ]; then
+  SIGNOFF_OUT="${PACKET%-DECISIONS.md}-SIGNOFF.md"
+fi
+
+# --- Packet-absent guard (Edge Case "gate reached, packet absent"). ----------
+# When NOT resuming and the packet is missing, fail CLOSED (exit 3). Do NOT
+# silently pass the gate.
+if [ -z "$RESUME_FILE" ] && [ ! -f "$PACKET" ]; then
+  echo "ERROR: interactive-review: packet not found: $PACKET (gate $GATE_ID fails closed)" >&2
+  exit 3
+fi
+
+# --- Field extractor: print the `- **<field>**: ` value within the `## <id>`
+# block. Bash-3.2-safe awk; used to surface decision context. ----------------
+_packet_field() {
+  awk -v want="$2" -v field="$3" '
+    /^## / { inblk = 0 }
+    /^- \*\*id\*\*: / { v=$0; sub(/^- \*\*id\*\*: /,"",v); inblk=(v==want)?1:0; next }
+    inblk && $0 ~ ("^- \\*\\*" field "\\*\\*: ") {
+      line=$0; sub("^- \\*\\*" field "\\*\\*: ","",line); print line; exit
+    }
+  ' "$1"
+}
+
+# --- ISO timestamp. ----------------------------------------------------------
+_iso_now() {
+  date -u +%Y-%m-%dT%H:%M:%SZ
+}
+
+# --- REVIEW.md helpers. ------------------------------------------------------
+
+# Print the count of `^## ` blocks currently in the REVIEW file (0 if absent).
+_review_block_count() {
+  rf="$1"
+  [ -f "$rf" ] || { printf '0\n'; return 0; }
+  c=$(grep -c '^## ' "$rf" 2>/dev/null || true)
+  [ -n "$c" ] || c=0
+  printf '%s\n' "$c"
+}
+
+# Write the REVIEW.md header (frontmatter + heading) iff the file is absent.
+# Append-only afterward; never rewrite the header.
+_ensure_review_header() {
+  rf="$1"
+  [ -f "$rf" ] && return 0
+  rdir=$(dirname "$rf")
+  mkdir -p "$rdir"
+  pbase=$(basename "$PACKET")
+  {
+    printf -- '---\n'
+    printf 'schema_version: "%s"\n' "$DECISIONS_SCHEMA_VERSION"
+    printf 'type: review-log\n'
+    printf 'milestone: "%s"\n' "$MILESTONE"
+    printf 'phase: "%s"\n' "$PHASE"
+    printf 'gate_id: "%s"\n' "$GATE_ID"
+    printf 'packet: "%s"\n' "$pbase"
+    printf -- '---\n'
+    printf '\n'
+    printf '# Review Log — %s\n' "$GATE_ID"
+  } > "$rf"
+}
+
+# Append (>>) one review block. Field bodies via quoted printf '%s' (RISK-1).
+#   _append_review_block <review_file> <index> <id> <action> <rationale> <override_value>
+_append_review_block() {
+  rf="$1"; idx="$2"; rid="$3"; raction="$4"; rrationale="$5"; rvalue="$6"
+  riso=$(_iso_now)
+  {
+    printf '\n'
+    printf '## %s — review block %s\n' "$rid" "$idx"
+    printf -- '- **id**: %s\n' "$rid"
+    printf -- '- **action**: %s\n' "$raction"
+    printf -- '- **reviewed_at**: %s\n' "$riso"
+    if [ -n "$rrationale" ]; then
+      printf -- '- **rationale**: %s\n' "$rrationale"
+    fi
+    if [ "$raction" = "override" ] && [ -n "$rvalue" ]; then
+      printf -- '- **override_value**: %s\n' "$rvalue"
+    fi
+    printf 'reviewed: %s\n' "$rid"
+  } >> "$rf"
+}
+
+# --- SIGNOFF helper. ---------------------------------------------------------
+#   _populate_signoff <signoff_file> <terminal_block_count> <approved_by>
+# Overwrites the SIGNOFF file with approved_by flipped from null.
+_populate_signoff() {
+  sf="$1"; sterm="$2"; sapprover="$3"
+  sdir=$(dirname "$sf")
+  mkdir -p "$sdir"
+  rbase=$(basename "$REVIEW_OUT")
+  siso=$(_iso_now)
+  {
+    printf -- '---\n'
+    printf 'schema_version: "%s"\n' "$DECISIONS_SCHEMA_VERSION"
+    printf 'type: signoff\n'
+    printf 'milestone: "%s"\n' "$MILESTONE"
+    printf 'phase: "%s"\n' "$PHASE"
+    printf 'gate_id: "%s"\n' "$GATE_ID"
+    printf 'approved_by: "%s"\n' "$sapprover"
+    printf 'review_md: "%s"\n' "$rbase"
+    printf 'terminal_review_block: %s\n' "$sterm"
+    printf 'signed_at: "%s"\n' "$siso"
+    printf -- '---\n'
+    printf '\n'
+    printf '# Sign-off — %s\n' "$GATE_ID"
+    printf '\n'
+    printf 'Populated from REVIEW.md terminal entry (block %s).\n' "$sterm"
+  } > "$sf"
+}
+
+# --- _run_test_responses (this task's deliverable, SC-3 / PC-3). -------------
+# Fully deterministic: no prompt, no network. One REVIEW.md block per active id
+# in packet order. Ids absent from the fixture default to accept.
+_run_test_responses() {
+  if [ ! -f "$TEST_RESPONSES" ]; then
+    echo "ERROR: interactive-review: --test-responses fixture not found: $TEST_RESPONSES" >&2
+    exit 1
+  fi
+
+  FIXTURE_JSON="$(cat "$TEST_RESPONSES")"
+  if ! printf '%s' "$FIXTURE_JSON" | jq -e 'type=="array"' >/dev/null 2>&1; then
+    echo "ERROR: interactive-review: --test-responses fixture is not a JSON array: $TEST_RESPONSES" >&2
+    exit 1
+  fi
+
+  _ensure_review_header "$REVIEW_OUT"
+  base=$(_review_block_count "$REVIEW_OUT")
+
+  ids="$(bash "$READER" active-ids "$PACKET")"
+
+  n=$base
+  for id in $ids; do
+    [ -n "$id" ] || continue
+    entry="$(printf '%s' "$FIXTURE_JSON" | jq -c --arg id "$id" '.[] | select(.id==$id)' | head -n 1)"
+    if [ -z "$entry" ]; then
+      action="accept"
+      rationale=""
+      value=""
+    else
+      action="$(printf '%s' "$entry" | jq -r '.action // "accept"')"
+      value="$(printf '%s' "$entry" | jq -r '.value // ""')"
+      rationale="$(printf '%s' "$entry" | jq -r '.rationale // ""')"
+    fi
+
+    if [ "$(decisions_is_valid_action "$action")" != "ok" ]; then
+      echo "ERROR: interactive-review: invalid action '$action' for decision '$id' (allowed: $DECISIONS_ACTION_VALUES)." >&2
+      exit 1
+    fi
+
+    n=$((n + 1))
+    _append_review_block "$REVIEW_OUT" "$n" "$id" "$action" "$rationale" "$value"
+  done
+
+  _populate_signoff "$SIGNOFF_OUT" "$n" "${ORCH_REVIEWER:-operator}"
+
+  reviewed_count=$((n - base))
+  echo "INTERACTIVE-REVIEW: reviewed $reviewed_count decisions -> $REVIEW_OUT"
+  exit 0
+}
+
+# --- Stub functions (filled by later tasks — keep the marker comments). ------
+
+# >>> T03 fills this: headless auto-mode policy paths (FR-8/FR-9). <<<
+_run_headless_policy() {
+  echo "interactive-review: headless policy path not yet implemented (M034/P02/T03)" >&2
+  exit 20
+}
+
+# >>> T04 fills this: --resume re-entry at last_review_md_block_index (PC-5). <<<
+_run_resume() {
+  echo "interactive-review: --resume not yet implemented (M034/P02/T04)" >&2
+  exit 21
+}
+
+# >>> T06 fills this: interactive-cc render-descriptor (FR-6, Case A). <<<
+_emit_interactive_descriptor() {
+  echo "interactive-review: interactive renderer descriptor not yet implemented (M034/P02/T06)" >&2
+  exit 22
+}
+
+# --- Dispatch skeleton. ------------------------------------------------------
+if [ -n "${RESUME_FILE:-}" ]; then
+  _run_resume
+elif [ -n "${TEST_RESPONSES:-}" ]; then
+  _run_test_responses
+else
+  _renderer="$(bash "$DISPATCH_IFACE" --probe-renderer 2>/dev/null | grep -E '^renderer=' | head -n 1 | cut -d= -f2)"
+  case "$_renderer" in
+    interactive-cc|interactive-cursor) _emit_interactive_descriptor "$_renderer" ;;
+    *) _run_headless_policy ;;
+  esac
+fi

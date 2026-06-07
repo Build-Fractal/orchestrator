@@ -176,11 +176,12 @@ sub="${1:-}"
 arg="${2:-}"
 case "$sub" in
   active-count)          _active_count "$arg" ;;
+  active-ids)            _active_ids "$arg" ;;
   unreviewed-count)      _unreviewed_count "$arg" ;;
   unreviewed-warn-count) _unreviewed_warn_count "$arg" ;;
   dir-unreviewed-count)  _dir_unreviewed_count "$arg" ;;
   *)
-    echo "ERROR: unknown subcommand '$sub'. Use active-count|unreviewed-count|unreviewed-warn-count|dir-unreviewed-count <path>." >&2
+    echo "ERROR: unknown subcommand '$sub'. Use active-count|active-ids|unreviewed-count|unreviewed-warn-count|dir-unreviewed-count <path>." >&2
     exit 1
     ;;
 esac

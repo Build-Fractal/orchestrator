@@ -1,0 +1,10 @@
+M044 (knowledge-activation-reliability — P0 hotfix) validated 2026-06-07.
+4 phases (P01-P04), all phase suites green.
+Acceptance battery (phase suites): M044 TOTAL pass=16 fail=0
+  (P01=7, P02=3, P03=3, P04=3).
+validate-milestone.sh .orchestrator/milestones/M044 → PASS 8/8.
+SC-1..SC-12 all covered (see M044-SUMMARY.md SC map).
+The knowledge-activation pipeline can no longer silently degrade; the
+capture→store→inject loop is closed. PR #11 (m044) — operator smoke-test +
+merge alongside the M034 PR #12.
+See M044-SUMMARY.md.

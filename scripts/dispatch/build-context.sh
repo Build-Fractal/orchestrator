@@ -174,8 +174,24 @@ if [ -n "$DIRECT_TASK_PLAN" ]; then
   fi
 
   _M031_PROJECT_ROOT="$PROJECT_ROOT"
+  # M044/P01/T01 (FR-11): resolve the index path via the canonical
+  # get_index_path() resolver (scripts/knowledge/lib/index-utils.sh) instead of
+  # a hardcoded KNOWLEDGE-INDEX.md path join. get_project_root() honors the
+  # exported PROJECT_ROOT (index-utils.sh:20), so the resolved path matches the
+  # dispatch root. The literal join survives ONLY as a guarded fallback for when
+  # the lib is unreachable — degrade, never hard-fail.
+  _M044_INDEX_UTILS="$_M031_PROJECT_ROOT/scripts/knowledge/lib/index-utils.sh"
+  if [ -r "$_M044_INDEX_UTILS" ]; then
+    . "$_M044_INDEX_UTILS" 2>/dev/null || true
+  fi
   _M031_KNOWLEDGE_INDEX=""
-  if [ -f "$_M031_PROJECT_ROOT/KNOWLEDGE-INDEX.md" ]; then
+  _M044_RESOLVED_INDEX=""
+  if command -v get_index_path >/dev/null 2>&1; then
+    _M044_RESOLVED_INDEX="$(get_index_path 2>/dev/null || true)"
+  fi
+  if [ -n "$_M044_RESOLVED_INDEX" ] && [ -f "$_M044_RESOLVED_INDEX" ]; then
+    _M031_KNOWLEDGE_INDEX="$_M044_RESOLVED_INDEX"
+  elif [ -f "$_M031_PROJECT_ROOT/KNOWLEDGE-INDEX.md" ]; then
     _M031_KNOWLEDGE_INDEX="$_M031_PROJECT_ROOT/KNOWLEDGE-INDEX.md"
   fi
 
@@ -458,8 +474,23 @@ INCLUDED_IDS_FILE="$(mktemp)"
 _bc_assemble_planning_payload() {
   # --- Gather knowledge (inline pre-refactor pipeline, since handle_knowledge
   #     targets the task-dispatch shape with "## Knowledge" header) ---
+  # M044/P01/T01 (FR-11): resolve the index path via the canonical
+  # get_index_path() resolver. The $PROJECT_ROOT and $MILESTONE_DIR literal
+  # joins survive only as guarded fallbacks (lib unreachable / milestone-local
+  # index). Source the resolver here too — the positional flow does not pass
+  # through the direct-mode source above.
+  local _M044_INDEX_UTILS_PL="$PROJECT_ROOT/scripts/knowledge/lib/index-utils.sh"
+  if [ -r "$_M044_INDEX_UTILS_PL" ]; then
+    . "$_M044_INDEX_UTILS_PL" 2>/dev/null || true
+  fi
   local KNOWLEDGE_INDEX=""
-  if [ -f "$PROJECT_ROOT/KNOWLEDGE-INDEX.md" ]; then
+  local _M044_RESOLVED_PL=""
+  if command -v get_index_path >/dev/null 2>&1; then
+    _M044_RESOLVED_PL="$(get_index_path 2>/dev/null || true)"
+  fi
+  if [ -n "$_M044_RESOLVED_PL" ] && [ -f "$_M044_RESOLVED_PL" ]; then
+    KNOWLEDGE_INDEX="$_M044_RESOLVED_PL"
+  elif [ -f "$PROJECT_ROOT/KNOWLEDGE-INDEX.md" ]; then
     KNOWLEDGE_INDEX="$PROJECT_ROOT/KNOWLEDGE-INDEX.md"
   elif [ -f "$MILESTONE_DIR/KNOWLEDGE-INDEX.md" ]; then
     KNOWLEDGE_INDEX="$MILESTONE_DIR/KNOWLEDGE-INDEX.md"

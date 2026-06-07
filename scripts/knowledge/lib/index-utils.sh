@@ -35,7 +35,11 @@ get_project_root() {
   echo "$dir"
 }
 
-# Get the index file path
+# Get the index file path.
+# CANONICAL RESOLVER (M044/FR-11): this is the single source of truth for the
+# KNOWLEDGE-INDEX.md path. The db-path twin is get_db_path() in
+# scripts/knowledge/lib/graph-db.sh. Every index reader MUST route through these
+# — no hardcoded "$root/KNOWLEDGE-INDEX.md" joins. Honors exported PROJECT_ROOT.
 get_index_path() {
   local root
   root="$(get_project_root)"

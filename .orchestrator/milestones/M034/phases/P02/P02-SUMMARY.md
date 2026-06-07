@@ -11,7 +11,7 @@ requires:
 affects:
   - "P03"
 key_files:
-  - "scripts/lifecycle/interactive-review.sh scripts/knowledge/emit-boundary-translation.sh templates/review.md templates/signoff.md references/interactive-review-renderer.md scripts/dispatch/dispatch-interface.sh"
+  - "scripts/lifecycle/interactive-review.sh,scripts/knowledge/emit-boundary-translation.sh,templates/review.md,templates/signoff.md,references/interactive-review-renderer.md,scripts/dispatch/dispatch-interface.sh"
 key_decisions:
   - "D-P02-1 dispatch-interface --probe-renderer seam; D-P02-2 SIGNOFF P02-owned; D-P02-3 reviewed:<id> marker; D-P02-4 action/policy enums in CON-4 SSOT; D-P02-5 boundary_translation explicit-only #Q-6"
 patterns_established:

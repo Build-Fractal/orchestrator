@@ -582,12 +582,9 @@ if [ ! -d "$SOURCE_REPO" ]; then
   exit 1
 fi
 
-INSTALLER="$SOURCE_REPO/packaging/install/install-claude-code.sh"
-if [ ! -f "$INSTALLER" ]; then
-  echo "FAIL: installer not found: $INSTALLER" >&2
-  echo "      $SOURCE_REPO does not look like an orchestrator source tree." >&2
-  exit 1
-fi
+# INSTALLER is resolved after project-dir validation below — it must match the
+# RUNTIME the project was set up for (a Cursor project refreshed with the Claude
+# Code installer registers the wrong skill surface and fails).
 
 # --- Project-dir validation --------------------------------------------------
 
@@ -599,6 +596,47 @@ fi
 if [ ! -d "$PROJECT_DIR/.orchestrator" ]; then
   echo "FAIL: $PROJECT_DIR has no .orchestrator/ directory." >&2
   echo "      Run \`orchestrator:init\` first to scaffold this project." >&2
+  exit 1
+fi
+
+# --- Resolve the project's runtime -------------------------------------------
+# update must reinstall with the SAME runtime the project was set up for. The
+# installer was previously hardcoded to install-claude-code.sh, so a Cursor (or
+# Codex) project refreshed with the wrong installer registered the wrong skill
+# surface and failed. Resolve in order: install-meta.txt `runtime=` (every
+# installer writes it — install-cursor.sh writes `runtime=cursor`), then
+# config.yml `runtime:` (written by init), then filesystem markers, then the
+# claude-code default.
+UPDATE_RUNTIME=""
+_meta_file="$PROJECT_DIR/.orchestrator/install-meta.txt"
+if [ -f "$_meta_file" ]; then
+  UPDATE_RUNTIME="$(grep -E '^runtime=' "$_meta_file" 2>/dev/null | head -1 \
+    | sed -E 's/^runtime=//' | tr -d "\"'[:space:]")"
+fi
+_cfg_file="$PROJECT_DIR/.orchestrator/config.yml"
+if [ -z "$UPDATE_RUNTIME" ] && [ -f "$_cfg_file" ]; then
+  UPDATE_RUNTIME="$(grep -E '^runtime:' "$_cfg_file" 2>/dev/null | head -1 \
+    | sed -E 's/^runtime:[[:space:]]*//' | tr -d "\"'[:space:]")"
+fi
+case "$UPDATE_RUNTIME" in
+  claude-code|codex|cursor) : ;;
+  *)
+    # Filesystem-marker fallback for installs predating the meta/config field.
+    if [ -f "$PROJECT_DIR/.cursor/rules/orchestrator.md" ] || [ -d "$PROJECT_DIR/.cursor/commands" ]; then
+      UPDATE_RUNTIME="cursor"
+    elif [ -f "$PROJECT_DIR/AGENTS.md" ] && [ ! -f "$PROJECT_DIR/CLAUDE.md" ]; then
+      UPDATE_RUNTIME="codex"
+    else
+      UPDATE_RUNTIME="claude-code"
+    fi
+    ;;
+esac
+
+INSTALLER="$SOURCE_REPO/packaging/install/install-$UPDATE_RUNTIME.sh"
+if [ ! -f "$INSTALLER" ]; then
+  echo "FAIL: installer not found: $INSTALLER" >&2
+  echo "      $SOURCE_REPO does not look like an orchestrator source tree, or" >&2
+  echo "      runtime '$UPDATE_RUNTIME' has no installer." >&2
   exit 1
 fi
 
@@ -630,6 +668,7 @@ if [ -n "$src_dirty" ]; then
 fi
 echo "bundle version:   $bundle_version"
 echo "project dir:      $PROJECT_DIR"
+echo "runtime:          $UPDATE_RUNTIME"
 echo "---"
 
 # --- Install dispatch --------------------------------------------------------

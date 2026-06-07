@@ -26,7 +26,7 @@ updated_at: "2026-06-07T01:08:32Z"
     - Produces: `scripts/knowledge/append-decision.sh` (canonical column order — the DQ-6 loser rewritten so `awk -F'|'` `$5`=Scope/`$6`=When holds, FR-1); `scripts/knowledge/append-knowledge.sh` (canonical `## K###` shape aligned to `filter_knowledge`, FR-1); `scripts/dispatch/scope-filter.sh` (`filter_decisions` comment `:351` + awk `:353-354` reconciled to observed indices, `filter_knowledge` aligned — FR-1, CON-6); `scripts/lib/knowledge-filter.sh` (`kf_filter_stream` passes flat `## K###` entries, FR-2); init-time empty `DECISIONS.md` header matching the canonical format; AC-1 round-trip oracle — **dynamic** capture→rebuild→grep→byte-assert lane (Quick fixture) split from **static** byte-equality fixtures (SC-1, SC-7)
     - Consumes: P01 observable inject surface (round-trip "resolves in inject" assertion); P01 canonical path resolver (rebuild/resolve reads)
 
-- [ ] **P03**: Resilient rebuild + scoped archive glob — "A corpus with a heading-less entry rebuilds successfully — all valid entries indexed, a per-skip warning + an `INDEXED: N / SKIPPED: M` summary emitted, exit 0; an `archive/`-rooted fixture project builds a non-empty index and a non-zero `:do` quick-inject while a genuine `knowledge/archive/` entry stays excluded."
+- [x] **P03**: Resilient rebuild + scoped archive glob — "A corpus with a heading-less entry rebuilds successfully — all valid entries indexed, a per-skip warning + an `INDEXED: N / SKIPPED: M` summary emitted, exit 0; an `archive/`-rooted fixture project builds a non-empty index and a non-zero `:do` quick-inject while a genuine `knowledge/archive/` entry stays excluded."
   - Risk: high
   - Depends: P01
   - Boundary Map:

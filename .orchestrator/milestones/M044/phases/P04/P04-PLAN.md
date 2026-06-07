@@ -22,6 +22,7 @@ depends_on: ["P01", "P02"]
 
 ### Artifacts
 
+- `scripts/dispatch/lib/decisions-digest.sh` (create — min 40 lines, contains "reference_apply_budget")
 - `tools/verify/m044-p04-t01-capture-at-quick.sh` (create — min 30 lines)
 - `tools/verify/m044-p04-t02-decisions-digest.sh` (create — min 30 lines)
 - `tools/verify/m044-p04-t03-capture-roundtrip.sh` (create — min 30 lines)
@@ -31,7 +32,8 @@ depends_on: ["P01", "P02"]
 ### Key Links
 
 - `scripts/knowledge/intensity-knowledge.sh` → `scripts/knowledge/append-decision.sh` (the gate runs the legacy decision-capture primitive — DQ-7 no net-new verb — even at Quick for an explicit decision)
-- `scripts/dispatch/build-context.sh` → `scripts/dispatch/lib/reference-budget.sh` (the Decisions digest read routes through the M036a token governor — CON-2)
+- `scripts/dispatch/build-context.sh` → `scripts/dispatch/lib/decisions-digest.sh` (the Quick inject sources the bounded Decisions-digest helper, which routes through the M036a token governor — CON-2)
+- `scripts/dispatch/lib/decisions-digest.sh` → `scripts/dispatch/lib/reference-budget.sh` (the digest read-into-payload routes through the M036a `reference_apply_budget` governor — CON-2)
 
 ## Tasks
 
@@ -84,7 +86,8 @@ T02 ─┘
 ## Files Likely Touched
 
 - `scripts/knowledge/intensity-knowledge.sh` (modify — explicit `--decision-arg` path)
-- `scripts/dispatch/build-context.sh` (modify — FR-6 Decisions digest at Quick + `_bc_decisions_digest` helper)
+- `scripts/dispatch/lib/decisions-digest.sh` (create — `dd_decisions_digest` sourceable helper)
+- `scripts/dispatch/build-context.sh` (modify — source the digest lib + emit the `## Decisions` digest at Quick)
 - `tools/verify/m044-p04-t01-capture-at-quick.sh` (create)
 - `tools/verify/m044-p04-t02-decisions-digest.sh` (create)
 - `tools/verify/m044-p04-t03-capture-roundtrip.sh` (create)

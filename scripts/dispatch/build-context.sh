@@ -189,6 +189,12 @@ if [ -n "$DIRECT_TASK_PLAN" ]; then
   if [ -r "$_M044_PROV_LIB" ]; then
     . "$_M044_PROV_LIB" 2>/dev/null || true
   fi
+  # M044/P04/T02 (FR-6): source the bounded Decisions-digest helper (routes its
+  # read-into-payload through the M036a reference-budget governor — CON-2).
+  _M044_DD_LIB="$_M031_PROJECT_ROOT/scripts/dispatch/lib/decisions-digest.sh"
+  if [ -r "$_M044_DD_LIB" ]; then
+    . "$_M044_DD_LIB" 2>/dev/null || true
+  fi
   _M031_KNOWLEDGE_INDEX=""
   _M044_RESOLVED_INDEX=""
   if command -v get_index_path >/dev/null 2>&1; then
@@ -341,9 +347,21 @@ if [ -n "$DIRECT_TASK_PLAN" ]; then
       printf '%s\n\n' "$_M044_ZEROMEM_WARNING"
     fi
     printf '%s\n\n' "$_M031_KNOWLEDGE_BODY"
-    if [ "$PROFILE" != "quick" ]; then
-      printf '## Decisions\n\n'
-      printf '(decisions section assembled by full-mode positional flow; direct mode includes a marker only.)\n\n'
+    # M044/P04/T02 (FR-6): the Decisions section is ALWAYS present now — a Quick
+    # project must never carry an empty-forever Decisions slot. The body is a
+    # bounded, budget-bounded digest of the system-of-record DECISIONS.md (CON-2
+    # governor, CON-3 deterministic). Empty corpus → a visible sentinel, never a
+    # silent omission.
+    printf '## Decisions\n\n'
+    _M044_DEC_FILE="$_M031_PROJECT_ROOT/.orchestrator/DECISIONS.md"
+    _M044_DEC_DIGEST=""
+    if command -v dd_decisions_digest >/dev/null 2>&1; then
+      _M044_DEC_DIGEST="$(dd_decisions_digest "$_M044_DEC_FILE" "${KP_FALLBACK_BUDGET_TOKENS:-2000}" "${QUICK_DECISIONS_DIGEST_MAX:-10}" 2>/dev/null || true)"
+    fi
+    if [ -n "$_M044_DEC_DIGEST" ]; then
+      printf '%s\n\n' "$_M044_DEC_DIGEST"
+    else
+      printf '(no decisions on record)\n\n'
     fi
     printf '## Task Plan\n\n'
     cat "$DIRECT_TASK_PLAN"

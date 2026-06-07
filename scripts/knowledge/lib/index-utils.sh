@@ -261,8 +261,13 @@ emit_spec_chunks_section() {
     if [ ! -f "$f" ]; then
       continue
     fi
-    case "$f" in
-      */archive/*)
+    # M044/FR-4: scope the archive skip to the knowledge/ subtree (relative path),
+    # not the absolute path — a project rooted under a dir named `archive` must
+    # still index its spec chunks. Preserves the genuine knowledge/**/archive/
+    # exclusion (CON-4). (Third B-4 site surfaced by the P03 bounded audit.)
+    rel_knowledge="${f#$knowledge_dir/}"
+    case "$rel_knowledge" in
+      archive/*|*/archive/*)
         continue
         ;;
     esac

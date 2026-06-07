@@ -104,8 +104,15 @@ _packet_field() {
 }
 
 # --- ISO timestamp. ----------------------------------------------------------
+# ORCH_REVIEW_FIXED_TS (test-only, M034 P03 / FR-15): when set, emit the literal
+# value so two otherwise-identical runs are byte-equal for the byte-parity audit.
+# Unset (production): real UTC timestamp as before.
 _iso_now() {
-  date -u +%Y-%m-%dT%H:%M:%SZ
+  if [ -n "${ORCH_REVIEW_FIXED_TS:-}" ]; then
+    printf '%s' "$ORCH_REVIEW_FIXED_TS"
+  else
+    date -u +%Y-%m-%dT%H:%M:%SZ
+  fi
 }
 
 # --- REVIEW.md helpers. ------------------------------------------------------

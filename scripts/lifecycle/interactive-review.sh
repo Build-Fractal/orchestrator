@@ -189,6 +189,17 @@ _populate_signoff() {
   } > "$sf"
 }
 
+# --- _emit_event: append a JSONL line to the milestone execution-log. --------
+# $1 = full JSON object string (already formed by the caller). Append-only.
+# Honors ORCH_EVENT_LOG override (verifier hermeticity) so the real milestone
+# log is never touched in tests. Never fails the run on a log-write error.
+_emit_event() {
+  ev_log="$REPO_ROOT/.orchestrator/milestones/$MILESTONE/execution-log.jsonl"
+  if [ -n "${ORCH_EVENT_LOG:-}" ]; then ev_log="$ORCH_EVENT_LOG"; fi
+  mkdir -p "$(dirname "$ev_log")" 2>/dev/null || return 0
+  printf '%s\n' "$1" >> "$ev_log" 2>/dev/null || true
+}
+
 # --- _run_test_responses (this task's deliverable, SC-3 / PC-3). -------------
 # Fully deterministic: no prompt, no network. One REVIEW.md block per active id
 # in packet order. Ids absent from the fixture default to accept.
@@ -242,9 +253,95 @@ _run_test_responses() {
 # --- Stub functions (filled by later tasks — keep the marker comments). ------
 
 # >>> T03 fills this: headless auto-mode policy paths (FR-8/FR-9). <<<
+# Headless / auto-mode entry: no human, no blocking read. Branches on the
+# declared $POLICY (FR-8) and never deadlocks — every branch ends in an
+# explicit `exit` (watchdog-never-fires guarantee). CON-5/SC-5: the
+# *-DECISIONS.md is already on disk and is NEVER touched here; only
+# operator-touch (REVIEW/SIGNOFF/CONTINUE) is gated.
 _run_headless_policy() {
-  echo "interactive-review: headless policy path not yet implemented (M034/P02/T03)" >&2
-  exit 20
+  if [ "$(decisions_is_valid_policy "$POLICY")" != "ok" ]; then
+    echo "ERROR: interactive-review: invalid policy '$POLICY' (allowed: $DECISIONS_POLICY_VALUES)." >&2
+    exit 1
+  fi
+
+  case "$POLICY" in
+    defer)
+      idx=$(_review_block_count "$REVIEW_OUT")
+      pkt_dir=$(dirname "$PACKET")
+
+      # FR-9 QUESTIONS.md hand-off: a markdown checklist a human answers
+      # out-of-band (mirrors the M033 P04 conflict hand-off shape). Written
+      # first, then the continue-file + JSONL + clean exit.
+      QUESTIONS_FILE="$pkt_dir/${GATE_ID}-QUESTIONS.md"
+      {
+        printf -- '# Review Questions — %s\n' "$GATE_ID"
+        printf '\n'
+        printf 'Headless `defer` policy: this gate awaits human completion.\n'
+        printf 'Answer each active decision below, then run `orchestrator:resume`.\n'
+        printf '\n'
+        for qid in $(bash "$READER" active-ids "$PACKET"); do
+          [ -n "$qid" ] || continue
+          q_summary=$(_packet_field "$PACKET" "$qid" "summary")
+          q_impact=$(_packet_field "$PACKET" "$qid" "concrete_impact")
+          printf -- '- [ ] **%s** — %s\n' "$qid" "$q_summary"
+          printf -- '  - impact: %s\n' "$q_impact"
+        done
+      } > "$QUESTIONS_FILE"
+
+      # Continue-file (PC-5 schema) — atomic tmpfile + mv (CON-1).
+      CONTINUE_FILE="$pkt_dir/${GATE_ID}-CONTINUE.md"
+      ciso=$(_iso_now)
+      tmp_continue="${CONTINUE_FILE}.tmp.$$"
+      {
+        printf -- '---\n'
+        printf 'schema_version: "%s"\n' "$DECISIONS_SCHEMA_VERSION"
+        printf 'type: pending-review-continue\n'
+        printf 'milestone_id: "%s"\n' "$MILESTONE"
+        printf 'phase_id: "%s"\n' "$PHASE"
+        printf 'gate_id: "%s"\n' "$GATE_ID"
+        printf 'last_review_md_block_index: %s\n' "$idx"
+        printf 'declared_policy: "defer"\n'
+        printf 'created_at: "%s"\n' "$ciso"
+        printf 'packet_path: "%s"\n' "$PACKET"
+        printf 'review_md_path: "%s"\n' "$REVIEW_OUT"
+        printf 'status: "pending-review"\n'
+        printf -- '---\n'
+        printf '\n'
+        printf 'Gate %s deferred for later human review via `orchestrator:resume`.\n' "$GATE_ID"
+      } > "$tmp_continue"
+      mv -f "$tmp_continue" "$CONTINUE_FILE"
+
+      _emit_event "$(printf '{"record_type":"pending_review","milestone":"%s","phase":"%s","gate_id":"%s","last_review_md_block_index":%s,"declared_policy":"defer","timestamp":"%s"}' "$MILESTONE" "$PHASE" "$GATE_ID" "$idx" "$ciso")"
+
+      echo "INTERACTIVE-REVIEW: deferred gate $GATE_ID -> $CONTINUE_FILE"
+      exit 0
+      ;;
+
+    accept-with-audit)
+      _ensure_review_header "$REVIEW_OUT"
+      base=$(_review_block_count "$REVIEW_OUT")
+      n=$base
+      for id in $(bash "$READER" active-ids "$PACKET"); do
+        [ -n "$id" ] || continue
+        n=$((n + 1))
+        _append_review_block "$REVIEW_OUT" "$n" "$id" "accept" \
+          "auto-accepted (accept-with-audit policy)" ""
+        aiso=$(_iso_now)
+        _emit_event "$(printf '{"record_type":"auto_accepted","milestone":"%s","phase":"%s","gate_id":"%s","decision_id":"%s","timestamp":"%s"}' "$MILESTONE" "$PHASE" "$GATE_ID" "$id" "$aiso")"
+      done
+      _populate_signoff "$SIGNOFF_OUT" "$n" "auto-accept"
+      accepted=$((n - base))
+      echo "INTERACTIVE-REVIEW: accept-with-audit gate $GATE_ID ($accepted decisions)"
+      exit 0
+      ;;
+
+    refuse-entry)
+      riso=$(_iso_now)
+      _emit_event "$(printf '{"record_type":"refused_entry","milestone":"%s","phase":"%s","gate_id":"%s","timestamp":"%s"}' "$MILESTONE" "$PHASE" "$GATE_ID" "$riso")"
+      echo "INTERACTIVE-REVIEW: refuse-entry gate $GATE_ID — phase entry refused (declared policy)" >&2
+      exit 30
+      ;;
+  esac
 }
 
 # >>> T04 fills this: --resume re-entry at last_review_md_block_index (PC-5). <<<

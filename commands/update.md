@@ -1,12 +1,12 @@
 ---
-description: "Use when refreshing an orchestrator-managed project's runtime from a locally-resolved source repo. Pre-M035 interim wrapper around install-claude-code.sh --force; M035 P02-P06 will add npm/homebrew/curl-pipe-bash sources."
+description: "Use when refreshing an orchestrator-managed project's runtime from a locally-resolved source repo. Re-stages via the installer matching the project's runtime (install-<runtime>.sh --force); also dispatches to npm/homebrew/curl channels per install provenance."
 ---
 
 # orchestrator:update
 
 Reinstall the orchestrator runtime into the current project from a locally-resolved orchestrator source repo. This is the **pre-M035 interim** that mechanizes the M035 Finding D shell-function recipe (`( cd $HOME/Sites/orchestrator && git pull --ff-only ) && bash packaging/install/install-claude-code.sh --force`) as a discoverable first-class command, ahead of M035 P02–P06's package-manager publishing pipeline.
 
-The skill is a **thin wrapper** around `scripts/lifecycle/run-update.sh`, which itself is a thin wrapper around `packaging/install/install-claude-code.sh --force`. No new install logic — discovery + visibility only.
+The skill is a **thin wrapper** around `scripts/lifecycle/run-update.sh`, which re-stages via the installer **matching the project's runtime** — `packaging/install/install-<runtime>.sh --force`, where `<runtime>` is resolved from `.orchestrator/install-meta.txt` `runtime=` (then `config.yml` `runtime:`, then filesystem markers, default `claude-code`). A Cursor project is refreshed with `install-cursor.sh`, not the Claude Code installer. No new install logic — discovery + visibility only.
 
 ## When to Use
 
@@ -24,10 +24,11 @@ The skill does NOT do `git pull` on the source repo. The operator controls when 
    - `--source-repo PATH` (explicit override)
    - `$ORCHESTRATOR_SOURCE_REPO` env var
    - `$HOME/Sites/orchestrator` (default)
-2. **Validate**: source path exists and contains `packaging/install/install-claude-code.sh`; project dir contains `.orchestrator/`.
-3. **Print pre-install summary**: source path, source HEAD short-sha + commit subject, dirty-state warning if applicable, bundle version, project dir.
-4. **Run** `bash <source>/packaging/install/install-claude-code.sh --project-dir <project> --force` and pass through its output.
-5. **Print** a one-line OK summary on success, or surface installer's non-zero exit.
+2. **Validate**: source path exists and is an orchestrator tree; project dir contains `.orchestrator/`.
+3. **Resolve the project's runtime** (`install-meta.txt` `runtime=` → `config.yml` `runtime:` → filesystem markers → `claude-code`) and select `packaging/install/install-<runtime>.sh`.
+4. **Print pre-install summary**: source path, source HEAD short-sha + commit subject, dirty-state warning if applicable, bundle version, project dir, resolved runtime.
+5. **Run** `bash <source>/packaging/install/install-<runtime>.sh --project-dir <project> --force` and pass through its output.
+6. **Print** a one-line OK summary on success, or surface installer's non-zero exit.
 
 ## Invocation
 
@@ -87,7 +88,7 @@ tarball — D007/D009 single-source-of-truth.
 
 | `update_source` | Dispatched command | Pre-flight check | Notes |
 |---|---|---|---|
-| `git` | `bash <source-repo>/packaging/install/install-claude-code.sh --force` | `<source-repo>` exists with `packaging/install/install-claude-code.sh` | Pre-M035 interim path; default for dogfooders. Resolves source via `--source-repo` / `$ORCHESTRATOR_SOURCE_REPO` / `~/Sites/orchestrator`. |
+| `git` | `bash <source-repo>/packaging/install/install-<runtime>.sh --force` | `<source-repo>` is an orchestrator tree | Pre-M035 interim path; default for dogfooders. `<runtime>` matches the project (Cursor → `install-cursor.sh`). Resolves source via `--source-repo` / `$ORCHESTRATOR_SOURCE_REPO` / `~/Sites/orchestrator`. |
 | `npm` | `npm update -g @build-fractal/orchestrator` | `npm` on PATH AND `[ -d "$(npm root -g)/@build-fractal/orchestrator" ]` | Default for npm consumers. Dispatch is direct; no source-repo resolution required. |
 | `homebrew` | `brew upgrade orchestrator` | `brew` on PATH AND `[ -d "$(brew --prefix)/Cellar/orchestrator" ]` | Default for brew consumers via the `build-fractal/orchestrator` tap. |
 | `none` | `<no-op>` (operator opt-out) | none | Suppresses both `orchestrator:update` dispatch and the FR-4 drift-render in `orchestrator:status`. No JSONL emission. |

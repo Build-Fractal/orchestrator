@@ -347,8 +347,12 @@ filter_decisions() {
       continue
     fi
 
-    # Parse the row — extract Scope and When columns
-    # Column positions: 1=ID, 2=Decision, 3=Choice, 4=Scope, 5=When, 6=Rationale
+    # Parse the row — extract Scope and When columns.
+    # Canonical consumer-order row `| ID | Decision | Choice | Scope | When | Rationale |`.
+    # `awk -F'|'` yields a leading empty $1 (text before the first pipe), so the
+    # field indices are shifted by one: $2=ID $3=Decision $4=Choice $5=Scope
+    # $6=When $7=Rationale. The producer (append-decision.sh) writes this order
+    # (M044/FR-1); the $5/$6 reads below are the canonical observed indices.
     local scope_col when_col
     scope_col=$(echo "$line" | awk -F'|' '{gsub(/^[[:space:]]+|[[:space:]]+$/, "", $5); print $5}')
     when_col=$(echo "$line" | awk -F'|' '{gsub(/^[[:space:]]+|[[:space:]]+$/, "", $6); print $6}')

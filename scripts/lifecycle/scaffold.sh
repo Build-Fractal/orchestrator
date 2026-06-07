@@ -86,8 +86,8 @@ mkdir -p "$ROOT_DIR"
 
 if [[ ! -f "$ROOT_DIR/DECISIONS.md" ]]; then
   cat > "$ROOT_DIR/DECISIONS.md" << 'EOF'
-| # | When | Scope | Decision | Choice | Rationale | Revisable? |
-|---|------|-------|----------|--------|-----------|------------|
+| # | Decision | Choice | Scope | When | Rationale | Revisable? |
+|---|----------|--------|-------|------|-----------|------------|
 EOF
 fi
 

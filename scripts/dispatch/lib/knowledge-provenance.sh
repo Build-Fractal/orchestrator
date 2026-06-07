@@ -193,6 +193,34 @@ kp_grep_fallback() {
   return 0
 }
 
+# --- kp_is_mature <project_root> -> 1 if the project carries prior work ---
+# A project is "mature" once it has a milestone SUMMARY on disk OR a decisions
+# data row. A 0-MEM inject is normal on a greenfield project, a danger signal on
+# a mature one (the original month-long silent-degradation was a mature project).
+kp_is_mature() {
+  local root="$1"
+  if [ -z "$root" ]; then
+    printf '0'
+    return 0
+  fi
+  local ms_dir="$root/.orchestrator/milestones"
+  if [ -d "$ms_dir" ]; then
+    local hit
+    hit="$(find "$ms_dir" -name '*-SUMMARY.md' -print 2>/dev/null | head -1 || true)"
+    if [ -n "$hit" ]; then
+      printf '1'
+      return 0
+    fi
+  fi
+  local dec="$root/.orchestrator/DECISIONS.md"
+  if [ -f "$dec" ] && grep -qE '^\| D[0-9]' "$dec" 2>/dev/null; then
+    printf '1'
+    return 0
+  fi
+  printf '0'
+  return 0
+}
+
 # --- kp_emit_header <source> <index_age> <entries_considered> ---
 # Byte-stable provenance block, ALWAYS emitted into the payload (even on a
 # healthy source=index). Field order is frozen (byte-contract).

@@ -284,6 +284,30 @@ if [ -n "$DIRECT_TASK_PLAN" ]; then
     _M044_INDEX_AGE="$(kp_index_age "$_M031_KNOWLEDGE_INDEX" 2>/dev/null || printf 'none')"
   fi
 
+  # M044/P01/T03 (FR-15): inject-size surface + 0-MEM-on-mature-project warning.
+  # Token estimate over the knowledge body uses the same ceil(chars/4) formula
+  # as the provenance lib's estimator (one estimator, deterministic — no
+  # wall-clock). Reported as `knowledge: N MEMs / X tokens`.
+  _M044_KNOW_CHARS="$(printf '%s' "$_M031_KNOWLEDGE_BODY" | wc -c | tr -d ' ')"
+  _M044_KNOW_CHARS="${_M044_KNOW_CHARS:-0}"
+  _M044_KNOW_TOKENS=$(( (_M044_KNOW_CHARS + 3) / 4 ))
+  _M044_INJECT_SIZE="knowledge: ${_M031_MEM_COUNT:-0} MEMs / ${_M044_KNOW_TOKENS} tokens"
+  printf '%s\n' "$_M044_INJECT_SIZE" >&2
+
+  # Maturity probe: a project is "mature" once it carries a milestone SUMMARY or
+  # a decisions row on disk. A 0-MEM inject is normal on a greenfield project
+  # (no warning) but a danger signal on a mature one (the original month-long
+  # silent-degradation incident was a mature project).
+  _M044_IS_MATURE=0
+  if command -v kp_is_mature >/dev/null 2>&1; then
+    _M044_IS_MATURE="$(kp_is_mature "$_M031_PROJECT_ROOT" 2>/dev/null || printf '0')"
+  fi
+  _M044_ZEROMEM_WARNING=""
+  if [ "${_M031_MEM_COUNT:-0}" = "0" ] && [ "$_M044_IS_MATURE" -eq 1 ]; then
+    _M044_ZEROMEM_WARNING="WARNING: 0-MEM inject on a project with prior milestones/decisions on disk — knowledge may not be activating (run: bash scripts/diagnostics/run-doctor.sh)"
+    printf '%s\n' "$_M044_ZEROMEM_WARNING" >&2
+  fi
+
   # Assemble payload. The Decisions section is omitted under the Quick
   # profile (FR-2). The Knowledge section header is always present so the
   # downstream agent contract is preserved.
@@ -308,8 +332,13 @@ if [ -n "$DIRECT_TASK_PLAN" ]; then
       kp_emit_header "$_M044_PROV_SOURCE" "$_M044_INDEX_AGE" "$_M031_MEM_COUNT"
       printf '\n'
     fi
+    # M044/P01/T03 (FR-15): inject-size surface, always present in the payload.
+    printf '%s\n\n' "$_M044_INJECT_SIZE"
     if [ -n "$_M044_PROV_WARNING" ]; then
       printf '%s\n\n' "$_M044_PROV_WARNING"
+    fi
+    if [ -n "$_M044_ZEROMEM_WARNING" ]; then
+      printf '%s\n\n' "$_M044_ZEROMEM_WARNING"
     fi
     printf '%s\n\n' "$_M031_KNOWLEDGE_BODY"
     if [ "$PROFILE" != "quick" ]; then

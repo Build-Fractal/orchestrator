@@ -28,6 +28,19 @@ DECISIONS_TYPE_DEFAULT="decision"
 # are count-based (not time-series); see M034-P01-ADDENDUM.md.
 DECISIONS_WARN_FINDING_THRESHOLD="3"
 
+# M034 P02: walkthrough action enum (FR-6). One per operator response.
+#   accept   — agree with the decision as-is.
+#   override — replace picked_value; carries value + rationale (verbatim).
+#   pushback — record a concern without changing the value.
+#   na       — boundary_translation false-positive: acknowledged-not-applicable.
+DECISIONS_ACTION_VALUES="accept override pushback na"
+
+# M034 P02: auto-mode policy enum (FR-8 / AD-4 / CON-8). Default defer.
+# The value is `refuse-entry`, NEVER `block` (CON-8 — `block` is a severity
+# value AND the conversus verdict; the policy enum stays lexically distinct).
+DECISIONS_POLICY_VALUES="defer accept-with-audit refuse-entry"
+DECISIONS_POLICY_DEFAULT="defer"
+
 # Validator: print "ok" if $1 is a member of the severity enum, else "".
 decisions_is_valid_severity() {
   case " $DECISIONS_SEVERITY_VALUES " in
@@ -39,6 +52,22 @@ decisions_is_valid_severity() {
 # Validator: print "ok" if $1 is a member of the type enum, else "".
 decisions_is_valid_type() {
   case " $DECISIONS_TYPE_VALUES " in
+    *" $1 "*) printf 'ok' ;;
+    *) printf '' ;;
+  esac
+}
+
+# Validator: print "ok" if $1 is a member of the action enum, else "".
+decisions_is_valid_action() {
+  case " $DECISIONS_ACTION_VALUES " in
+    *" $1 "*) printf 'ok' ;;
+    *) printf '' ;;
+  esac
+}
+
+# Validator: print "ok" if $1 is a member of the policy enum, else "".
+decisions_is_valid_policy() {
+  case " $DECISIONS_POLICY_VALUES " in
     *" $1 "*) printf 'ok' ;;
     *) printf '' ;;
   esac

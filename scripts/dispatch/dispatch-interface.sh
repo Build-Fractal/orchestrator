@@ -63,6 +63,38 @@ if [ "${1:-}" = "--query" ]; then
 fi
 # -----------------------------------------------------------------------------
 
+# --- M034/P02/T01: --probe-renderer subcommand passthrough (PC-4 / D-P02-1) -
+# When the FIRST argument is --probe-renderer, resolve the interactive-review
+# renderer state and exit. This is the CON-7 renderer-selection seam:
+# interactive-review.sh routes through here, never calling a question
+# primitive directly. Emits exactly one line:
+#   renderer=interactive-cc | interactive-cursor | headless
+# Precedence (PC-4, M034-P01-ADDENDUM.md):
+#   ORCH_HEADLESS=1 -> headless (highest, unconditional)
+#   else local-agent probe available=true -> interactive-cc
+#   else cursor-agent probe available=true -> interactive-cursor (P03 renders)
+#   else -> headless
+if [ "${1:-}" = "--probe-renderer" ]; then
+  if [ "${ORCH_HEADLESS:-0}" = "1" ]; then
+    echo "renderer=headless"
+    exit 0
+  fi
+  _pr_registry="$SCRIPT_DIR/backend-registry.sh"
+  _pr_cc="$(bash "$_pr_registry" --probe local-agent 2>/dev/null | grep -E '^available=' | head -n 1 | cut -d= -f2)"
+  if [ "$_pr_cc" = "true" ]; then
+    echo "renderer=interactive-cc"
+    exit 0
+  fi
+  _pr_cursor="$(bash "$_pr_registry" --probe cursor-agent 2>/dev/null | grep -E '^available=' | head -n 1 | cut -d= -f2)"
+  if [ "$_pr_cursor" = "true" ]; then
+    echo "renderer=interactive-cursor"
+    exit 0
+  fi
+  echo "renderer=headless"
+  exit 0
+fi
+# ---------------------------------------------------------------------------
+
 # Parse arguments
 while [[ $# -gt 0 ]]; do
   case "$1" in

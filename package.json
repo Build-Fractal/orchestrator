@@ -1,6 +1,6 @@
 {
   "name": "@build-fractal/orchestrator",
-  "version": "0.10.2-dev",
+  "version": "0.10.2",
   "description": "Autonomous multi-phase orchestration skills for Claude Code, Codex, and Cursor",
   "homepage": "https://github.com/Build-Fractal/orchestrator",
   "repository": {

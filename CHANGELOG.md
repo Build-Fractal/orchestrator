@@ -6,9 +6,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This pr
 
 ## [Unreleased]
 
+## [0.10.2] — 2026-06-07
+
 ### Fixed — `orchestrator:update` now refreshes with the project's own runtime installer
 
 - **`run-update.sh` was hardcoded to the Claude Code installer**, so `orchestrator:update` on a **Cursor** (or Codex) project re-staged via `install-claude-code.sh` — registering the wrong skill surface and failing. Update now resolves the project's runtime (`.orchestrator/install-meta.txt` `runtime=` → `config.yml` `runtime:` → filesystem markers like `.cursor/` → default `claude-code`) and runs `install-<runtime>.sh`. The pre-install summary now shows the resolved `runtime:`. Affects the git/source update channel (the dogfooding path); npm/Homebrew channels are unchanged. Surfaced by a Cursor dogfooder.
+
+### Changed — clean dual-runtime onboarding docs
+
+- Reworked the README + Getting Started so **Claude Code and Cursor are equal, self-serve install paths** and dropped the "alpha / Tier-A / dogfooder" framing. Corrected the Cursor install details (no npm shortcut — per-project `install-cursor.sh`; needs only bash+git, not an API key; `cursor-agent` + `CURSOR_API_KEY` only for autonomous runs) and the stale "review gates are not-yet" claim (they ship on Cursor via the MCP elicitation renderer; only per-run cost accounting is deferred).
 
 ## [0.10.1] — 2026-06-07
 

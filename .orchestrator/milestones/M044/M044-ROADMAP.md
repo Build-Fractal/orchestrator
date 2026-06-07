@@ -33,7 +33,7 @@ updated_at: "2026-06-07T01:08:32Z"
     - Produces: `scripts/knowledge/rebuild-index.sh` (per-entry try/skip/warn guarding `:117`, bounded unguarded-command audit of the script + directly-sourced libs, per-skip stderr + final `INDEXED/SKIPPED` summary, exit non-zero only on catastrophic failure — FR-3; scoped archive glob `:74` dropping the bare `*/archive/*` false-match while preserving `knowledge/archive/` per `:6` — FR-4, CON-4); `scripts/knowledge/resolve-entries.sh` (scoped archive glob `:45`, same preservation — FR-4); bounded-audit artifact under `M044/gates/` listing each at-risk command guarded/justify-and-track (SC-3); resilient-rebuild fixture (heading-less entry, SC-2) + archive-rooted fixture (SC-4)
     - Consumes: P01 canonical path resolver
 
-- [ ] **P04**: Capture-by-default at Quick + Decisions digest — "On a fresh Quick-intensity fixture, an explicitly-captured decision lands in `DECISIONS.md`, is indexed by `rebuild-index.sh`, and is present in the next `build-context.sh` inject — which now carries a bounded, budget-bounded Decisions digest at the Quick profile."
+- [x] **P04**: Capture-by-default at Quick + Decisions digest — "On a fresh Quick-intensity fixture, an explicitly-captured decision lands in `DECISIONS.md`, is indexed by `rebuild-index.sh`, and is present in the next `build-context.sh` inject — which now carries a bounded, budget-bounded Decisions digest at the Quick profile."
   - Risk: high
   - Depends: P01, P02
   - Boundary Map:

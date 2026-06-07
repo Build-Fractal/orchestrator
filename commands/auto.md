@@ -388,6 +388,37 @@ When a pause is detected:
 3. **Report**: "Autonomous execution paused at {position}. Continue file written. Run `/orchestrator-resume` to resume."
 4. **Exit cleanly** with exit code 0.
 
+## Review Gates (M034 / FR-8 / FR-9)
+
+Before entering a phase whose plan frontmatter declares `review_gates: [...]`,
+`orchestrator:auto` resolves each gate's declared `--policy` (read from the
+phase-plan frontmatter) and runs the headless review path. Because no human
+sits in an autonomous loop, `auto` exports `ORCH_HEADLESS=1` and invokes:
+
+```bash
+ORCH_HEADLESS=1 bash scripts/lifecycle/interactive-review.sh \
+  --milestone=M### --phase=P## --gate-id=<gate> \
+  --packet=<artifact>-DECISIONS.md --policy=<declared-policy>
+```
+
+Branch on the result:
+
+- **`defer`** (the default) → clean exit 0 plus a `<gate>-CONTINUE.md`
+  continue-file (PC-5 schema) + a `<gate>-QUESTIONS.md` hand-off + a
+  `pending_review` JSONL event. This **pauses the autonomous run** for later
+  `orchestrator:resume` — treat it like a pause: write/keep the continue
+  state, release the lock, and exit cleanly.
+- **`accept-with-audit`** → exit 0 with one REVIEW.md block + one
+  `auto_accepted` JSONL per active decision and a populated SIGNOFF; the loop
+  proceeds into the phase.
+- **`refuse-entry`** → a non-zero exit (refusal is the *declared strict
+  behavior*, not a bug). **Halt the autonomous run at the phase boundary** —
+  release the lock and exit; the operator must intervene.
+
+The `*-DECISIONS.md` packet is never modified on any policy path (always-write
+CON-5/SC-5). The headless path never blocks on input, so the watchdog never
+fires.
+
 ## Phase Transition
 
 When `auto-loop.sh` returns `AUTO:PHASE_COMPLETE` or `derive-phase.sh` returns `summarizing`:

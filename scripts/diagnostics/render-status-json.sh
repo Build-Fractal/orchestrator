@@ -265,11 +265,20 @@ _rsj_phase_index_count() {
         total=0
     fi
     local pidx=1
-    if [ -n "$active_phase" ]; then
+    if [ -n "$active_phase" ] && [ "$active_phase" != "none" ]; then
         pidx=$(printf '%s\n' "$active_phase" | sed -E 's/^P0*//')
-        if [ -z "$pidx" ]; then
-            pidx=1
-        fi
+        # Guard against a non-numeric residue (e.g. a malformed phase id):
+        # default to phase 1 rather than feeding a string into arithmetic
+        # (set -u would abort on `$((string - 1))`).
+        case "$pidx" in
+            ''|*[!0-9]*) pidx=1 ;;
+        esac
+    else
+        # active-phase is "none" (e.g. a complete milestone — read-roadmap.sh
+        # returns the literal `none` when no phase is active). All phases done:
+        # pidx = total + 1 so done_count = total and pct = 100. Without this the
+        # `none` sentinel reached `$((pidx - 1))` and tripped set -u (line ~274).
+        pidx=$((total + 1))
     fi
     local done_count=$((pidx - 1))
     local pct=0

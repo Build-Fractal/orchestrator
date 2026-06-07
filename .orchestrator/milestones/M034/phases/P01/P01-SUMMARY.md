@@ -11,7 +11,7 @@ requires:
 affects:
   - "P02"
 key_files:
-  - "templates/decisions-packet.md scripts/knowledge/lib/decisions-constants.sh scripts/knowledge/write-decisions.sh scripts/knowledge/read-decisions.sh scripts/knowledge/decisions-from-conversus.sh scripts/diagnostics/check-decisions.sh"
+  - "templates/decisions-packet.md,scripts/knowledge/lib/decisions-constants.sh,scripts/knowledge/write-decisions.sh,scripts/knowledge/read-decisions.sh,scripts/knowledge/decisions-from-conversus.sh,scripts/diagnostics/check-decisions.sh"
 key_decisions:
   - "CON-4 SSOT; PC-1 stdin-JSON; Q1 content_hash supersede chain; FR-12 strict producer; top-level unreviewed_decisions fallback; PC-3/4/5 forward-specified for P02"
 patterns_established:

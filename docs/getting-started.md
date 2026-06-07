@@ -209,6 +209,27 @@ For the mechanics behind each stage, see [Architecture](../references/architectu
 
 ---
 
+## Reviewing load-bearing decisions (interactive review gates)
+
+For phase-based work, the orchestrator can put a **first-class review step between artifact authoring and sign-off** — so contract-defining decisions get deliberated, not reverse-engineered from a finished file. It's opt-in and built on two plan-frontmatter declarations:
+
+- A task declaring `decision_packet: true` emits a structured `*-DECISIONS.md` alongside its artifact — one typed entry per load-bearing decision (picked value, rationale, alternatives, concrete impact, severity). `/orchestrator-status` and `/orchestrator-doctor` then report **unreviewed decisions** for the phase.
+- A phase declaring `review_gates: [...]` runs the `interactive_review` stage at sign-off: each decision is surfaced one at a time — **accept**, **override** (supply a replacement, recorded verbatim), or **push back** — through whichever question primitive your runtime has:
+
+  | Runtime | How decisions are surfaced |
+  |---------|----------------------------|
+  | Claude Code (interactive) | native `AskUserQuestion` prompt |
+  | Cursor (interactive) | native MCP `elicitation/create` form (registered in `.cursor/mcp.json` at install) |
+  | Headless / autonomous | a `QUESTIONS.md` hand-off you answer out-of-band, then `/orchestrator-resume` |
+
+Responses land in an append-only `REVIEW.md` that populates `SIGNOFF.md`. Because a gate **must never deadlock an autonomous run**, each gate declares an auto-mode policy — **`defer`** (default: write a continue-file and pause, resumable via `/orchestrator-resume`), `accept-with-audit` (auto-accept with a per-decision audit record), or `refuse-entry` (halt at the phase boundary). The decision artifact is always written regardless of policy; only the operator touch is gated.
+
+Optionally, a gate can declare `producer: conversus` to fold a [conversus](why-this-exists.md) deliberation's verdict and surviving disputes into the packet, so you adjudicate its findings at the gate rather than re-deriving them.
+
+Gates are entirely opt-in — `decision_packet` and `review_gates` are never global defaults. See [`commands/plan-phase.md`](../commands/plan-phase.md) for declaring them and [`references/interactive-review-renderer.md`](../references/interactive-review-renderer.md) for the walkthrough mechanics.
+
+---
+
 ## Reporting issues (please do!)
 
 The fastest way to improve the orchestrator — **especially on Cursor, where you're an early dogfooder** — is to tell us when something snags. It takes about 30 seconds and there's no wrong report.

@@ -314,6 +314,32 @@ else
   hooks_wired=1
 fi
 
+# --- 3.6 MCP review-gate server registration (M009 FR-6 -> M034 FR-10). ---
+# Register the orchestrator review-gate stdio MCP server in .cursor/mcp.json via
+# a NON-CLOBBERING merge (CON-6): operator MCP servers are preserved; only our
+# `orchestrator-review-gate` entry is set/replaced (idempotent). A malformed
+# operator mcp.json fails closed (the merge helper exits 2; we WARN + skip).
+log "registering review-gate MCP server via adapter --mcp-config + merge-mcp-config.sh"
+mcp_wired=0
+mcp_out="$(bash "$ADAPTER" --mcp-config --project-dir "$PROJECT_DIR" 2>/dev/null)"
+mcp_name="$(printf '%s\n' "$mcp_out" | sed -n 's/^name=//p' | head -n 1)"
+mcp_entry="$(printf '%s\n' "$mcp_out" | sed -n 's/^entry=//p' | head -n 1)"
+mcp_target="$PROJECT_DIR/.cursor/mcp.json"
+if [ -z "$mcp_name" ] || [ -z "$mcp_entry" ]; then
+  echo "WARN: adapter --mcp-config produced no server entry; skipping MCP registration" >&2
+elif [ "$DRY_RUN" = "1" ]; then
+  bash "$REPO_ROOT/scripts/lifecycle/merge-mcp-config.sh" \
+    --target "$mcp_target" --name "$mcp_name" --entry "$mcp_entry" --dry-run || true
+  mcp_wired=1
+else
+  if bash "$REPO_ROOT/scripts/lifecycle/merge-mcp-config.sh" \
+       --target "$mcp_target" --name "$mcp_name" --entry "$mcp_entry"; then
+    mcp_wired=1
+  else
+    echo "WARN: merge-mcp-config.sh failed (malformed operator mcp.json?); preserving operator file, mcp_wired=0" >&2
+  fi
+fi
+
 # --- 3.5 Wire the git pre-commit hook (M009 FR-5). ---
 # Cursor has no CC-style PreToolUse-on-bash event, so the before-commit
 # lifecycle gate is wired as an actual git .git/hooks/pre-commit. The helper
@@ -592,7 +618,7 @@ if [ "$DRY_RUN" = "0" ]; then
 fi
 
 # --- 5. Summary line ---
-echo "SUMMARY: runtime=cursor skills_installed=${skills_installed} hooks_wired=${hooks_wired} pre_commit_wired=${pre_commit_wired} config_written=${config_written} runtime_staged=${runtime_staged} dry_run=${DRY_RUN}"
+echo "SUMMARY: runtime=cursor skills_installed=${skills_installed} hooks_wired=${hooks_wired} mcp_wired=${mcp_wired} pre_commit_wired=${pre_commit_wired} config_written=${config_written} runtime_staged=${runtime_staged} dry_run=${DRY_RUN}"
 
 # --- 6. Optional sister-project hint (purely informational; never alters exit) ---
 # shellcheck disable=SC1091

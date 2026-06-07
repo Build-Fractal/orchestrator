@@ -65,6 +65,24 @@ Detected when:
 
 This indicates the pause may not have completed cleanly. Treat as **crash recovery** (Path B), but also read the continue file for additional context about what the pausing session intended as the next action. Include that context in the recovery briefing output.
 
+## Pending-Review Continue (M034 PC-5)
+
+Beyond the graceful-pause (`continue.md`) and crash (stale lock) artifacts above, a deferred **interactive review gate** leaves a distinct recovery artifact: a `<gate_id>-CONTINUE.md` continue-file co-located with the gated phase. This is neither a generic pause nor a crash — it is a review stage that was deferred under the `defer` policy and awaits human completion.
+
+During recovery-artifact location, ALSO scan `<milestone-dir>/phases/*/` for files matching `*-CONTINUE.md` whose frontmatter carries `type: pending-review-continue`. (These are written by the `defer` policy of `scripts/lifecycle/interactive-review.sh`, carry the PC-5 schema — `milestone_id` / `phase_id` / `gate_id` / `last_review_md_block_index` / `declared_policy` / `packet_path` / `review_md_path` — and are distinct from the milestone-root `continue.md`.)
+
+When one is found, route recovery to:
+
+```bash
+bash scripts/lifecycle/interactive-review.sh --resume=<path-to-CONTINUE.md>
+```
+
+This re-enters the review walkthrough at `last_review_md_block_index` and completes the remaining decisions — re-entry at the recorded position, not a restart. Already-recorded REVIEW.md blocks are NOT re-written (partial answers survive an interruption); only the still-pending decisions are appended. On success it populates the sibling `SIGNOFF.md`.
+
+This branch is **additive** to the existing pause (Path A) / crash (Path B) branches — neither is changed. A milestone may have a milestone-root `continue.md` (Path A) AND/OR a per-gate `*-CONTINUE.md` `pending-review-continue` file; handle each with its own branch.
+
+**Idempotency:** `interactive-review.sh --resume` deletes the consumed continue-file on success, so a second resume finds no `pending-review-continue` file for that gate and falls through. Re-running resume is safe.
+
 ## Path A — Resume from Pause (FR-048)
 
 Follow these steps to resume from a graceful pause:

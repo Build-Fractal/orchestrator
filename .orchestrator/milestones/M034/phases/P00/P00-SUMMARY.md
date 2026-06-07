@@ -11,7 +11,7 @@ requires:
 affects:
   - "P01"
 key_files:
-  - "M034-P00-ADDENDUM.md,fixtures/decisions-packet-baseline.md,tools/verify/m034-p00-addendum.sh"
+  - ".orchestrator/milestones/M034/M034-P00-ADDENDUM.md,.orchestrator/milestones/M034/fixtures/decisions-packet-baseline.md,tools/verify/m034-p00-addendum.sh"
 key_decisions:
   - "PC-1=stdin-JSON;PC-2=CaseA-RISK5-cleared;Q1=append-with-supersede-chain"
 patterns_established:

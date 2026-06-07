@@ -6,6 +6,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This pr
 
 ## [Unreleased]
 
+## [0.10.1] — 2026-06-07
+
+### Added — frictionless onboarding for cloned projects
+
+- **`orchestrator:init` now auto-wires the knowledge graph on a fresh clone.** A project's memory (`.orchestrator/`, `KNOWLEDGE-INDEX.md`) is committed and travels with a `git clone`, but the generated `knowledge.db` graph is gitignored — so cloning a teammate's project left the graph unbuilt until someone ran `rebuild-index.sh` by hand. `init` now rebuilds it automatically after staging the runtime tree, when a committed corpus (`knowledge/**/MEM*.md`) exists but the DB is missing or stale. Idempotent (silent no-op on greenfield, cheap refresh when stale) and non-fatal (the M044 fail-loud floor covers a transient miss). The `SUMMARY:` line gains `knowledge_graph=none|fresh|rebuilt|rebuild-failed`. **Net effect: cloning a project that uses orchestrator collapses to `clone → install → /orchestrator-init`.**
+- **`orchestrator:doctor` gains a `stale-graph-db` symptom** on its consolidated `DOCTOR:KNOWLEDGE_ACTIVATION` check (read-only `warn`): a real corpus present but `knowledge.db` missing/stale prints the exact `rebuild-index.sh` fix. doctor diagnoses; init fixes.
+- **Docs:** new Getting Started section *"Joining a project that already uses orchestrator (git clone)"* (the committed/staged/generated three-layer model + a repo-owner convention tip), a README *Pick your path* row, and `init.md` / `doctor.md` updates.
+
 ## [0.10.0] — 2026-06-07
 
 First release to ship **Cursor support**, **interactive review gates**, and a **hardened knowledge-activation pipeline** — three milestones (M009 Tier-A, M034, M044) on top of the v0.9.x line.

@@ -281,9 +281,24 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           TAG="${GITHUB_REF#refs/tags/v}"
-          # Wait briefly for npm registry to propagate the version.
-          sleep 5
-          npm view "@build-fractal/orchestrator@${TAG}" version
+          # The `npm publish` step above is the real gate. This step only
+          # confirms REGISTRY PROPAGATION, which routinely lags well past a few
+          # seconds — a single `sleep 5; npm view` false-failed v0.10.1 (404 not
+          # yet propagated), which then skipped homebrew-publish via `needs:`.
+          # Poll with backoff (~2 min) instead, and never fail on a propagation
+          # timeout: the publish already succeeded, and a red X here would
+          # wrongly block the downstream formula push.
+          for i in $(seq 1 15); do
+            if npm view "@build-fractal/orchestrator@${TAG}" version 2>/dev/null | grep -qx "${TAG}"; then
+              echo "confirmed: @build-fractal/orchestrator@${TAG} is live on npm"
+              exit 0
+            fi
+            echo "attempt $i/15: not propagated yet; retrying in 8s..."
+            sleep 8
+          done
+          echo "WARNING: @build-fractal/orchestrator@${TAG} still not visible via npm view after ~2 min." >&2
+          echo "         The publish step itself succeeded; treating this as registry-propagation lag, not a publish failure." >&2
+          exit 0
 
   # -----------------------------------------------------------------
   # homebrew-publish — CON-6: tag-push only, never PR. Runs after

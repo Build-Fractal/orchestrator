@@ -1,0 +1,3 @@
+| # | Decision | Choice | Scope | When | Rationale | Revisable? |
+|---|----------|--------|-------|------|-----------|------------|
+| D001 | Index demoted to cache? | Yes, grep is the guarantee | arch | M044/P01 | Silent degradation is the enemy | No |

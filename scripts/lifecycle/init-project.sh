@@ -331,8 +331,42 @@ if [ "$INSTALL_RC" -ne 0 ]; then
   exit 1
 fi
 
+# --- 14.5. Wire the knowledge graph -----------------------------------------
+# A project cloned from version control ships its committed corpus
+# (knowledge/**/MEM*.md + KNOWLEDGE-INDEX.md) but NOT the generated knowledge.db
+# (a gitignored artifact). Rebuild it here so the graph is live after a single
+# `init` — the cloned-project onboarding path. Idempotent: a silent no-op when
+# there is no corpus (greenfield), and a cheap refresh when the DB is
+# present-but-stale (older than a knowledge entry). Non-fatal — the M044
+# fail-loud activation floor (grep-over-raw fallback + provenance warning)
+# covers a transient miss, so a rebuild failure never blocks init.
+KNOWLEDGE_GRAPH="none"
+REBUILD_INDEX="$PROJECT_DIR/scripts/knowledge/rebuild-index.sh"
+if [ -d "$PROJECT_DIR/knowledge" ] && [ -f "$REBUILD_INDEX" ]; then
+  _corpus_hit="$(find "$PROJECT_DIR/knowledge" -name 'MEM*.md' -o -name 'SPEC-*.md' -o -name 'REF-*.md' 2>/dev/null | head -1)"
+  if [ -n "$_corpus_hit" ]; then
+    _graph_db="$PROJECT_DIR/knowledge.db"
+    _need_rebuild=0
+    if [ ! -f "$_graph_db" ]; then
+      _need_rebuild=1
+    elif [ -n "$(find "$PROJECT_DIR/knowledge" -name '*.md' -newer "$_graph_db" -print 2>/dev/null | head -1)" ]; then
+      _need_rebuild=1
+    fi
+    if [ "$_need_rebuild" -eq 1 ]; then
+      if bash "$REBUILD_INDEX" --root "$PROJECT_DIR" >/dev/null 2>&1; then
+        KNOWLEDGE_GRAPH="rebuilt"
+      else
+        KNOWLEDGE_GRAPH="rebuild-failed"
+        echo "WARNING: init: knowledge.db rebuild failed; run: bash scripts/knowledge/rebuild-index.sh" >&2
+      fi
+    else
+      KNOWLEDGE_GRAPH="fresh"
+    fi
+  fi
+fi
+
 # --- 15. Summary ------------------------------------------------------------
-echo "SUMMARY: project_type=$PROJECT_TYPE runtime=$RUNTIME instruction_file=$INSTRUCTION_FILE config_file=$CONFIG_FILE cap_score=$CAP_SCORE recommended_intensity=$RECOMMENDED_INTENSITY skills_installed=$SKILLS_INSTALLED dual_writes=$DUAL_WRITES next_step=run_orchestrator_evaluate"
+echo "SUMMARY: project_type=$PROJECT_TYPE runtime=$RUNTIME instruction_file=$INSTRUCTION_FILE config_file=$CONFIG_FILE cap_score=$CAP_SCORE recommended_intensity=$RECOMMENDED_INTENSITY skills_installed=$SKILLS_INSTALLED dual_writes=$DUAL_WRITES knowledge_graph=$KNOWLEDGE_GRAPH next_step=run_orchestrator_evaluate"
 
 # --- 16. M032/P02/T02 — sequential --with-wiki dispatch (FR-11 / MIT-011) ---
 # init outputs are now on disk (instruction file, config.yml, dual-writes,

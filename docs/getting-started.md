@@ -95,6 +95,26 @@ The interactive in-IDE slash commands do **not** need `CURSOR_API_KEY` — only 
 
 ---
 
+## Joining a project that already uses orchestrator (git clone)
+
+Cloning a repo a teammate already set up? You **inherit its entire memory** — milestones, decisions, and accumulated knowledge all live in the committed `.orchestrator/`, so you do **not** re-onboard or re-ideate. But two artifacts don't travel in a clone, so do these three things after pulling:
+
+1. **Install orchestrator** (Step 1 above) so the `/orchestrator-*` commands are registered in your runtime.
+2. **Run `/orchestrator-init` once** in the cloned project. It re-stages the framework runtime tree (`scripts/`/`templates/`/`references/`) if your repo gitignores it, **and rebuilds the knowledge graph** — `knowledge.db` is a generated, gitignored artifact, so it's absent on a fresh clone. One command and the graph is live.
+3. **Run `/orchestrator-doctor`** to confirm. A clean run means you're ready; otherwise it names exactly what's missing (e.g. a `stale-graph-db` symptom prints the precise `rebuild-index.sh` command).
+
+> **Why `init` and not `doctor`?** `doctor` is **read-only by design** — it *diagnoses* (and prints the fix) but never mutates your project. `init` is the command that *wires* things, so it's the one that rebuilds the graph. To rebuild the graph by hand any time, it's just `bash scripts/knowledge/rebuild-index.sh`.
+
+| Layer | What | Travels in the clone? |
+|-------|------|-----------------------|
+| Project memory | `.orchestrator/` (config, `KNOWLEDGE.md`, `DECISIONS.md`, milestones, `KNOWLEDGE-INDEX.md`), `CLAUDE.md` | ✅ Committed |
+| Framework runtime | `scripts/` `templates/` `references/` (staged by the installer) | ⚠️ Your repo's `.gitignore` decides — `init` re-stages it if absent |
+| Generated graph | `knowledge.db` (the SQLite graph) | ❌ Always gitignored — `init` rebuilds it |
+
+> **Repo-owner tip:** pick a convention and note it in your project README. **Always commit `.orchestrator/`** (the project's brain). For the runtime tree, either commit it (teammates then only need install → `init`) or gitignore it (teammates run `init` to re-stage). Either way `knowledge.db` is regenerated on clone — `init` handles it.
+
+---
+
 ## Step 2: Onboard with `/orchestrator-start`
 
 Switch to your project directory and open Claude Code. `/orchestrator-start` is the warm conversational front door: it auto-detects which of four shapes your project is in, calls `/orchestrator-init` under the hood, and routes you into the right onboarding sub-flow.

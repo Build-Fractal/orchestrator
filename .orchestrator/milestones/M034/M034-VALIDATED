@@ -1,0 +1,15 @@
+M034 (interactive review gates) validated 2026-06-06.
+4 phases (P00-P03), all phase suites green.
+validate-milestone.sh: PASS 29/29.
+Phase suites: P01 4/4 + addendum; P02 5/5 + FR-6; P03 4/4.
+check-must-haves: P03 53 PASS / 0 FAIL.
+Success criteria: SC-1..SC-9 verified across P01 (SC-1/SC-2), P02
+(SC-3/SC-4/SC-5/SC-8), P03 (SC-6/SC-9).
+Pre-planning conditions: PC-1/PC-2 cleared at P00; PC-3/PC-4/PC-5 verified at P02;
+PC-6 + #Q-5 resolved at P03 plan-time and verified (SC-6).
+Consolidates M009 FR-6 -> FR-10 (Cursor MCP review-gate server) and
+M009 FR-8 -> FR-15 (byte-parity audit). M009 FR-7 (Cursor cost rate-card) deferred.
+Milestone-close reconciliation: P00/P01/P02 summary key_files normalized to the
+comma-separated / project-root-relative form validate-milestone.sh parses (every
+deliverable already on disk; serialization-only fix surfaced at first validation).
+See M034-SUMMARY.md.

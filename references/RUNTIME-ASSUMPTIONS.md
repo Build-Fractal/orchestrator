@@ -85,6 +85,32 @@ Tier-B parity audit (FR-8) assigns real IDs and runs the
 SHA-256 byte-equality + Tier-3 routing parity, alongside the M018 rows
 above.
 
+## Interactive review primitive (M034)
+
+The interactive review gate (M034) abstracts one runtime question primitive per
+runtime behind the `dispatch-interface.sh --probe-renderer` seam (CON-7). The
+renderer is selected uniformly; the agent in that runtime context issues the
+primitive (AD-3 two-layer dispatch). The deterministic, zero-LLM paths
+(`--test-responses` writer + headless auto-mode policy) are runtime-AGNOSTIC and
+byte-identical across backends — asserted by the FR-15 byte-parity audit
+(`tools/verify/m034-p03-byte-parity.sh`).
+
+### Divergences
+
+| ID | Surface | Divergence | Rationale | M009 Audit Row |
+|----|---------|------------|-----------|-----------------|
+| RA-M034-REVIEW-01 | CC interactive-review primitive | Claude Code surfaces each decision via the in-process `AskUserQuestion` tool (Case A — the already-interactive top-level session, not a `claude -p` subagent); the agent writes `REVIEW.md` directly. | `AskUserQuestion` is a live CC tool reaching the operator's terminal; resolved at P00 PC-2 (`M034-P00-ADDENDUM.md`). | M009-RP-M034-01 (cc-askuserquestion) |
+| RA-M034-REVIEW-02 | Cursor interactive-review primitive | Interactive Cursor surfaces each decision via the orchestrator-owned stdio MCP server's `elicitation/create` request; `action:accept` content is captured to `REVIEW.md`. The server delegates ALL writes to `interactive-review.sh` (single producer). | Cursor advertises `capabilities.elicitation.form` (M009 Q1, findings Addendum (b)); FR-10 server is the renderer. Registered non-clobbering in `.cursor/mcp.json` (CON-6). | M009-RP-M034-02 (cursor-mcp-elicitation) |
+| RA-M034-REVIEW-03 | Headless interactive-review primitive | Headless CC / headless `cursor-agent -p` have no interactive surface; the gate writes a `QUESTIONS.md` hand-off and applies the declared auto-mode policy (`defer`/`accept-with-audit`/`refuse-entry`). Headless Cursor elicitation auto-returns `action:decline`, which maps onto the same policy. | No TTY/form surface in headless (M009 Addendum (b): decline is instant, deterministic, no hang); FR-9 fallback + FR-8 policy. | M009-RP-M034-03 (headless-questions-handoff) |
+
+### M034 parity-fixture handoff
+
+These rows use placeholder audit IDs (`M009-RP-M034-01..03`); the M009 Tier-B
+parity audit assigns real IDs. The FR-15 byte-parity fixture
+(`tools/verify/m034-p03-byte-parity.sh`) runs the deterministic review-gate paths
+under `ORCH_BACKEND=cursor` and asserts SHA-256 equality with the CC paths — the
+`dispatch-interface.sh` parity-fixture convention applied to the review stage.
+
 ## Shape-Guard Carve-Outs (M021 / M028)
 
 The active PreToolUse Bash shape-guard

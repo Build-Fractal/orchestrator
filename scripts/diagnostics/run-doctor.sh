@@ -223,6 +223,7 @@ run_check "Task Plan Shape" "$SCRIPT_DIR/check-plans.sh" "--root $PROJECT_ROOT" 
 run_check "Documentation Completeness" "$SCRIPT_DIR/check-docs.sh" "--root $PROJECT_ROOT" "0"
 run_check "Runtime Instruction Drift" "$SCRIPT_DIR/check-docs.sh" "--check drift --root $PROJECT_ROOT" "1"
 run_check "Corpus-Exhaustion Gate" "$SCRIPT_DIR/check-corpus-exhaustion.sh" "--root $PROJECT_ROOT" "1"
+run_check "Unreviewed Decisions" "$SCRIPT_DIR/check-decisions.sh" "--root $PROJECT_ROOT" "1"
 run_check "Wiki Pages Exposure" "$SCRIPT_DIR/check-wiki-pages-exposure.sh" "--mode doctor --root $PROJECT_ROOT" "1"
 
 # M027/P03/T03 — Anomaly Detection (advisory; FR-8: never blocks autonomous mode).

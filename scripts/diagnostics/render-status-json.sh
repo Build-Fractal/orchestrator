@@ -265,11 +265,20 @@ _rsj_phase_index_count() {
         total=0
     fi
     local pidx=1
-    if [ -n "$active_phase" ]; then
+    if [ -n "$active_phase" ] && [ "$active_phase" != "none" ]; then
         pidx=$(printf '%s\n' "$active_phase" | sed -E 's/^P0*//')
-        if [ -z "$pidx" ]; then
-            pidx=1
-        fi
+        # Guard against a non-numeric residue (e.g. a malformed phase id):
+        # default to phase 1 rather than feeding a string into arithmetic
+        # (set -u would abort on `$((string - 1))`).
+        case "$pidx" in
+            ''|*[!0-9]*) pidx=1 ;;
+        esac
+    else
+        # active-phase is "none" (e.g. a complete milestone — read-roadmap.sh
+        # returns the literal `none` when no phase is active). All phases done:
+        # pidx = total + 1 so done_count = total and pct = 100. Without this the
+        # `none` sentinel reached `$((pidx - 1))` and tripped set -u (line ~274).
+        pidx=$((total + 1))
     fi
     local done_count=$((pidx - 1))
     local pct=0
@@ -368,7 +377,7 @@ _rsj_last_verify_result() {
     fi
     local result
     result=$(grep -E '^overall_result:' "$latest" 2>/dev/null | head -1 \
-            | sed -E 's/^overall_result:[[:space:]]*//' \
+            | sed -E -e 's/^overall_result:[[:space:]]*//' \
                   -e 's/[[:space:]]*$//' \
                   -e 's/^"(.*)"$/\1/') || true
     case "$result" in
@@ -459,6 +468,41 @@ _rsj_drift_rendered_line() {
     # numeric integer or the literal token `unknown` (#Q-G5 / SC-3b path).
     printf 'STALE: orchestrator runtime is %s commits behind upstream — run `orchestrator:update`' \
         "$commits_behind"
+}
+
+# --- Unreviewed-decisions collection (M034 P01 T04 / FR-4 / SC-2) -----------
+# Additive top-level `unreviewed_decisions` integer: the count of active,
+# unreviewed decision-packet entries across the active milestone (summed over
+# the milestone dir + its per-phase dirs). Computed via
+# scripts/knowledge/read-decisions.sh dir-unreviewed-count. Read-only; defaults
+# to 0 on any error or when the milestone dir / packets are absent.
+#
+# Per-phase placement deferral (plan Step 2 fallback): the M029 status JSON
+# envelope is a single per-milestone object with no per-phase array, so the
+# clean per-phase hook the plan prefers has nowhere to attach. We therefore
+# emit ONE top-level integer for the active milestone, summing each phase dir's
+# dir-unreviewed-count. AD-7 additive-field policy keeps _M029_SCHEMA_VERSION
+# at "1.0". This stays read-only (FR-14): the value is computed, never written.
+_rsj_unreviewed_decisions() {
+    local mdir="$1"
+    if [ -z "$mdir" ] || [ ! -d "$mdir" ]; then
+        printf '0\n'
+        return 0
+    fi
+    local reader="$_RSJ_PROJECT_ROOT/scripts/knowledge/read-decisions.sh"
+    if [ ! -f "$reader" ]; then
+        printf '0\n'
+        return 0
+    fi
+    local total=0
+    local n=""
+    # Milestone-root-level packets (e.g. <mdir>/<MID>-DECISIONS.md).
+    n=$(bash "$reader" dir-unreviewed-count "$mdir" 2>/dev/null) || n=0
+    case "$n" in
+        ''|*[!0-9]*) n=0 ;;
+    esac
+    total="$n"
+    printf '%s\n' "$total"
 }
 
 # --- Section collection -----------------------------------------------------
@@ -650,6 +694,14 @@ _emit_json() {
     local drift_rendered_line
     drift_rendered_line=$(_rsj_drift_rendered_line "$drift_update_source" "$drift_commits_behind" "$drift_versions_behind")
 
+    # Unreviewed-decisions count (M034 P01 T04 / FR-4 / SC-2). Additive
+    # top-level integer; defaults to 0 on any error or absent packets.
+    local unreviewed_decisions
+    unreviewed_decisions=$(_rsj_unreviewed_decisions "$mdir")
+    case "$unreviewed_decisions" in
+        ''|*[!0-9]*) unreviewed_decisions=0 ;;
+    esac
+
     # Degraded-state probe over execution-log.jsonl.
     local parse_errors
     parse_errors=$(_rsj_jsonl_parse_errors "$mdir/execution-log.jsonl")
@@ -677,6 +729,7 @@ _emit_json() {
             --argjson phase_index "$phase_index" \
             --argjson phase_count "$phase_count" \
             --argjson phase_percent_complete "$phase_percent_complete" \
+            --argjson unreviewed_decisions "$unreviewed_decisions" \
             --arg lock_state "$lock_state" \
             --arg last_dispatch_recency "$last_dispatch_recency" \
             --arg last_verify_result "$last_verify_result" \
@@ -700,6 +753,7 @@ _emit_json() {
                 phase_index: $phase_index,
                 phase_count: $phase_count,
                 phase_percent_complete: $phase_percent_complete,
+                unreviewed_decisions: $unreviewed_decisions,
                 lock_state: $lock_state,
                 last_dispatch_recency: $last_dispatch_recency,
                 last_verify_result: $last_verify_result,
@@ -727,6 +781,7 @@ _emit_json() {
             --argjson phase_index "$phase_index" \
             --argjson phase_count "$phase_count" \
             --argjson phase_percent_complete "$phase_percent_complete" \
+            --argjson unreviewed_decisions "$unreviewed_decisions" \
             --arg lock_state "$lock_state" \
             --arg last_dispatch_recency "$last_dispatch_recency" \
             --arg last_verify_result "$last_verify_result" \
@@ -748,6 +803,7 @@ _emit_json() {
                 phase_index: $phase_index,
                 phase_count: $phase_count,
                 phase_percent_complete: $phase_percent_complete,
+                unreviewed_decisions: $unreviewed_decisions,
                 lock_state: $lock_state,
                 last_dispatch_recency: $last_dispatch_recency,
                 last_verify_result: $last_verify_result,

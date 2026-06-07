@@ -871,13 +871,15 @@ _bc_apply_knowledge_filter() {
   out_file="$TMPDIR_BUILD/_filter_out.md"
   kf_read_drop_list "$PROJECT_ROOT" > "$drop_list_file"
   printf '%s\n' "$stream" | kf_filter_stream "$drop_list_file" "$stats_file" > "$out_file"
-  # Detect empty-after-filter: no `^---$` frontmatter delimiters in output.
-  local fm_count
-  fm_count="$(grep -cE '^---$' "$out_file" 2>/dev/null || true)"
-  if [ -z "$fm_count" ]; then
-    fm_count=0
+  # Detect empty-after-filter by counting entry markers: a frontmatter fence
+  # (`^---$`) OR a flat `## K###` heading (M044/FR-2 — flat-only streams carry no
+  # `---`, so the old `^---$`-only count falsely nulled valid flat entries).
+  local entry_marker_count
+  entry_marker_count="$(grep -cE '^---$|^## ' "$out_file" 2>/dev/null || true)"
+  if [ -z "$entry_marker_count" ]; then
+    entry_marker_count=0
   fi
-  if [ "$fm_count" -eq 0 ]; then
+  if [ "$entry_marker_count" -eq 0 ]; then
     printf '(no qualifying knowledge entries)\n'
   else
     cat "$out_file"

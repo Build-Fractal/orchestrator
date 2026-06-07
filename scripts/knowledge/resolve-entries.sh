@@ -41,8 +41,13 @@ for entry_id in $ids; do
   found=false
   for file in "$root"/knowledge/*/"${entry_id}.md"; do
     if [ -f "$file" ]; then
-      case "$file" in
-        */archive/*) continue ;;
+      # M044/FR-4: scope the archive skip to the knowledge/ subtree (relative
+      # path), not the absolute path — preserve the genuine knowledge/archive/
+      # exclusion (CON-4) without zeroing a project rooted under a dir named
+      # `archive` (B-4).
+      rel_knowledge="${file#$root/knowledge/}"
+      case "$rel_knowledge" in
+        archive/*|*/archive/*) continue ;;
       esac
       # Add blank line separator between entries (not before the first one)
       if [ "$first" = true ]; then

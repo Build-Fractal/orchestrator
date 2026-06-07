@@ -1,0 +1,85 @@
+# Framework-Steward — Final Disputes & Convergence
+
+*Reviewer: framework-steward (smallest-correct-change / constitution alignment / roadmap coherence with M040-M034-M038 / determinism-is-a-feature).*
+*Phase: final statement before synthesis. Cooperative mode. Read: pipeline-reliability/revision.md, activation-loop/revision.md, my own revision.md, constitution v2.3.0, M040 brief.*
+*Date: 2026-06-06.*
+
+---
+
+### Remaining Disputes
+
+The deliberation converged unusually hard — all three of us moved toward the same shape (proven-bug P0 milestone-independent; G-1 capture slice into P0; capture command = M040's existing verb; graduation-not-live-read; deterministic-grep floor). What remains are not *open contradictions* but three **governance guardrails I will not let synthesis soften into "ship it broad."** Each is a place where a plausible synthesis could quietly drop the constraint and re-introduce a constitution violation under hotfix urgency. I hold these as non-conceding because both other agents *accepted* them in revision, so any synthesis that omits them is a regression against the achieved consensus, not a live disagreement.
+
+**Dispute: capture-cost-is-free-but-INJECT-must-stay-budgeted-and-scoped** —
+My claim: the G-1 capture primitive (one `append-decision.sh` row-append at Quick) ships P0 *unbudgeted* because a disk write carries zero Principle-I cost — but the **read-side** (FR-6 Quick decisions digest, and every grep-fallback retrieval) MUST route through the M036a token-budget governor (SC-3/SC-7), and capture-by-default must remain scoped to **EXPLICIT operator/SME decisions**, never an "auto-capture all knowledge at Quick" firehose (my revision Rec 7; New Rec A scope-boundary; Scope Discipline §"Context-Minimization on the ungoverned grep firehose").
+Opposing position(s): no agent now opposes this — pipeline-reliability explicitly adopted it ("budget-bound every grep-fallback path through the M036a governor," their New Rec; revision Rec 1b) and activation-loop conceded the inject side fully ("I fully concede the *inject* side to steward's budget framing"; revision Rec 2). The residual risk is a *synthesis* that reads "capture-by-default in P0" and flattens the capture/inject distinction back into one unbudgeted flip.
+Evidence vs advocacy: evidence — Principle I's amended text ("minimize *total task tokens*… A future execution path that proposes bypassing the knowledge graph + compression pipeline MUST justify with empirical token data") plus M031's deliberately right-sized Quick profile. The M036a governor (SC-3/SC-7) already exists; this reuses it, no new machinery.
+Why I will not concede: a fail-loud fix with no inject budget trades a silent under-load for a silent over-load — *two* Principle-I violations wearing a fix's clothes. This is the one place where "make activation reliable" can directly contradict "keep Quick right-sized," and the resolution is mechanical, not philosophical.
+Counter-argument: "a digest is small; budgeting it is speculative complexity (Principle XIV)." Rebuttal: the governor call is one existing function, not a new abstraction; and the unbounded grep-over-raw-files path is provably *not* small when the corpus is large — that is the firehose, not a hypothetical.
+Proposed resolution path: synthesis states two separate sentences — (1) "explicit-decision capture at Quick ships P0, unbudgeted (disk write, zero inject cost), scoped to operator/SME decisions only"; (2) "every read-into-payload path — FR-6 digest, FR-5/FR-12/FR-14 grep retrieval — routes through the M036a governor; the index-free regression asserts hits *within budget*."
+
+**Dispute: FR-12 corpus-gate stays ADVISORY-default with per-seam XIV justification — no cross-cutting "default-on everywhere" hard flip** —
+My claim: corpus-exhaustion gating bakes into entry points *advisory-default*, with a dispatch-refusing **hard** gate reserved for `comments` spec-amendment only, each new seam carrying an explicit Principle-XIV justification at plan time, shipped incrementally — not a blanket "hard-on across all question paths" flip (my revision Rec 9, held Surviving; Scope Discipline §"Principle-XIV gating on FR-12").
+Opposing position(s): none in opposition — pipeline-reliability ("near-zero on the policy outcome") and activation-loop ("we do not actually conflict… adopt steward's advisory-default + comments-only-hard-gate") both converged. The dispute I preserve is against a *synthesis miscount*: the brief's DQ-5 ("hard vs advisory") plus FR-12's "default-on… on the entry points that consume feedback or emit human-facing questions" could be read as license for a global hard gate.
+Evidence vs advocacy: evidence — Principle XIV ("No features beyond what was asked… 'flexibility' that was not requested… requires justification") and the standing single-point-of-failure logic (a global hard gate converts fail-open into fail-closed-blocking). My three independent justifications (XIV speculative-complexity, pipeline-reliability's SPOF, activation-loop's grep-floor mechanism) *stack* — they are not three votes for the same thing to be double-counted as agreement-on-strength.
+Why I will not concede: a default-on hard gate across `discuss`/`specify`/`plan-phase`/`materials-intake` is exactly the unrequested cross-cutting complexity Principle XIV forbids, and it would block dispatch on a degraded corpus — re-creating the single-point-of-failure that P-B (index-as-cache) exists to dissolve.
+Counter-argument: "operators explicitly value not being asked already-answered questions (DQ-5), so hard-gate everywhere." Rebuttal: advisory *surfacing* of the already-answered finding delivers that value without the blocking failure mode; the hard gate is justified only where a wrong human action is durably costly (`comments` spec-amendment).
+Proposed resolution path: synthesis resolves DQ-5 as "advisory-default everywhere; hard-gate only on `comments`; each seam ships incrementally with a one-line XIV justification at plan time; the deterministic-grep evidence artifact is mandatory on every seam."
+
+**Dispute: whatever capture command ships MUST be M040's `/orchestrator-capture` + `/orchestrator-promote` — no net-new verb, and the COMMAND UX is M040-track, not P0** —
+My claim: FR-7 is *not* a new `orchestrator:note`/`:decide` command; it is M040's already-on-disk `/orchestrator-capture` (§95-99) + `/orchestrator-promote --to=mem|decision|task` (§111-114), extended with round-trip-confirmation + local decision-vs-knowledge classification. The discoverable command UX ships on the M040 track (new install-surface + docs + runtime-parity obligation = build-shaped, not hotfix-shaped); only the *underlying write primitive* (G-1 one-liner) + the *confirmation mechanism* ride P0 (my revision Rec 4; New Rec A scope-boundary; Scope Discipline §"No new top-level capture command").
+Opposing position(s): activation-loop **conceded the command name fully** ("I withdraw the new-command name… FR-7 now extends M040's already-on-disk /orchestrator-capture + /orchestrator-promote"; revision Rec 5) and conceded the UX ship-window to M040-track. No live opposition. The dispute I preserve is against a synthesis that, seeing "capture-by-default in P0," mints or implies a *new command in the hotfix* — which would create two parallel capture loops the day M040 enters the queue (a Single-Source-of-Truth-for-commands / Principle XI violation).
+Evidence vs advocacy: evidence — M040 §95-99 + §111-114 specify the command, storage paths, and frontmatter on disk *now*; Principle XI ("exactly one authoritative location"); Principle VIII (no dead infrastructure — a second capture verb retired the moment M040 ships is dead-on-arrival).
+Why I will not concede: this is the roadmap-coherence core of my lane. M040/M034/M038 share the capture/decision-packet/section-binding primitive; minting a hotfix command fractures that shared primitive and pre-commits an absorption decision the roadmap explicitly defers to queue-entry time.
+Counter-argument: "M040's trigger hasn't fired (only #2+#3, not #4's ≥5 reports), so its command may never ship — P0 needs its own." Rebuttal: correct on the trigger (I corrected my own #4 error to #2+#3 in revision Rec 5), and that is *exactly why* the P0 hotfix ships the *primitive* (the `append-decision.sh`-at-Quick call) on a committed timeline while the *command name* is reserved for M040. Primitive now, verb later — no fork.
+Proposed resolution path: synthesis states "P0 ships the explicit-capture write primitive + round-trip-confirmation mechanism; the discoverable capture *command* is M040's existing `/orchestrator-capture`+`/orchestrator-promote`, shipped on the M040 track; no net-new capture verb is created in the hotfix."
+
+---
+
+### Convergence
+
+**Converged: deterministic-grep is the activation floor; embeddings additive-only (DQ-2 RESOLVED, not open)** —
+Shared position (actionable): the index-free deterministic grep over raw `knowledge/**/*.md` is *the* activation guarantee and the sole input to the corpus-gate evidence artifact; embeddings, if ever added, are additive recall that never gates and never enters the receipt; nondeterminism vectors forbidden (`LC_ALL=C`, no wall-clock fields in artifact body, stable file ordering).
+Agreeing agents: all three — pipeline-reliability (revision Rec 6, "strengthened to a resolved invariant"), activation-loop (revision Rec 10, both rationales), framework-steward (revision Rec 3). Both other agents flagged the *mislabel risk* explicitly so synthesis does not record a fork.
+Strength: very high — three independent derivations (Principle IX reproducibility / round-trip same-instant confirmation / fail-loud trust receipt) reach one invariant.
+Path to convergence: record DQ-2 as **jointly resolved consensus** citing all three reviews; do not carry it as a surviving open question.
+
+**Converged: proven bugs (B-1..B-5) + BUG A (B-3) ship P0, milestone-independent** —
+Shared position (actionable): the §7 cleave axis holds; B-1..B-5 are file:line-verified proven defects and ship as a P0 hotfix independent of any milestone sequencing; B-3 (format mismatch) is foregrounded as co-primary using the cache-vs-source-of-truth ranking (raw-store-unreadable > index-absent).
+Agreeing agents: all three — activation-loop (revision Rec 1, Hold; "zero daylight"), pipeline-reliability (revision §"What remains fixed"), framework-steward (revision Rec 1, New Rec B; "zero daylight between us on this being a proven P0 bug").
+Strength: very high — never genuinely in dispute; only B-3's *foregrounding* moved, at zero blast radius.
+Path to convergence: P0 set = FR-1,2,3,4,5(budgeted),6,11,15 + the G-1 explicit-capture slice; the unguarded-pipeline audit is a *bounded grep-enumeration artifact* (rebuild-index.sh + direct libs only; fix-only-the-reproduced, justify-and-track the rest).
+
+**Converged: capture command = M040's design; `.orchestrator/` is system-of-record via GRADUATION, live-read cut** —
+Shared position (actionable): no net-new capture verb — FR-7 = M040's `/orchestrator-capture`+`/orchestrator-promote`; `.orchestrator/` is the system of record reached by *graduation* into it, with live-runtime-memory-read **cut entirely** (deferred to M009-era runtime-memory-adapter work), not kept as opt-in; divergence is made *loud* in the hotfix (FR-15 0-MEM warning + doctor check) and *impossible* in the M040-track graduation build.
+Agreeing agents: all three — activation-loop withdrew both the new-command name *and* live-read (revision Recs 4, 5); pipeline-reliability reached graduation-over-live-read from the determinism angle; framework-steward (revision Recs 4, 6; live-read out of scope on Principle VI / runtime-agnostic posture).
+Strength: high — activation-loop's clean concession of its two genuine over-reaches (minting a command, coupling dispatch to a runtime memory shape) closed this.
+Path to convergence: synthesis states graduation-only on the guarantee path; live-read explicitly out of scope (M009); the enforcement clause (0-MEM warning + doctor check) is fully satisfiable without any live-read coupling.
+
+**Converged: one consolidated `doctor` knowledge-gap check (three symptoms), reconciled with the queued paper-cut** —
+Shared position (actionable): a single `orchestrator:doctor` check (one owner) covers (1) 0-MEM inject on a mature project (FR-15), (2) a second vestigial index/db exists (pipeline-reliability Rec 10, folded via FR-11), (3) runtime-memory decisions absent from `.orchestrator/` (FR-9 enforcement half) — reconciled with `papercut-doctor-knowledge-gap-surface.md`, no second overlapping doctor surface.
+Agreeing agents: all three — framework-steward (revision Rec 8), pipeline-reliability (revision Rec 10, "route the no-vestigial-index assertion into the same consolidated doctor check"), activation-loop (enforcement clause, revision Rec 4).
+Strength: high — grounded in Principle VIII (No Dead Infrastructure) + XI (Single Source of Truth).
+Path to convergence: synthesis names one check, one owner, three symptoms; FR-15 reconciles-or-supersedes the paper-cut before intake.
+
+**Converged: byte-equality fixtures are the default, sequenced to schema-settledness; round-trip oracle is a separate dynamic lane** —
+Shared position (actionable): byte-equality fixtures ship P0 for the schema-settled deterministic surfaces (`INDEXED:/SKIPPED:` summary, path-collision index count, freshness flag, B-3 round-trip resolution); the provenance-header byte-fixture ships P1 *with* its schema (you cannot byte-lock an unsettled contract); the round-trip oracle (writes → rebuilds → greps → asserts) is a *separate dynamic* assertion lane that must not be forced into a frozen-corpus fixture — same determinism discipline, different shape; the oracle asserts against the *observed awk field indices*, not the documented column order.
+Agreeing agents: all three — pipeline-reliability (revision Rec 3), activation-loop (revision Rec 6, New-2), framework-steward (New Rec C). The byte-equality *default* is the framework's hard-won V1.x lesson; only per-surface timing is corrected.
+Strength: high.
+Path to convergence: split harness — static byte-equality fixtures (P0, schema-settled) + provenance-header fixture (P1, with schema) + dynamic round-trip oracle (P0, coverage on a Quick-default fixture project + byte-assert the written row).
+
+---
+
+### Final Position Statement
+
+**Non-Negotiables**
+
+1. **Inject-side budget governance + capture-scoping (Principle I).** The G-1 capture write ships P0 unbudgeted (free disk write) and **scoped to explicit operator/SME decisions only** — never an auto-capture-all-knowledge firehose. Every *read-into-payload* path (FR-6 digest; FR-5/FR-12/FR-14 grep retrieval) routes through the existing M036a token-budget governor; the index-free regression asserts hits *within budget*. Why: this is the single seam where "make activation reliable" can directly violate "keep Quick right-sized" (M031); the fix is mechanical and reuses an existing governor — conceding it trades a silent under-load for a silent over-load, two Principle-I violations.
+
+2. **No net-new capture verb; live-read out of scope (Principles XI, VI, VIII; M040/M034/M038 roadmap coherence).** The hotfix ships the capture *primitive* + confirmation *mechanism* only; the discoverable capture *command* is M040's already-on-disk `/orchestrator-capture`+`/orchestrator-promote`. Live-runtime-memory-read is cut entirely (deferred to M009). Why: minting a hotfix command forks the shared capture/decision-packet/section-binding primitive that M040/M034/M038 deliberately hold in common, and pre-commits an absorption decision the roadmap defers to queue-entry time; live-read couples dispatch to a CC-specific `MEMORY.md` shape and fires latent debt the moment a non-CC user arrives.
+
+**Flexibility**
+
+1. **FR placement on the P0/P1 line — flexible on granularity, firm on the axis.** I moved my own cleave from "bug vs feature" to "local primitive vs UX wrapper," pulling the G-1 slice and FR-9 enforcement-warning into P0. I am flexible on exactly which sub-items land where, provided the invariant is preserved: **a default (Quick) project must not ship a Decisions slot that is empty-forever** — FR-6 (inject) and the G-1 capture half land in the *same change set*, so the loud 0-MEM alarm (FR-15) points at a populated store, never certifies an empty one as "activated."
+
+2. **Audit and fixture *scope* — flexible on breadth, firm on the bound.** The unguarded-pipeline audit may enumerate as widely as is cheap, but *fixing* a non-`:117` pipeline is P0 only with a reproduced failure (Principle XV Surgical Precision); the rest are justified-and-tracked rows. Byte-equality fixtures may cover more surfaces over time, but no fixture byte-locks an unsettled schema (the provenance header waits for its P1 contract). I am flexible on how much ships when, firm that neither balloons a one-line guard into a multi-file refactor nor freezes a contract before it exists.

@@ -13,6 +13,7 @@ Run diagnostic checks across all orchestrator subsystems to detect anomalies and
 3. **Scope Issues**: Entries with no scope tags (injected into all dispatches)
 4. **Cost Spikes**: Tasks costing >5x the average for their complexity tier
 5. **Runtime Instruction Drift**: `CLAUDE.md` and `AGENTS.md` marker-bounded region comparison (FR-13 advisory in v1). Detects missing regions, byte-divergence between matching regions, and unmatched markers. Surfaces findings under a `Runtime Instruction Drift` section in the doctor output; warnings count as advisory (do not fail the overall health status) until a future milestone escalates.
+6. **Knowledge Activation** (M044/FR-15, `scripts/diagnostics/check-knowledge-activation.sh`): the single consolidated knowledge-activation check. Reports three silent-degradation symptoms in one surface — `0-mem-on-mature` (a mature project whose `KNOWLEDGE-INDEX.md` carries zero MEM entries — the load-bearing alarm, `status=fail`), `vestigial-index` (a divergent `.orchestrator/KNOWLEDGE-INDEX.md` shadowing the canonical `get_index_path()` copy, `warn`), and `runtime-memory-divergence` (decision-shaped notes in an execution log while `DECISIONS.md` is empty, `warn`). Emits `DOCTOR:KNOWLEDGE_ACTIVATION status=ok|warn|fail symptoms=<csv|none>`; advisory in the score. This is the **single** knowledge-activation doctor surface — `papercut-doctor-knowledge-gap-surface.md`'s negative-space density check, if shipped, lands as a 4th symptom here, never as a parallel surface (CON-5).
 
 ## Runtime Instruction Drift
 

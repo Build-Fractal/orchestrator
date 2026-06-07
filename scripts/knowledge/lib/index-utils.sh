@@ -35,7 +35,11 @@ get_project_root() {
   echo "$dir"
 }
 
-# Get the index file path
+# Get the index file path.
+# CANONICAL RESOLVER (M044/FR-11): this is the single source of truth for the
+# KNOWLEDGE-INDEX.md path. The db-path twin is get_db_path() in
+# scripts/knowledge/lib/graph-db.sh. Every index reader MUST route through these
+# — no hardcoded "$root/KNOWLEDGE-INDEX.md" joins. Honors exported PROJECT_ROOT.
 get_index_path() {
   local root
   root="$(get_project_root)"
@@ -257,8 +261,13 @@ emit_spec_chunks_section() {
     if [ ! -f "$f" ]; then
       continue
     fi
-    case "$f" in
-      */archive/*)
+    # M044/FR-4: scope the archive skip to the knowledge/ subtree (relative path),
+    # not the absolute path — a project rooted under a dir named `archive` must
+    # still index its spec chunks. Preserves the genuine knowledge/**/archive/
+    # exclusion (CON-4). (Third B-4 site surfaced by the P03 bounded audit.)
+    rel_knowledge="${f#$knowledge_dir/}"
+    case "$rel_knowledge" in
+      archive/*|*/archive/*)
         continue
         ;;
     esac

@@ -741,10 +741,12 @@ kf_filter_stream() {
   in_file="$(mktemp 2>/dev/null || printf '/tmp/kf_in_%d' "$$")"
   out_file="$(mktemp 2>/dev/null || printf '/tmp/kf_out_%d' "$$")"
   cat > "$in_file"
-  # Pass: split entries on the boundary between a closing `---` and the next
-  # opening `---`. Because resolve-entries.sh separates entries with a single
-  # blank line, we detect entry start by `^---$` lines whose pair-position is
-  # 1 (mod 2).
+  # Pass: split entries on either (a) the boundary between a closing `---` and
+  # the next opening `---` (frontmatter entries, detected by `^---$` lines whose
+  # pair-position is 1 (mod 2)), or (b) a top-level `## ` heading (flat
+  # `## K###` knowledge entries, which carry no frontmatter — M044/FR-2). A
+  # frontmatter entry`s own heading (the first `# ` / `## ` line after its
+  # closing fence) stays bound to it so superseded-entry drop covers heading+body.
   awk -v dlf="$drop_list_file" -v stf="$stats_file" '
     BEGIN {
       while ((getline d < dlf) > 0) {
@@ -756,6 +758,7 @@ kf_filter_stream() {
       buf = ""
       in_fm = 0
       fm_seen = 0
+      heading_seen = 0
       status_val = ""
       entry_id = ""
       dropped_count = 0
@@ -776,6 +779,7 @@ kf_filter_stream() {
           buf = line "\n"
           in_fm = 1
           fm_seen = 1
+          heading_seen = 0
           status_val = ""
           entry_id = ""
           next
@@ -785,6 +789,41 @@ kf_filter_stream() {
           in_fm = 0
           next
         }
+      }
+      # M044/FR-2 (B-5): flat `## K###` entry boundary. A `## ` heading at top
+      # level (outside frontmatter) starts a new entry — flush the prior buffer
+      # first — EXCEPT the first `## ` heading immediately after a closing `---`
+      # fence, which is the current frontmatter entry`s own heading and must stay
+      # bound to it (so a superseded frontmatter entry drops heading+body, not
+      # just its frontmatter). Flat entries carry no `status:`, so decide() keeps
+      # them. Without this, a flat entry trailing a dropped frontmatter entry was
+      # glued on and silently dropped with it.
+      if (in_fm == 0 && line ~ /^## /) {
+        if (fm_seen == 1 && heading_seen == 0) {
+          # This frontmatter entry`s own heading — keep it with the entry.
+          buf = buf line "\n"
+          heading_seen = 1
+          next
+        }
+        # New flat entry boundary.
+        if (buf != "") {
+          decide(buf, status_val, entry_id)
+        }
+        buf = line "\n"
+        in_fm = 0
+        fm_seen = 0
+        heading_seen = 1
+        status_val = ""
+        entry_id = ""
+        next
+      }
+      # Mark a frontmatter entry`s own heading as consumed once we pass it (its
+      # title is a single-hash `# MEM###` line right after the closing fence).
+      # This lets the next `## ` line be recognized as a NEW flat entry rather
+      # than absorbed as this entry`s heading (M044/FR-2 — without it, a flat
+      # entry trailing a single-hash-headed frontmatter entry was glued on).
+      if (in_fm == 0 && fm_seen == 1 && heading_seen == 0 && line ~ /^# /) {
+        heading_seen = 1
       }
       # Append every other line to the current entry buffer.
       buf = buf line "\n"

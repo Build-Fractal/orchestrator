@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Version](https://img.shields.io/badge/version-v0.9.8-green.svg)](./CHANGELOG.md)
-[![Runtime](https://img.shields.io/badge/runtime-Claude%20Code-orange.svg)](./packaging/install/install-claude-code.sh)
+[![Runtime](https://img.shields.io/badge/runtime-Claude%20Code%20%2B%20Cursor-orange.svg)](#try-it-with-zero-commitment)
 [![Spec-driven](https://img.shields.io/badge/spec--driven-development-purple.svg)](./docs/why-this-exists.md)
 
 **Agents dispatch with only the context they need — your decisions, conventions, and related code — never from zero; and every task passes mechanical verification before it counts as done.**
@@ -81,6 +81,20 @@ cd orchestrator && bash packaging/install/install-claude-code.sh --project-dir /
 
 Installing registers the `/orchestrator-*` skills globally in Claude Code. Then, **in your project, open Claude Code and run `/orchestrator-start`** — the warm onboarding front door (or `/orchestrator-init` for the bare scaffold). The `orchestrator` binary itself is just `--version` / `--help`; the real surface is the Claude Code skills.
 
+> ### 🟣 On Cursor? (early, Tier-A)
+>
+> Cursor has **native, working support** — the same `/orchestrator-*` commands, no compromise on the core loop. You get slash commands under `.cursor/commands/`, an always-on operating rule, the safety shape-guard wired into Cursor's `beforeShellExecution` hook, a git pre-commit gate, and a `cursor-agent` dispatch backend for autonomous runs. Install it **per-project** (Cursor is project-scoped):
+>
+> ```bash
+> git clone https://github.com/Build-Fractal/orchestrator.git
+> cd orchestrator
+> bash packaging/install/install-cursor.sh --project-dir /path/to/your-project
+> ```
+>
+> Then **open that project in Cursor and run `/orchestrator-start`** — exact same first step as Claude Code. The in-IDE slash commands work as-is; autonomous (`cursor-agent`) dispatch additionally needs the `cursor-agent` CLI on your PATH and `CURSOR_API_KEY` set.
+>
+> **Honest scope:** Tier-A is real, tested support, *not* a stub — but it's **early, and you're a dogfooder.** The IDE command surface and autonomous dispatch are live today; richer extras (interactive in-IDE review gates, per-run cost accounting) are Tier-B and ship when demand arrives. If anything feels off, **[tell us](#hit-a-snag-tell-us) — your reports are what move Cursor from Tier-A to full parity.**
+
 **Updating** is one line, and `orchestrator:update` auto-detects how you installed:
 
 ```bash
@@ -89,7 +103,7 @@ brew upgrade orchestrator                    # Homebrew installs
 /orchestrator-update                         # from inside any project (dispatches to the right channel)
 ```
 
-(Requires Bash 3.2+, git, and optionally jq. macOS + Linux; Windows is fail-closed by design. Codex CLI and Cursor installers exist with the same flags; multi-runtime parity is a demand-driven post-launch fast-follow.)
+(Requires Bash 3.2+, git, and optionally jq. macOS + Linux; Windows is fail-closed by design. **Claude Code** is the primary runtime; **Cursor** has native early (Tier-A) support — see the callout above. A Codex CLI installer exists with the same flags; full byte-parity across runtimes is a demand-driven fast-follow.)
 
 ---
 
@@ -142,11 +156,31 @@ Each command below assumes you've [installed](docs/getting-started.md) and are i
 
 ## Status & credibility
 
-**v0.9.8** — published across npm / Homebrew / curl, in production use and **dogfooded daily on its own development**. Dozens of milestones closed (latest: M034 interactive review gates, 2026-06-06; M043 Cloudflare Pages + Access wiki-deploy target, 2026-06-05; M042 `/orchestrator-corpus-gate`, 2026-05-30; M041 `/orchestrator-detective`, 2026-05-25); the packaging & distribution launch event shipped 2026-05-09. Next up is a demand-driven post-launch fast-follow queue (M009 multi-runtime parity; M023 design layer; the M038+M040 paired slot).
+**v0.9.8** — published across npm / Homebrew / curl, in production use and **dogfooded daily on its own development**. Dozens of milestones closed (latest: M044 knowledge-activation reliability, 2026-06-07; M034 interactive review gates, 2026-06-06; M043 Cloudflare Pages + Access wiki-deploy target, 2026-06-05; M042 `/orchestrator-corpus-gate`, 2026-05-30; M041 `/orchestrator-detective`, 2026-05-25); the packaging & distribution launch event shipped 2026-05-09. **Cursor support landed at Tier-A (M009, 2026-06-06)** — native commands + dispatch backend + hooks, now in early dogfooding. Next up is a demand-driven post-launch fast-follow queue (M009 Tier-B full Cursor parity; M023 design layer; the M038+M040 paired slot).
 
 Full audit trail: [`.orchestrator/milestone-summary.md`](./.orchestrator/milestone-summary.md) · engineering changelog: [`CHANGELOG.md`](./CHANGELOG.md).
 
 Governed by 15 constitutional principles ([`.orchestrator/memory/constitution.md`](./.orchestrator/memory/constitution.md)) — e.g. *Evidence Before Claims* (no task closes without fresh verification) and *Knowledge Compounds* (every phase emits docs that make the next cheaper). The full rationale and the prior failures these codify live in [why-this-exists](docs/why-this-exists.md).
+
+---
+
+## Hit a snag? Tell us
+
+**Especially if you're on Cursor** — you're early, and your reports are what shape the support. Reporting takes about 30 seconds:
+
+| What | Where |
+|---|---|
+| 🐞 Something's broken | **[Open a bug report →](https://github.com/Build-Fractal/orchestrator/issues/new?template=bug_report.yml)** |
+| 💡 Want a feature | [Open a feature request →](https://github.com/Build-Fractal/orchestrator/issues/new?template=feature_request.yml) |
+| ❓ How-to / "is this normal?" | [GitHub Discussions →](https://github.com/Build-Fractal/orchestrator/discussions) (not the issue tracker) |
+| 🔒 Security issue | [Private advisory →](https://github.com/Build-Fractal/orchestrator/security/advisories/new) — please don't open a public issue |
+
+Two things make any report instantly actionable — the bug template asks for both:
+
+1. **Your runtime** — Claude Code or Cursor (+ install channel).
+2. **The output of `/orchestrator-doctor`** — it's read-only and safe to run anytime; paste what it prints.
+
+That's it. No reproduction wizardry required — a one-paragraph "I ran X, expected Y, got Z" plus those two lines is a great report.
 
 ---
 
@@ -155,7 +189,8 @@ Governed by 15 constitutional principles ([`.orchestrator/memory/constitution.md
 | You are… | Go here |
 |---|---|
 | **Skeptical** — want the "why" before you commit | → [Why this exists](docs/why-this-exists.md) |
-| **Ready to install** and run your first command | → [Getting Started](docs/getting-started.md) |
+| **Ready to install** (Claude Code or Cursor) | → [Getting Started](docs/getting-started.md) |
+| **On Cursor** and want the full setup | → [Getting Started → Cursor](docs/getting-started.md#on-cursor-early-tier-a) |
 | **Coming from spec-kit** with existing artifacts | → [Migrating from spec-kit](docs/migrating-from-speckit.md) |
 
 **Want to contribute?** → [CONTRIBUTING.md](CONTRIBUTING.md) (dev setup, tests, conventions). Maintainers cutting a release → [Releasing](references/RELEASING.md).

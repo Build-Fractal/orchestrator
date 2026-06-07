@@ -139,6 +139,37 @@ deps_match() {
 # ========================================================================
 # Knowledge filtering
 # ========================================================================
+# _sf_tag_includes <scope_tag> <full_line> — echoes "true" if the tag is in the
+# active scope (FILTER_TAG literal mode, or MILESTONE_ID/PHASE_ID derivation),
+# else "false". Single source for the scope-resolution rule shared by both the
+# `## K###` heading branch and the M044/FR-2 standalone scoped-bullet branch.
+_sf_tag_includes() {
+  local scope_tag="$1" full_line="$2"
+  if [[ -n "$FILTER_TAG" ]]; then
+    # M036/P05: literal-tag mode (operator-asserted scope-by-tag). `grep -qF` is
+    # fixed-string — bracket characters in $FILTER_TAG are NOT treated as regex.
+    if echo "$full_line" | grep -qF "$FILTER_TAG"; then echo true; else echo false; fi
+    return 0
+  fi
+  if [[ -z "$scope_tag" ]]; then echo true; return 0; fi          # no tag → project-level
+  if [[ "$scope_tag" = "[project]" ]]; then echo true; return 0; fi
+  if echo "$scope_tag" | grep -qE '^\[milestone:'; then
+    local tag_milestone
+    tag_milestone=$(echo "$scope_tag" | sed 's/\[milestone://' | sed 's/\]//')
+    if [[ "$tag_milestone" = "$MILESTONE_ID" ]]; then echo true; else echo false; fi
+    return 0
+  fi
+  if echo "$scope_tag" | grep -qE '^\[phase:'; then
+    local tag_scope tag_milestone tag_phase
+    tag_scope=$(echo "$scope_tag" | sed 's/\[phase://' | sed 's/\]//')
+    tag_milestone=$(echo "$tag_scope" | cut -d/ -f1)
+    tag_phase=$(echo "$tag_scope" | cut -d/ -f2)
+    if [[ "$tag_milestone" = "$MILESTONE_ID" && "$tag_phase" = "$PHASE_ID" ]]; then echo true; else echo false; fi
+    return 0
+  fi
+  echo false
+}
+
 filter_knowledge() {
   local include=false
   local in_entry=false
@@ -162,39 +193,22 @@ filter_knowledge() {
       # (strict superset — pre-P05 patterns continue to match unchanged).
       local scope_tag
       scope_tag=$(echo "$line" | grep -oE '\[[a-z]+:[A-Za-z0-9/_.-]+\]|\[project\]' || true)
-
-      if [[ -n "$FILTER_TAG" ]]; then
-        # M036/P05: literal-tag mode (operator-asserted scope-by-tag).
-        # Bypasses MILESTONE_ID/PHASE_ID derivation. `grep -qF` is fixed-string
-        # match — bracket characters in $FILTER_TAG are NOT treated as regex.
-        if echo "$line" | grep -qF "$FILTER_TAG"; then
-          include=true
-        else
-          include=false
-        fi
-      elif [[ -z "$scope_tag" ]]; then
-        # No scope tag — include by default (project-level)
-        include=true
-      elif [[ "$scope_tag" = "[project]" ]]; then
-        include=true
-      elif echo "$scope_tag" | grep -qE '^\[milestone:'; then
-        # Extract milestone from tag
-        local tag_milestone
-        tag_milestone=$(echo "$scope_tag" | sed 's/\[milestone://' | sed 's/\]//')
-        if [[ "$tag_milestone" = "$MILESTONE_ID" ]]; then
-          include=true
-        fi
-      elif echo "$scope_tag" | grep -qE '^\[phase:'; then
-        # Extract phase scope: phase:M001/P02
-        local tag_scope
-        tag_scope=$(echo "$scope_tag" | sed 's/\[phase://' | sed 's/\]//')
-        local tag_milestone tag_phase
-        tag_milestone=$(echo "$tag_scope" | cut -d/ -f1)
-        tag_phase=$(echo "$tag_scope" | cut -d/ -f2)
-        if [[ "$tag_milestone" = "$MILESTONE_ID" && "$tag_phase" = "$PHASE_ID" ]]; then
-          include=true
-        fi
+      include=$(_sf_tag_includes "$scope_tag" "$line")
+    elif echo "$line" | grep -qE '^- \*\*\[([a-z]+:[A-Za-z0-9/_.-]+|project)\]\*\*'; then
+      # M044/FR-2: a standalone scoped bullet written by append-knowledge.sh
+      # (`- **[scope]** [date] text`). It is its OWN single-line entry, scoped by
+      # its inline tag — NOT a continuation of the preceding `## K###` entry.
+      # Without this, an append-knowledge bullet trailing an out-of-scope entry
+      # was glued to it and silently dropped (the producer/consumer divergence
+      # parallel to the `## K###` B-5 fix).
+      if [[ "$in_entry" = true && "$include" = true ]]; then
+        printf '%s\n' "$entry_lines"
       fi
+      local bullet_tag
+      bullet_tag=$(echo "$line" | grep -oE '\[[a-z]+:[A-Za-z0-9/_.-]+\]|\[project\]' | head -1 || true)
+      in_entry=true
+      entry_lines="$line"
+      include=$(_sf_tag_includes "$bullet_tag" "$line")
     elif [[ "$in_entry" = true ]]; then
       # Continuation of current entry
       entry_lines="$entry_lines
@@ -347,8 +361,12 @@ filter_decisions() {
       continue
     fi
 
-    # Parse the row — extract Scope and When columns
-    # Column positions: 1=ID, 2=Decision, 3=Choice, 4=Scope, 5=When, 6=Rationale
+    # Parse the row — extract Scope and When columns.
+    # Canonical consumer-order row `| ID | Decision | Choice | Scope | When | Rationale |`.
+    # `awk -F'|'` yields a leading empty $1 (text before the first pipe), so the
+    # field indices are shifted by one: $2=ID $3=Decision $4=Choice $5=Scope
+    # $6=When $7=Rationale. The producer (append-decision.sh) writes this order
+    # (M044/FR-1); the $5/$6 reads below are the canonical observed indices.
     local scope_col when_col
     scope_col=$(echo "$line" | awk -F'|' '{gsub(/^[[:space:]]+|[[:space:]]+$/, "", $5); print $5}')
     when_col=$(echo "$line" | awk -F'|' '{gsub(/^[[:space:]]+|[[:space:]]+$/, "", $6); print $6}')

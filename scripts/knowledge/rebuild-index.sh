@@ -62,6 +62,11 @@ db_tag_count=0
 # --- Scan detail files and build entries ---
 entries=""
 entry_count=0
+# M044/FR-3: per-entry skip-and-warn accumulators. A malformed entry (no id, or
+# heading-less) is skipped loudly and the rebuild continues — one bad entry can
+# never silently zero the whole index (B-1).
+skipped_count=0
+skipped_ids=""
 
 for file in "$knowledge_dir"/*/*.md "$knowledge_dir"/*/*/*.md; do
   # Skip if glob didn't match anything
@@ -69,9 +74,13 @@ for file in "$knowledge_dir"/*/*.md "$knowledge_dir"/*/*/*.md; do
     continue
   fi
 
-  # Skip archive directory
-  case "$file" in
-    */archive/*)
+  # Skip the genuine knowledge/archive/ cold-storage subtree (declared at L6,
+  # CON-4). M044/FR-4: match the path RELATIVE to knowledge/ — the old bare
+  # `*/archive/*` against the absolute path zeroed the index for any project
+  # rooted under a directory literally named `archive` (B-4).
+  rel_knowledge="${file#$knowledge_dir/}"
+  case "$rel_knowledge" in
+    archive/*|*/archive/*)
       continue
       ;;
   esac
@@ -97,6 +106,18 @@ for file in "$knowledge_dir"/*/*.md "$knowledge_dir"/*/*/*.md; do
     # works once $id is populated.
     id="$(fm_field "$file" "chunk_id")"
   fi
+
+  # Path relative to the project root — used for skip messages and DB rel_path.
+  rel_path="${file#$root/}"
+
+  # M044/FR-3: skip-and-warn an entry that cannot be keyed (no id/chunk_id), never
+  # abort the whole rebuild.
+  if [ -z "$id" ]; then
+    echo "SKIP: $rel_path (no id/chunk_id frontmatter field)" >&2
+    skipped_count=$((skipped_count + 1))
+    skipped_ids="${skipped_ids}${skipped_ids:+ }$rel_path"
+    continue
+  fi
   scope_tags="$(fm_field "$file" "scope_tags")"
   category="$(fm_field "$file" "category")"
   confidence="$(fm_field "$file" "confidence")"
@@ -114,15 +135,25 @@ for file in "$knowledge_dir"/*/*.md "$knowledge_dir"/*/*/*.md; do
   applies_to_field_raw="$(fm_field "$file" "applies_to_field")"
 
   # Extract description from heading: # MEM###: <description>
-  description="$(grep "^# ${id}:" "$file" | head -1 | sed "s/^# ${id}:[[:space:]]*//")"
+  # M044/FR-3: guard the grep so a heading-less entry skips-and-warns instead of
+  # aborting the whole rebuild under set -e/pipefail (B-1 — the proven root
+  # incident). grep-miss → empty heading_line (the `|| true` absorbs the non-zero
+  # exit that pipefail would otherwise propagate).
+  heading_line="$(grep "^# ${id}:" "$file" 2>/dev/null | head -1 || true)"
+  if [ -z "$heading_line" ]; then
+    echo "SKIP: $rel_path ($id — no '# $id:' heading line)" >&2
+    skipped_count=$((skipped_count + 1))
+    skipped_ids="${skipped_ids}${skipped_ids:+ }$id"
+    continue
+  fi
+  description="$(printf '%s' "$heading_line" | sed "s/^# ${id}:[[:space:]]*//")"
 
-  # Use ID as fallback if no description found
+  # Use ID as fallback when the heading is present but carries no description text.
   if [ -z "$description" ]; then
     description="$id"
   fi
 
   # --- Populate SQLite database (all entries, including superseded) ---
-  rel_path="${file#$root/}"
   db_insert_entry "$tmp_db" "$id" "$category" "$confidence" "$created_at" \
     "$last_verified" "$hit_count" "$source_unit" "$source_type" \
     "$supersedes" "$superseded_by" "$content_hash" "$description" "$rel_path"
@@ -255,3 +286,12 @@ mv "$tmp_db" "$db_path"
 
 echo "REBUILT: KNOWLEDGE-INDEX.md with $entry_count entries"
 echo "REBUILT: knowledge.db with $db_entry_count entries, $db_edge_count edges, $db_tag_count scope_tags"
+
+# M044/FR-3: fail-loud per-entry resilience summary. Exit stays 0 here — non-zero
+# is reserved for the catastrophic cases (missing knowledge/ at :47-50; DB write
+# failure via the `mv` under set -e). One malformed entry never zeroes the index.
+if [ "$skipped_count" -gt 0 ]; then
+  echo "INDEXED: $db_entry_count / SKIPPED: $skipped_count [$skipped_ids]"
+else
+  echo "INDEXED: $db_entry_count / SKIPPED: 0"
+fi

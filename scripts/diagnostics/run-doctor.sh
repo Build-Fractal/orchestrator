@@ -209,6 +209,11 @@ m031_compound_change_check "$DOCTOR_CONFIG_PATH"
 
 run_check "Orphaned Artifacts" "$SCRIPT_DIR/check-orphaned.sh" "" "0"
 run_check "Stale Knowledge" "$SCRIPT_DIR/check-stale.sh" "" "0"
+# M044/P01/T04 (FR-15/CON-5): the single consolidated knowledge-activation
+# check (0-mem-on-mature / vestigial-index / runtime-memory-divergence).
+# Advisory — surfaces the three silent-degradation symptoms without altering
+# the existing health-score denominator.
+run_check "Knowledge Activation" "$SCRIPT_DIR/check-knowledge-activation.sh" "--root $PROJECT_ROOT" "1"
 run_check "Scope Issues" "$SCRIPT_DIR/check-scope.sh" "" "0"
 run_check "Cost Spikes" "$SCRIPT_DIR/check-cost-spikes.sh" "" "0"
 run_check "Instruction Conformance" "$SCRIPT_DIR/check-instructions.sh" "--root $PROJECT_ROOT" "0"

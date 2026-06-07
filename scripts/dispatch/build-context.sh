@@ -174,8 +174,35 @@ if [ -n "$DIRECT_TASK_PLAN" ]; then
   fi
 
   _M031_PROJECT_ROOT="$PROJECT_ROOT"
+  # M044/P01/T01 (FR-11): resolve the index path via the canonical
+  # get_index_path() resolver (scripts/knowledge/lib/index-utils.sh) instead of
+  # a hardcoded KNOWLEDGE-INDEX.md path join. get_project_root() honors the
+  # exported PROJECT_ROOT (index-utils.sh:20), so the resolved path matches the
+  # dispatch root. The literal join survives ONLY as a guarded fallback for when
+  # the lib is unreachable — degrade, never hard-fail.
+  _M044_INDEX_UTILS="$_M031_PROJECT_ROOT/scripts/knowledge/lib/index-utils.sh"
+  if [ -r "$_M044_INDEX_UTILS" ]; then
+    . "$_M044_INDEX_UTILS" 2>/dev/null || true
+  fi
+  # M044/P01/T02 (FR-5): source the fail-loud provenance/fallback helpers.
+  _M044_PROV_LIB="$_M031_PROJECT_ROOT/scripts/dispatch/lib/knowledge-provenance.sh"
+  if [ -r "$_M044_PROV_LIB" ]; then
+    . "$_M044_PROV_LIB" 2>/dev/null || true
+  fi
+  # M044/P04/T02 (FR-6): source the bounded Decisions-digest helper (routes its
+  # read-into-payload through the M036a reference-budget governor — CON-2).
+  _M044_DD_LIB="$_M031_PROJECT_ROOT/scripts/dispatch/lib/decisions-digest.sh"
+  if [ -r "$_M044_DD_LIB" ]; then
+    . "$_M044_DD_LIB" 2>/dev/null || true
+  fi
   _M031_KNOWLEDGE_INDEX=""
-  if [ -f "$_M031_PROJECT_ROOT/KNOWLEDGE-INDEX.md" ]; then
+  _M044_RESOLVED_INDEX=""
+  if command -v get_index_path >/dev/null 2>&1; then
+    _M044_RESOLVED_INDEX="$(get_index_path 2>/dev/null || true)"
+  fi
+  if [ -n "$_M044_RESOLVED_INDEX" ] && [ -f "$_M044_RESOLVED_INDEX" ]; then
+    _M031_KNOWLEDGE_INDEX="$_M044_RESOLVED_INDEX"
+  elif [ -f "$_M031_PROJECT_ROOT/KNOWLEDGE-INDEX.md" ]; then
     _M031_KNOWLEDGE_INDEX="$_M031_PROJECT_ROOT/KNOWLEDGE-INDEX.md"
   fi
 
@@ -189,35 +216,102 @@ if [ -n "$DIRECT_TASK_PLAN" ]; then
     _M031_TOUCHED="$(printf '%s' "$_M031_TF_LINE" | sed 's/^touched_files:[[:space:]]*//')"
   fi
 
+  # M044/P01/T02 (FR-5): fail-loud index-state detection. An empty/missing/stale
+  # index must never silently inject first-N — fall back to a deterministic grep
+  # over the raw corpus and WARN loudly (payload + stderr). A `present` index is
+  # read via the existing M031 quick path. A provenance header is stamped into
+  # the payload ALWAYS (emitted below), even on a healthy source=index.
+  _M044_KDIR="$_M031_PROJECT_ROOT/knowledge"
+  _M044_INDEX_STATE="present"
+  if command -v kp_index_state >/dev/null 2>&1; then
+    _M044_INDEX_STATE="$(kp_index_state "$_M031_KNOWLEDGE_INDEX" "$_M044_KDIR" 2>/dev/null || printf 'present')"
+  fi
+  _M044_PROV_SOURCE="index"
+  _M044_PROV_WARNING=""
+  _M044_FALLBACK_BUDGET="${KP_FALLBACK_BUDGET_TOKENS:-2000}"
+
   _M031_MEM_COUNT=0
   _M031_KNOWLEDGE_BODY=""
-  if [ -n "$_M031_KNOWLEDGE_INDEX" ] && [ -f "$_M031_KNOWLEDGE_INDEX" ]; then
-    # Quick profile: 1-hop, touched-files-only scope. Resolve the touched
-    # MEM IDs by intersecting filenames mentioned in the index against
-    # touched files. When no touched-file set is derivable, fall back to
-    # the first N MEM IDs in the index (parity with degenerate-plan
-    # behavior — not a regression).
-    _M031_TF_TMP="$(mktemp)"
-    if [ -n "$_M031_TOUCHED" ]; then
-      printf '%s\n' "$_M031_TOUCHED" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' > "$_M031_TF_TMP"
-    fi
-    _M031_IDS_TMP="$(mktemp)"
-    if [ -s "$_M031_TF_TMP" ]; then
-      grep -oE 'MEM[0-9]+' "$_M031_KNOWLEDGE_INDEX" 2>/dev/null | sort -u > "$_M031_IDS_TMP" || true
-    else
-      grep -oE 'MEM[0-9]+' "$_M031_KNOWLEDGE_INDEX" 2>/dev/null | sort -u | head -5 > "$_M031_IDS_TMP" || true
-    fi
-    _M031_MEM_COUNT="$(wc -l < "$_M031_IDS_TMP" | tr -d ' ')"
-    if [ -s "$_M031_IDS_TMP" ]; then
-      _M031_RESOLVE="$_M031_PROJECT_ROOT/scripts/knowledge/resolve-entries.sh"
-      if [ -x "$_M031_RESOLVE" ] || [ -f "$_M031_RESOLVE" ]; then
-        _M031_KNOWLEDGE_BODY="$(cat "$_M031_IDS_TMP" | bash "$_M031_RESOLVE" 2>/dev/null || true)"
+  case "$_M044_INDEX_STATE" in
+    empty|missing|stale)
+      # Degraded: deterministic grep-over-raw fallback (budget-bounded via the
+      # M036a governor), not a silent first-N. Fail loud.
+      _M044_PROV_SOURCE="grep-fallback"
+      _M044_PROV_WARNING="WARNING: knowledge index ${_M044_INDEX_STATE} — ran degraded via grep-over-raw fallback (rebuild: bash scripts/knowledge/rebuild-index.sh)"
+      printf '%s\n' "$_M044_PROV_WARNING" >&2
+      if command -v kp_grep_fallback >/dev/null 2>&1; then
+        _M031_KNOWLEDGE_BODY="$(kp_grep_fallback "$_M044_KDIR" "$_M031_TOUCHED" "$_M044_FALLBACK_BUDGET" 2>/dev/null || true)"
       fi
-    fi
-    rm -f "$_M031_TF_TMP" "$_M031_IDS_TMP"
-  fi
+      _M044_TMP_CNT="$(printf '%s\n' "$_M031_KNOWLEDGE_BODY" | grep -cE '^id:[[:space:]]*MEM|^# MEM' 2>/dev/null | tr -d ' ' || true)"
+      _M031_MEM_COUNT="${_M044_TMP_CNT:-0}"
+      if [ -z "$_M031_KNOWLEDGE_BODY" ]; then
+        _M044_PROV_SOURCE="degraded"
+        _M031_MEM_COUNT=0
+      fi
+      ;;
+    *)
+      if [ -n "$_M031_KNOWLEDGE_INDEX" ] && [ -f "$_M031_KNOWLEDGE_INDEX" ]; then
+        # Quick profile: 1-hop, touched-files-only scope. Resolve the touched
+        # MEM IDs by intersecting filenames mentioned in the index against
+        # touched files. When no touched-file set is derivable, fall back to
+        # the first N MEM IDs in the index (parity with degenerate-plan
+        # behavior — not a regression). This first-N path is no longer silent:
+        # the provenance header (source=index, entries_considered=N) is stamped.
+        _M031_TF_TMP="$(mktemp)"
+        if [ -n "$_M031_TOUCHED" ]; then
+          printf '%s\n' "$_M031_TOUCHED" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' > "$_M031_TF_TMP"
+        fi
+        _M031_IDS_TMP="$(mktemp)"
+        if [ -s "$_M031_TF_TMP" ]; then
+          grep -oE 'MEM[0-9]+' "$_M031_KNOWLEDGE_INDEX" 2>/dev/null | sort -u > "$_M031_IDS_TMP" || true
+        else
+          grep -oE 'MEM[0-9]+' "$_M031_KNOWLEDGE_INDEX" 2>/dev/null | sort -u | head -5 > "$_M031_IDS_TMP" || true
+        fi
+        _M031_MEM_COUNT="$(wc -l < "$_M031_IDS_TMP" | tr -d ' ')"
+        if [ -s "$_M031_IDS_TMP" ]; then
+          _M031_RESOLVE="$_M031_PROJECT_ROOT/scripts/knowledge/resolve-entries.sh"
+          if [ -x "$_M031_RESOLVE" ] || [ -f "$_M031_RESOLVE" ]; then
+            _M031_KNOWLEDGE_BODY="$(cat "$_M031_IDS_TMP" | bash "$_M031_RESOLVE" 2>/dev/null || true)"
+          fi
+        fi
+        rm -f "$_M031_TF_TMP" "$_M031_IDS_TMP"
+      fi
+      ;;
+  esac
   if [ -z "$_M031_KNOWLEDGE_BODY" ]; then
     _M031_KNOWLEDGE_BODY="No knowledge entries in scope."
+  fi
+
+  # M044/P01/T02 (FR-5): resolve the index age for the provenance header
+  # (time-relative; surfaced only in the header, `none` when the index is
+  # absent). entries_considered = _M031_MEM_COUNT.
+  _M044_INDEX_AGE="none"
+  if command -v kp_index_age >/dev/null 2>&1; then
+    _M044_INDEX_AGE="$(kp_index_age "$_M031_KNOWLEDGE_INDEX" 2>/dev/null || printf 'none')"
+  fi
+
+  # M044/P01/T03 (FR-15): inject-size surface + 0-MEM-on-mature-project warning.
+  # Token estimate over the knowledge body uses the same ceil(chars/4) formula
+  # as the provenance lib's estimator (one estimator, deterministic — no
+  # wall-clock). Reported as `knowledge: N MEMs / X tokens`.
+  _M044_KNOW_CHARS="$(printf '%s' "$_M031_KNOWLEDGE_BODY" | wc -c | tr -d ' ')"
+  _M044_KNOW_CHARS="${_M044_KNOW_CHARS:-0}"
+  _M044_KNOW_TOKENS=$(( (_M044_KNOW_CHARS + 3) / 4 ))
+  _M044_INJECT_SIZE="knowledge: ${_M031_MEM_COUNT:-0} MEMs / ${_M044_KNOW_TOKENS} tokens"
+  printf '%s\n' "$_M044_INJECT_SIZE" >&2
+
+  # Maturity probe: a project is "mature" once it carries a milestone SUMMARY or
+  # a decisions row on disk. A 0-MEM inject is normal on a greenfield project
+  # (no warning) but a danger signal on a mature one (the original month-long
+  # silent-degradation incident was a mature project).
+  _M044_IS_MATURE=0
+  if command -v kp_is_mature >/dev/null 2>&1; then
+    _M044_IS_MATURE="$(kp_is_mature "$_M031_PROJECT_ROOT" 2>/dev/null || printf '0')"
+  fi
+  _M044_ZEROMEM_WARNING=""
+  if [ "${_M031_MEM_COUNT:-0}" = "0" ] && [ "$_M044_IS_MATURE" -eq 1 ]; then
+    _M044_ZEROMEM_WARNING="WARNING: 0-MEM inject on a project with prior milestones/decisions on disk — knowledge may not be activating (run: bash scripts/diagnostics/run-doctor.sh)"
+    printf '%s\n' "$_M044_ZEROMEM_WARNING" >&2
   fi
 
   # Assemble payload. The Decisions section is omitted under the Quick
@@ -239,10 +333,35 @@ if [ -n "$DIRECT_TASK_PLAN" ]; then
     printf '\n'
     printf '# Dispatch Context (direct mode, profile=%s)\n\n' "$PROFILE"
     printf '## Knowledge\n\n'
+    # M044/P01/T02 (FR-5): always-on provenance header + loud WARNING on degrade.
+    if command -v kp_emit_header >/dev/null 2>&1; then
+      kp_emit_header "$_M044_PROV_SOURCE" "$_M044_INDEX_AGE" "$_M031_MEM_COUNT"
+      printf '\n'
+    fi
+    # M044/P01/T03 (FR-15): inject-size surface, always present in the payload.
+    printf '%s\n\n' "$_M044_INJECT_SIZE"
+    if [ -n "$_M044_PROV_WARNING" ]; then
+      printf '%s\n\n' "$_M044_PROV_WARNING"
+    fi
+    if [ -n "$_M044_ZEROMEM_WARNING" ]; then
+      printf '%s\n\n' "$_M044_ZEROMEM_WARNING"
+    fi
     printf '%s\n\n' "$_M031_KNOWLEDGE_BODY"
-    if [ "$PROFILE" != "quick" ]; then
-      printf '## Decisions\n\n'
-      printf '(decisions section assembled by full-mode positional flow; direct mode includes a marker only.)\n\n'
+    # M044/P04/T02 (FR-6): the Decisions section is ALWAYS present now — a Quick
+    # project must never carry an empty-forever Decisions slot. The body is a
+    # bounded, budget-bounded digest of the system-of-record DECISIONS.md (CON-2
+    # governor, CON-3 deterministic). Empty corpus → a visible sentinel, never a
+    # silent omission.
+    printf '## Decisions\n\n'
+    _M044_DEC_FILE="$_M031_PROJECT_ROOT/.orchestrator/DECISIONS.md"
+    _M044_DEC_DIGEST=""
+    if command -v dd_decisions_digest >/dev/null 2>&1; then
+      _M044_DEC_DIGEST="$(dd_decisions_digest "$_M044_DEC_FILE" "${KP_FALLBACK_BUDGET_TOKENS:-2000}" "${QUICK_DECISIONS_DIGEST_MAX:-10}" 2>/dev/null || true)"
+    fi
+    if [ -n "$_M044_DEC_DIGEST" ]; then
+      printf '%s\n\n' "$_M044_DEC_DIGEST"
+    else
+      printf '(no decisions on record)\n\n'
     fi
     printf '## Task Plan\n\n'
     cat "$DIRECT_TASK_PLAN"
@@ -458,8 +577,23 @@ INCLUDED_IDS_FILE="$(mktemp)"
 _bc_assemble_planning_payload() {
   # --- Gather knowledge (inline pre-refactor pipeline, since handle_knowledge
   #     targets the task-dispatch shape with "## Knowledge" header) ---
+  # M044/P01/T01 (FR-11): resolve the index path via the canonical
+  # get_index_path() resolver. The $PROJECT_ROOT and $MILESTONE_DIR literal
+  # joins survive only as guarded fallbacks (lib unreachable / milestone-local
+  # index). Source the resolver here too — the positional flow does not pass
+  # through the direct-mode source above.
+  local _M044_INDEX_UTILS_PL="$PROJECT_ROOT/scripts/knowledge/lib/index-utils.sh"
+  if [ -r "$_M044_INDEX_UTILS_PL" ]; then
+    . "$_M044_INDEX_UTILS_PL" 2>/dev/null || true
+  fi
   local KNOWLEDGE_INDEX=""
-  if [ -f "$PROJECT_ROOT/KNOWLEDGE-INDEX.md" ]; then
+  local _M044_RESOLVED_PL=""
+  if command -v get_index_path >/dev/null 2>&1; then
+    _M044_RESOLVED_PL="$(get_index_path 2>/dev/null || true)"
+  fi
+  if [ -n "$_M044_RESOLVED_PL" ] && [ -f "$_M044_RESOLVED_PL" ]; then
+    KNOWLEDGE_INDEX="$_M044_RESOLVED_PL"
+  elif [ -f "$PROJECT_ROOT/KNOWLEDGE-INDEX.md" ]; then
     KNOWLEDGE_INDEX="$PROJECT_ROOT/KNOWLEDGE-INDEX.md"
   elif [ -f "$MILESTONE_DIR/KNOWLEDGE-INDEX.md" ]; then
     KNOWLEDGE_INDEX="$MILESTONE_DIR/KNOWLEDGE-INDEX.md"
@@ -755,13 +889,15 @@ _bc_apply_knowledge_filter() {
   out_file="$TMPDIR_BUILD/_filter_out.md"
   kf_read_drop_list "$PROJECT_ROOT" > "$drop_list_file"
   printf '%s\n' "$stream" | kf_filter_stream "$drop_list_file" "$stats_file" > "$out_file"
-  # Detect empty-after-filter: no `^---$` frontmatter delimiters in output.
-  local fm_count
-  fm_count="$(grep -cE '^---$' "$out_file" 2>/dev/null || true)"
-  if [ -z "$fm_count" ]; then
-    fm_count=0
+  # Detect empty-after-filter by counting entry markers: a frontmatter fence
+  # (`^---$`) OR a flat `## K###` heading (M044/FR-2 — flat-only streams carry no
+  # `---`, so the old `^---$`-only count falsely nulled valid flat entries).
+  local entry_marker_count
+  entry_marker_count="$(grep -cE '^---$|^## ' "$out_file" 2>/dev/null || true)"
+  if [ -z "$entry_marker_count" ]; then
+    entry_marker_count=0
   fi
-  if [ "$fm_count" -eq 0 ]; then
+  if [ "$entry_marker_count" -eq 0 ]; then
     printf '(no qualifying knowledge entries)\n'
   else
     cat "$out_file"

@@ -118,6 +118,8 @@ MEM002 | [project] | constraints | 0.95 | 2026-03-20 | verified:2026-04-01 | hit
 
 The index excludes archived and superseded entries. Rebuild it any time with [`rebuild-index.sh`](#rebuilding-the-index).
 
+**The index is a cache; the raw corpus is the source of truth (M044).** The activation guarantee runs **index-free**: when the index is empty, missing, or stale, dispatch falls back to a deterministic grep over the raw `knowledge/**/*.md` files and stamps every payload with a `knowledge_provenance:` header (`source: index|grep-fallback|degraded`). Degradation is never silent — a `WARNING` is emitted into both the payload and stderr. The **canonical path resolvers** are `get_index_path()` in `scripts/knowledge/lib/index-utils.sh` (index) and `get_db_path()` in `scripts/knowledge/lib/graph-db.sh` (graph db); every reader routes through these, with no hardcoded `KNOWLEDGE-INDEX.md` path joins.
+
 ---
 
 ## Anatomy: the append-only register

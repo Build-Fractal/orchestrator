@@ -4,7 +4,8 @@
 #
 # Reads existing DECISIONS.md, finds the highest D### ID, assigns the next sequential ID.
 # Appends a new markdown table row. Never modifies existing rows (append-only per FR-025).
-# Column order: #, When, Scope, Decision, Choice, Rationale, Revisable?
+# Column order (canonical consumer-order, M044/FR-1): #, Decision, Choice, Scope, When, Rationale, Revisable?
+# (matches scope-filter.sh::filter_decisions awk -F'|' $5=Scope / $6=When)
 #
 # If the file doesn't exist, exits non-zero with error.
 # Outputs "DECISION: D### appended" on success.
@@ -89,7 +90,12 @@ done < "$DECISIONS_FILE"
 next_num=$((highest_id + 1))
 next_id=$(printf "D%03d" "$next_num")
 
-# Append the new row (never modify existing content)
-echo "| $next_id | $WHEN | $SCOPE | $DECISION | $CHOICE | $RATIONALE | $REVISABLE |" >> "$DECISIONS_FILE"
+# Append the new row (never modify existing content).
+# Canonical consumer-order (M044/FR-1, #Q-1): the row must match the order
+# scope-filter.sh::filter_decisions reads with `awk -F'|'` ($5=Scope, $6=When).
+# The CLI arg order (<when> <scope> <decision> <choice> <rationale>) is unchanged;
+# only the written column order is canonicalized. Forward-only — pre-M044
+# producer-order rows already never resolved (that was B-3).
+echo "| $next_id | $DECISION | $CHOICE | $SCOPE | $WHEN | $RATIONALE | $REVISABLE |" >> "$DECISIONS_FILE"
 
 echo "DECISION: $next_id appended"

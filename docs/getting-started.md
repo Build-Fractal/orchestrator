@@ -19,6 +19,8 @@ npm install -g @build-fractal/orchestrator
 
 Step 1 installs the tool and registers the `/orchestrator-*` skills into Claude Code (globally, in `~/.claude`); steps 2–3 run inside your own project from Claude Code. Each step is expanded below — including the from-source path if you'd rather clone.
 
+> **On Cursor?** One different install command (it's project-scoped), then **steps 2–3 are identical**. → [On Cursor (early, Tier-A)](#on-cursor-early-tier-a)
+
 > **Is this for you?** The orchestrator makes every coding task — a one-line tweak or a multi-month rewrite — execute against a project-aware knowledge base, so dispatched agents never start from zero. If you only need single-context work, plain Claude Code is the right tool first; reach for the orchestrator when tasks span multiple contexts or you want accumulated project knowledge injected automatically. See [why-this-exists](why-this-exists.md) if you want the motivation before installing.
 
 ---
@@ -27,13 +29,14 @@ Step 1 installs the tool and registers the `/orchestrator-*` skills into Claude 
 
 | Dependency | Required? | Check command |
 |------------|-----------|---------------|
-| Claude Code | Yes (primary runtime) | `claude --version` |
+| **Claude Code** _or_ **Cursor** | Yes — one runtime | `claude --version` / `cursor-agent --version` |
 | git | Yes | `git --version` |
 | Bash >= 3.2 | Yes (macOS default) | `bash --version` |
 | Node.js >= 14 | Only for the npm install channel | `node --version` |
+| `cursor-agent` CLI + `CURSOR_API_KEY` | Only for autonomous dispatch on Cursor | `cursor-agent --version` |
 | jq | Optional (JSON parsing in some scripts) | `jq --version` |
 
-Codex CLI and Cursor are post-launch fast-follows (tracked under M009); Claude Code is the supported runtime at launch.
+**Two runtimes are supported today.** **Claude Code** is the primary runtime. **Cursor** has native **early (Tier-A)** support — same `/orchestrator-*` commands, a real dispatch backend, and safety hooks ([jump to the Cursor setup](#on-cursor-early-tier-a)). Codex CLI has an installer too; full byte-parity across runtimes is a demand-driven fast-follow.
 
 ---
 
@@ -53,6 +56,42 @@ The orchestrator binary itself is intentionally minimal — `orchestrator --vers
 **Wiring a project.** Installing registers skills globally; the per-project runtime tree (`scripts/`, `templates/`, `references/`) is staged into each project you onboard (commands invoke helpers via project-relative paths, so the tree must live there). The npm channel stages it automatically when you install from inside the project; otherwise `/orchestrator-start` / `/orchestrator-init` (Step 2) stages it, or you re-run `install-claude-code.sh --project-dir <path>` directly. Installed files are recorded in `.orchestrator/installed-files.txt` for a clean uninstall. Installer flags (`--dry-run`, `--mode copy|symlink`, `--force`) and the full autonomy/update reference live in [Installation](../references/installation.md).
 
 > **Updating later:** `npm update -g @build-fractal/orchestrator`, `brew upgrade orchestrator`, or `/orchestrator-update` from inside a project (it auto-detects your install channel). See [Releasing](../references/RELEASING.md) for how releases are cut.
+
+### On Cursor (early, Tier-A)
+
+Using Cursor instead of Claude Code? You're a **welcome early dogfooder** — Cursor support is real, tested **Tier-A** (not a stub), and your feedback is what moves it toward full parity. Setup is one command, and **Step 2 and Step 3 below are identical** — the same `/orchestrator-start` and `/orchestrator-do "..."`.
+
+**1. Install per-project.** Cursor is project-scoped (it writes under `<project>/.cursor/`), so unlike the global Claude Code install you point the installer at your project:
+
+```bash
+git clone https://github.com/Build-Fractal/orchestrator.git
+cd orchestrator
+bash packaging/install/install-cursor.sh --project-dir /path/to/your-project
+```
+
+This stages, into your project's `.cursor/`:
+
+| What you get | Where | Notes |
+|---|---|---|
+| Native `/orchestrator-*` slash commands | `.cursor/commands/orchestrator-*.md` | The same command surface as Claude Code |
+| Always-on operating rule | `.cursor/rules/orchestrator.md` | Keeps the agent acting on your project's conventions |
+| Safety shape-guard | `.cursor/hooks.json` → `beforeShellExecution` | Blocks unsafe shell shapes before they run |
+| git pre-commit gate | project git hooks | Clobber-safe; fails open; skips cleanly in non-git dirs |
+| `cursor-agent` dispatch backend | runtime adapter | Fresh-context autonomous dispatch (see below) |
+
+**2. Open the project in Cursor and run `/orchestrator-start`** — exactly like Claude Code. The in-IDE slash commands work as soon as the install finishes.
+
+**3. For autonomous runs** (`/orchestrator-auto`, headless dispatch), the orchestrator shells out to the `cursor-agent` CLI, which needs:
+
+```bash
+cursor-agent --version          # the CLI must be on your PATH
+export CURSOR_API_KEY=...        # required even for local runs
+export CURSOR_AGENT=1            # opt the dispatcher into the cursor-agent backend
+```
+
+The interactive in-IDE slash commands do **not** need `CURSOR_API_KEY` — only the autonomous dispatch backend does.
+
+**Honest Tier-A scope.** Live and tested today: the native command surface, the dispatch backend, the shape-guard hook, and the pre-commit gate. **Not yet** (Tier-B, demand-driven): interactive in-IDE review gates (the MCP renderer) and per-run cost accounting. None of that blocks the core loop — onboarding, knowledge inject, dispatch, and verification all work. **Found a rough edge? → [Reporting issues](#reporting-issues-please-do).**
 
 ---
 
@@ -167,6 +206,27 @@ It reads `.orchestrator/` state, distinguishes a crash (stale lock — breaks it
 For work too large for `/orchestrator-do`, the full per-feature command chain is `evaluate → discuss → roadmap → plan-phase → auto → verify → consolidate`. `/orchestrator-do` already runs the appropriate subset for you based on scope; you only walk the chain by hand when you want manual control of each gate. `/orchestrator-auto` runs the autonomous loop (dispatch → verify → record → advance) until the milestone completes or a blocker surfaces.
 
 For the mechanics behind each stage, see [Architecture](../references/architecture.md), [State Machine](../references/state-machine.md), and [Tier Definitions](../references/tier-definitions.md). For the on-disk artifact contracts (`EVALUATION.md`, `ROADMAP.md`, phase/task plans, `execution-log.jsonl`), see [File Formats](../references/file-formats.md).
+
+---
+
+## Reporting issues (please do!)
+
+The fastest way to improve the orchestrator — **especially on Cursor, where you're an early dogfooder** — is to tell us when something snags. It takes about 30 seconds and there's no wrong report.
+
+| What | Where |
+|---|---|
+| 🐞 Something's broken | **[Bug report](https://github.com/Build-Fractal/orchestrator/issues/new?template=bug_report.yml)** |
+| 💡 Want a feature | [Feature request](https://github.com/Build-Fractal/orchestrator/issues/new?template=feature_request.yml) |
+| ❓ How-to / "is this normal?" | [GitHub Discussions](https://github.com/Build-Fractal/orchestrator/discussions) (not the issue tracker) |
+| 🔒 Security issue | [Private advisory](https://github.com/Build-Fractal/orchestrator/security/advisories/new) — never a public issue |
+
+**Make it instantly actionable** — the bug template asks for exactly this:
+
+1. **Your runtime** — Claude Code or Cursor — and install channel.
+2. **`/orchestrator-doctor` output** — run it (read-only, always safe) and paste what it prints. It surfaces the most common onboarding problems on its own.
+3. A one-line *"I ran X, expected Y, got Z."*
+
+That's a great report. You don't need a minimal reproduction — the doctor output plus your runtime usually points straight at the cause.
 
 ---
 

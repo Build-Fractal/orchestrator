@@ -6,6 +6,25 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This pr
 
 ## [Unreleased]
 
+## [0.10.0] — 2026-06-07
+
+First release to ship **Cursor support**, **interactive review gates**, and a **hardened knowledge-activation pipeline** — three milestones (M009 Tier-A, M034, M044) on top of the v0.9.x line.
+
+### Added — Cursor support (Tier-A, M009)
+
+- **Native Cursor runtime.** `install-cursor.sh --project-dir <path>` stages a real Cursor integration: `/orchestrator-*` slash commands under `.cursor/commands/`, an always-on operating rule (`.cursor/rules/orchestrator.md`), the bash shape-guard wired into Cursor's `beforeShellExecution` hook (`.cursor/hooks.json`), a clobber-safe git pre-commit gate, and a `cursor-agent` dispatch backend for fresh-context autonomous runs (opt-in via `CURSOR_AGENT=1`; needs `CURSOR_API_KEY`). The in-IDE command surface works without an API key. Honest **Tier-A** scope — the core loop (onboarding, knowledge inject, dispatch, verification) is live and tested; interactive MCP review gates and per-run cost accounting are demand-driven Tier-B. Early-dogfooding status; see the README + Getting Started "On Cursor" sections and `references/RUNTIME-ASSUMPTIONS.md` (rows `RA-M009-CURSOR-01/02/03`).
+- **README + Getting Started reworked for dual-runtime onboarding** (Claude Code + Cursor) with a prominent, low-friction issue-reporting path for early Cursor dogfooders.
+
+### Added — Interactive review gates (M034)
+
+- **A first-class review stage between artifact authoring and sign-off.** A task declaring `decision_packet: true` emits a structured `*-DECISIONS.md` (one typed entry per load-bearing decision: picked value, rationale, alternatives, impact, severity); `/orchestrator-status` and `/orchestrator-doctor` then surface **unreviewed decisions**. A phase declaring `review_gates: [...]` runs an `interactive_review` stage at sign-off — each decision surfaced one-by-one (accept / override / push back) through the runtime's native primitive (Claude Code `AskUserQuestion`, Cursor MCP `elicitation/create`, or a headless `QUESTIONS.md` hand-off), captured to an append-only `REVIEW.md` that populates `SIGNOFF.md`.
+- **Never deadlocks an autonomous run** — each gate declares an auto-mode policy (`defer` / `accept-with-audit` / `refuse-entry`); the decision artifact is always written, only the operator touch is gated. Optional `producer: conversus` folds a deliberation verdict into the packet. Opt-in only. See `commands/plan-phase.md` + `references/interactive-review-renderer.md`.
+
+### Fixed — knowledge-activation pipeline can no longer silently degrade (M044)
+
+- **The capture→store→inject loop is closed and fail-loud.** Five proven defects fixed: (B-1) one heading-less entry aborted the entire index rebuild — now per-entry skip-and-warn with an `INDEXED: N / SKIPPED: M` summary; (B-2) the consumer silently injected "first-5" off an empty index — now a deterministic grep-over-raw fallback with an always-on `knowledge_provenance:` header + loud degradation WARNING; (B-3) `append-decision.sh` wrote a column order `scope-filter.sh` couldn't parse — producer + init header unified to canonical consumer-order (proven by a capture→rebuild→resolve byte-equality round-trip); (B-4) a bare `*/archive/*` glob zeroed the index for any project rooted under a dir named `archive` — scoped to the `knowledge/` subtree at all three sites while preserving the genuine `knowledge/archive/` exclusion; (B-5) the compression filter dropped flat `## K###` knowledge — entry-boundary detection fixed.
+- **Capture-by-default at Quick.** Explicit decisions are now captured at any intensity (including Quick), and the Quick inject carries a bounded, budget-bounded Decisions digest — so a Quick project never ships an empty-forever Decisions slot. A consolidated `DOCTOR:KNOWLEDGE_ACTIVATION` check surfaces 0-MEM-on-mature-project / vestigial-index / runtime-memory-divergence. `validate-milestone.sh M044` PASS; phase batteries 16/16.
+
 ## [0.9.8] — 2026-06-05
 
 ### Added — Cloudflare Pages + Access as a first-class wiki-deploy target (M043)

@@ -42,6 +42,12 @@
 #     lifecycle-hook API comparable to Claude Code or Codex CLI, so this
 #     adapter advertises rules-only integration. No python3/jq dependency.
 #
+#   --mcp-config
+#     Emits a two-line `name=` + `entry={...json...}` fragment naming the
+#     orchestrator review-gate stdio MCP server (M034 P03 / FR-10), so
+#     install-cursor.sh can merge it non-clobbering into .cursor/mcp.json via
+#     merge-mcp-config.sh.
+#
 # Cursor conventions (cf. claude-code.sh, codex.sh), corrected M009:
 #   - .cursor/commands/ holds invocable slash commands (v1.6+).
 #   - .cursor/rules/ holds always-on rules the agent reads.
@@ -69,6 +75,8 @@ while [[ $# -gt 0 ]]; do
       DRY_RUN=1; shift ;;
     --hook-config)
       MODE="hook-config"; shift ;;
+    --mcp-config)
+      MODE="mcp-config"; shift ;;
     --project-dir)
       shift
       if [[ $# -eq 0 ]]; then
@@ -270,7 +278,24 @@ EOF
   exit 0
 fi
 
+# --- MCP-config mode (M034 P03 / FR-10) ---
+
+if [[ "$MODE" = "mcp-config" ]]; then
+  # The review-gate stdio MCP server entry for .cursor/mcp.json. Cursor spawns
+  # it per session and tears it down on EOF (#Q-5). When --project-dir is given,
+  # emit an absolute server path (the staged copy travels with scripts/);
+  # otherwise a project-relative default.
+  if [[ -n "${PROJECT_DIR:-}" ]] && [[ "${PROJECT_DIR}" != "/" ]]; then
+    server_path="${PROJECT_DIR}/scripts/lifecycle/review-gate-mcp-server.sh"
+  else
+    server_path="./scripts/lifecycle/review-gate-mcp-server.sh"
+  fi
+  echo "name=orchestrator-review-gate"
+  echo "entry={\"command\":\"bash\",\"args\":[\"${server_path}\"]}"
+  exit 0
+fi
+
 # --- No recognized mode ---
 
-echo "ERROR: one of --probe, --register [--dry-run] [--project-dir <path>], --hook-config is required" >&2
+echo "ERROR: one of --probe, --register [--dry-run] [--project-dir <path>], --hook-config, --mcp-config is required" >&2
 exit 2

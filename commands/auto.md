@@ -545,9 +545,23 @@ Substrate note (decision D015): the re-entry is process-fresh (a new
 does not relieve context per-rotation. See
 `.orchestrator/milestones/M045/phases/P01/P01-VIABILITY-EVIDENCE.md`.
 
-**Status**: arming surface + decision core land in P02; the live rotation
-branch is rewired to consume `AUTO:SELF_CONTINUE` in P03. Until P03, the
-rotation-exit path behaves exactly as documented in "Context Rotation Check".
+**Launch**: `--self-continue` runs the milestone under the process-fresh
+driver `scripts/lifecycle/self-continue-drive.sh <milestone-dir>
+[--max-continuations N] [--min-interval S] [--stop-file <path>]`. The driver
+re-spawns a fresh `claude -p "orchestrator:auto <milestone-dir>"` (single-
+segment, no `--self-continue`) after each rotation-exit, until a terminal
+outcome, the `--max-continuations` cap, or the `--stop-file`. Interrupt a run
+by creating the stop-file. The driver emits `SELF_CONTINUE:SCHEDULED` /
+`:TERMINAL` / `:CAP_REACHED` / `:STOPPED` (each carrying `continuations=` and a
+forward-progress `progress=` field — a cap-halt with `progress ≪ continuations`
+signals a thrash rather than a legitimately long run).
+
+**Outcome marker**: at each exit path (rotation and every terminal state), the
+loop additionally writes `<milestone-dir>/.self-continue-outcome` with one of
+`rotation <phase>` / `complete` / `blocked` / `budget` / `stuck` / `pause`. This
+marker is inert unless the run is driven by `self-continue-drive.sh`, which reads
+it to decide re-spawn vs stop. Emitting it does NOT change the rotation-exit
+decision or the legacy human handoff (spec FR-8 legacy parity holds).
 
 ## Completion
 

@@ -25,7 +25,7 @@ updated_at: "2026-07-01"
   - Boundary Map:
     - Produces: `scripts/lifecycle/self-continue-branch.sh` (FR-3 deterministic directive); `scripts/dispatch/detect-capabilities.sh` extended with a `headless_reentry` field (can we spawn a fresh `claude -p`? — replaces the rejected `schedule_wakeup` capability, FR-7); the arming surface in `commands/auto.md` (FR-1, a driver/launch flag under the process-fresh model); SC-5 truth-table fixture
     - Consumes: P01 substrate decision (D015: process-fresh `claude -p`); the rotation-exit branch contract
-- [ ] **P03**: Self-continue wiring + terminal-state guards + safety envelope — "A self-continuing run advances across a rotation boundary with no manual re-invoke and halts on every terminal state; the max-continuations cap halts a thrash; the un-armed path is byte-identical to legacy."
+- [x] **P03**: Self-continue wiring + terminal-state guards + safety envelope — **DONE 2026-07-01.** Driver-outer design: `self-continue-drive.sh` re-spawns fresh `claude -p` per rotation until terminal/cap/stop-file (SC-2/SC-3/SC-4 PASS; thrash-vs-healthy progress field). `auto.md` additive (rotation-exit decision unchanged, legacy parity). — "A self-continuing run advances across a rotation boundary with no manual re-invoke and halts on every terminal state; the max-continuations cap halts a thrash; the un-armed path is byte-identical to legacy."
   - Risk: high
   - Depends: P02
   - Boundary Map:

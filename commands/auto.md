@@ -520,6 +520,35 @@ If phase-level verification fails:
 - Release the lock
 - Report and exit cleanly
 
+## Self-Continue (M045 — process-fresh re-entry)
+
+`orchestrator:auto` accepts an explicit, per-run opt-in `--self-continue`
+(default: OFF — spec CON-4; no config key may make it the silent default).
+When ARMED and the runtime reports the `headless_reentry` capability
+(`detect-capabilities.sh`), the loop, instead of exiting for a human at a
+context-rotation boundary, hands off to a **process-fresh `claude -p`
+re-entry** that resumes the next phase from disk and keeps advancing until a
+terminal state (milestone complete / blocker / budget / stuck / pause).
+
+The self-continue-vs-legacy-exit decision is deterministic and lives in
+`scripts/lifecycle/self-continue-branch.sh` (the agent only acts on its
+directive):
+
+- `AUTO:SELF_CONTINUE` — rotation AND armed AND headless-capable → spawn a
+  fresh `claude -p` re-entry (wired in P03).
+- `AUTO:ROTATE_EXIT reason=not-armed|headless-unavailable` — fall back to the
+  legacy human-handoff (write `continue.md`, report, exit).
+- `AUTO:NO_ROTATION` — no rotation; advance normally.
+
+Substrate note (decision D015): the re-entry is process-fresh (a new
+`claude -p`), NOT in-session — the M045 P01 spike proved in-session re-entry
+does not relieve context per-rotation. See
+`.orchestrator/milestones/M045/phases/P01/P01-VIABILITY-EVIDENCE.md`.
+
+**Status**: arming surface + decision core land in P02; the live rotation
+branch is rewired to consume `AUTO:SELF_CONTINUE` in P03. Until P03, the
+rotation-exit path behaves exactly as documented in "Context Rotation Check".
+
 ## Completion
 
 When `auto-loop.sh` returns a terminal state:

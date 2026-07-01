@@ -19,7 +19,7 @@ updated_at: "2026-07-01"
   - Boundary Map:
     - Produces: `.orchestrator/milestones/M045/phases/P01/P01-VIABILITY-EVIDENCE.md` (VERDICT + #Q-1/#Q-2 resolution); throwaway spike harness under `phases/P01/spike/`; verifiers `tools/verify/m045-p01-*.sh`
     - Consumes: `scripts/lifecycle/context-monitor.sh` (real rotation detector); the `ScheduleWakeup` primitive (tested, rejected as substrate)
-- [ ] **P02**: Deterministic branch + capability detection + arming surface — "Given CONTEXT:ROTATE plus armed/available flags, a deterministic script prints exactly one of AUTO:SELF_CONTINUE / AUTO:ROTATE_EXIT per the truth table, and capability-absent yields the legacy-exit directive."
+- [x] **P02**: Deterministic branch + capability detection + arming surface — **DONE 2026-07-01.** `self-continue-branch.sh` (SC-5 truth table PASS), `headless_reentry` capability, `--self-continue` arming docs in `auto.md` (doc-only; non-breaking). — "Given CONTEXT:ROTATE plus armed/available flags, a deterministic script prints exactly one of AUTO:SELF_CONTINUE / AUTO:ROTATE_EXIT per the truth table, and capability-absent yields the legacy-exit directive."
   - Risk: high
   - Depends: P01
   - Boundary Map:

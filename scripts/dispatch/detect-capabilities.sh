@@ -55,6 +55,13 @@ elif command -v copilot >/dev/null 2>&1; then
   subagent_dispatch=true
 fi
 
+# headless_reentry: can we spawn a fresh `claude -p` process for a process-fresh
+# self-continue re-entry (M045 / D015)? Requires the claude CLI on PATH.
+headless_reentry=false
+if command -v claude >/dev/null 2>&1; then
+  headless_reentry=true
+fi
+
 # agent_tool_available: in-process agent tools (e.g. Claude Code's Agent tool)
 # cannot be reliably detected from a shell script because they exist in the
 # agent's tool namespace, not as env vars or CLI commands. This field defaults
@@ -172,7 +179,8 @@ elif [[ "$FORMAT" = "json" ]]; then
   "host_copilot": $host_copilot,
   "graph_db": $graph_db,
   "mcp_servers": $mcp_servers,
-  "ci_pipeline": $ci_pipeline
+  "ci_pipeline": $ci_pipeline,
+  "headless_reentry": $headless_reentry
 }
 EOF
 else
@@ -189,4 +197,5 @@ else
   echo "graph_db=$graph_db"
   echo "mcp_servers=$mcp_servers"
   echo "ci_pipeline=$ci_pipeline"
+  echo "headless_reentry=$headless_reentry"
 fi

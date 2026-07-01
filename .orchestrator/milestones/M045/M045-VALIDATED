@@ -1,0 +1,15 @@
+M045 (self-continuing-auto — Auto v2 Posture 1) validated 2026-07-01.
+4 phases (P01-P04), all phase must-haves green.
+  P01 viability spike: VERDICT PARTIAL → substrate pivot to process-fresh (D015).
+  P02 decision core: self-continue-branch (SC-5 truth table) + headless_reentry + arming docs.
+  P03 live wiring: process-fresh driver (SC-2 terminal, SC-3 cap+thrash, SC-4 golden).
+  P04 observability: FR-9 log records + FR-10 stall watchdog (SC-1 continuity, SC-7 stall).
+validate-milestone.sh .orchestrator/milestones/M045 → PASS 8/8.
+Per-phase check-must-haves: P01 clean, P02 0-fail, P03 19/0, P04 12/0.
+Regression: test-s08-auto-safety.sh 33/35 (2 fails pre-existing, stash-confirmed).
+P04 executed via fresh-context dispatch (orchestrator-agent), independently re-verified.
+SC map: SC-1 (P04 continuity), SC-2 (P03 terminal), SC-3 (P03 cap+progress),
+  SC-4 (P03 golden), SC-5 (P02 truth table), SC-6 (P01 viability spike),
+  SC-7 (P04 stall). All covered.
+Key outcome: P01 caught the in-session premise as unviable BEFORE P02-P04 were
+built on it — the milestone ships the process-fresh substrate instead. See M045-SUMMARY.md.

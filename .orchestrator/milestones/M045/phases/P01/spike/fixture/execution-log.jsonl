@@ -1,0 +1,12 @@
+{"type":"dispatch","unit":"P01/T00","phase":"P01","outcome":"success","timestamp":"2026-07-01T01:00:00Z"}
+{"type":"dispatch","unit":"P01/T01","phase":"P01","outcome":"success","timestamp":"2026-07-01T01:00:00Z"}
+{"type":"dispatch","unit":"P01/T02","phase":"P01","outcome":"success","timestamp":"2026-07-01T01:00:00Z"}
+{"type":"dispatch","unit":"P01/T03","phase":"P01","outcome":"success","timestamp":"2026-07-01T01:00:00Z"}
+{"type":"dispatch","unit":"P02/T00","phase":"P02","outcome":"success","timestamp":"2026-07-01T01:00:00Z"}
+{"type":"dispatch","unit":"P02/T01","phase":"P02","outcome":"success","timestamp":"2026-07-01T01:00:00Z"}
+{"type":"dispatch","unit":"P02/T02","phase":"P02","outcome":"success","timestamp":"2026-07-01T01:00:00Z"}
+{"type":"dispatch","unit":"P02/T03","phase":"P02","outcome":"success","timestamp":"2026-07-01T01:00:00Z"}
+{"type":"dispatch","unit":"P03/T00","phase":"P03","outcome":"success","timestamp":"2026-07-01T01:00:00Z"}
+{"type":"dispatch","unit":"P03/T01","phase":"P03","outcome":"success","timestamp":"2026-07-01T01:00:00Z"}
+{"type":"dispatch","unit":"P03/T02","phase":"P03","outcome":"success","timestamp":"2026-07-01T01:00:00Z"}
+{"type":"dispatch","unit":"P03/T03","phase":"P03","outcome":"success","timestamp":"2026-07-01T01:00:00Z"}

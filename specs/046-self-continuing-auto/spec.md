@@ -4,7 +4,7 @@ type: feature-spec
 feature_slug: "046-self-continuing-auto"
 created_at: "2026-07-01"
 status: "Ready-for-discuss"
-milestone: "M-auto-v2a"
+milestone: "M045"
 ---
 
 # Feature Specification: 046-self-continuing-auto
@@ -13,7 +13,7 @@ milestone: "M-auto-v2a"
 **Created**: 2026-07-01
 **Status**: Ready-for-discuss
 **Last Revised**: 2026-07-01 (conversus spec-pressure-test PASS; 3 P0 + 4 P1/P2 mitigations from the red-blue deliberation applied — SC-6 viability gate, CON-5 contingency routing, Problem-Statement reword, FR-10 stall watchdog, FR-5 progress field, FR-5a delay floor, SC-4 golden baseline)
-**Milestone**: M-auto-v2a (Auto v2 — Posture 1; see `.orchestrator/proposals/Mxx-auto-v2-claude-code-loop-integration.md`)
+**Milestone**: M045 — Auto v2 Posture 1 / "M-auto-v2a" (see `.orchestrator/proposals/Mxx-auto-v2-claude-code-loop-integration.md`)
 **Input**: User description: "Posture 1 self-continuing attended autonomous execution: layer onto the existing Tier C auto loop so it auto-resumes across context-rotation boundaries via ScheduleWakeup/self-paced loop instead of stopping for a human to re-invoke. Intercept auto-loop.sh exit 14 (context rotation), schedule a fresh-context re-entry that consumes the continue-file, and keep advancing until the milestone completes, blocks, or exhausts budget."
 
 ## Problem Statement

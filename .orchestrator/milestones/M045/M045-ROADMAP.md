@@ -4,7 +4,7 @@ type: roadmap
 milestone: "M045"
 feature_ref: "046-self-continuing-auto"
 feature_spec: "specs/046-self-continuing-auto/spec.md"
-vision: "The Tier C autonomous loop continues itself across context-rotation boundaries — kick it once and it runs to a terminal state without a human re-invoking at each rotation."
+vision: "The Tier C autonomous loop continues itself across context-rotation boundaries via process-fresh claude -p re-entry — kick it once and it runs to a terminal state without a human re-invoking at each rotation. (Substrate pivoted from in-session ScheduleWakeup to process-fresh per P01/D015, 2026-07-01.)"
 tier: "C"
 created_at: "2026-07-01"
 updated_at: "2026-07-01"
@@ -12,24 +12,24 @@ updated_at: "2026-07-01"
 
 ## Phases
 
-- [ ] **P01**: Viability spike — does in-session re-entry relieve context? — "A real, non-stubbed multi-rotation Tier C run under a self-continue prototype shows measured, bounded (non-compounding) orchestrating-context growth across ≥2 rotation boundaries — or a negative result that triggers the CON-5 route to M-auto-v2b."
+- [x] **P01**: Viability spike — does in-session re-entry relieve context? — **DONE 2026-07-01, VERDICT PARTIAL.** In-session `ScheduleWakeup` re-entry preserves correctness but NOT per-rotation context relief; substrate pivoted to process-fresh `claude -p` per decision D015 / CON-5. Evidence: `.orchestrator/milestones/M045/phases/P01/P01-VIABILITY-EVIDENCE.md`.
   - Risk: high
   - Depends: none
-  - **Decision gate**: This phase resolves #Q-1 / SC-6, the milestone's load-bearing risk. A PASS unblocks P02–P04 as scoped. A negative result halts the milestone at whatever US1 slice is viable and routes the process-fresh remainder to M-auto-v2b per spec CON-5 — it does NOT expand scope here. Also informs #Q-2 (a process-fresh answer favors the `/loop` recipe over a `--self-continue` flag).
+  - **Decision gate (fired)**: resolved #Q-1 / SC-6. Outcome was not the expected PASS — the in-session premise failed on the axis rotation targets, routing the re-entry substrate to process-fresh per CON-5. P02–P04 proceed with the substrate swapped (mechanism otherwise ~unchanged). #Q-2 resolved: `ScheduleWakeup` is `/loop`-only; moot under process-fresh (arming becomes a driver flag).
   - Boundary Map:
-    - Produces: `.orchestrator/milestones/M045/P01-VIABILITY-EVIDENCE.md` (measured context-growth across boundaries, env-gated live run modeled on the M036a live-smoke precedent); a throwaway spike-grade self-continue harness (NOT production code); resolution notes for #Q-1 and a recommendation for #Q-2
-    - Consumes: existing rotation machinery — `scripts/lifecycle/auto-loop.sh --step=X`, `scripts/lifecycle/context-monitor.sh`; the harness `ScheduleWakeup`/self-paced `/loop` primitive
+    - Produces: `.orchestrator/milestones/M045/phases/P01/P01-VIABILITY-EVIDENCE.md` (VERDICT + #Q-1/#Q-2 resolution); throwaway spike harness under `phases/P01/spike/`; verifiers `tools/verify/m045-p01-*.sh`
+    - Consumes: `scripts/lifecycle/context-monitor.sh` (real rotation detector); the `ScheduleWakeup` primitive (tested, rejected as substrate)
 - [ ] **P02**: Deterministic branch + capability detection + arming surface — "Given CONTEXT:ROTATE plus armed/available flags, a deterministic script prints exactly one of AUTO:SELF_CONTINUE / AUTO:ROTATE_EXIT per the truth table, and capability-absent yields the legacy-exit directive."
   - Risk: high
   - Depends: P01
   - Boundary Map:
-    - Produces: `scripts/lifecycle/self-continue-branch.sh` (FR-3 deterministic directive + FR-5a delay-floor query); `scripts/dispatch/detect-capabilities.sh` extended with a `schedule_wakeup` field (FR-7); the arming surface in `commands/auto.md` (FR-1, form resolved per #Q-2); SC-5 truth-table fixture
-    - Consumes: P01 viability decision (#Q-1 PASS, #Q-2 recommendation); the rotation-exit branch contract
+    - Produces: `scripts/lifecycle/self-continue-branch.sh` (FR-3 deterministic directive); `scripts/dispatch/detect-capabilities.sh` extended with a `headless_reentry` field (can we spawn a fresh `claude -p`? — replaces the rejected `schedule_wakeup` capability, FR-7); the arming surface in `commands/auto.md` (FR-1, a driver/launch flag under the process-fresh model); SC-5 truth-table fixture
+    - Consumes: P01 substrate decision (D015: process-fresh `claude -p`); the rotation-exit branch contract
 - [ ] **P03**: Self-continue wiring + terminal-state guards + safety envelope — "A self-continuing run advances across a rotation boundary with no manual re-invoke and halts on every terminal state; the max-continuations cap halts a thrash; the un-armed path is byte-identical to legacy."
   - Risk: high
   - Depends: P02
   - Boundary Map:
-    - Produces: `commands/auto.md` §Context Rotation Check edits wiring the directive → `ScheduleWakeup` call (FR-2); terminal-states-never-self-continue guard (FR-4); `max-continuations` cap + forward-progress field (FR-5); interruptibility (FR-6); un-armed legacy parity (FR-8); `tests/fixtures/rotation-exit-legacy-<ver>.golden` (SC-4); SC-2 + SC-3 fixtures
+    - Produces: `commands/auto.md` §Context Rotation Check edits wiring the directive → spawn a process-fresh `claude -p` re-entry that resumes from disk (FR-2); a small driver (e.g. `scripts/lifecycle/self-continue-drive.sh`, productionized from the P01 spike) that loops rotation→fresh-process→resume until terminal; terminal-states-never-self-continue guard (FR-4); `max-continuations` cap + forward-progress field (FR-5); interruptibility (FR-6); un-armed legacy parity (FR-8); `tests/fixtures/rotation-exit-legacy-<ver>.golden` (SC-4); SC-2 + SC-3 fixtures
     - Consumes: P02 branch script + capability detection + arming surface
 - [ ] **P04**: Continuity observability + stall watchdog + flagship acceptance — "A completed multi-segment run is auditable as one continuous execution in the log, an unfired re-entry surfaces as SELF_CONTINUE:STALLED in orchestrator:status, and the P1 cross-rotation story passes end-to-end."
   - Risk: medium

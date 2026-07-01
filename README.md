@@ -119,6 +119,7 @@ Each command below assumes you've [installed](docs/getting-started.md) and are i
 | Start greenfield, nothing written | `/orchestrator-start` → ideation | 5–10 min | 7-question grilling protocol → vision, scope, users, constraints |
 | Greenfield + materials (briefs, PDFs) | `/orchestrator-start` → materials intake | 5–15 min | Reconciled pre-spec; asked only about real conflicts |
 | Ship a multi-month feature autonomously | `/orchestrator-start` then `/orchestrator-auto` | hours–days | Roadmap → phases → dispatch → verify → advance, untouched |
+| Run it hands-off across context rotations | `/orchestrator-auto --self-continue` | hours–days | Self-continues over rotation boundaries via fresh-process re-entry; halts on completion / blocker / budget / cap. [Details](docs/getting-started.md#self-continuing-autonomous-runs---self-continue) |
 | Add reference docs (regs, glossaries) | `/orchestrator-extract` then `/orchestrator-ingest-reference` | varies | Tiered extraction into the knowledge graph |
 | Give a team visibility | `/orchestrator-wiki-init` (`--deploy --with-giscus`) | ~2 min | mkdocs site of milestones, phases, decisions — GitHub Pages + commentable |
 | Use GitHub Issues / Projects as tracker | `/orchestrator-github-init` | ~2 min | State projected to Issues / Milestones / Projects v2; opt-in, reversible |
@@ -145,7 +146,7 @@ Each command below assumes you've [installed](docs/getting-started.md) and are i
 |---|---|
 | `/orchestrator-start` | First time in any project — warm front door, auto-routes onboarding (greenfield-empty / greenfield-with-materials / existing-codebase / migrating) |
 | `/orchestrator-do "..."` | Any task — classifies scope, routes to Tier A quick-path, Tier A+ middle flow, or defers larger work to `/orchestrator-specify` |
-| `/orchestrator-auto` | Autonomous loop — `dispatch → verify → record → advance` until milestone completes or a blocker surfaces |
+| `/orchestrator-auto` | Autonomous loop — `dispatch → verify → record → advance` until milestone completes or a blocker surfaces. Add **`--self-continue`** to keep it running across context-rotation boundaries *without re-invoking by hand* — it re-spawns a fresh process each time and stops on completion, a blocker, budget, or a cap (opt-in, default off) |
 | `/orchestrator-status` | Anytime — read-only one-screen progress + next-action report |
 | `/orchestrator-resume` | After crash or pause — reads `.orchestrator/` state and continues exactly where it stopped |
 

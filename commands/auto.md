@@ -50,21 +50,23 @@ env block.
 ### Oracle wrapper (AD-4 — SC-8 byte-identity contract)
 
 The `predicted_cost` field is byte-identical to the `cost_standard_usd=`
-line emitted by the documented oracle invocation:
+line emitted by the documented oracle invocation. (These blocks are
+**reference** — they document the byte-identity contract, not commands auto
+mode emits verbatim; the command-substitution form below is illustrative and
+would itself trip the AD-19 harness shape-guard if run directly.)
 
-```bash
+```text
 bash scripts/dispatch/predictive-surface.sh \
-  --description "$(bash scripts/diagnostics/summarize-milestone.sh M### --format=keys)" \
+  --description "<milestone key-summary from summarize-milestone.sh M### --format=keys>" \
   --intensity standard
 ```
 
-Extract the cost scalar via:
+Extract the cost scalar from the oracle output (`$ORACLE`) via a single
+projection:
 
-```bash
-ORACLE=$(bash scripts/dispatch/predictive-surface.sh \
-  --description "$(bash scripts/diagnostics/summarize-milestone.sh M### --format=keys)" \
-  --intensity standard)
-COST=$(printf '%s\n' "$ORACLE" | grep -F 'cost_standard_usd=' | cut -d= -f2)
+```text
+COST = the value after "cost_standard_usd=" in the oracle's output
+       (e.g. printf '%s\n' "$ORACLE" | sed -n 's/^cost_standard_usd=//p')
 ```
 
 Why **`--no-predict` is NOT in the oracle invocation**:

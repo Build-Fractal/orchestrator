@@ -563,6 +563,8 @@ marker is inert unless the run is driven by `self-continue-drive.sh`, which read
 it to decide re-spawn vs stop. Emitting it does NOT change the rotation-exit
 decision or the legacy human handoff (spec FR-8 legacy parity holds).
 
+Run health can be inspected read-only with `scripts/diagnostics/self-continue-status.sh <log-path>` — reports `SELF_CONTINUE:STALLED` if the last segment never resolved (FR-10).
+
 ## Completion
 
 When `auto-loop.sh` returns a terminal state:

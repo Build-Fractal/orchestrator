@@ -31,7 +31,7 @@ updated_at: "2026-07-01"
   - Boundary Map:
     - Produces: `commands/auto.md` §Context Rotation Check edits wiring the directive → spawn a process-fresh `claude -p` re-entry that resumes from disk (FR-2); a small driver (e.g. `scripts/lifecycle/self-continue-drive.sh`, productionized from the P01 spike) that loops rotation→fresh-process→resume until terminal; terminal-states-never-self-continue guard (FR-4); `max-continuations` cap + forward-progress field (FR-5); interruptibility (FR-6); un-armed legacy parity (FR-8); `tests/fixtures/rotation-exit-legacy-<ver>.golden` (SC-4); SC-2 + SC-3 fixtures
     - Consumes: P02 branch script + capability detection + arming surface
-- [ ] **P04**: Continuity observability + stall watchdog + flagship acceptance — "A completed multi-segment run is auditable as one continuous execution in the log, an unfired re-entry surfaces as SELF_CONTINUE:STALLED in orchestrator:status, and the P1 cross-rotation story passes end-to-end."
+- [x] **P04**: Continuity observability + stall watchdog + flagship acceptance — **DONE 2026-07-01.** Driver `--log` FR-9 records + FR-10 structural stall (`SELF_CONTINUE:STALLED`); `self-continue-status.sh` reader; SC-1 continuity + SC-7 stall fixtures PASS. Executed via fresh-context dispatch. — "A completed multi-segment run is auditable as one continuous execution in the log, an unfired re-entry surfaces as SELF_CONTINUE:STALLED in orchestrator:status, and the P1 cross-rotation story passes end-to-end."
   - Risk: medium
   - Depends: P03
   - Boundary Map:

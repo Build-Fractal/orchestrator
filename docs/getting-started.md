@@ -228,6 +228,41 @@ It reads `.orchestrator/` state, distinguishes a crash (stale lock — breaks it
 
 ---
 
+## Self-continuing autonomous runs (`--self-continue`)
+
+A long Tier C run periodically hits a **context-rotation boundary** — the point where the orchestrating session's context is deep enough that it's healthier to start fresh. By default the loop stops there and asks you to re-run `/orchestrator-auto` in a new session. On a multi-phase milestone that can mean babysitting several restarts.
+
+`--self-continue` removes the babysitting:
+
+```
+/orchestrator-auto --self-continue
+```
+
+Kick it once and walk away. At each rotation boundary the orchestrator **re-spawns a fresh process** (`claude -p`) that resumes the milestone from on-disk state and keeps advancing — until one of the natural stopping points:
+
+- ✅ the milestone **completes**,
+- 🛑 a **blocker** / verification failure / budget limit / pause is hit, or
+- 🧯 the **`--max-continuations` cap** is reached (a runaway backstop).
+
+It's **opt-in and off by default** — no config knob can make it silent — and you can stop a run any time by creating the `--stop-file`. Because every re-entry is a *genuinely fresh process*, each segment gets a clean context (this is what a bare in-session re-run can't give you — see the design note below).
+
+**Flags:**
+
+| Flag | Meaning |
+|---|---|
+| `--self-continue` | Arm self-continuation (default: off) |
+| `--max-continuations N` | Hard cap on re-spawns (runaway backstop) |
+| `--min-interval S` | Minimum seconds between re-spawns |
+| `--stop-file <path>` | Create this file to stop after the current segment |
+
+**Requirements:** the `claude` CLI must be on `PATH` (reported as the `headless_reentry` capability by `detect-capabilities.sh`). Where it isn't (some CI, or Codex/Cursor today), self-continue **degrades gracefully** to the normal "stop and re-invoke" behavior — nothing breaks.
+
+**Observability:** pass `--log <path>` to record a continuous audit trail of the run (one JSONL record per segment). Check a run's health read-only with `scripts/diagnostics/self-continue-status.sh <log>` — it reports `SELF_CONTINUE:STALLED` if a spawned segment never resolved. A cap-halt whose `progress` is far below its `continuations` count is telling you the run was *thrashing*, not making progress.
+
+> **Why fresh processes?** A quick spike (milestone M045 / P01) proved that re-entering *in the same session* doesn't actually relieve context — it just keeps piling onto the same window. Only a fresh process resets the context per rotation, so that's what `--self-continue` does. The evidence lives at `.orchestrator/milestones/M045/phases/P01/P01-VIABILITY-EVIDENCE.md`.
+
+---
+
 ## Going bigger
 
 For work too large for `/orchestrator-do`, the full per-feature command chain is `evaluate → discuss → roadmap → plan-phase → auto → verify → consolidate`. `/orchestrator-do` already runs the appropriate subset for you based on scope; you only walk the chain by hand when you want manual control of each gate. `/orchestrator-auto` runs the autonomous loop (dispatch → verify → record → advance) until the milestone completes or a blocker surfaces.

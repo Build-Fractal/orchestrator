@@ -50,21 +50,23 @@ env block.
 ### Oracle wrapper (AD-4 — SC-8 byte-identity contract)
 
 The `predicted_cost` field is byte-identical to the `cost_standard_usd=`
-line emitted by the documented oracle invocation:
+line emitted by the documented oracle invocation. (These blocks are
+**reference** — they document the byte-identity contract, not commands auto
+mode emits verbatim; the command-substitution form below is illustrative and
+would itself trip the AD-19 harness shape-guard if run directly.)
 
-```bash
+```text
 bash scripts/dispatch/predictive-surface.sh \
-  --description "$(bash scripts/diagnostics/summarize-milestone.sh M### --format=keys)" \
+  --description "<milestone key-summary from summarize-milestone.sh M### --format=keys>" \
   --intensity standard
 ```
 
-Extract the cost scalar via:
+Extract the cost scalar from the oracle output (`$ORACLE`) via a single
+projection:
 
-```bash
-ORACLE=$(bash scripts/dispatch/predictive-surface.sh \
-  --description "$(bash scripts/diagnostics/summarize-milestone.sh M### --format=keys)" \
-  --intensity standard)
-COST=$(printf '%s\n' "$ORACLE" | grep -F 'cost_standard_usd=' | cut -d= -f2)
+```text
+COST = the value after "cost_standard_usd=" in the oracle's output
+       (e.g. printf '%s\n' "$ORACLE" | sed -n 's/^cost_standard_usd=//p')
 ```
 
 Why **`--no-predict` is NOT in the oracle invocation**:
@@ -519,6 +521,51 @@ If phase-level verification fails:
 - Write a continue file with the failed verification details
 - Release the lock
 - Report and exit cleanly
+
+## Self-Continue (M045 — process-fresh re-entry)
+
+`orchestrator:auto` accepts an explicit, per-run opt-in `--self-continue`
+(default: OFF — spec CON-4; no config key may make it the silent default).
+When ARMED and the runtime reports the `headless_reentry` capability
+(`detect-capabilities.sh`), the loop, instead of exiting for a human at a
+context-rotation boundary, hands off to a **process-fresh `claude -p`
+re-entry** that resumes the next phase from disk and keeps advancing until a
+terminal state (milestone complete / blocker / budget / stuck / pause).
+
+The self-continue-vs-legacy-exit decision is deterministic and lives in
+`scripts/lifecycle/self-continue-branch.sh` (the agent only acts on its
+directive):
+
+- `AUTO:SELF_CONTINUE` — rotation AND armed AND headless-capable → spawn a
+  fresh `claude -p` re-entry (wired in P03).
+- `AUTO:ROTATE_EXIT reason=not-armed|headless-unavailable` — fall back to the
+  legacy human-handoff (write `continue.md`, report, exit).
+- `AUTO:NO_ROTATION` — no rotation; advance normally.
+
+Substrate note (decision D015): the re-entry is process-fresh (a new
+`claude -p`), NOT in-session — the M045 P01 spike proved in-session re-entry
+does not relieve context per-rotation. See
+`.orchestrator/milestones/M045/phases/P01/P01-VIABILITY-EVIDENCE.md`.
+
+**Launch**: `--self-continue` runs the milestone under the process-fresh
+driver `scripts/lifecycle/self-continue-drive.sh <milestone-dir>
+[--max-continuations N] [--min-interval S] [--stop-file <path>]`. The driver
+re-spawns a fresh `claude -p "orchestrator:auto <milestone-dir>"` (single-
+segment, no `--self-continue`) after each rotation-exit, until a terminal
+outcome, the `--max-continuations` cap, or the `--stop-file`. Interrupt a run
+by creating the stop-file. The driver emits `SELF_CONTINUE:SCHEDULED` /
+`:TERMINAL` / `:CAP_REACHED` / `:STOPPED` (each carrying `continuations=` and a
+forward-progress `progress=` field — a cap-halt with `progress ≪ continuations`
+signals a thrash rather than a legitimately long run).
+
+**Outcome marker**: at each exit path (rotation and every terminal state), the
+loop additionally writes `<milestone-dir>/.self-continue-outcome` with one of
+`rotation <phase>` / `complete` / `blocked` / `budget` / `stuck` / `pause`. This
+marker is inert unless the run is driven by `self-continue-drive.sh`, which reads
+it to decide re-spawn vs stop. Emitting it does NOT change the rotation-exit
+decision or the legacy human handoff (spec FR-8 legacy parity holds).
+
+Run health can be inspected read-only with `scripts/diagnostics/self-continue-status.sh <log-path>` — reports `SELF_CONTINUE:STALLED` if the last segment never resolved (FR-10).
 
 ## Completion
 

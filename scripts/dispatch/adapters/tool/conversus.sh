@@ -611,7 +611,16 @@ ${_src_one}
       fi
     fi
     _provider="${CONVERSUS_PROVIDER:-anthropic}"
-    "$_bin_path" run "$_conv_config" --provider "$_provider"
+    # Model override passthrough. Conversus OSS pins a stale default model
+    # (claude-sonnet-4-20250514) that 404s on current sessions — see the
+    # KNOWN_PROVIDER_ERROR_PATTERNS guard above. Operators set CONVERSUS_MODEL
+    # to a reachable id (e.g. claude-sonnet-5) to override it. Unset → conversus
+    # default (preserves prior behavior for environments where the default works).
+    if [ -n "${CONVERSUS_MODEL:-}" ]; then
+      "$_bin_path" run "$_conv_config" --provider "$_provider" --model "$CONVERSUS_MODEL"
+    else
+      "$_bin_path" run "$_conv_config" --provider "$_provider"
+    fi
     _rc=$?
     if [ $_rc -ne 0 ]; then
       _emit_fail "conversus run exited non-zero (rc=${_rc})"

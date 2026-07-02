@@ -1,0 +1,4 @@
+{"segment":1,"phase":"P01","exec_log_lines":4,"weight":"4","limit":"3","status":"rotate","context_proxy":"weight-only:4 (synchronous run — no live harness token readout available from shell)"}
+{"segment":2,"phase":"P02","exec_log_lines":8,"weight":"11","limit":"3","status":"rotate","context_proxy":"weight-only:11 (compounding; +7 over prior segment — lock startedAt static, no reset)"}
+{"segment":3,"phase":"P03","exec_log_lines":12,"weight":"18","limit":"3","status":"rotate","context_proxy":"weight-only:18 (compounding; +7 over prior segment)"}
+{"segment":4,"phase":"-","exec_log_lines":12,"weight":"-","limit":"3","status":"complete","context_proxy":"-"}

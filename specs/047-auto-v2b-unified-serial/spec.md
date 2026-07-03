@@ -12,7 +12,7 @@ milestone: "M046"
 **Feature Branch**: `047-auto-v2b-unified-serial`
 **Created**: 2026-07-02
 **Status**: Ready-for-discuss
-**Last Revised**: 2026-07-02 (Full+PASS conversus gate; MIT-1..MIT-7 amendments applied)
+**Last Revised**: 2026-07-03 (LFD-article amendments: FR-18 attempts-ledger, FR-19 agent-queryable instruments, FR-20 verification-integrity + CON-7 + SC-13..15 + #Q-8/#Q-9) — over 2026-07-02 Full+PASS conversus gate (MIT-1..MIT-7)
 **Milestone**: M046
 **Input**: User description: "Unified tier-sized autonomous entry (serial core): collapse orchestrator:do into orchestrator:auto behind one classify-first entry, add a --unattended serial safety envelope (in-segment budget ceiling with watchdog SIGKILL, reserve-then-spend accounting, default-DENY PreToolUse path+tool allowlist, BLOCK-on-ambiguity, thrash-as-terminal), harden the process-fresh driver marker contract, and degrade gracefully on non-CC runtimes. Fan-out coordinator and Posture-3 Stop-hook are carved to future milestones."
 
@@ -111,6 +111,8 @@ On a non-CC runtime (Codex CLI / Cursor) where the process-fresh `claude -p` sub
 - **`--yes` on a now-broader `auto`** — a pre-existing `--yes` caller must not silently gain authority over unattended/destructive approvals (see #Q-2).
 - **Tier-A task that outgrows Tier A mid-run** — does not silently self-promote into a locked loop; it BLOCKs back to `orchestrator:evaluate` (Tier A produces zero orchestrator state).
 - **Stale lock from a crashed unattended run** — `orchestrator:resume` reconciles the single `.orchestrator/orchestrator.lock` per existing M045 semantics (per-unit worktree locks are a v2c concern, explicitly out of scope here).
+- **Fresh rotation re-tries a failed approach** — because process-fresh re-entry wipes context totally, the FR-18 attempts-ledger is the only cross-rotation memory of what was tried; a rotation reads it before acting so it does not blindly repeat a prior failed fix. (Contrast `/goal`'s in-session continuation, whose risk is the opposite — local maxima from too much retained context; forced-entropy is that tool's cure and is deliberately NOT adopted here, since a stall in deterministic execution means escalate-to-human via FR-12, not inject randomness.)
+- **Child tries to weaken its own completion gate** — an unattended child attempting to edit a success criterion, the verification harness, or its scoring record is denied by the FR-9/FR-20 hook (CON-7 separation-of-doing-and-scoring); the completion target is outside the executor's reach.
 
 ---
 
@@ -134,6 +136,12 @@ On a non-CC runtime (Codex CLI / Cursor) where the process-fresh `claude -p` sub
 - **FR-16 (runtime-degrade)**: On a runtime lacking `headless_reentry` or the hook-install path, `--unattended` MUST refuse to start with a diagnostic; attended `auto` MUST fall back to M045 manual-re-invoke. The unsafe degrade (unattended without the hook) MUST be impossible. Coordinates with M009 (classified inspiration-only, see Dependencies). Satisfies US6.
 - **FR-17 (legacy-parity)**: The attended Tier-C loop behavior MUST remain byte-compatible with M045 (FR-8 legacy parity); the unattended envelope wraps it without changing attended semantics. Satisfies US1, CON-2.
 
+> **LFD-article amendments (2026-07-03)** — FR-18..FR-20 fold in three insights from the loss-function-development playbook (Elvis Sun) that materially strengthen the serial safety envelope. Rationale is recorded per-FR; the broader "optimize-toward-metric" outer-loop paradigm is captured separately at `.orchestrator/proposals/lfd-optimize-mode.md` and is explicitly NOT M046 scope.
+
+- **FR-18 (attempts-ledger)**: Under process-fresh re-entry (D015), the driver MUST maintain a per-unit durable **attempts-ledger** on disk — each entry records the approach attempted, its hypothesis, the expected failure mode, the observed diagnostic, and the outcome. Each fresh rotation MUST read the ledger before acting and append to it after acting. Rationale: D015 process-fresh re-entry wipes in-context memory *totally* (unlike `/goal`'s in-session continuation, which risks the opposite — local-maxima from too much retained context); without a disk-durable ledger, a fresh-context rotation can blindly re-attempt an approach a prior rotation already proved fails, burning budget. This is the load-bearing prerequisite for a safe future Posture-3 (until-verified) loop. Satisfies US3.
+- **FR-19 (agent-queryable-instruments)**: Every unattended constraint (budget remaining, wall-clock remaining, continuation/iteration count, phase-progress delta, cumulative spend) MUST be exposable to the executing child via a read-only introspection CLI, so the child can *self-regulate*, not only be externally enforced. This complements FR-7's dual mechanism (external watchdog SIGKILL + in-child self-abort) and generalizes it to all constraints: "a constraint the agent cannot read is one it cannot honor from its own side." Satisfies US3, extends CON-6.
+- **FR-20 (verification-integrity)**: Under `--unattended`, the executing child MUST NOT be able to modify the success criteria, the verification harness, or its own scoring records that gate its completion. The FR-9 default-DENY hook MUST treat the SC/eval/verification surface and the attempts-ledger's scoring fields as **read-only to the executing child** (separation of doing vs. scoring). This closes the "agent games its own completion target" path — the SDD analogue of the LFD cheating saga, and the same "green board, silent leak" failure the conversus red-team named. Satisfies US3, CON-7.
+
 ## Success Criteria
 
 - **SC-1 (unified-routing)**: `orchestrator:auto` with a Tier-A description, a Tier-C dir, and an ambiguous arg routes to one-shot / loop / BLOCK respectively — asserted by a fixture harness, exit 0 on the three expected outcomes. Verifies US1.
@@ -148,6 +156,9 @@ On a non-CC runtime (Codex CLI / Cursor) where the process-fresh `claude -p` sub
 - **SC-10 (no-injection)**: A metacharacter-bearing milestone-dir name is rejected, not executed. Verifies FR-15.
 - **SC-11 (classifier-precision-floor)**: The conversus red-team reports a measured false-high classification rate against a fixture corpus that meets a precision floor. **Anti-circularity protocol (#Q-6)**: the floor MUST be committed to disk BEFORE the rate is measured, and the measurement MUST be performed by an independent (non-implementer) pass; commit-order/timestamp is inspectable on disk. The first measured rate is provisional, subject to a second independent conversus review of whether the committed floor is defensible relative to corpus composition (not merely whether the ordering was followed). Below floor is milestone-blocking. Verifies FR-11.
 - **SC-12 (safe-degrade)**: On a simulated non-CC profile, `--unattended` refuses with a diagnostic and attended `auto` falls back to M045 behavior; no unattended-without-hook path exists. Verifies US6 / FR-16.
+- **SC-13 (attempts-ledger-replay)**: In a fixture where rotation N records a failed approach, rotation N+1 reads the ledger and is presented that prior failure (asserted: the ledger entry is on disk and consumed by the next rotation's context assembly, not re-derived blind). Verifies FR-18.
+- **SC-14 (instrument-introspection)**: Each named unattended constraint has a working read-only CLI returning its current value; a fixture asserts the child can query budget-remaining, wall-clock-remaining, and progress-delta and receive live values. Verifies FR-19.
+- **SC-15 (verification-immutability, NON-STUBBED)**: A real unattended child attempting to edit a success-criterion definition, the verification harness, OR its own scoring record is BLOCKED by the live hook. Milestone-blocking, non-stubbed (this is a completion-integrity gate — a stub does NOT satisfy it). Verifies FR-20.
 
 ## Non-Goals
 
@@ -167,6 +178,7 @@ On a non-CC runtime (Codex CLI / Cursor) where the process-fresh `claude -p` sub
 - **CON-4 (hard-caps-always-on)**: Under `--unattended`, hard budget + iteration caps + a wall-clock ceiling and BLOCK-on-ambiguity MUST always be on; there is no flag to disable them. (The wall-clock ceiling's value/mechanism is resolved at #Q-7; its *presence* in the always-on set is non-negotiable.)
 - **CON-5 (fail-closed)**: Every safety enforcement (caps, hook install, marker, degrade) MUST fail closed — absence of a guarantee halts the run, never proceeds unsafely.
 - **CON-6 (primitive-verification)**: No load-bearing design may rest on an assumed primitive behavior until confirmed against official docs AND (for concurrency/cost/hook primitives) shown to survive the M021 shape-guard + M028 consumer hook-install path + an empirical spike. The PreToolUse deny-hook, the cost-read path, and the marker contract each carry a non-stubbed gate (SC-3/5/9). Concurrency itself is already spiked (P00, N=3) and belongs to v2c.
+- **CON-7 (separation-of-doing-and-scoring)**: The component that executes work and the surface that scores its completion MUST be separable — the executing unattended child cannot mutate the success criteria, verification harness, or scoring records that gate it (enforced by FR-20 / SC-15). Anti-gaming invariant: an optimizer (or an autonomous executor) games whatever it can reach; the completion target must be outside its reach.
 
 ### Knowledge-Layer Boundary (M046 vs. M019/M024)
 
@@ -197,6 +209,8 @@ M046 owns NO knowledge-tree schema. It **reads** the M019 Tier-1 cost JSONL (and
 - **#Q-5 (second-gate-substrate)**: Is the FR-11 second gate a cheap second-model call, the M042 corpus-gate, or both? Decided at plan-phase with a cost/precision trade-off.
 - **#Q-6 (precision-floor-protocol)**: The SC-11 anti-circularity protocol requires committing the precision floor to disk before measuring the false-high rate and using an independent (non-implementer) measurer. Open at plan-phase: who is the independent measurer, what corpus composition is defensible, and does the numeric floor itself need to be hard-coded in the spec rather than deferred under the protocol? The first measured rate is provisional pending a second independent conversus review (arbiter ruling, gate-result RISK-3).
 - **#Q-7 (wall-clock-default)**: Is the wall-clock ceiling (FR-7/FR-13/CON-4) a fixed internal non-configurable constant (and if so, what value?) or a future operator-facing flag? It is always-on either way; only its value/mechanism is open. Resolved at plan-phase (gate-result RISK-6).
+- **#Q-8 (ledger-schema)**: What is the FR-18 attempts-ledger's on-disk schema, retention policy, and how much is fed to a fresh rotation — full replay vs a compacted summary (to respect Principle I context minimization)? Resolved at plan-phase.
+- **#Q-9 (instrument-surface)**: Do the FR-19 introspection CLIs reuse existing surfaces (`self-continue-status.sh`, M019 cost rollup) or require new commands, and what is the exact read-only command set? Resolved at plan-phase.
 
 ## Dependencies
 
@@ -211,5 +225,6 @@ M046 owns NO knowledge-tree schema. It **reads** the M019 Tier-1 cost JSONL (and
 ## Downstream Consumers (informational, not binding)
 
 - **v2c-fanout (future)** — the fan-out coordinator builds directly on this serial safety envelope (caps, hook, marker, ledger); the P00 concurrency evidence is banked for it.
-- **Posture-3 until-verified slice (future)** — a unit-grain Stop-hook loop that reuses the unified entry and safety envelope.
+- **Posture-3 until-verified slice (future)** — a unit-grain Stop-hook loop that reuses the unified entry and safety envelope, and **consumes the FR-18 attempts-ledger** as its cross-retry memory (without it, an until-verified loop re-tries failed fixes blind).
+- **lfd-optimize-mode (future proposal)** — the outer-loop "optimize-toward-a-private-eval" paradigm (`.orchestrator/proposals/lfd-optimize-mode.md`); would reuse this milestone's safety envelope (caps, hook, instruments, ledger) and add target/blind-eval/forced-entropy on top.
 - **orchestrator:resume** — reconciles a stale lock from a crashed unattended run (existing single-lock semantics; per-unit locks are v2c).

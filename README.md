@@ -1,7 +1,7 @@
 # Orchestrator
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-v0.10.2-green.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v0.10.3-green.svg)](./CHANGELOG.md)
 [![Runtime](https://img.shields.io/badge/runtime-Claude%20Code%20%2B%20Cursor-orange.svg)](#try-it-with-zero-commitment)
 [![Spec-driven](https://img.shields.io/badge/spec--driven-development-purple.svg)](./docs/why-this-exists.md)
 
@@ -158,7 +158,7 @@ Each command below assumes you've [installed](docs/getting-started.md) and are i
 
 ## Status & credibility
 
-**v0.10.2** — published across npm / Homebrew / curl, in production use and **dogfooded daily on its own development**. Dozens of milestones closed (latest: M044 knowledge-activation reliability, 2026-06-07; M034 interactive review gates, 2026-06-06; M043 Cloudflare Pages + Access wiki-deploy target, 2026-06-05; M042 `/orchestrator-corpus-gate`, 2026-05-30; M041 `/orchestrator-detective`, 2026-05-25); the packaging & distribution launch event shipped 2026-05-09. **Cursor is a supported runtime (M009 + M034, 2026-06-06)** — native commands, dispatch backend, hooks, and interactive review gates. Next up is a demand-driven post-launch fast-follow queue (Cursor cost accounting; M023 design layer; the M038+M040 paired slot).
+**v0.10.3** — published across npm / Homebrew / curl, in production use and **dogfooded daily on its own development**. Dozens of milestones closed (latest: M045 self-continuing auto — `orchestrator:auto --self-continue`, 2026-07-01; M044 knowledge-activation reliability, 2026-06-07; M034 interactive review gates, 2026-06-06; M043 Cloudflare Pages + Access wiki-deploy target, 2026-06-05; M042 `/orchestrator-corpus-gate`, 2026-05-30); the packaging & distribution launch event shipped 2026-05-09. **Cursor is a supported runtime (M009 + M034, 2026-06-06)** — native commands, dispatch backend, hooks, and interactive review gates. In flight: M046 auto-v2b unified serial core (tier-sized autonomous entry + `--unattended` safety envelope).
 
 Full audit trail: [`.orchestrator/milestone-summary.md`](./.orchestrator/milestone-summary.md) · engineering changelog: [`CHANGELOG.md`](./CHANGELOG.md).
 

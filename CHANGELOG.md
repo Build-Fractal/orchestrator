@@ -6,6 +6,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This pr
 
 ## [Unreleased]
 
+## [0.10.3] — 2026-07-12
+
+### Added — self-continuing autonomous runs (M045, Auto v2 Posture 1)
+
+- **`orchestrator:auto --self-continue`** — a Tier C autonomous run now continues itself across context-rotation boundaries via **process-fresh `claude -p` re-entry**: kick it once and it advances to a terminal state (milestone complete, blocker, or cap) without a human re-invoking at each rotation. Explicit per-run opt-in, default OFF; the live rotation-exit decision is byte-unchanged (legacy parity) — the driver wraps it.
+- **Decision core** (`scripts/lifecycle/self-continue-branch.sh`) — deterministic `AUTO:SELF_CONTINUE` / `AUTO:ROTATE_EXIT` / `AUTO:NO_ROTATION` per the armed × capable × rotation truth table, policy-in-shell.
+- **`headless_reentry` capability probe** (`detect-capabilities.sh`) — gates the feature; graceful degradation to the legacy rotation exit where a fresh `claude -p` can't be spawned.
+- **Driver** (`scripts/lifecycle/self-continue-drive.sh`) — outer loop re-spawning a fresh `claude -p` per rotation-exit until a terminal outcome, `--max-continuations`, or a `--stop-file`; forward-progress tracking with thrash detection.
+- **Observability** — continuity JSONL log records (`--log`), structural-stall watchdog (`SELF_CONTINUE:STALLED`), and `scripts/diagnostics/self-continue-status.sh` to surface run state.
+- Design note: the originally-specced in-session wakeup substrate was **disproven by the P01 viability spike** (no per-rotation context relief) and pivoted to process-fresh re-entry (D015). Validated 8/8 via `validate-milestone.sh`.
+
+### Fixed
+
+- Closed two pre-existing `test-s08-auto-safety.sh` pipe-chain audit failures in `commands/auto.md` (predated M045).
+
 ## [0.10.2] — 2026-06-07
 
 ### Fixed — `orchestrator:update` now refreshes with the project's own runtime installer

@@ -1,0 +1,3 @@
+{"timestamp":"2026-07-13T00:00:01Z","unitId":"MFIX/P01/T01","milestone":"MFIX","phase":"P01","task":"T01","tier":"C","outcome":"failure","dispatch_method":"subagent","attempt":1,"verification_result":"fail","duration_s":1}
+{"timestamp":"2026-07-13T00:00:02Z","unitId":"MFIX/P01/T01","milestone":"MFIX","phase":"P01","task":"T01","tier":"C","outcome":"failure","dispatch_method":"subagent","attempt":1,"verification_result":"fail","duration_s":1}
+{"timestamp":"2026-07-13T00:00:03Z","unitId":"MFIX/P01/T01","milestone":"MFIX","phase":"P01","task":"T01","tier":"C","outcome":"failure","dispatch_method":"subagent","attempt":1,"verification_result":"fail","duration_s":1}

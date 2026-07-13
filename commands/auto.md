@@ -558,12 +558,51 @@ by creating the stop-file. The driver emits `SELF_CONTINUE:SCHEDULED` /
 forward-progress `progress=` field — a cap-halt with `progress ≪ continuations`
 signals a thrash rather than a legitimately long run).
 
-**Outcome marker**: at each exit path (rotation and every terminal state), the
-loop additionally writes `<milestone-dir>/.self-continue-outcome` with one of
-`rotation <phase>` / `complete` / `blocked` / `budget` / `stuck` / `pause`. This
-marker is inert unless the run is driven by `self-continue-drive.sh`, which reads
-it to decide re-spawn vs stop. Emitting it does NOT change the rotation-exit
-decision or the legacy human handoff (spec FR-8 legacy parity holds).
+**Outcome marker — writer of record (M046 FR-14)**: in driver-gated runs,
+`self-continue-drive.sh` exports `ORCHESTRATOR_SELF_CONTINUE_MARKER=1` and
+`auto-loop.sh` itself writes `<milestone-dir>/.self-continue-outcome`
+deterministically at every exit, keyed to its full exit-code contract:
+
+| Exit | Substate | Marker word |
+|------|----------|-------------|
+| 0 | `AUTO:PLANNING` | `planning <phase>` |
+| 0 | `AUTO:PHASE_COMPLETE` | `phase_complete <phase>` |
+| 0 | `AUTO:MILESTONE_VALIDATING` | `validating` |
+| 14 | rotation | `rotation <phase>` |
+| 1 / 2 / 3 | — | `error` / `budget` / `stuck` |
+| 10 / 11 / 12 / 13 | — | `complete` / `pause` / `unexpected_state` / `planning_failed` |
+
+The agent MUST NOT hand-write `.self-continue-outcome` in gated runs — a
+hand-write would shadow the deterministic writer of record. The one
+exception is `blocked`: it is the single entry-layer word the agent may
+still write, at BLOCK decision points that occur outside `auto-loop.sh`.
+
+**Driver-owned terminal (`child_abort`)**: a child killed by a signal
+(rc >= 128 — overwriting any mid-segment stale marker) or crashed before
+reporting (nonzero rc, no marker) yields `child_abort`, written by the
+driver's deterministic shell wrapper — never a silent stall for a killed
+child. The driver surfaces it as `SELF_CONTINUE:CHILD_ABORT rc=<rc>` and
+terminates.
+
+**Continue-class vs terminal**: `rotation` / `planning` / `phase_complete` /
+`validating` re-spawn a fresh segment (still gated by arming +
+`headless_reentry` via `self-continue-branch.sh`); every other marker word
+(`complete` / `blocked` / `budget` / `stuck` / `pause` / `error` /
+`unexpected_state` / `planning_failed` / `child_abort`) is a terminal — the
+driver stops with no re-spawn.
+
+**Atomicity**: every marker write in both writers is temp file + `rename(2)`
+(`mv -f`), so a kill landing mid-write leaves the old or the new marker
+whole, never a torn one.
+
+**Attended legacy parity (FR-17)**: without the env gate the marker
+mechanism is fully inert — `auto-loop.sh` stdout and exit codes are
+byte-unchanged from M045 and no marker file is written. The attended manual
+marker convention (the agent writing `rotation <phase>` / `complete` /
+`blocked` / `budget` / `stuck` / `pause` at exit paths) remains as
+previously documented for non-driver runs; emitting it does NOT change the
+rotation-exit decision or the legacy human handoff (spec FR-8 legacy parity
+holds).
 
 Run health can be inspected read-only with `scripts/diagnostics/self-continue-status.sh <log-path>` — reports `SELF_CONTINUE:STALLED` if the last segment never resolved (FR-10).
 

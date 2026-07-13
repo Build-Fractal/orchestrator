@@ -20,7 +20,7 @@ updated_at: "2026-07-12"
     - Produces: `.orchestrator/milestones/M046/phases/P01/P01-VIABILITY-EVIDENCE.md` (VERDICT + #Q-1/#Q-4 resolutions); throwaway spike harness under `phases/P01/spike/`; verifiers `tools/verify/m046-p01-*.sh`
     - Consumes: M028 consumer hook-install path (`scripts/hooks/` install conventions via `packaging/install/install-claude-code.sh`); M021 shape-guard (`scripts/hooks/pre-bash-shape-guard.sh`); M019 Tier-1 cost JSONL emitter; `claude -p --output-format json` cost read (P00 spike evidence, re-verified at segment grain)
 
-- [ ] **P02**: Marker full-exit contract + driver injection hardening — "For every real `auto-loop.sh` exit — including the exit-0 continuation substates PLANNING/PHASE_COMPLETE/VALIDATING — the marker on disk names the correct outcome; a child killed mid-write leaves a whole old-or-new marker (atomic temp+rename), a killed/crashed child yields `SELF_CONTINUE:CHILD_ABORT`, and a metacharacter-bearing milestone name is rejected, not executed."
+- [x] **P02**: Marker full-exit contract + driver injection hardening — "For every real `auto-loop.sh` exit — including the exit-0 continuation substates PLANNING/PHASE_COMPLETE/VALIDATING — the marker on disk names the correct outcome; a child killed mid-write leaves a whole old-or-new marker (atomic temp+rename), a killed/crashed child yields `SELF_CONTINUE:CHILD_ABORT`, and a metacharacter-bearing milestone name is rejected, not executed."
   - Risk: high
   - Depends: none
   - Boundary Map:

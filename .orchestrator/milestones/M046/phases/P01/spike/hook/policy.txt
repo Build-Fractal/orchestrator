@@ -1,0 +1,5 @@
+# M046/P01/T01 spike allowlist (throwaway). One directive per line.
+# allow_path <prefix> / allow_tool <name> / allow_bash <regex>
+allow_path /Users/brettkellgren/Sites/orchestrator/.orchestrator/milestones/M046/
+allow_tool mcp__orchestrator__status
+allow_bash ^git push origin spike-sandbox$

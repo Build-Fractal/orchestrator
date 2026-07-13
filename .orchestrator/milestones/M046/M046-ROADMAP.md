@@ -12,7 +12,7 @@ updated_at: "2026-07-12"
 
 ## Phases
 
-- [ ] **P01**: Viability spikes — hook-install portability + cost-read cadence — "Two evidence docs on disk carry firm verdicts: a default-DENY PreToolUse hook installed via the M028 consumer path denies a live out-of-scope call on a real install shape (and survives the M021 shape-guard), and the cost source's per-segment read latency is measured — #Q-1 and #Q-4 are answered before any envelope code exists."
+- [x] **P01**: Viability spikes — hook-install portability + cost-read cadence — "Two evidence docs on disk carry firm verdicts: a default-DENY PreToolUse hook installed via the M028 consumer path denies a live out-of-scope call on a real install shape (and survives the M021 shape-guard), and the cost source's per-segment read latency is measured — #Q-1 and #Q-4 are answered before any envelope code exists."
   - Risk: high
   - Depends: none
   - **Decision gate**: resolves #Q-1 and #Q-4 (the SC-3 precondition). A negative #Q-1 (hook cannot install portably / does not survive the shape-guard) reroutes the FR-9 enforcement mechanism via an explicit Decision row before P05 begins. A negative #Q-4 (M019 JSONL cadence insufficient for pre-spawn lease reads) fixes the FR-7/FR-8 cost source to `claude -p --output-format json` `total_cost_usd` sole-source. Mirrors the M045 P01 pattern: a cheap, correct "no" before P04/P05 build on a flawed premise (CON-6).

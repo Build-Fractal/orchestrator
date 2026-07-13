@@ -119,7 +119,7 @@ install shapes proven by P01 (`m046-p01-install-matrix.sh`).
 
 - packaging/install/install-claude-code.sh → scripts/hooks/unattended-scope-guard.sh (HOOKS_PAYLOAD staging line)
 - scripts/dispatch/adapters/runtime/claude-code.sh → unattended-scope-guard.sh (Write|Edit|Bash|mcp__.* matcher wrapper)
-- scripts/lifecycle/unattended-envelope.sh → unattended-protected-surface.txt (policy-composition reads the committed manifest)
+- scripts/lifecycle/self-continue-drive.sh → unattended-protected-surface.txt (driver resolves the committed manifest path and passes it to envelope_write_scope_policy; the envelope function is parameterized on the manifest arg per the shipped design — reconciled from the pre-implementation guess that the envelope named the manifest literally)
 - tools/verify/m046-p05-phase-suite.sh → m046-p05-scope-guard-deny.sh (suite member invocation)
 
 ## Tasks

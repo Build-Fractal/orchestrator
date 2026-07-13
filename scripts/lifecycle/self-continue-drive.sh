@@ -143,6 +143,7 @@ run_child() {
     : > "$RESULT_FILE"
     ORCHESTRATOR_SELF_CONTINUE_MARKER=1 \
     ORCHESTRATOR_UNATTENDED=1 \
+    ORCHESTRATOR_UNATTENDED_POLICY="$SCOPE_POLICY" \
     ORCHESTRATOR_MAX_BUDGET_USD="$BUDGET_USD" \
     ORCHESTRATOR_BUDGET_REMAINING_USD="$SEG_REMAINING_USD" \
     ORCHESTRATOR_WALL_CLOCK_DEADLINE_EPOCH="$DEADLINE_EPOCH" \
@@ -190,6 +191,16 @@ if [ "$UNATTENDED" = "true" ]; then
   DEADLINE_EPOCH=$((RUN_START_EPOCH + WALL_S))
   envelope_ledger_init "$LEDGER" "$BUDGET_USD" "$WALL_S" "$MAX_CONT"
   rm -f "$REASON_FILE"
+  # M046 P05/T03 (Decision D018): resolve the per-run write/tool-scope policy
+  # inputs. REPO_ROOT here = "$SCRIPT_DIR/.." = <repo>/scripts, so the committed
+  # manifest is under $REPO_ROOT/hooks and the TRUE project root is one level up.
+  # The policy file is (re)composed before each spawn (pre-spawn block) and its
+  # path is exported into the child (run_child). Unattended-only — the attended
+  # path resolves none of these and exports nothing (FR-17 parity).
+  PROJECT_ROOT="$(cd "$REPO_ROOT/.." && pwd)"
+  MANIFEST_FILE="$REPO_ROOT/hooks/unattended-protected-surface.txt"
+  SCOPE_POLICY="$MILESTONE_DIR/.self-continue-scope-policy"
+  ROADMAP_FILE="$MILESTONE_DIR/$(basename "$MILESTONE_DIR")-ROADMAP.md"
 fi
 
 HEADLESS="$(bash "$REPO_ROOT/dispatch/detect-capabilities.sh" 2>/dev/null | grep -E '^headless_reentry=' | head -n1 | sed 's/^headless_reentry=//')"
@@ -223,6 +234,14 @@ while :; do
     fi
     SEG_ID="$(envelope_next_segment "$LEDGER")"
     envelope_reserve "$LEDGER" "$SEG_ID" "$RESERVE_USD"
+    # M046 P05/T03: (re)compose the per-run default-DENY scope policy the T01
+    # hook enforces, BEFORE the spawn, so .self-continue-scope-policy exists for
+    # the child. Recomposed each iteration so the P07 attempts-ledger forward-slot
+    # promotes to an active readonly_path once that scoring record appears. The
+    # phase-plan arg is passed empty (the driver cannot generically derive the
+    # active phase plan; the milestone roadmap is the primary SC surface).
+    envelope_write_scope_policy "$SCOPE_POLICY" "$PROJECT_ROOT" "$MANIFEST_FILE" \
+      "$MILESTONE_DIR" "$ROADMAP_FILE" ""
     SEG_REMAINING_USD="$(awk -v c="$BUDGET_USD" -v s="$SEG_SPENT_BEFORE" 'BEGIN { printf "%.6f", c - s }')"
     COST_BASELINE_LINES=0
     if [ -f "$COST_LOG" ]; then COST_BASELINE_LINES="$(wc -l < "$COST_LOG" | tr -d ' ')"; fi

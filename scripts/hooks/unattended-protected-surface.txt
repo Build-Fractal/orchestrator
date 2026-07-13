@@ -1,0 +1,26 @@
+# unattended-protected-surface.txt — M046/P05 FR-20/CON-7 read-only-to-child manifest.
+#
+# Framework-generic protected surface. Each non-comment, non-blank line is a
+# project-RELATIVE prefix the M046 driver (envelope_write_scope_policy, T03)
+# abs-resolves against the project root and emits as a `readonly_path`
+# directive into the per-run policy file. The executing unattended child may
+# READ but never Edit / overwrite these surfaces (separation of doing vs.
+# scoring — the completion target is outside its reach, CON-7).
+#
+# Format: one project-relative prefix per line.
+#
+# --- Success-criteria / eval definitions ---
+specs/
+# --- Verification harness (the scoring machinery) ---
+tools/verify/
+scripts/verify/
+# --- The guard + policy machinery itself (no self-widening) ---
+scripts/hooks/
+#
+# Milestone-specific SC surfaces (roadmap, active phase plan) and the P07
+# attempts-ledger scoring record are NOT listed here — they are per-run and
+# are added by the driver's policy composition (T03). P07 FORWARD-SLOT: when
+# M046/P07 lands the durable attempts-ledger, the driver adds its scoring-
+# record path as a readonly_path at composition time; the CONTRACT (scoring
+# records are read-only to the child) exists now, the concrete path is
+# populated when P07 builds it.

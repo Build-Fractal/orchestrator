@@ -41,7 +41,7 @@ updated_at: "2026-07-12"
     - Produces: `--unattended` envelope layer on the process-fresh driver (flag plumbing, FR-6; in-segment cost/duration watchdog with SIGKILL, FR-7; reserve-then-spend budget-lease ledger on disk, FR-8; stop-file live-kill, FR-10; `SELF_CONTINUE:THRASH` first-class terminal, FR-12; fail-closed cap enumeration incl. the #Q-7-resolved wall-clock ceiling, FR-13); SC-3 non-stubbed cost-discriminating fixture (duration held ~constant, cost varied); SC-4 / SC-6 / SC-7 / SC-8 fixtures
     - Consumes: P01 cost-cadence verdict (#Q-4, SC-3 precondition); P02 hardened wrapper + atomic marker discipline (the surface its SIGKILLs land on)
 
-- [ ] **P05**: Default-DENY scope hook + verification-integrity — "A real unattended child attempting an out-of-scope write, an out-of-scope Bash call (`git push`), an MCP tool call outside the allowlist, or an edit to its own success criteria / verification harness / scoring records is denied by the live PreToolUse hook and the attempt is logged."
+- [x] **P05**: Default-DENY scope hook + verification-integrity — "A real unattended child attempting an out-of-scope write, an out-of-scope Bash call (`git push`), an MCP tool call outside the allowlist, or an edit to its own success criteria / verification harness / scoring records is denied by the live PreToolUse hook and the attempt is logged."
   - Risk: high
   - Depends: P01
   - Boundary Map:

@@ -1,0 +1,4 @@
+allow_path /tmp/m046p05/work/
+allow_path /tmp/m046p05/ro/
+readonly_path /tmp/m046p05/ro/
+allow_bash ^ls

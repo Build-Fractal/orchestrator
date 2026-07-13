@@ -394,6 +394,10 @@ fi
 #   shape-classifier.sh      -- M021 classifier library (sibling of hook)
 #   before-commit.sh         -- M025 lifecycle script (PreToolUse Bash)
 #   after-verify-sync.sh     -- M025 lifecycle script (Stop)
+#   unattended-scope-guard.sh        -- M046/P05 default-DENY PreToolUse hook
+#                                (env-gated to ORCHESTRATOR_UNATTENDED)
+#   unattended-protected-surface.txt -- M046/P05 committed protected-surface
+#                                manifest (data file read by the driver)
 #   MANIFEST                 -- text file listing staged set (used by --uninstall)
 #
 # Repeat-install is idempotent: cp -f overwrites in place. The MANIFEST format
@@ -405,6 +409,15 @@ HOOKS_PAYLOAD="${HOOKS_PAYLOAD} ${REPO_ROOT}/scripts/hooks/pre-bash-shape-guard.
 HOOKS_PAYLOAD="${HOOKS_PAYLOAD} ${REPO_ROOT}/scripts/verify/lib/shape-classifier.sh"
 HOOKS_PAYLOAD="${HOOKS_PAYLOAD} ${REPO_ROOT}/scripts/lifecycle/before-commit.sh"
 HOOKS_PAYLOAD="${HOOKS_PAYLOAD} ${REPO_ROOT}/scripts/lifecycle/after-verify-sync.sh"
+# M046/P05/T02 (FR-9/FR-20): the unattended scope guard + its committed
+# protected-surface manifest ride the same staged-hooks-dir path. The guard
+# is the default-DENY PreToolUse hook for the self-continuing UNATTENDED
+# child; it env-gates to a no-op unless ORCHESTRATOR_UNATTENDED is set, so the
+# operator's interactive session is never constrained by its mere presence.
+# The .txt manifest is a data file the driver reads from the staged dir at
+# runtime (rides the same cp -f staging as the .sh members).
+HOOKS_PAYLOAD="${HOOKS_PAYLOAD} ${REPO_ROOT}/scripts/hooks/unattended-scope-guard.sh"
+HOOKS_PAYLOAD="${HOOKS_PAYLOAD} ${REPO_ROOT}/scripts/hooks/unattended-protected-surface.txt"
 
 hooks_staged=0
 if [ "$DRY_RUN" = "1" ]; then

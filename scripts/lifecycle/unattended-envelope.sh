@@ -246,6 +246,49 @@ envelope_write_kill_reason() {
   mv -f "$_ek_tmp" "$_ek_file"
 }
 
+# envelope_write_scope_policy <policy-file> <project-root> <manifest-file> \
+#                             <milestone-dir> <roadmap-file> <phase-plan-file>
+#   Composes the per-run default-DENY write/tool-scope policy the T01 hook
+#   enforces (Decision D018: the writable allowlist is only knowable at spawn
+#   time = the active project root). ATOMIC write (temp+rename, P02 discipline
+#   — a policy that is torn at spawn time would fail-open). Emits, in order:
+#     allow_path <project-root>/                 writable work surface (project root)
+#     readonly_path <project-root>/<glob>        one per non-comment manifest line
+#     readonly_path <roadmap-file>               milestone SC surface   (if it exists)
+#     readonly_path <phase-plan-file>            phase-grain SC surface (if it exists)
+#     readonly_path <policy-file>                the policy itself (no self-widening)
+#   P07 FORWARD-SLOT: <milestone-dir>/.self-continue-attempts-ledger is emitted
+#   as a readonly_path directive ONLY once that scoring record exists; until
+#   then it is written as a documented `#`-comment placeholder (the CONTRACT
+#   exists now, the concrete path lands when P07 builds the ledger).
+#   NO allow_tool line => MCP default-DENY (Decision D019). NO allow_bash line
+#   => only the hook's dangerous-class Bash denylist applies. Empty/absent
+#   roadmap or phase-plan args are simply skipped ([ -e ] guard) so the driver
+#   may pass "" for a surface it cannot resolve.
+envelope_write_scope_policy() {
+  _pf="$1"; _root="$2"; _manifest="$3"; _mdir="$4"; _road="$5"; _plan="$6"
+  _tmp="$_pf.tmp.$$"
+  {
+    printf 'allow_path %s/\n' "$_root"
+    if [ -r "$_manifest" ]; then
+      while IFS= read -r _ln; do
+        case "$_ln" in ''|'#'*) continue ;; esac
+        printf 'readonly_path %s/%s\n' "$_root" "$_ln"
+      done < "$_manifest"
+    fi
+    [ -n "$_road" ] && [ -e "$_road" ] && printf 'readonly_path %s\n' "$_road"
+    [ -n "$_plan" ] && [ -e "$_plan" ] && printf 'readonly_path %s\n' "$_plan"
+    printf 'readonly_path %s\n' "$_pf"
+    _ledger="$_mdir/.self-continue-attempts-ledger"
+    if [ -e "$_ledger" ]; then
+      printf 'readonly_path %s\n' "$_ledger"
+    else
+      printf '# P07 FORWARD-SLOT readonly_path %s (added when P07 ledger exists)\n' "$_ledger"
+    fi
+  } > "$_tmp"
+  mv -f "$_tmp" "$_pf"
+}
+
 # envelope_watchdog <child_pid> <poll_s> <stop_file> <deadline_epoch> \
 #                   <cap_usd> <spent_before_usd> <cost_log> <cost_baseline_lines> \
 #                   <reason_file> [<start_epoch>]

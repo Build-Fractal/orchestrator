@@ -606,6 +606,96 @@ holds).
 
 Run health can be inspected read-only with `scripts/diagnostics/self-continue-status.sh <log-path>` — reports `SELF_CONTINUE:STALLED` if the last segment never resolved (FR-10).
 
+### Unattended envelope (--unattended, M046 P04)
+
+The self-continue driver can run **unattended** — spawning fresh segments with
+no human at the terminal — behind a hard safety envelope. This is a per-run,
+default-OFF opt-in (`--unattended`); **no config key can enable it** (FR-6). The
+envelope only wraps the loop; it never alters the attended path (see *Attended
+parity* below).
+
+**Opt-in and fail-closed caps.** Under `--unattended`, three ceilings are ALL
+mandatory:
+
+- `--max-budget-usd <x>` — hard cumulative dollar ceiling (positive decimal).
+- `--max-continuations <n>` — explicit continuation cap (positive integer). The
+  attended default `MAX_CONT=20` is NOT an implicit cap here — it must be stated.
+- `--max-wall-clock-s <n>` — hard whole-run wall-clock ceiling in seconds
+  (positive integer).
+
+If any of the three is unset or non-numeric, the driver **itself refuses to
+start** — exit 2, no ledger write, no child spawn — emitting
+`SELF_CONTINUE:REFUSE reason=caps-unset missing=<csv>` (or
+`SELF_CONTINUE:REFUSE reason=caps-invalid invalid=<csv>`), where `<csv>` is drawn
+from `budget,continuations,wall-clock`. This gate lives in the driver, not in a
+CLI wrapper, so it holds no matter how the driver is invoked (FR-13 / SC-8).
+Per decision **D016** (#Q-7), the wall-clock ceiling is operator-supplied per run
+(whole-run, in seconds) with no default — a fixed internal constant would make
+FR-13's "refuse if unset" enumeration vacuous — and it is enforced live.
+
+Optional envelope tuning flags (all defaulted; inert unless `--unattended`):
+
+- `--segment-reserve-usd <x>` — per-segment budget lease reserved before each
+  spawn (default `1.00`).
+- `--thrash-threshold <n>` — consecutive no-progress segments before a THRASH
+  halt (default `2`).
+- `--watchdog-poll-s <n>` — watchdog poll interval in seconds (default `1`).
+- `--cost-log <path>` — JSONL the watchdog reads for mid-segment cost (default
+  `<milestone-dir>/execution-log.jsonl`).
+
+**Terminal vocabulary (unattended-only).** In addition to the pre-existing
+terminals (`:TERMINAL`, `:CAP_REACHED`, `:STOPPED reason=stop-file`,
+`:CHILD_ABORT`, `:REJECT`, `:STALLED` — all unchanged), the envelope adds four:
+
+| Terminal line | Meaning |
+|---------------|---------|
+| `SELF_CONTINUE:BUDGET_EXCEEDED stage=<pre-spawn\|mid-segment> spent=<x> … cap=<x> …` | Cumulative spend crossed `--max-budget-usd`. `pre-spawn`: the next reserve would exceed the cap, checked before spawning. `mid-segment`: a live segment's cost crossed the cap and the child was SIGKILLed. |
+| `SELF_CONTINUE:WALL_CLOCK_EXCEEDED stage=<pre-spawn\|mid-segment> …` | The whole-run deadline (`--max-wall-clock-s` from run start) was crossed. `pre-spawn`: between segments; `mid-segment`: a live child was SIGKILLed. |
+| `SELF_CONTINUE:STOPPED reason=stop-file stage=mid-segment …` | The stop-file appeared while a child was live; the child was SIGKILLed within bounded latency (distinct from the attended between-segment `:STOPPED`). |
+| `SELF_CONTINUE:THRASH no_progress_segments=<n> threshold=<n> …` | `--thrash-threshold` consecutive continue-class segments advanced no phase word; the loop halts well before the continuation/budget caps. Unattended-only (FR-12). |
+
+**Accounting surfaces.** The envelope maintains three dotfiles under the
+milestone dir:
+
+- `<milestone-dir>/.self-continue-budget-ledger` — append-only lease ledger
+  (`run_start` / `reserve` / `reconcile` / `forfeit` lines). Reserve-then-spend:
+  a conservative `--segment-reserve-usd` reserve is written BEFORE each spawn, so
+  a driver crash between reserve and reconcile leaves the reserve SPENT — a
+  killed child is never free. At each segment boundary the reserve is either
+  **trued-up** from the exiting child's `claude -p --output-format json`
+  `total_cost_usd` (the authoritative actual), or **forfeited** at
+  `max(reserve, observed)` when the child died before flushing that record. The
+  ledger **PERSISTS across runs** and cumulative spend binds later runs (SC-4);
+  the operator resets the budget by **deleting the file** — there is no reset flag.
+- `<milestone-dir>/.self-continue-kill-reason` — the watchdog's kill-reason
+  handoff, written atomically (temp + `rename(2)`, P02 discipline) before every
+  envelope SIGKILL, then consumed by the driver to select the distinct terminal.
+- `<milestone-dir>/.self-continue-segment-result.json` — the segment's captured
+  child stdout/stderr; the child's JSON result (and `total_cost_usd`) is parsed
+  here for the true-up.
+
+**Watchdog.** Under `--unattended` the child is BACKGROUNDED and a foreground
+watchdog polls it every `--watchdog-poll-s` seconds. On each tick it checks, in
+order, **stop-file → wall-clock → budget**, and on the first trigger writes the
+kill-reason atomically then `kill -9`s the child. The budget trigger is
+**cost-derived**, not a duration proxy: it sums the non-null
+`"record_type":"unit_close"` `estimated_cost_usd` values appended to the cost
+log since segment start (override `--cost-log`); a `null` estimate contributes 0
+(P01 #Q-4: JSONL supplies grain, the JSON result supplies truth).
+
+**Child-visible limits.** The driver exports the hard limits into the child's
+environment so a segment can self-abort before overrunning:
+`ORCHESTRATOR_UNATTENDED`, `ORCHESTRATOR_MAX_BUDGET_USD`,
+`ORCHESTRATOR_BUDGET_REMAINING_USD`, `ORCHESTRATOR_WALL_CLOCK_DEADLINE_EPOCH`,
+and `ORCHESTRATOR_MAX_CONTINUATIONS`. These are the FR-7 in-child self-abort leg;
+P07's instruments read the same names.
+
+**Implementation seam.** The envelope is a sourceable function library at
+`scripts/lifecycle/unattended-envelope.sh`, sourced by
+`scripts/lifecycle/self-continue-drive.sh` with zero side effects at source time.
+The attended path is **byte-compatible** with M045 (FR-17) — the envelope wraps
+the loop, it never alters it.
+
 ## Completion
 
 When `auto-loop.sh` returns a terminal state:

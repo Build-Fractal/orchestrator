@@ -171,10 +171,22 @@ if [[ "$MODE" = "hook-config" ]]; then
   #                                      in wrapper)
   #                        -> before-commit.sh (renamed from bare
   #                           orchestrator-before-commit)
+  #   unattended_scope_guard -> PreToolUse (matcher: Write|Edit|Bash|mcp__.*;
+  #                        M046/P05 FR-9/FR-20; env-gated to
+  #                        ORCHESTRATOR_UNATTENDED -- no-op in the operator's
+  #                        interactive session, default-DENY in the
+  #                        self-continuing child)
+  #                        -> unattended-scope-guard.sh
   #
   # Two PreToolUse Bash leaves coexist because settings-merge.sh's dedup key
   # is (event, matcher, command), not wrapper identity -- distinct command
   # strings produce distinct dedup-key tuples.
+  #
+  # Likewise the two PreToolUse WRAPPERS below (matcher "Bash" and matcher
+  # "Write|Edit|Bash|mcp__.*") coexist: the dedup key includes the matcher,
+  # so the distinct matcher strings yield distinct dedup-key tuples. The
+  # shape-guard keeps firing on attended Bash calls; the scope-guard is added
+  # as a SEPARATE wrapper (never merged into the shape-guard wrapper).
   #
   # Deferred orchestrator events (no CC equivalent at M025):
   #   TODO(M025+): before_tasks     -- revisit if CC gains a task-start event
@@ -211,6 +223,12 @@ if [[ "$MODE" = "hook-config" ]]; then
         "hooks": [
           { "type": "command", "command": "bash ${HOME_HOOKS}/pre-bash-shape-guard.sh", "_orchestrator_managed": true },
           { "type": "command", "command": "bash ${HOME_HOOKS}/before-commit.sh", "_orchestrator_managed": true }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|Bash|mcp__.*",
+        "hooks": [
+          { "type": "command", "command": "bash ${HOME_HOOKS}/unattended-scope-guard.sh", "_orchestrator_managed": true }
         ]
       }
     ]

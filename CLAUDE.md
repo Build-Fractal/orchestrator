@@ -1,5 +1,5 @@
 # >>> orchestrator:recent-changes >>>
-- 046-self-continuing-auto: Posture 1 self-continuing attended autonomous execution: layer onto the existing
+- 047-auto-v2b-unified-serial: Unified tier-sized autonomous entry (serial core): collapse orchestrator:do into
 # <<< orchestrator:recent-changes <<<
 # CLAUDE.md — orchestrator
 

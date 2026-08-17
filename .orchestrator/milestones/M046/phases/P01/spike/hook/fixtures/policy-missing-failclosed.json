@@ -1,0 +1,1 @@
+{"tool_name": "Write", "tool_input": {"file_path": "/Users/brettkellgren/Sites/orchestrator/.orchestrator/milestones/M046/phases/P01/spike/hook/scratch-note.md", "content": "valid payload, but policy file is absent -> fail closed"}}

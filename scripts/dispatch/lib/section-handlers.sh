@@ -334,23 +334,31 @@ handle_knowledge() {
   cat "$related_file" >> "$all_ids_file"
   rm -f "$related_file" "$matched_file"
 
-  # Step 4: deduplicate
-  local sorted_file
-  sorted_file="$(mktemp)"
-  sort -u "$all_ids_file" > "$sorted_file"
+  # Step 4: deduplicate, preserving discovery order.
+  #
+  # `sort -u` here re-ordered the payload lexicographically by MEM ID, discarding
+  # the `ORDER BY confidence` applied upstream in scope-filter.sh and
+  # traverse-graph.sh, and burying direct scope matches under graph-expanded
+  # neighbours that happen to carry a lower ID. `all_ids_file` is built matches-
+  # first (Step 2) then expansion (Step 3), so first-appearance dedupe keeps
+  # seeds ahead of their neighbours — payload position is itself a relevance
+  # signal to the reading model.
+  local ordered_file
+  ordered_file="$(mktemp)"
+  awk '!seen[$0]++' "$all_ids_file" > "$ordered_file"
   rm -f "$all_ids_file"
 
   # Forward IDs to caller if requested
   if [ -n "$included_ids_file" ]; then
-    cp "$sorted_file" "$included_ids_file"
+    cp "$ordered_file" "$included_ids_file"
   fi
 
   # Step 5: resolve
   local resolved
-  resolved="$(cat "$sorted_file" | bash "$_SH_RESOLVE_ENTRIES" 2>/dev/null || true)"
+  resolved="$(cat "$ordered_file" | bash "$_SH_RESOLVE_ENTRIES" 2>/dev/null || true)"
   local entry_count
-  entry_count="$(grep -c 'MEM' "$sorted_file" 2>/dev/null || echo 0)"
-  rm -f "$sorted_file"
+  entry_count="$(grep -c 'MEM' "$ordered_file" 2>/dev/null || echo 0)"
+  rm -f "$ordered_file"
 
   if [ -z "$resolved" ]; then
     printf 'No knowledge entries in scope.\n'

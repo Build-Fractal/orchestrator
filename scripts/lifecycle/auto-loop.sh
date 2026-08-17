@@ -99,6 +99,53 @@ if [[ ! -d "$MILESTONE_DIR" ]]; then
   exit 1
 fi
 
+# --- M046 FR-14: deterministic outcome marker (the single CON-2-authorized
+# additive change). Active ONLY when ORCHESTRATOR_SELF_CONTINUE_MARKER=1
+# (exported by scripts/lifecycle/self-continue-drive.sh). Maps this
+# invocation's exit code (+ exit-0 substate captured in the _auto_output
+# funnel) to the self-continue marker vocabulary and writes it atomically
+# (temp + rename), so a kill landing mid-write leaves old-or-new, never torn.
+_MARKER_SUBSTATE=""
+_MARKER_PHASE=""
+_write_outcome_marker() {
+  _marker_rc=$?
+  [[ "${ORCHESTRATOR_SELF_CONTINUE_MARKER:-}" = "1" ]] || return 0
+  _marker_word=""
+  case "$_marker_rc" in
+    0)
+      case "${_MARKER_SUBSTATE:-}" in
+        PLANNING)             _marker_word="planning" ;;
+        PHASE_COMPLETE)       _marker_word="phase_complete" ;;
+        MILESTONE_VALIDATING) _marker_word="validating" ;;
+      esac
+      ;;
+    1)  _marker_word="error" ;;
+    2)  _marker_word="budget" ;;
+    3)  _marker_word="stuck" ;;
+    10) _marker_word="complete" ;;
+    11) _marker_word="pause" ;;
+    12) _marker_word="unexpected_state" ;;
+    13) _marker_word="planning_failed" ;;
+    14)
+      _marker_word="rotation"
+      if [[ -z "${_MARKER_PHASE:-}" && -n "${READ_ROADMAP:-}" && -f "${ROADMAP_FILE:-/nonexistent}" ]]; then
+        _MARKER_PHASE="$(bash "$READ_ROADMAP" "$ROADMAP_FILE" active-phase 2>/dev/null)" || _MARKER_PHASE=""
+        [[ "$_MARKER_PHASE" = "none" ]] && _MARKER_PHASE=""
+      fi
+      ;;
+  esac
+  [[ -n "$_marker_word" ]] || return 0
+  _marker_tmp="$MILESTONE_DIR/.self-continue-outcome.tmp.$$"
+  if [[ -n "${_MARKER_PHASE:-}" ]]; then
+    printf '%s %s\n' "$_marker_word" "$_MARKER_PHASE" > "$_marker_tmp" 2>/dev/null || return 0
+  else
+    printf '%s\n' "$_marker_word" > "$_marker_tmp" 2>/dev/null || return 0
+  fi
+  mv -f "$_marker_tmp" "$MILESTONE_DIR/.self-continue-outcome" 2>/dev/null || rm -f "$_marker_tmp" 2>/dev/null || true
+  return 0
+}
+trap _write_outcome_marker EXIT
+
 STEP=""
 TASK=""
 PHASE=""
@@ -144,6 +191,13 @@ done
 # harness safety heuristics). Instead of output=$(bash auto-loop.sh ...),
 # callers run: bash auto-loop.sh ... --output-file <path> && read the file.
 _auto_output() {
+  case "$1" in
+    "AUTO:PLANNING "*)            _MARKER_SUBSTATE="PLANNING"
+                                  _MARKER_PHASE="$(printf '%s' "$1" | sed -n 's/.*phase=\([^ ]*\).*/\1/p')" ;;
+    "AUTO:PHASE_COMPLETE "*)      _MARKER_SUBSTATE="PHASE_COMPLETE"
+                                  _MARKER_PHASE="$(printf '%s' "$1" | sed -n 's/.*phase=\([^ ]*\).*/\1/p')" ;;
+    "AUTO:MILESTONE_VALIDATING"*) _MARKER_SUBSTATE="MILESTONE_VALIDATING"; _MARKER_PHASE="" ;;
+  esac
   if [[ -n "$OUTPUT_FILE" ]]; then
     mkdir -p "$(dirname "$OUTPUT_FILE")"
     printf '%s\n' "$1" > "$OUTPUT_FILE"

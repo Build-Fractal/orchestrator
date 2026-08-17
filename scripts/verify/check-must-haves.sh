@@ -95,6 +95,12 @@ fi
 
 FAILURES=0
 
+# Vacuity accounting. A verification that measured nothing must be
+# distinguishable from a verification that measured something and passed.
+TRUTHS_SEEN=0     # top-level truth items declared in the Truths block
+CHECKS_RUN=0      # `- Check:` commands actually executed
+UNCHECKED=0       # truths that carried no Check: sub-item
+
 # --- Parse Must-Haves section ---
 
 # Extract the section between ## Must-Haves and the next ## heading
@@ -135,8 +141,18 @@ while IFS= read -r line; do
     truths)
       # Top-level truth item: starts with "- " (not indented sub-item)
       if echo "$line" | grep -qE '^- [^[:space:]]'; then
+        # A truth still pending when the NEXT truth arrives was never checked:
+        # no `- Check:` sub-item followed it. Previously it was overwritten
+        # here in silence, so a Must-Haves block whose truths carry no checks
+        # produced zero output and exit 0 — Tier 1 reporting success having
+        # verified nothing. Count it instead (reported as UNCHECKED below).
+        if [[ -n "$PENDING_TRUTH" ]]; then
+          echo "UNCHECKED: truth '$PENDING_TRUTH' (no Check: sub-item)"
+          UNCHECKED=$((UNCHECKED + 1))
+        fi
         # Store description for potential Tier 3 logging
         PENDING_TRUTH=$(echo "$line" | sed 's/^- //')
+        TRUTHS_SEEN=$((TRUTHS_SEEN + 1))
       fi
       # Sub-item with Check: command
       if echo "$line" | grep -qE '^[[:space:]]+- Check:'; then
@@ -152,6 +168,7 @@ while IFS= read -r line; do
             echo "FAIL: truth '$PENDING_TRUTH' (check command failed: $check_cmd)"
             FAILURES=$((FAILURES + 1))
           fi
+          CHECKS_RUN=$((CHECKS_RUN + 1))
         fi
         PENDING_TRUTH=""
       fi
@@ -288,8 +305,44 @@ while IFS= read -r line; do
   esac
 done <<< "$MUST_HAVES_SECTION"
 
+# A truth still pending at EOF was never followed by a Check: sub-item.
+if [[ -n "$PENDING_TRUTH" ]]; then
+  echo "UNCHECKED: truth '$PENDING_TRUTH' (no Check: sub-item)"
+  UNCHECKED=$((UNCHECKED + 1))
+fi
+
+# --- Vacuity gate ---
+#
+# A Truths block whose items carry no Check: sub-items used to produce zero
+# output and exit 0 — Tier 1 static verification reporting success having
+# executed nothing. Truths are prose assertions ("payment flows are audited");
+# treating an unexecuted assertion as satisfied is precisely the failure mode
+# mechanical verification exists to prevent.
+#
+# Declared-but-unchecked truths are now always reported. When the Truths block
+# is entirely unchecked, the run is vacuous and fails loud. Set
+# ALLOW_UNCHECKED_TRUTHS=1 to downgrade to a warning for a plan that
+# legitimately carries narrative truths (the escape hatch is explicit and
+# leaves a trace, rather than being the silent default).
+if [[ "$UNCHECKED" -gt 0 ]]; then
+  echo "UNCHECKED-SUMMARY: truths_declared=$TRUTHS_SEEN checks_run=$CHECKS_RUN unchecked=$UNCHECKED"
+fi
+
+VACUOUS=0
+if [[ "$TRUTHS_SEEN" -gt 0 && "$CHECKS_RUN" -eq 0 ]]; then
+  VACUOUS=1
+  echo "VACUOUS: $TRUTHS_SEEN truth(s) declared, 0 checks executed — nothing was verified" >&2
+  if [[ "${ALLOW_UNCHECKED_TRUTHS:-0}" != "1" ]]; then
+    FAILURES=$((FAILURES + 1))
+  else
+    echo "  (ALLOW_UNCHECKED_TRUTHS=1 — downgraded to warning)" >&2
+  fi
+fi
+
 if [ -n "${ORCH_RUN_ID:-}" ]; then
-  emit_event VERIFY_COMPLETE stage=check_must_haves failures="$FAILURES" >&2
+  emit_event VERIFY_COMPLETE stage=check_must_haves failures="$FAILURES" \
+    truths_declared="$TRUTHS_SEEN" checks_run="$CHECKS_RUN" \
+    unchecked="$UNCHECKED" vacuous="$VACUOUS" >&2
 fi
 
 # --- Exit ---

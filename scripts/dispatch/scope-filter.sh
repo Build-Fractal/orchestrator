@@ -143,6 +143,61 @@ deps_match() {
 # active scope (FILTER_TAG literal mode, or MILESTONE_ID/PHASE_ID derivation),
 # else "false". Single source for the scope-resolution rule shared by both the
 # `## K###` heading branch and the M044/FR-2 standalone scoped-bullet branch.
+_sf_single_tag_matches() {
+  local tag="$1"
+  if [[ "$tag" = "[project]" ]]; then
+    return 0
+  fi
+  if [[ "$tag" = "[milestone:"* ]]; then
+    local tag_milestone
+    tag_milestone="${tag#\[milestone:}"
+    tag_milestone="${tag_milestone%\]}"
+    [[ "$tag_milestone" = "$MILESTONE_ID" ]] && return 0
+    return 1
+  fi
+  if [[ "$tag" = "[phase:"* ]]; then
+    local tag_scope tag_milestone tag_phase
+    tag_scope="${tag#\[phase:}"
+    tag_scope="${tag_scope%\]}"
+    tag_milestone="${tag_scope%%/*}"
+    tag_phase="${tag_scope#*/}"
+    if [[ "$tag_milestone" = "$MILESTONE_ID" ]] && deps_match "$tag_phase"; then
+      return 0
+    fi
+    return 1
+  fi
+  # Unrecognised namespace (e.g. `[concern:...]`) — not in scope on its own.
+  return 1
+}
+
+# _sf_scope_field_includes <scope_field> — returns 0 when ANY bracketed tag in a
+# (possibly multi-tag) scope field is in the active scope, else 1.
+#
+# A scope field routinely carries more than one tag: the index writes
+# `[project], [milestone:M005]` in field 2, and the flat-file `grep -oE` yields
+# newline-separated tokens. Before this split the entire field was compared as a
+# single atom, so a multi-tag entry matched neither `= "[project]"` nor
+# `^\[milestone:` and fell through every branch to `include=false` — silently
+# dropping 22 of this repo's 31 MEMs on the flat (no-SQLite) path.
+_sf_scope_field_includes() {
+  local scope_field="$1"
+  [[ -z "$scope_field" ]] && return 0          # untagged → project-level
+
+  local tag saw_tag=1 matched=1
+  while IFS= read -r tag; do
+    [[ -z "$tag" ]] && continue
+    saw_tag=0
+    if _sf_single_tag_matches "$tag"; then
+      matched=0
+      break
+    fi
+  done < <(printf '%s' "$scope_field" | grep -oE '\[[a-z]+:[A-Za-z0-9/_.-]+\]|\[project\]' || true)
+
+  # A field with no parseable bracketed tag keeps the legacy "untagged" reading.
+  [[ "$saw_tag" -ne 0 ]] && return 0
+  return "$matched"
+}
+
 _sf_tag_includes() {
   local scope_tag="$1" full_line="$2"
   if [[ -n "$FILTER_TAG" ]]; then
@@ -151,23 +206,7 @@ _sf_tag_includes() {
     if echo "$full_line" | grep -qF "$FILTER_TAG"; then echo true; else echo false; fi
     return 0
   fi
-  if [[ -z "$scope_tag" ]]; then echo true; return 0; fi          # no tag → project-level
-  if [[ "$scope_tag" = "[project]" ]]; then echo true; return 0; fi
-  if echo "$scope_tag" | grep -qE '^\[milestone:'; then
-    local tag_milestone
-    tag_milestone=$(echo "$scope_tag" | sed 's/\[milestone://' | sed 's/\]//')
-    if [[ "$tag_milestone" = "$MILESTONE_ID" ]]; then echo true; else echo false; fi
-    return 0
-  fi
-  if echo "$scope_tag" | grep -qE '^\[phase:'; then
-    local tag_scope tag_milestone tag_phase
-    tag_scope=$(echo "$scope_tag" | sed 's/\[phase://' | sed 's/\]//')
-    tag_milestone=$(echo "$tag_scope" | cut -d/ -f1)
-    tag_phase=$(echo "$tag_scope" | cut -d/ -f2)
-    if [[ "$tag_milestone" = "$MILESTONE_ID" && "$tag_phase" = "$PHASE_ID" ]]; then echo true; else echo false; fi
-    return 0
-  fi
-  echo false
+  if _sf_scope_field_includes "$scope_tag"; then echo true; else echo false; fi
 }
 
 filter_knowledge() {
@@ -304,29 +343,9 @@ filter_knowledge_index() {
       if printf '%s' "$scope_tag" | grep -qF "$FILTER_TAG"; then
         include=true
       fi
-    elif [[ -z "$scope_tag" ]]; then
-      # No scope tag — include by default (project-level)
+    elif _sf_scope_field_includes "$scope_tag"; then
+      # Shared multi-tag scope rule (single source with the flat-file path).
       include=true
-    elif [[ "$scope_tag" = "[project]" ]]; then
-      include=true
-    elif echo "$scope_tag" | grep -qE '^\[milestone:'; then
-      # Extract milestone from tag
-      local tag_milestone
-      tag_milestone=$(echo "$scope_tag" | sed 's/\[milestone://' | sed 's/\]//')
-      if [[ "$tag_milestone" = "$MILESTONE_ID" ]]; then
-        include=true
-      fi
-    elif echo "$scope_tag" | grep -qE '^\[phase:'; then
-      # Extract phase scope: phase:M###/P##
-      local tag_scope tag_milestone tag_phase
-      tag_scope=$(echo "$scope_tag" | sed 's/\[phase://' | sed 's/\]//')
-      tag_milestone=$(echo "$tag_scope" | cut -d/ -f1)
-      tag_phase=$(echo "$tag_scope" | cut -d/ -f2)
-      if [[ "$tag_milestone" = "$MILESTONE_ID" ]]; then
-        if deps_match "$tag_phase"; then
-          include=true
-        fi
-      fi
     fi
 
     if [[ "$include" = true ]]; then

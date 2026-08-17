@@ -1,27 +1,82 @@
 ---
-description: "Use when invoking a one-shot task — runs the M024 classifier, dispatches a Tier A degenerate task with Quick-profile knowledge inject, hands Tier A+ tasks to the P02 research → plan → build chain, or routes Tier B/C tasks to orchestrator:specify."
+description: "DEPRECATED — use orchestrator:auto <task> instead. This command is now a thin deprecation shim that forwards to the unified orchestrator:auto entry (scripts/intake/auto-entry.sh) with the legacy interactive low-confidence prompt preserved. Scheduled for removal; see the removal runway below."
 ---
 
-# orchestrator:do <task>
+# orchestrator:do <task>  (DEPRECATED)
 
-The universal entry point for one-shot work. Lowers adoption friction for
-small tasks: the operator types `orchestrator:do "fix the typo in foo"`
-and the orchestrator decides whether the input is small enough to
-fast-path (Quick-profile knowledge inject), middle-sized enough for the
-Tier A+ research → plan → build chain, or large enough that it deserves
-the full SDD flow (`orchestrator:specify` / `orchestrator:evaluate`).
+> **DEPRECATED — migrate to `orchestrator:auto <task>`.**
+>
+> `orchestrator:do` has been unified into `orchestrator:auto`. The entire
+> one-shot classify-and-route behavior that `do` provided now lives in the
+> single `orchestrator:auto` entry driver (`scripts/intake/auto-entry.sh`).
+> This command is retained only as a thin **deprecation shim** so existing
+> scripted callers of `do-entry.sh` keep working during the migration window.
+>
+> **Replacement:** `orchestrator:auto "<task>"`
 
-This command is a thin authoring surface over the backing driver script
-`scripts/intake/do-entry.sh`. The driver is a one-shot — it runs the
-M024 classifier, picks one of four routing branches, optionally invokes
-one downstream script, and exits. There is no auto-loop, no state
-machine, no resume.
+## What the shim does
 
-The command is registered as `orchestrator:do <task>` because Claude
-Code slash-commands are verb-prefixed at launch (per AD-6). The
-verbless `orchestrator <task>` form is reserved for the post-M009
-multi-runtime parity audit when CC, Codex CLI, and Cursor all support
-the same invocation shape.
+`scripts/intake/do-entry.sh` is now a thin forwarding shim. On every
+invocation it:
+
+1. Emits exactly one deprecation-notice line to stderr.
+2. Forwards **all six** legacy flags verbatim to
+   `scripts/intake/auto-entry.sh`, prepending `--ambiguity-mode prompt`.
+3. Exits with `auto-entry.sh`'s exit code unchanged.
+
+Prepending `--ambiguity-mode prompt` is what preserves `do`'s legacy
+interactive low-confidence behavior byte-for-byte: a below-floor `do` caller
+still gets the interactive Tier A vs Tier B question (honoring
+`--no-prompt-mode`), **not** the auto-native `AUTO:BLOCK_AMBIGUITY` default.
+This is the compatibility guarantee that keeps scripted `do` callers from
+silently changing behavior across the cutover.
+
+All routing logic — the four-branch classify table, the Tier A degenerate
+fast-path, the Tier A+ handoff, and the Tier B/C passthrough — is documented
+at `commands/auto.md` and implemented in `scripts/intake/auto-entry.sh`. The
+shim itself contains no routing logic.
+
+## Flag forwarding (FR-3)
+
+All six flags forward with **identical effect** through the shim to
+`auto-entry.sh`:
+
+| Flag                    | Effect (unchanged)                                          |
+|-------------------------|-------------------------------------------------------------|
+| `--task <description>`  | the task description.                                       |
+| `--yes`                 | skip the single attended confirmation prompt (see below).   |
+| `--config <path>`       | override active `config.yml` lookup.                        |
+| `--dispatch-stub <s>`   | stand in for the agent runtime (test seam).                 |
+| `--scratch-root <dir>`  | forwarded to `route-to-dispatch.sh`.                        |
+| `--no-prompt-mode <A\|B\|C>` | bypass the interactive low-confidence `read`.          |
+
+The `ORCH_DO_ENTRY_LOG` env var is inherited through the environment
+unchanged, so the low-confidence `unit_close` JSONL record is byte-identical
+under either entry.
+
+- Shim: `scripts/intake/do-entry.sh`
+- Driver: `scripts/intake/auto-entry.sh`
+
+## `--yes` boundary note (D020 / FR-5)
+
+`--yes` keeps its **narrow** meaning under the shim exactly as before: it
+skips the single attended confirmation prompt (the Tier-A+ P02 approval prompt
+on the one-shot path, or the preflight confirm on the Tier-C loop path). It
+does **not** broaden and it does **not** grant any unattended or destructive
+authority. `--unattended` (shipped in P04) is the sole explicit gate for the
+unattended/destructive-approval envelope. The shim forwards `--yes`
+unchanged; no broadening happens at this layer.
+
+## Removal runway (D021 / #Q-3)
+
+This shim is retained through **at least the next published minor release**.
+Removal is gated **no earlier than one published release after this
+deprecation ships**. The one-line deprecation notice emitted by the shim
+names the concrete **target-removal version: `v0.12.0`**. Removal is a
+separate future change, not part of this milestone.
+
+Until removal, `orchestrator:do "<task>"` remains functional — it prints the
+deprecation notice and forwards to `orchestrator:auto`.
 
 ## Prerequisites / State Check
 
@@ -31,130 +86,33 @@ The orchestrator must already be initialized in the project. Verify:
 test -d .orchestrator
 ```
 
-If non-zero, run `orchestrator:init` first. The driver script also
-inspects `.orchestrator/config.yml` (when present) and falls back to
-`templates/orchestrator-config-default.yml` for the
-`entry_routing_confidence_floor` knob; the bundled default 0.7 ships
-with the orchestrator skill, so even a freshly-initialized project
-without a project-local override resolves the floor.
-
-## Core Workflow
-
-The driver implements a four-branch routing table. The branches are
-applied in order, first-match wins.
-
-| Classifier output (verdict / confidence)       | Branch                | Action                                                                                    | Approval prompts |
-|------------------------------------------------|-----------------------|-------------------------------------------------------------------------------------------|------------------|
-| `tier_a_plus` (any confidence)                 | tier-a-plus-handoff   | exec `route-to-dispatch.sh --verdict tier_a_plus --task <desc> [--yes] [--dispatch-stub]` | one (P02 prompt; `--yes` skips) |
-| `idea` (high) OR short `paragraph` (high)      | tier-a-degenerate     | invoke `build-context.sh --profile=quick --task-plan <plan> --out <pl> --meta-out <sc>` then emit `doing: <task> — knowledge: <N> MEMs / <X> tokens` to stderr; agent runtime adapter takes over (MEM018) | zero |
-| `fragment` / `spec` / long `paragraph` (high)  | tier-bc-passthrough   | emit `route=tier_bc passthrough=orchestrator:specify` to stderr; exit 0 (operator runs the named command in their next turn — NG-6 one-shot discipline) | zero |
-| any verdict with confidence below floor        | low-conf-prompt       | render explicit Tier A vs Tier B question to stderr; record `chosen_shape` in JSONL `unit_close` | one |
-
-### Confidence-floor numeric mapping (A-2 closure)
-
-The classifier `shape-detect.sh` emits `shape_classification=high|low`
-(an enum). The `entry_routing_confidence_floor` knob is numeric (P00
-default `0.7`). The driver maps the enum to a numeric:
-
-- `high` → `1.0`
-- `low` → `0.5`
-
-…and applies the comparison `numeric_confidence >= floor`. `high` (1.0)
-clears the default floor 0.7; `low` (0.5) does not. This grounds the
-knob in the active classifier surface without modifying M024 to emit a
-numeric. Future demand can extend M024 to emit a numeric without
-invalidating this entry — the mapping is a forward-compatible adapter.
-
-### Word-band split for Tier A degenerate vs Tier B/C
-
-After the `tier_a_plus` verdict has been peeled off (the Tier A+ branch
-handles the 30–80 word band with zero structural markers), the
-remaining verdicts split by word count:
-
-- `idea` (≤10 words) → Tier A degenerate fast-path.
-- `paragraph` (11–29 words) → Tier A degenerate fast-path.
-- `paragraph` (>30 words) → Tier B/C passthrough (the operator likely
-  intended a more complex task; route to `orchestrator:specify`).
-- `fragment` (structural markers OR ≥81 words) / `spec` (full spec
-  shape) / `empty` → Tier B/C passthrough.
-
-## Output
-
-### Tier A degenerate fast-path
-
-One stderr line of the form:
-
-```
-doing: <task> — knowledge: <N> MEMs / <X> tokens
-```
-
-…where `<N>` is the AD-11 sidecar `mem_count` field and `<X>` is the
-AD-11 sidecar `total_tokens` field. The dispatch payload + sidecar are
-written to disk; the agent runtime takes over (MEM018) — production
-execution requires the agent runtime to read the payload + execute.
-
-### Tier A+ handoff
-
-The driver execs `route-to-dispatch.sh --verdict tier_a_plus`. The
-P02 router emits its own audit lines and chains research → approval →
-plan → build dispatches. See `commands/dispatch.md` and the P02 router
-internals for the chain output.
-
-### Tier B/C passthrough
-
-Two stderr lines:
-
-```
-route=tier_bc passthrough=<surface>
-do-entry: this task is too large for a single dispatch — invoke <surface> in your next turn.
-```
-
-…where `<surface>` is `orchestrator:specify` (default) or
-`orchestrator:evaluate` (empty input). Exit 0 — the operator runs the
-named command in their next turn (NG-6 one-shot discipline).
-
-### Low-confidence prompt
-
-A multi-line prompt to stderr describing the Tier A vs Tier B choice,
-plus a JSONL `unit_close` record appended to
-`.orchestrator/observability/dispatch-log.jsonl` (or the
-`ORCH_DO_ENTRY_LOG` override path) with the operator's `chosen_shape`.
+If non-zero, run `orchestrator:init` first.
 
 ## Idempotency
 
-The entry is one-shot (NG-6). There is no state machine, no lock file,
-no `.orchestrator/milestones/M###/` scaffolding write. Re-running
-`orchestrator:do "<task>"` with the same input simply re-runs the
-classifier and re-dispatches — there is nothing to resume.
+The entry is one-shot. There is no state machine, no lock file, no
+`.orchestrator/milestones/M###/` scaffolding write. Re-running
+`orchestrator:do "<task>"` simply re-emits the deprecation notice and
+re-forwards to `auto-entry.sh` — there is nothing to resume.
 
 ## Error Handling
 
-Non-zero exit reasons:
+The shim returns `auto-entry.sh`'s exit code unchanged. Notable codes:
 
-- `64` — usage error (missing `--task`, unknown flag).
-- non-zero from `build-context.sh` on the Tier A degenerate fast-path
-  (the driver prints `do-entry: build-context.sh exited <rc> on
-  tier_a_degenerate fast-path` and returns the same `<rc>`).
-- non-zero from `route-to-dispatch.sh` on the Tier A+ handoff (the
-  driver returns the router's exit code unchanged).
-- `2` — operator cancel at the low-confidence prompt (response `C` or
-  timeout).
-
-The driver does not retry on its own. The agent runtime (or the
-operator) is responsible for re-invoking after fixing the underlying
-issue.
+- `64` — usage error (`-h` / `--help` prints the shim usage and exits 64).
+- non-zero from `build-context.sh` on the Tier A degenerate fast-path.
+- non-zero from `route-to-dispatch.sh` on the Tier A+ handoff.
+- `2` — operator cancel at the low-confidence prompt (response `C` or timeout).
 
 ## Referenced Scripts/Templates
 
-- `scripts/intake/do-entry.sh` — backing driver. Implements the
-  four-branch routing table and the FR-12 stderr summary line.
-- `scripts/intake/shape-detect.sh` — M024 classifier (verdict +
-  confidence enum).
-- `scripts/intake/route-to-dispatch.sh` — P02 Tier A+ middle-flow
-  router (research → approval → plan → build chain).
-- `scripts/dispatch/build-context.sh` — P01 direct-mode driver
-  (Quick-profile knowledge inject + AD-11 sidecar).
-- `templates/orchestrator-config-default.yml` — P00 pinned defaults
-  (`entry_routing_confidence_floor: 0.7`,
-  `quick_knowledge_token_budget: 800`,
-  `tier_a_plus_prompt_summary_lines: 8`, `auto_proceed: true`).
+- `scripts/intake/do-entry.sh` — the deprecation shim (emits the notice,
+  forwards all six flags plus `--ambiguity-mode prompt` to the driver).
+- `scripts/intake/auto-entry.sh` — the unified `orchestrator:auto` entry
+  driver that now backs this command (four-branch one-shot routing table +
+  Tier-C loop front-route).
+- `scripts/intake/shape-detect.sh` — M024 classifier (verdict + confidence
+  enum).
+- `scripts/intake/route-to-dispatch.sh` — Tier A+ middle-flow router.
+- `scripts/dispatch/build-context.sh` — Quick-profile knowledge inject.
+- `commands/auto.md` — the replacement command; full routing documentation.

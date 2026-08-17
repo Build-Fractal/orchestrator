@@ -1,10 +1,75 @@
 ---
-description: "Use when running fully autonomous execution on a Tier C project. Acquires a lock, then loops: derive state → check budget/stuck → dispatch task → verify → record → advance, until the milestone completes, a blocker is encountered, or a pause is requested."
+description: "The single classify-first entry: pass any argument and it sizes to a tier — a Tier A/A+/B task description routes to a one-shot dispatch (absorbing the former orchestrator:do), an empty arg or existing milestone dir enters the Tier C autonomous loop, and a below-confidence-floor arg BLOCKs on ambiguity. The Tier C loop acquires a lock, then loops: derive state → check budget/stuck → dispatch task → verify → record → advance, until the milestone completes, a blocker is encountered, or a pause is requested."
 ---
 
 # orchestrator:auto
 
 Run the autonomous dispatch loop for a Tier C milestone. This command owns the full execution cycle — it acquires a lock, dispatches tasks one at a time in fresh contexts with verification between each, handles pause/stuck/budget gates, and releases the lock on any exit path.
+
+## Unified Tier-Sized Entry (M046 / FR-1)
+
+`orchestrator:auto <arg>` is the **single classify-first entry**. It does not
+assume the argument is a Tier C milestone: it first **classifies** the
+argument's tier and then routes to the tier-sized path. This collapses the
+former `orchestrator:do` one-shot entry into `auto` — there is one door, and it
+sizes the work for you.
+
+Classification runs through the driver `scripts/intake/auto-entry.sh`, which
+uses the M024 classifier (`scripts/intake/shape-detect.sh`) to size the
+argument and then emits a single machine-readable handoff line on **stderr**:
+either `AUTO:ROUTE …` (proceed on the named path) or `AUTO:BLOCK_AMBIGUITY …`
+(too ambiguous to size — stop and let the operator disambiguate).
+
+### Routing table
+
+| arg | driver output | action |
+|-----|---------------|--------|
+| empty / existing milestone dir | `AUTO:ROUTE tier=c mode=loop target=<active\|dir>` | enter the Tier-C autonomous loop documented below (unchanged) |
+| Tier A/A+/B task description | `AUTO:ROUTE tier=<a\|a_plus\|b> mode=one-shot` | one-shot dispatch (the former `orchestrator:do` behavior) |
+| below the confidence floor | `AUTO:BLOCK_AMBIGUITY verdict=<v> conf=<c>` | exit 0 without dispatching; the operator disambiguates and re-invokes |
+
+All three outcomes exit 0 — `AUTO:BLOCK_AMBIGUITY` is a deliberate,
+non-error stop, not a failure. Invoke the driver as a single-script call
+(no compound bash, per AD-19):
+
+```bash
+bash scripts/intake/auto-entry.sh "<task-or-dir-or-empty>"
+```
+
+The **one-shot path** (Tier A/A+/B) reuses `scripts/intake/route-to-dispatch.sh`
+and `scripts/dispatch/build-context.sh` byte-unchanged — the high-confidence
+one-shot code path is identical to the legacy `do` behavior (FR-2 / CON-2). The
+**Tier-C branch** (`AUTO:ROUTE tier=c mode=loop`) hands control back to the
+existing autonomous loop flow documented in the rest of this file, unchanged
+(M045 legacy parity, FR-17).
+
+The below-floor policy is governed by the driver's `--ambiguity-mode` flag
+(closed enum, default `block` — the auto-native behavior that emits
+`AUTO:BLOCK_AMBIGUITY` and exits). `--ambiguity-mode prompt` preserves the
+legacy `do`-style interactive disambiguation for the deprecation-shim path.
+
+`orchestrator:do` is now a **deprecation shim** over this same driver — it
+forwards to `auto-entry.sh` and prints a deprecation notice. See
+`commands/do.md`.
+
+### --yes vs --unattended (FR-5 / D020)
+
+`--yes` and `--unattended` are **separate authorities** and must not be
+conflated:
+
+- **`--yes`** skips the single **attended confirmation prompt** — the Tier-A+
+  approval prompt on the one-shot path, or the M029 preflight confirmation on
+  the Tier-C loop path. It keeps its existing **narrow** meaning and does NOT
+  broaden. `--yes` never grants unattended authority.
+- **`--unattended`** (P04) is the **only** flag that grants
+  unattended / destructive-approval authority. It carries the FR-13
+  driver-level fail-closed caps (`--max-budget-usd`, `--max-continuations`,
+  `--max-wall-clock-s`, all mandatory) documented in the *Unattended envelope*
+  section below.
+
+Per D020, these are deliberately kept distinct so that skipping one benign
+confirmation prompt can never silently escalate a run into destructive
+unattended execution.
 
 ## Preflight Summary
 
@@ -558,14 +623,143 @@ by creating the stop-file. The driver emits `SELF_CONTINUE:SCHEDULED` /
 forward-progress `progress=` field — a cap-halt with `progress ≪ continuations`
 signals a thrash rather than a legitimately long run).
 
-**Outcome marker**: at each exit path (rotation and every terminal state), the
-loop additionally writes `<milestone-dir>/.self-continue-outcome` with one of
-`rotation <phase>` / `complete` / `blocked` / `budget` / `stuck` / `pause`. This
-marker is inert unless the run is driven by `self-continue-drive.sh`, which reads
-it to decide re-spawn vs stop. Emitting it does NOT change the rotation-exit
-decision or the legacy human handoff (spec FR-8 legacy parity holds).
+**Outcome marker — writer of record (M046 FR-14)**: in driver-gated runs,
+`self-continue-drive.sh` exports `ORCHESTRATOR_SELF_CONTINUE_MARKER=1` and
+`auto-loop.sh` itself writes `<milestone-dir>/.self-continue-outcome`
+deterministically at every exit, keyed to its full exit-code contract:
+
+| Exit | Substate | Marker word |
+|------|----------|-------------|
+| 0 | `AUTO:PLANNING` | `planning <phase>` |
+| 0 | `AUTO:PHASE_COMPLETE` | `phase_complete <phase>` |
+| 0 | `AUTO:MILESTONE_VALIDATING` | `validating` |
+| 14 | rotation | `rotation <phase>` |
+| 1 / 2 / 3 | — | `error` / `budget` / `stuck` |
+| 10 / 11 / 12 / 13 | — | `complete` / `pause` / `unexpected_state` / `planning_failed` |
+
+The agent MUST NOT hand-write `.self-continue-outcome` in gated runs — a
+hand-write would shadow the deterministic writer of record. The one
+exception is `blocked`: it is the single entry-layer word the agent may
+still write, at BLOCK decision points that occur outside `auto-loop.sh`.
+
+**Driver-owned terminal (`child_abort`)**: a child killed by a signal
+(rc >= 128 — overwriting any mid-segment stale marker) or crashed before
+reporting (nonzero rc, no marker) yields `child_abort`, written by the
+driver's deterministic shell wrapper — never a silent stall for a killed
+child. The driver surfaces it as `SELF_CONTINUE:CHILD_ABORT rc=<rc>` and
+terminates.
+
+**Continue-class vs terminal**: `rotation` / `planning` / `phase_complete` /
+`validating` re-spawn a fresh segment (still gated by arming +
+`headless_reentry` via `self-continue-branch.sh`); every other marker word
+(`complete` / `blocked` / `budget` / `stuck` / `pause` / `error` /
+`unexpected_state` / `planning_failed` / `child_abort`) is a terminal — the
+driver stops with no re-spawn.
+
+**Atomicity**: every marker write in both writers is temp file + `rename(2)`
+(`mv -f`), so a kill landing mid-write leaves the old or the new marker
+whole, never a torn one.
+
+**Attended legacy parity (FR-17)**: without the env gate the marker
+mechanism is fully inert — `auto-loop.sh` stdout and exit codes are
+byte-unchanged from M045 and no marker file is written. The attended manual
+marker convention (the agent writing `rotation <phase>` / `complete` /
+`blocked` / `budget` / `stuck` / `pause` at exit paths) remains as
+previously documented for non-driver runs; emitting it does NOT change the
+rotation-exit decision or the legacy human handoff (spec FR-8 legacy parity
+holds).
 
 Run health can be inspected read-only with `scripts/diagnostics/self-continue-status.sh <log-path>` — reports `SELF_CONTINUE:STALLED` if the last segment never resolved (FR-10).
+
+### Unattended envelope (--unattended, M046 P04)
+
+The self-continue driver can run **unattended** — spawning fresh segments with
+no human at the terminal — behind a hard safety envelope. This is a per-run,
+default-OFF opt-in (`--unattended`); **no config key can enable it** (FR-6). The
+envelope only wraps the loop; it never alters the attended path (see *Attended
+parity* below).
+
+**Opt-in and fail-closed caps.** Under `--unattended`, three ceilings are ALL
+mandatory:
+
+- `--max-budget-usd <x>` — hard cumulative dollar ceiling (positive decimal).
+- `--max-continuations <n>` — explicit continuation cap (positive integer). The
+  attended default `MAX_CONT=20` is NOT an implicit cap here — it must be stated.
+- `--max-wall-clock-s <n>` — hard whole-run wall-clock ceiling in seconds
+  (positive integer).
+
+If any of the three is unset or non-numeric, the driver **itself refuses to
+start** — exit 2, no ledger write, no child spawn — emitting
+`SELF_CONTINUE:REFUSE reason=caps-unset missing=<csv>` (or
+`SELF_CONTINUE:REFUSE reason=caps-invalid invalid=<csv>`), where `<csv>` is drawn
+from `budget,continuations,wall-clock`. This gate lives in the driver, not in a
+CLI wrapper, so it holds no matter how the driver is invoked (FR-13 / SC-8).
+Per decision **D016** (#Q-7), the wall-clock ceiling is operator-supplied per run
+(whole-run, in seconds) with no default — a fixed internal constant would make
+FR-13's "refuse if unset" enumeration vacuous — and it is enforced live.
+
+Optional envelope tuning flags (all defaulted; inert unless `--unattended`):
+
+- `--segment-reserve-usd <x>` — per-segment budget lease reserved before each
+  spawn (default `1.00`).
+- `--thrash-threshold <n>` — consecutive no-progress segments before a THRASH
+  halt (default `2`).
+- `--watchdog-poll-s <n>` — watchdog poll interval in seconds (default `1`).
+- `--cost-log <path>` — JSONL the watchdog reads for mid-segment cost (default
+  `<milestone-dir>/execution-log.jsonl`).
+
+**Terminal vocabulary (unattended-only).** In addition to the pre-existing
+terminals (`:TERMINAL`, `:CAP_REACHED`, `:STOPPED reason=stop-file`,
+`:CHILD_ABORT`, `:REJECT`, `:STALLED` — all unchanged), the envelope adds four:
+
+| Terminal line | Meaning |
+|---------------|---------|
+| `SELF_CONTINUE:BUDGET_EXCEEDED stage=<pre-spawn\|mid-segment> spent=<x> … cap=<x> …` | Cumulative spend crossed `--max-budget-usd`. `pre-spawn`: the next reserve would exceed the cap, checked before spawning. `mid-segment`: a live segment's cost crossed the cap and the child was SIGKILLed. |
+| `SELF_CONTINUE:WALL_CLOCK_EXCEEDED stage=<pre-spawn\|mid-segment> …` | The whole-run deadline (`--max-wall-clock-s` from run start) was crossed. `pre-spawn`: between segments; `mid-segment`: a live child was SIGKILLed. |
+| `SELF_CONTINUE:STOPPED reason=stop-file stage=mid-segment …` | The stop-file appeared while a child was live; the child was SIGKILLed within bounded latency (distinct from the attended between-segment `:STOPPED`). |
+| `SELF_CONTINUE:THRASH no_progress_segments=<n> threshold=<n> …` | `--thrash-threshold` consecutive continue-class segments advanced no phase word; the loop halts well before the continuation/budget caps. Unattended-only (FR-12). |
+
+**Accounting surfaces.** The envelope maintains three dotfiles under the
+milestone dir:
+
+- `<milestone-dir>/.self-continue-budget-ledger` — append-only lease ledger
+  (`run_start` / `reserve` / `reconcile` / `forfeit` lines). Reserve-then-spend:
+  a conservative `--segment-reserve-usd` reserve is written BEFORE each spawn, so
+  a driver crash between reserve and reconcile leaves the reserve SPENT — a
+  killed child is never free. At each segment boundary the reserve is either
+  **trued-up** from the exiting child's `claude -p --output-format json`
+  `total_cost_usd` (the authoritative actual), or **forfeited** at
+  `max(reserve, observed)` when the child died before flushing that record. The
+  ledger **PERSISTS across runs** and cumulative spend binds later runs (SC-4);
+  the operator resets the budget by **deleting the file** — there is no reset flag.
+- `<milestone-dir>/.self-continue-kill-reason` — the watchdog's kill-reason
+  handoff, written atomically (temp + `rename(2)`, P02 discipline) before every
+  envelope SIGKILL, then consumed by the driver to select the distinct terminal.
+- `<milestone-dir>/.self-continue-segment-result.json` — the segment's captured
+  child stdout/stderr; the child's JSON result (and `total_cost_usd`) is parsed
+  here for the true-up.
+
+**Watchdog.** Under `--unattended` the child is BACKGROUNDED and a foreground
+watchdog polls it every `--watchdog-poll-s` seconds. On each tick it checks, in
+order, **stop-file → wall-clock → budget**, and on the first trigger writes the
+kill-reason atomically then `kill -9`s the child. The budget trigger is
+**cost-derived**, not a duration proxy: it sums the non-null
+`"record_type":"unit_close"` `estimated_cost_usd` values appended to the cost
+log since segment start (override `--cost-log`); a `null` estimate contributes 0
+(P01 #Q-4: JSONL supplies grain, the JSON result supplies truth).
+
+**Child-visible limits.** The driver exports the hard limits into the child's
+environment so a segment can self-abort before overrunning:
+`ORCHESTRATOR_UNATTENDED`, `ORCHESTRATOR_MAX_BUDGET_USD`,
+`ORCHESTRATOR_BUDGET_REMAINING_USD`, `ORCHESTRATOR_WALL_CLOCK_DEADLINE_EPOCH`,
+and `ORCHESTRATOR_MAX_CONTINUATIONS`. These are the FR-7 in-child self-abort leg;
+P07's instruments read the same names.
+
+**Implementation seam.** The envelope is a sourceable function library at
+`scripts/lifecycle/unattended-envelope.sh`, sourced by
+`scripts/lifecycle/self-continue-drive.sh` with zero side effects at source time.
+The attended path is **byte-compatible** with M045 (FR-17) — the envelope wraps
+the loop, it never alters it.
 
 ## Completion
 

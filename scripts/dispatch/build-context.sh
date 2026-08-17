@@ -251,22 +251,61 @@ if [ -n "$DIRECT_TASK_PLAN" ]; then
       ;;
     *)
       if [ -n "$_M031_KNOWLEDGE_INDEX" ] && [ -f "$_M031_KNOWLEDGE_INDEX" ]; then
-        # Quick profile: 1-hop, touched-files-only scope. Resolve the touched
-        # MEM IDs by intersecting filenames mentioned in the index against
-        # touched files. When no touched-file set is derivable, fall back to
-        # the first N MEM IDs in the index (parity with degenerate-plan
-        # behavior — not a regression). This first-N path is no longer silent:
-        # the provenance header (source=index, entries_considered=N) is stamped.
+        # Quick profile: 1-hop, touched-files-only scope.
+        #
+        # This branch documented a touched-files intersection but never
+        # performed one: the touched set was consulted only as a boolean, so
+        # the "scoped" arm injected the ENTIRE corpus and the unscoped arm took
+        # `sort -u | head -5` — and because rebuild-index.sh sorts by ID
+        # (:273) and IDs are allocation order, that is the five OLDEST entries,
+        # not the five most relevant. Both arms are now signal-driven:
+        #
+        #   scoped   — keep MEMs whose body actually mentions a touched file,
+        #              reusing kp_grep_fallback's basename normalisation so the
+        #              healthy and degraded paths scope identically.
+        #   unscoped — rank by confidence, then last-verified recency (both
+        #              already columns in the index), and take the top N.
+        #
+        # No-match degrades to the ranked fallback rather than to empty, so the
+        # SC-1 `mem_count >= 1` contract holds whenever the corpus is non-empty.
+        # The provenance header (source=index, entries_considered=N) still
+        # stamps either way.
         _M031_TF_TMP="$(mktemp)"
         if [ -n "$_M031_TOUCHED" ]; then
-          printf '%s\n' "$_M031_TOUCHED" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' > "$_M031_TF_TMP"
+          printf '%s\n' "$_M031_TOUCHED" | tr ',' '\n' \
+            | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' \
+            | sed 's#.*/##;s#\.[A-Za-z0-9]*$##' \
+            | grep -v '^$' > "$_M031_TF_TMP" || true
         fi
         _M031_IDS_TMP="$(mktemp)"
-        if [ -s "$_M031_TF_TMP" ]; then
-          grep -oE 'MEM[0-9]+' "$_M031_KNOWLEDGE_INDEX" 2>/dev/null | sort -u > "$_M031_IDS_TMP" || true
-        else
-          grep -oE 'MEM[0-9]+' "$_M031_KNOWLEDGE_INDEX" 2>/dev/null | sort -u | head -5 > "$_M031_IDS_TMP" || true
+        _M031_CAND_TMP="$(mktemp)"
+        if [ -s "$_M031_TF_TMP" ] && [ -d "$_M044_KDIR" ]; then
+          find "$_M044_KDIR" -type f -name 'MEM*.md' 2>/dev/null \
+            | grep -v '/archive/' \
+            | LC_ALL=C sort > "$_M031_CAND_TMP" || true
+          while IFS= read -r _M031_CAND_F; do
+            [ -f "$_M031_CAND_F" ] || continue
+            if grep -qFf "$_M031_TF_TMP" "$_M031_CAND_F" 2>/dev/null; then
+              basename "$_M031_CAND_F" .md >> "$_M031_IDS_TMP"
+            fi
+          done < "$_M031_CAND_TMP"
         fi
+        if [ ! -s "$_M031_IDS_TMP" ]; then
+          _M031_RANK_TMP="$(mktemp)"
+          awk -F'|' '/^MEM[0-9]+[[:space:]]*\|/ {
+              id = $1; conf = $4; ver = $6;
+              gsub(/^[ \t]+|[ \t]+$/, "", id);
+              gsub(/^[ \t]+|[ \t]+$/, "", conf);
+              gsub(/^[ \t]+|[ \t]+$/, "", ver);
+              sub(/^verified:/, "", ver);
+              if (conf == "") conf = "0.00";
+              printf "%s %s %s\n", conf, ver, id;
+            }' "$_M031_KNOWLEDGE_INDEX" 2>/dev/null \
+            | LC_ALL=C sort -r -k1,1 -k2,2 > "$_M031_RANK_TMP" || true
+          awk '{print $3}' "$_M031_RANK_TMP" 2>/dev/null | head -5 > "$_M031_IDS_TMP" || true
+          rm -f "$_M031_RANK_TMP"
+        fi
+        rm -f "$_M031_CAND_TMP"
         _M031_MEM_COUNT="$(wc -l < "$_M031_IDS_TMP" | tr -d ' ')"
         if [ -s "$_M031_IDS_TMP" ]; then
           _M031_RESOLVE="$_M031_PROJECT_ROOT/scripts/knowledge/resolve-entries.sh"

@@ -1,5 +1,5 @@
 # >>> orchestrator:recent-changes >>>
-- 047-auto-v2b-unified-serial: Unified tier-sized autonomous entry (serial core): collapse orchestrator:do into
+- 048-graph-core-migration: Orchestrator v2 graph core and migration (M047): unify the file-based knowledge 
 # <<< orchestrator:recent-changes <<<
 # CLAUDE.md — orchestrator
 

@@ -75,12 +75,14 @@ purely additive at the top.
 
 ## Verification
 
-`test -f commands/auto.md`
-`grep -qi "classify" commands/auto.md`
-`grep -q "AUTO:BLOCK_AMBIGUITY" commands/auto.md`
-`grep -q "auto-entry.sh" commands/auto.md`
-`grep -q "Unified Tier-Sized Entry" commands/auto.md`
-`grep -q "unattended" commands/auto.md`
+```bash
+test -f commands/auto.md
+grep -qi "classify" commands/auto.md
+grep -q "AUTO:BLOCK_AMBIGUITY" commands/auto.md
+grep -q "auto-entry.sh" commands/auto.md
+grep -q "Unified Tier-Sized Entry" commands/auto.md
+grep -q "unattended" commands/auto.md
+```
 
 ## Inputs
 

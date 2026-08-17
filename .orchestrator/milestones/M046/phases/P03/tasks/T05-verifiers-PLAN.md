@@ -124,11 +124,9 @@ byte-identical artifacts on a fixed Tier-A degenerate fixture:
 
 ## Verification
 
-`bash tools/verify/m046-p03-routing-fixture.sh`
-`bash tools/verify/m046-p03-shim-parity.sh`
-`bash tools/verify/m046-p03-shim-forward.sh`
-`bash tools/verify/m046-p03-update-restage.sh`
-`bash tools/verify/m046-p03-phase-suite.sh`
+```bash
+bash tools/verify/m046-p03-phase-suite.sh
+```
 
 ## Inputs
 

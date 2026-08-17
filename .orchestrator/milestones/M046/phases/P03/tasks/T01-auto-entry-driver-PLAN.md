@@ -107,14 +107,17 @@ shim that forwards into this driver, so the parity is structural.
 
 ## Verification
 
-`test -f scripts/intake/auto-entry.sh`
-`bash -n scripts/intake/auto-entry.sh`
-`grep -q "AUTO:BLOCK_AMBIGUITY" scripts/intake/auto-entry.sh`
-`grep -q "AUTO:ROUTE" scripts/intake/auto-entry.sh`
-`grep -q "shape-detect.sh" scripts/intake/auto-entry.sh`
-`grep -q "route-to-dispatch.sh" scripts/intake/auto-entry.sh`
-`grep -q "build-context.sh" scripts/intake/auto-entry.sh`
-`grep -q "ambiguity-mode" scripts/intake/auto-entry.sh`
+```bash
+bash tools/verify/m046-p03-routing-fixture.sh
+test -f scripts/intake/auto-entry.sh
+bash -n scripts/intake/auto-entry.sh
+grep -q "AUTO:BLOCK_AMBIGUITY" scripts/intake/auto-entry.sh
+grep -q "AUTO:ROUTE" scripts/intake/auto-entry.sh
+grep -q "shape-detect.sh" scripts/intake/auto-entry.sh
+grep -q "route-to-dispatch.sh" scripts/intake/auto-entry.sh
+grep -q "build-context.sh" scripts/intake/auto-entry.sh
+grep -q "ambiguity-mode" scripts/intake/auto-entry.sh
+```
 
 ## Inputs
 

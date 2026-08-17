@@ -1,10 +1,75 @@
 ---
-description: "Use when running fully autonomous execution on a Tier C project. Acquires a lock, then loops: derive state → check budget/stuck → dispatch task → verify → record → advance, until the milestone completes, a blocker is encountered, or a pause is requested."
+description: "The single classify-first entry: pass any argument and it sizes to a tier — a Tier A/A+/B task description routes to a one-shot dispatch (absorbing the former orchestrator:do), an empty arg or existing milestone dir enters the Tier C autonomous loop, and a below-confidence-floor arg BLOCKs on ambiguity. The Tier C loop acquires a lock, then loops: derive state → check budget/stuck → dispatch task → verify → record → advance, until the milestone completes, a blocker is encountered, or a pause is requested."
 ---
 
 # orchestrator:auto
 
 Run the autonomous dispatch loop for a Tier C milestone. This command owns the full execution cycle — it acquires a lock, dispatches tasks one at a time in fresh contexts with verification between each, handles pause/stuck/budget gates, and releases the lock on any exit path.
+
+## Unified Tier-Sized Entry (M046 / FR-1)
+
+`orchestrator:auto <arg>` is the **single classify-first entry**. It does not
+assume the argument is a Tier C milestone: it first **classifies** the
+argument's tier and then routes to the tier-sized path. This collapses the
+former `orchestrator:do` one-shot entry into `auto` — there is one door, and it
+sizes the work for you.
+
+Classification runs through the driver `scripts/intake/auto-entry.sh`, which
+uses the M024 classifier (`scripts/intake/shape-detect.sh`) to size the
+argument and then emits a single machine-readable handoff line on **stderr**:
+either `AUTO:ROUTE …` (proceed on the named path) or `AUTO:BLOCK_AMBIGUITY …`
+(too ambiguous to size — stop and let the operator disambiguate).
+
+### Routing table
+
+| arg | driver output | action |
+|-----|---------------|--------|
+| empty / existing milestone dir | `AUTO:ROUTE tier=c mode=loop target=<active\|dir>` | enter the Tier-C autonomous loop documented below (unchanged) |
+| Tier A/A+/B task description | `AUTO:ROUTE tier=<a\|a_plus\|b> mode=one-shot` | one-shot dispatch (the former `orchestrator:do` behavior) |
+| below the confidence floor | `AUTO:BLOCK_AMBIGUITY verdict=<v> conf=<c>` | exit 0 without dispatching; the operator disambiguates and re-invokes |
+
+All three outcomes exit 0 — `AUTO:BLOCK_AMBIGUITY` is a deliberate,
+non-error stop, not a failure. Invoke the driver as a single-script call
+(no compound bash, per AD-19):
+
+```bash
+bash scripts/intake/auto-entry.sh "<task-or-dir-or-empty>"
+```
+
+The **one-shot path** (Tier A/A+/B) reuses `scripts/intake/route-to-dispatch.sh`
+and `scripts/dispatch/build-context.sh` byte-unchanged — the high-confidence
+one-shot code path is identical to the legacy `do` behavior (FR-2 / CON-2). The
+**Tier-C branch** (`AUTO:ROUTE tier=c mode=loop`) hands control back to the
+existing autonomous loop flow documented in the rest of this file, unchanged
+(M045 legacy parity, FR-17).
+
+The below-floor policy is governed by the driver's `--ambiguity-mode` flag
+(closed enum, default `block` — the auto-native behavior that emits
+`AUTO:BLOCK_AMBIGUITY` and exits). `--ambiguity-mode prompt` preserves the
+legacy `do`-style interactive disambiguation for the deprecation-shim path.
+
+`orchestrator:do` is now a **deprecation shim** over this same driver — it
+forwards to `auto-entry.sh` and prints a deprecation notice. See
+`commands/do.md`.
+
+### --yes vs --unattended (FR-5 / D020)
+
+`--yes` and `--unattended` are **separate authorities** and must not be
+conflated:
+
+- **`--yes`** skips the single **attended confirmation prompt** — the Tier-A+
+  approval prompt on the one-shot path, or the M029 preflight confirmation on
+  the Tier-C loop path. It keeps its existing **narrow** meaning and does NOT
+  broaden. `--yes` never grants unattended authority.
+- **`--unattended`** (P04) is the **only** flag that grants
+  unattended / destructive-approval authority. It carries the FR-13
+  driver-level fail-closed caps (`--max-budget-usd`, `--max-continuations`,
+  `--max-wall-clock-s`, all mandatory) documented in the *Unattended envelope*
+  section below.
+
+Per D020, these are deliberately kept distinct so that skipping one benign
+confirmation prompt can never silently escalate a run into destructive
+unattended execution.
 
 ## Preflight Summary
 

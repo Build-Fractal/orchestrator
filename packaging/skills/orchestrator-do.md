@@ -3,7 +3,7 @@ schema_version: "1.0"
 type: skill
 name: "orchestrator:do"
 namespace: "orchestrator"
-description: "Use when invoking a one-shot task — runs the M024 classifier, dispatches a Tier A degenerate task with Quick-profile knowledge inject, hands Tier A+ tasks to the P02 research → plan → build chain, or routes Tier B/C tasks to orchestrator:specify."
+description: "DEPRECATED — use orchestrator:auto <task> instead. This command is now a thin deprecation shim that forwards to the unified orchestrator:auto entry (scripts/intake/auto-entry.sh) with the legacy interactive low-confidence prompt preserved. Scheduled for removal; see the removal runway below."
 runtime_compatibility: ["claude-code", "codex", "cursor"]
 command_file: "commands/do.md"
 ---

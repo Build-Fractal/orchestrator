@@ -75,13 +75,15 @@ This is what keeps scripted `do` callers from silently breaking (US2).
 
 ## Verification
 
-`test -f scripts/intake/do-entry.sh`
-`bash -n scripts/intake/do-entry.sh`
-`grep -q "auto-entry.sh" scripts/intake/do-entry.sh`
-`grep -qi "deprecat" scripts/intake/do-entry.sh`
-`grep -q "ambiguity-mode prompt" scripts/intake/do-entry.sh`
-`grep -qi "deprecat" commands/do.md`
-`grep -q "do-entry.sh" commands/do.md`
+```bash
+test -f scripts/intake/do-entry.sh
+bash -n scripts/intake/do-entry.sh
+grep -q "auto-entry.sh" scripts/intake/do-entry.sh
+grep -qi "deprecat" scripts/intake/do-entry.sh
+grep -q "ambiguity-mode prompt" scripts/intake/do-entry.sh
+grep -qi "deprecat" commands/do.md
+grep -q "do-entry.sh" commands/do.md
+```
 
 ## Inputs
 

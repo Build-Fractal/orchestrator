@@ -75,12 +75,14 @@ T05 `m046-p03-update-restage.sh` assertion accordingly.
 
 ## Verification
 
-`test -f packaging/skills/orchestrator-do.md`
-`grep -qi "deprecat" packaging/skills/orchestrator-do.md`
-`grep -q "orchestrator-do.md" packaging/bundle/manifest.yml`
-`grep -q "orchestrator-do.md" packaging/bundle/build-bundle.sh`
-`grep -q "EXPECTED_SKILLS=14" packaging/bundle/build-bundle.sh`
-`bash packaging/bundle/build-bundle.sh --check`
+```bash
+test -f packaging/skills/orchestrator-do.md
+grep -qi "deprecat" packaging/skills/orchestrator-do.md
+grep -q "orchestrator-do.md" packaging/bundle/manifest.yml
+grep -q "orchestrator-do.md" packaging/bundle/build-bundle.sh
+grep -q "EXPECTED_SKILLS=14" packaging/bundle/build-bundle.sh
+bash packaging/bundle/build-bundle.sh --check
+```
 
 ## Inputs
 

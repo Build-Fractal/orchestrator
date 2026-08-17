@@ -27,7 +27,7 @@ updated_at: "2026-07-12"
     - Produces: `scripts/lifecycle/auto-loop.sh` single CON-2-authorized additive outcome-marker write (FR-14 writer division-of-labor); `scripts/lifecycle/self-continue-drive.sh` hardened — argv-array child spawn (no `sh -c`), strict charset allowlist on milestone-dir names (FR-15), deterministic shell wrapper owning the `CHILD_ABORT` terminal marker, atomic temp+rename discipline for every marker write; SC-9 non-stubbed fixture against the real `auto-loop.sh` exit set + SC-10 injection fixture
     - Consumes: M045 driver trio (`self-continue-drive.sh`, `self-continue-branch.sh`, `self-continue-status.sh`); the real `auto-loop.sh` exit-code contract (0-substates / 1 / 12 / 13)
 
-- [ ] **P03**: Unified tier-sized entry + `orchestrator:do` deprecate-and-merge — "`orchestrator:auto` with a Tier-A description, a Tier-C milestone dir, and an ambiguous arg routes to one-shot dispatch, loop entry, and `AUTO:BLOCK_AMBIGUITY` respectively; `orchestrator:do` prints a one-line deprecation notice and produces byte-identical artifacts through the shim for all six forwarded flags."
+- [x] **P03**: Unified tier-sized entry + `orchestrator:do` deprecate-and-merge — "`orchestrator:auto` with a Tier-A description, a Tier-C milestone dir, and an ambiguous arg routes to one-shot dispatch, loop entry, and `AUTO:BLOCK_AMBIGUITY` respectively; `orchestrator:do` prints a one-line deprecation notice and produces byte-identical artifacts through the shim for all six forwarded flags."
   - Risk: medium
   - Depends: none
   - Boundary Map:
